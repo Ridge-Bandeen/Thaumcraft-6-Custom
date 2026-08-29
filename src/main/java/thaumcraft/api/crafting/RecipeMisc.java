@@ -1,17 +1,17 @@
 package thaumcraft.api.crafting;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 
 
 /**
- * 
+ *
  * @author Azanor
- * 
+ *
  * Used as a placeholder recipe for the thaumonomicon. Currently only used for smelting recipes.
  * Will always be considered a 'fake' recipe.
  *
  */
 public class RecipeMisc {
-	
+
 	public enum MiscRecipeType {
 		SMELTING
 	}
@@ -19,7 +19,7 @@ public class RecipeMisc {
 	MiscRecipeType type;
 	ItemStack input;
 	ItemStack output;
-	
+
 	public RecipeMisc(ItemStack input, ItemStack output, MiscRecipeType type) {
 		this.input = input;
 		this.output = output;
@@ -67,7 +67,7 @@ public class RecipeMisc {
 	public void setOutput(ItemStack output) {
 		this.output = output;
 	}
-	
-	
-	
+
+
+
 }

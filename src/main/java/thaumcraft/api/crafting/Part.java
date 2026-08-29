@@ -1,15 +1,15 @@
 package thaumcraft.api.crafting;
 
 /**
- * 
+ *
  * @author Azanor
- * 
+ *
  * Part used in multiblock crafting
  *
  */
 public class Part {
 	private Object source; // can be a block, itemstack or material
-	private Object target; // anything other than an itemstack will cause an air block to be placed 
+	private Object target; // anything other than an itemstack will cause an air block to be placed
 	private boolean opp;
 	private int priority;
 	private boolean applyPlayerFacing;
@@ -20,14 +20,14 @@ public class Part {
 		setOpp(opp);
 		setPriority(priority);
 	}
-	
+
 	public Part(Object source, Object target, boolean opp) {
 		setSource(source);
 		setTarget(target);
 		setOpp(opp);
 		setPriority(50);
 	}
-	
+
 	public Part(Object source, Object target) {
 		setSource(source);
 		setTarget(target);
@@ -66,7 +66,7 @@ public class Part {
 	public void setPriority(int priority) {
 		this.priority = priority;
 	}
-	
+
 	public boolean getApplyPlayerFacing() {
 		return applyPlayerFacing;
 	}

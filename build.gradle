@@ -79,6 +79,23 @@ sourceSets {
             include 'thaumcraft/api/golems/seals/ISealGui.java'
             include 'thaumcraft/api/golems/seals/SealPos.java'
             include 'thaumcraft/api/golems/tasks/Task.java'
+
+            include 'thaumcraft/api/crafting/ArcaneCraftingInput.java'
+            include 'thaumcraft/api/crafting/ArcaneShapedRecipe.java'
+            include 'thaumcraft/api/crafting/ArcaneShapelessRecipe.java'
+            include 'thaumcraft/api/crafting/CrucibleRecipe.java'
+            include 'thaumcraft/api/crafting/CrucibleRecipeInput.java'
+            include 'thaumcraft/api/crafting/IArcaneWorkbench.java'
+            include 'thaumcraft/api/crafting/IDustTrigger.java'
+            include 'thaumcraft/api/crafting/IInfusionStabiliser.java'
+            include 'thaumcraft/api/crafting/IInfusionStabiliserExt.java'
+            include 'thaumcraft/api/crafting/IStabilizable.java'
+            include 'thaumcraft/api/crafting/IThaumcraftRecipe.java'
+            include 'thaumcraft/api/crafting/InfusionRecipe.java'
+            include 'thaumcraft/api/crafting/InfusionRecipeInput.java'
+            include 'thaumcraft/api/crafting/Part.java'
+            include 'thaumcraft/api/crafting/RecipeMisc.java'
+            include 'thaumcraft/api/crafting/ThaumcraftRecipeTypes.java'
         }
     }
 }

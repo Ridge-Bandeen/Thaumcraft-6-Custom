@@ -5,10 +5,22 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 public class Aspect {
+
+	/** Serializes as the aspect's tag (e.g. "aer"), resolved against the live {@link #aspects} registry. */
+	public static final Codec<Aspect> CODEC = Codec.STRING.comapFlatMap(
+			tag -> {
+				Aspect a = getAspect(tag);
+				return a != null ? DataResult.success(a) : DataResult.error(() -> "Unknown aspect: " + tag);
+			},
+			Aspect::getTag
+	);
 
 	String tag;
 	Aspect[] components;

@@ -12,6 +12,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import thaumcraft.api.ThaumcraftAttributes;
+import thaumcraft.api.crafting.ThaumcraftRecipeTypes;
 
 /**
  * NeoForge 1.21.1 entry point.
@@ -34,6 +35,8 @@ public class Thaumcraft {
         NeoForge.EVENT_BUS.register(this);
 
         ThaumcraftAttributes.ATTRIBUTES.register(modEventBus);
+        ThaumcraftRecipeTypes.RECIPE_TYPES.register(modEventBus);
+        ThaumcraftRecipeTypes.RECIPE_SERIALIZERS.register(modEventBus);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
