@@ -6,5 +6,9 @@
   "death.attack.thaumcraft.tentacle.player": "%1$s was pulled apart by tentacles while trying to escape %2$s",
   "death.attack.thaumcraft.swarm": "%1$s was devoured by a swarm",
   "death.attack.thaumcraft.swarm.player": "%1$s was devoured by a swarm while trying to escape %2$s",
-  "death.attack.thaumcraft.dissolve": "%1$s dissolved"
+  "death.attack.thaumcraft.dissolve": "%1$s dissolved",
+
+  "block.thaumcraft.arcane_workbench": "Arcane Workbench",
+  "item.thaumcraft.thaumometer": "Thaumometer",
+  "container.thaumcraft.arcane_workbench": "Arcane Workbench"
 }

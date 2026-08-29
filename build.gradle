@@ -81,6 +81,7 @@ sourceSets {
             include 'thaumcraft/api/golems/tasks/Task.java'
 
             include 'thaumcraft/api/crafting/ArcaneCraftingInput.java'
+            include 'thaumcraft/api/crafting/ArcaneRecipe.java'
             include 'thaumcraft/api/crafting/ArcaneShapedRecipe.java'
             include 'thaumcraft/api/crafting/ArcaneShapelessRecipe.java'
             include 'thaumcraft/api/crafting/CrucibleRecipe.java'
@@ -129,6 +130,16 @@ sourceSets {
             include 'thaumcraft/api/casters/IInteractWithCaster.java'
             include 'thaumcraft/api/casters/NodeSetting.java'
             include 'thaumcraft/api/casters/Trajectory.java'
+
+            include 'thaumcraft/api/blocks/BlocksTC.java'
+            include 'thaumcraft/api/items/ItemsTC.java'
+
+            include 'thaumcraft/common/blocks/crafting/BlockArcaneWorkbench.java'
+            include 'thaumcraft/common/tiles/crafting/TileArcaneWorkbench.java'
+            include 'thaumcraft/common/container/ArcaneWorkbenchMenu.java'
+            include 'thaumcraft/common/registry/ThaumcraftBlockEntities.java'
+            include 'thaumcraft/common/registry/ThaumcraftMenus.java'
+            include 'thaumcraft/client/gui/GuiArcaneWorkbench.java'
         }
     }
 }

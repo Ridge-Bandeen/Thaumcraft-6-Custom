@@ -30,7 +30,7 @@ import thaumcraft.api.aspects.IEssentiaContainerItem;
  * shaped case, which reuses vanilla's own {@code ShapedRecipePattern}) uses NeoForge's {@code RecipeMatcher}
  * bipartite-matching utility directly, same as the original's Forge {@code ShapelessOreRecipe} base did.
  */
-public class ArcaneShapelessRecipe implements Recipe<ArcaneCraftingInput>, IThaumcraftRecipe {
+public class ArcaneShapelessRecipe implements ArcaneRecipe, IThaumcraftRecipe {
 
 	private final String group;
 	private final String research;
@@ -122,7 +122,7 @@ public class ArcaneShapelessRecipe implements Recipe<ArcaneCraftingInput>, IThau
 
 	@Override
 	public RecipeType<?> getType() {
-		return ThaumcraftRecipeTypes.ARCANE_SHAPELESS_TYPE.get();
+		return ThaumcraftRecipeTypes.ARCANE_TYPE.get();
 	}
 
 	public static class Serializer implements RecipeSerializer<ArcaneShapelessRecipe> {

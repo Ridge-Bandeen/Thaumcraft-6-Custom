@@ -20,11 +20,12 @@ public final class ThaumcraftRecipeTypes {
 	public static final DeferredRegister<RecipeType<?>> RECIPE_TYPES = DeferredRegister.create(Registries.RECIPE_TYPE, MODID);
 	public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(Registries.RECIPE_SERIALIZER, MODID);
 
-	public static final Supplier<RecipeType<ArcaneShapedRecipe>> ARCANE_SHAPED_TYPE = registerType("arcane_shaped");
+	/** Shared by both arcane recipe shapes - see {@link ArcaneRecipe}. */
+	public static final Supplier<RecipeType<ArcaneRecipe>> ARCANE_TYPE = registerType("arcane");
+
 	public static final Supplier<RecipeSerializer<ArcaneShapedRecipe>> ARCANE_SHAPED_SERIALIZER =
 			RECIPE_SERIALIZERS.register("arcane_shaped", () -> new ArcaneShapedRecipe.Serializer());
 
-	public static final Supplier<RecipeType<ArcaneShapelessRecipe>> ARCANE_SHAPELESS_TYPE = registerType("arcane_shapeless");
 	public static final Supplier<RecipeSerializer<ArcaneShapelessRecipe>> ARCANE_SHAPELESS_SERIALIZER =
 			RECIPE_SERIALIZERS.register("arcane_shapeless", () -> new ArcaneShapelessRecipe.Serializer());
 

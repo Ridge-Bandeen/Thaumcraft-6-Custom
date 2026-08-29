@@ -28,7 +28,7 @@ import thaumcraft.api.aspects.IEssentiaContainerItem;
  * reusing vanilla's own {@link ShapedRecipePattern} for the 3x3 shape check and doing the crystal check itself.
  * See {@link ArcaneCraftingInput}.
  */
-public class ArcaneShapedRecipe implements Recipe<ArcaneCraftingInput>, IThaumcraftRecipe {
+public class ArcaneShapedRecipe implements ArcaneRecipe, IThaumcraftRecipe {
 
 	private final String group;
 	private final String research;
@@ -119,7 +119,7 @@ public class ArcaneShapedRecipe implements Recipe<ArcaneCraftingInput>, IThaumcr
 
 	@Override
 	public RecipeType<?> getType() {
-		return ThaumcraftRecipeTypes.ARCANE_SHAPED_TYPE.get();
+		return ThaumcraftRecipeTypes.ARCANE_TYPE.get();
 	}
 
 	public static class Serializer implements RecipeSerializer<ArcaneShapedRecipe> {
