@@ -1,34 +1,34 @@
 package thaumcraft.api.capabilities;
 import javax.annotation.Nonnull;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraftforge.common.util.INBTSerializable;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.common.util.INBTSerializable;
 
 
 
 /**
- * 
+ *
  * @author Azanor
- * 
- * Unless there are specific tasks you need to perform, you are better off using <b>addWarpToPlayer</b> 
- * from the <b>IInternalMethodHandler</b>. It does most of the heavy lifting for you. 
+ *
+ * Unless there are specific tasks you need to perform, you are better off using <b>addWarpToPlayer</b>
+ * from the <b>IInternalMethodHandler</b>. It does most of the heavy lifting for you.
  *
  */
-public interface IPlayerWarp extends INBTSerializable<NBTTagCompound>
+public interface IPlayerWarp extends INBTSerializable<CompoundTag>
 {
 
     /**
-     * Clears all warp. 
+     * Clears all warp.
      */
     void clear();
-    
+
 
     /**
      * @param type The warp type to query
      * @return the amount of warp the player has
      */
     int get(@Nonnull EnumWarpType type);
-    
+
     /**
      * @param type The type of warp to set
      * @param amount how much to set it to
@@ -41,33 +41,33 @@ public interface IPlayerWarp extends INBTSerializable<NBTTagCompound>
      * @return the new total
      */
     int add(@Nonnull EnumWarpType type, int amount);
-    
-    
+
+
     /**
      * @param type The type of warp to reduce
      * @param amount how much to reduce
      * @return the new total
      */
     int reduce(@Nonnull EnumWarpType type, int amount);
-    
+
     public enum EnumWarpType {
     	PERMANENT, NORMAL, TEMPORARY;
     }
-    
-	
+
+
 	/**
      * @param player the player to sync
      */
-	void sync(EntityPlayerMP player);
-	
+	void sync(ServerPlayer player);
+
 	/**
      * @return the counter that is used to keep track of warp gains
      */
     int getCounter();
-    
+
     /**
      * @param amount how much to set the counter it to
      */
     void setCounter(int amount);
-	
+
 }

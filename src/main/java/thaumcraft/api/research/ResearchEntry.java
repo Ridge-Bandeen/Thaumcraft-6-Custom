@@ -1,41 +1,41 @@
 package thaumcraft.api.research;
 import java.util.Arrays;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.text.translation.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 import thaumcraft.api.research.ResearchStage.Knowledge;
 
 
 
-public class ResearchEntry 
+public class ResearchEntry
 {
-	
+
 
 	/**
 	 * A short string used as a key for this research. Must be unique
 	 */
 	String key;
-	
+
 	/**
 	 * A short string used as a reference to the research category to which this must be added.
 	 */
 	String category;
-	
+
 	/**
 	 * A text name of the research entry. Can be a localizable string.
 	 */
 	String name;
-	
+
 	/**
      * This links to any research that needs to be completed before this research can be discovered or learnt.
      */
     String[] parents;
-        
+
     /**
      * any research linked to this that will be unlocked automatically when this research is complete
      */
     String[] siblings;
-    
-	
+
+
     /**
      * the horizontal position of the research icon
      */
@@ -45,29 +45,29 @@ public class ResearchEntry
      * the vertical position of the research icon
      */
     int displayRow;
-    
+
     /**
-     * the icon to be used for this research 
+     * the icon to be used for this research
      */
-    Object[] icons;    
+    Object[] icons;
 
     /**
      * special meta-data tags that indicate how this research must be handled
      */
     EnumResearchMeta[] meta;
-    
+
     /**
      * items the player will receive on completion of this research
      */
     ItemStack[] rewardItem;
-    
+
     /**
      * knowledge the player will receive on completion of this research
      */
     Knowledge[] rewardKnow;
-    
-    
-    
+
+
+
     public enum EnumResearchMeta {
     	ROUND,
     	SPIKY,//these also grant .5 bonus inspiration for theorycrafting
@@ -76,17 +76,17 @@ public class ResearchEntry
     	AUTOUNLOCK,
     	HEX;
 	}
-    
+
     /**
      * The various stages present in this research entry
      */
     ResearchStage[] stages;
-    
+
     /**
      * The various addena present in this research entry
      */
     ResearchAddendum[] addenda;
-    
+
 	/**
 	 * @return the key
 	 */
@@ -121,12 +121,12 @@ public class ResearchEntry
 	public String getName() {
 		return name;
 	}
-	
+
 	/**
 	 * @return the name
 	 */
-	public String getLocalizedName() {
-		return I18n.translateToLocal(getName());
+	public Component getLocalizedName() {
+		return Component.translatable(getName());
 	}
 
 	/**
@@ -142,33 +142,33 @@ public class ResearchEntry
 	public String[] getParents() {
 		return parents;
 	}
-	
+
 	/**
 	 * @return return parents with ALL prefixes and postfixes stripped away
 	 */
 	public String[] getParentsClean() {
 		String[] out = null;
-		if (parents!=null) { 
+		if (parents!=null) {
 			out = getParentsStripped();
 			for (int q=0;q<out.length;q++) {
-				if (out[q].contains("@")) 
+				if (out[q].contains("@"))
 					out[q] = out[q].substring(0,out[q].indexOf("@"));
 			}
 		}
 		return out;
 	}
-	
-	
+
+
 	/**
 	 * @return return parents with prefixes stripped away
 	 */
 	public String[] getParentsStripped() {
 		String[] out = null;
-		if (parents!=null) { 
+		if (parents!=null) {
 			out = new String[parents.length];
 			for (int q=0;q<out.length;q++) {
 				out[q] = ""+parents[q];
-				if (out[q].startsWith("~")) 
+				if (out[q].startsWith("~"))
 					out[q] = out[q].substring(1);
 			}
 		}
@@ -244,7 +244,7 @@ public class ResearchEntry
 	public EnumResearchMeta[] getMeta() {
 		return meta;
 	}
-	
+
 	public boolean hasMeta(EnumResearchMeta me) {
 		return meta==null ? false : Arrays.asList(meta).contains(me);
 	}
@@ -311,7 +311,7 @@ public class ResearchEntry
 	public void setAddenda(ResearchAddendum[] addenda) {
 		this.addenda = addenda;
 	}
-    
-    
-	
+
+
+
 }

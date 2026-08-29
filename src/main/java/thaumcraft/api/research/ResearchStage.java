@@ -1,7 +1,6 @@
 package thaumcraft.api.research;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.translation.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import thaumcraft.api.capabilities.IPlayerKnowledge.EnumKnowledgeType;
 
 
@@ -15,16 +14,17 @@ public class ResearchStage {
 	String[] research;
 	String[] researchIcon;
 	int warp;
-	
+
 	/**
 	 * @return the text
 	 */
 	public String getText() {
 		return text;
 	}
-	
-	public String getTextLocalized() {
-		return I18n.translateToLocal(getText());
+
+	/** See {@link thaumcraft.api.aspects.Aspect#getLocalizedDescription()} for why this returns a Component now. */
+	public Component getTextLocalized() {
+		return Component.translatable(getText());
 	}
 	/**
 	 * @param text the text to set
@@ -67,7 +67,7 @@ public class ResearchStage {
 	 */
 	public void setCraft(Object[] craft) {
 		this.craft = craft;
-	}	
+	}
 	/**
 	 * @return the craftReference
 	 */
@@ -92,7 +92,7 @@ public class ResearchStage {
 	public void setKnow(Knowledge[] know) {
 		this.know = know;
 	}
-	
+
 	/**
 	 * @return the research
 	 */
@@ -105,7 +105,7 @@ public class ResearchStage {
 	public void setResearch(String[] research) {
 		this.research = research;
 	}
-	
+
 	/**
 	 * @return the research
 	 */
@@ -118,7 +118,7 @@ public class ResearchStage {
 	public void setResearchIcon(String[] research) {
 		researchIcon = research;
 	}
-	
+
 	/**
 	 * @return the warp
 	 */
@@ -131,12 +131,12 @@ public class ResearchStage {
 	public void setWarp(int warp) {
 		this.warp = warp;
 	}
-		
+
 	public static class Knowledge {
 		public EnumKnowledgeType type;
-    	public ResearchCategory category; 
+    	public ResearchCategory category;
     	public int amount = 0;
-    	
+
     	public Knowledge(EnumKnowledgeType type, ResearchCategory category, int num) {
 			super();
 			this.type = type;
@@ -150,7 +150,7 @@ public class ResearchStage {
     			int num = 0;
     			try {
     				num = Integer.parseInt(s[1]);
-    			} catch (Exception e) {}    			
+    			} catch (Exception e) {}
     			EnumKnowledgeType t = EnumKnowledgeType.valueOf(s[0].toUpperCase());
     			if (t!=null && !t.hasFields() && num>0) {
     				return new Knowledge(t, null, num);
@@ -159,7 +159,7 @@ public class ResearchStage {
     			int num = 0;
     			try {
     				num = Integer.parseInt(s[2]);
-    			} catch (Exception e) {}    			
+    			} catch (Exception e) {}
     			EnumKnowledgeType t = EnumKnowledgeType.valueOf(s[0].toUpperCase());
     			ResearchCategory f = ResearchCategories.getResearchCategory(s[1].toUpperCase());
     			if (t!=null && f!=null && num>0) {
@@ -169,5 +169,5 @@ public class ResearchStage {
     		return null;
     	}
     }
-	
+
 }

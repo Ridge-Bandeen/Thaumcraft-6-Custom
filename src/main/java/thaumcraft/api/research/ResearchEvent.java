@@ -1,35 +1,36 @@
 package thaumcraft.api.research;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraftforge.fml.common.eventhandler.Event;
+import net.minecraft.world.entity.player.Player;
+import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.ICancellableEvent;
 import thaumcraft.api.capabilities.IPlayerKnowledge.EnumKnowledgeType;
 
 
 /**
- * These events trigger whenever a players gains knowledge or progresses research. 
+ * These events trigger whenever a players gains knowledge or progresses research.
  * They can be cancelled to prevent the research gain.
  */
-public class ResearchEvent extends Event {
+public class ResearchEvent extends Event implements ICancellableEvent {
 
-	private EntityPlayer player;
-	
-	public ResearchEvent(EntityPlayer player)
+	private Player player;
+
+	public ResearchEvent(Player player)
     {
         this.player = player;
     }
 
-    public EntityPlayer getPlayer()
+    public Player getPlayer()
     {
         return player;
     }
-	
-	
+
+
 	public static class Knowledge extends ResearchEvent
     {
 		private EnumKnowledgeType type;
 		private ResearchCategory category;
 		private int amount;
-		
-		public Knowledge(EntityPlayer player, EnumKnowledgeType type, ResearchCategory category, int amount)
+
+		public Knowledge(Player player, EnumKnowledgeType type, ResearchCategory category, int amount)
         {
             super(player);
             this.type = type;
@@ -47,29 +48,23 @@ public class ResearchEvent extends Event {
 
 		public int getAmount() {
 			return amount;
-		}		
-		
+		}
+
     }
-	
+
 	public static class Research extends ResearchEvent
     {
 		private String researchKey;
-		
-		public Research(EntityPlayer player, String researchKey)
+
+		public Research(Player player, String researchKey)
         {
             super(player);
             this.researchKey = researchKey;
         }
-		
+
 		public String getResearchKey() {
 			return researchKey;
-		}		
+		}
     }
 
-	@Override
-	public boolean isCancelable() {
-		return true;
-	}
-	
-	
 }

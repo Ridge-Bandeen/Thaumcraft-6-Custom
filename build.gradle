@@ -46,6 +46,17 @@ sourceSets {
             include 'thaumcraft/api/aspects/IAspectSource.java'
             include 'thaumcraft/api/aspects/IEssentiaContainerItem.java'
             include 'thaumcraft/api/aspects/IEssentiaTransport.java'
+
+            include 'thaumcraft/api/capabilities/IPlayerKnowledge.java'
+            include 'thaumcraft/api/capabilities/IPlayerWarp.java'
+
+            include 'thaumcraft/api/research/IScanThing.java'
+            include 'thaumcraft/api/research/ResearchAddendum.java'
+            include 'thaumcraft/api/research/ResearchCategories.java'
+            include 'thaumcraft/api/research/ResearchCategory.java'
+            include 'thaumcraft/api/research/ResearchEntry.java'
+            include 'thaumcraft/api/research/ResearchEvent.java'
+            include 'thaumcraft/api/research/ResearchStage.java'
         }
     }
 }
