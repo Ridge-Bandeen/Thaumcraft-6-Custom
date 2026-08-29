@@ -1,13 +1,13 @@
 package thaumcraft.api.casters;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
 
 public class Trajectory {
-	
-	public Vec3d source;
-	public Vec3d direction;
-	
-	public Trajectory(Vec3d source, Vec3d direction) {
+
+	public Vec3 source;
+	public Vec3 direction;
+
+	public Trajectory(Vec3 source, Vec3 direction) {
 		this.source = source;
 		this.direction = direction;
 	}

@@ -9,10 +9,10 @@ public abstract class FocusMod extends FocusNode {
 	public EnumUnitType getType() {
 		return EnumUnitType.MOD;
 	}
-	
+
 	public abstract boolean execute();
-	
-	
+
+
 	@Override
 	public Aspect getAspect() {
 		return null;

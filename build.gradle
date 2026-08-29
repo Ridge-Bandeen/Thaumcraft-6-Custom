@@ -112,6 +112,23 @@ sourceSets {
             include 'thaumcraft/api/items/IWarpingGear.java'
             include 'thaumcraft/api/items/RechargeHelper.java'
             include 'thaumcraft/api/items/ThaumcraftDataComponents.java'
+
+            include 'thaumcraft/api/casters/CasterTriggerRegistry.java'
+            include 'thaumcraft/api/casters/FocusEffect.java'
+            include 'thaumcraft/api/casters/FocusEngine.java'
+            include 'thaumcraft/api/casters/FocusMedium.java'
+            include 'thaumcraft/api/casters/FocusMediumRoot.java'
+            include 'thaumcraft/api/casters/FocusMod.java'
+            include 'thaumcraft/api/casters/FocusModSplit.java'
+            include 'thaumcraft/api/casters/FocusNode.java'
+            include 'thaumcraft/api/casters/FocusPackage.java'
+            include 'thaumcraft/api/casters/ICaster.java'
+            include 'thaumcraft/api/casters/ICasterTriggerManager.java'
+            include 'thaumcraft/api/casters/IFocusBlockPicker.java'
+            include 'thaumcraft/api/casters/IFocusElement.java'
+            include 'thaumcraft/api/casters/IInteractWithCaster.java'
+            include 'thaumcraft/api/casters/NodeSetting.java'
+            include 'thaumcraft/api/casters/Trajectory.java'
         }
     }
 }

@@ -2,7 +2,7 @@ package thaumcraft.api.casters;
 
 
 public abstract class FocusMedium extends FocusNode {
-	
+
 
 	@Override
 	public EnumUnitType getType() {
@@ -13,12 +13,12 @@ public abstract class FocusMedium extends FocusNode {
 	public EnumSupplyType[] mustBeSupplied() {
 		return this instanceof FocusMediumRoot ? null : new EnumSupplyType[] {EnumSupplyType.TRAJECTORY};
 	}
-	
+
 	@Override
 	public EnumSupplyType[] willSupply() {
 		return new EnumSupplyType[] {EnumSupplyType.TARGET};
 	}
-	
+
 	public boolean hasIntermediary() {
 		return false;
 	}
@@ -26,6 +26,6 @@ public abstract class FocusMedium extends FocusNode {
 	public boolean execute(Trajectory trajectory) {
 		return true;
 	}
-	
-	
+
+
 }

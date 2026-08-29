@@ -1,13 +1,13 @@
 package thaumcraft.api.casters;
 import javax.annotation.Nullable;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.HitResult;
 
 
 
 public abstract class FocusEffect extends FocusNode {
-	
+
 	@Override
 	public EnumUnitType getType() {
 		return EnumUnitType.EFFECT;
@@ -23,15 +23,15 @@ public abstract class FocusEffect extends FocusNode {
 		return null;
 	}
 
-	public abstract boolean execute(RayTraceResult target, @Nullable Trajectory trajectory, float finalPower, int num);
-	
+	public abstract boolean execute(HitResult target, @Nullable Trajectory trajectory, float finalPower, int num);
+
 	public float getDamageForDisplay(float finalPower) {
 		return 0;
 	}
-	
-	public abstract void renderParticleFX(World world, double posX, double posY, double posZ, double motionX, double motionY, double motionZ);
 
-	public void onCast(Entity caster) {	
-		
+	public abstract void renderParticleFX(Level world, double posX, double posY, double posZ, double motionX, double motionY, double motionZ);
+
+	public void onCast(Entity caster) {
+
 	}
 }
