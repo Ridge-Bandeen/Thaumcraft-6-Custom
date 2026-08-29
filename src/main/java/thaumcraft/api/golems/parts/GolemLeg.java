@@ -1,6 +1,6 @@
 package thaumcraft.api.golems.parts;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.translation.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import thaumcraft.api.golems.EnumGolemTrait;
 
 
@@ -16,7 +16,7 @@ public class GolemLeg
     public ILegFunction function;
     public PartModel model;
     private static byte lastID;
-    
+
     public GolemLeg(String key, String[] research, ResourceLocation icon, PartModel model, Object[] comp, EnumGolemTrait[] tags) {
         this.key = key;
         this.research = research;
@@ -26,12 +26,12 @@ public class GolemLeg
         this.model = model;
         function = null;
     }
-    
+
     public GolemLeg(String key, String[] research, ResourceLocation icon, PartModel model, Object[] comp, ILegFunction function, EnumGolemTrait[] tags) {
         this(key, research, icon, model, comp, tags);
         this.function = function;
     }
-    
+
     public static void register(GolemLeg thing) {
         thing.id = GolemLeg.lastID;
         ++GolemLeg.lastID;
@@ -42,24 +42,25 @@ public class GolemLeg
         }
         GolemLeg.legs[thing.id] = thing;
     }
-    
-    public String getLocalizedName() {
-        return I18n.translateToLocal("golem.leg." + key.toLowerCase());
+
+    /** See {@link thaumcraft.api.aspects.Aspect#getLocalizedDescription()} for why this returns a Component now. */
+    public Component getLocalizedName() {
+        return Component.translatable("golem.leg." + key.toLowerCase());
     }
-    
-    public String getLocalizedDescription() {
-        return I18n.translateToLocal("golem.leg.text." + key.toLowerCase());
+
+    public Component getLocalizedDescription() {
+        return Component.translatable("golem.leg.text." + key.toLowerCase());
     }
-    
+
     public static GolemLeg[] getLegs() {
         return GolemLeg.legs;
     }
-    
+
     static {
         GolemLeg.legs = new GolemLeg[1];
         GolemLeg.lastID = 0;
     }
-    
+
     public interface ILegFunction extends IGenericFunction
     {
     }

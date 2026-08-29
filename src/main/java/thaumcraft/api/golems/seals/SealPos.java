@@ -1,18 +1,18 @@
 package thaumcraft.api.golems.seals;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 
 
 public class SealPos  {
 		public BlockPos pos;
-		public EnumFacing face;
-		
-		public SealPos(BlockPos pos, EnumFacing face) {
+		public Direction face;
+
+		public SealPos(BlockPos pos, Direction face) {
 			super();
 			this.pos = pos;
 			this.face = face;
-		}	
-		
+		}
+
 		@Override
 		public int hashCode()
 	    {
@@ -22,7 +22,7 @@ public class SealPos  {
 	        i = 31 * i + pos.getZ();
 	        return i;
 	    }
-	
+
 		@Override
 		public boolean equals(Object p_equals_1_)
 	    {

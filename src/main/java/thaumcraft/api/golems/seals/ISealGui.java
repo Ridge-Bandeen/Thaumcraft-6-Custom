@@ -7,7 +7,7 @@ public interface ISealGui {
 	int CAT_AREA = 2;
 	int CAT_TOGGLES = 3;
 	int CAT_TAGS = 4;
-	
+
 	public int[] getGuiCategories();
-	
+
 }

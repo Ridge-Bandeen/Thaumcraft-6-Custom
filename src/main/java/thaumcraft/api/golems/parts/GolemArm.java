@@ -1,10 +1,10 @@
 package thaumcraft.api.golems.parts;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.IRangedAttackMob;
-import net.minecraft.entity.ai.EntityAIAttackRanged;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.translation.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.RangedAttackGoal;
+import net.minecraft.world.entity.monster.RangedAttackMob;
 import thaumcraft.api.golems.EnumGolemTrait;
 import thaumcraft.api.golems.IGolemAPI;
 
@@ -21,7 +21,7 @@ public class GolemArm
     public IArmFunction function;
     public PartModel model;
     private static byte lastID;
-    
+
     public GolemArm(String key, String[] research, ResourceLocation icon, PartModel model, Object[] comp, EnumGolemTrait[] tags) {
         this.key = key;
         this.research = research;
@@ -31,12 +31,12 @@ public class GolemArm
         this.model = model;
         function = null;
     }
-    
+
     public GolemArm(String key, String[] research, ResourceLocation icon, PartModel model, Object[] comp, IArmFunction function, EnumGolemTrait[] tags) {
         this(key, research, icon, model, comp, tags);
         this.function = function;
     }
-    
+
     public static void register(GolemArm thing) {
         thing.id = GolemArm.lastID;
         ++GolemArm.lastID;
@@ -47,30 +47,31 @@ public class GolemArm
         }
         GolemArm.arms[thing.id] = thing;
     }
-    
-    public String getLocalizedName() {
-        return I18n.translateToLocal("golem.arm." + key.toLowerCase());
+
+    /** See {@link thaumcraft.api.aspects.Aspect#getLocalizedDescription()} for why this returns a Component now. */
+    public Component getLocalizedName() {
+        return Component.translatable("golem.arm." + key.toLowerCase());
     }
-    
-    public String getLocalizedDescription() {
-        return I18n.translateToLocal("golem.arm.text." + key.toLowerCase());
+
+    public Component getLocalizedDescription() {
+        return Component.translatable("golem.arm.text." + key.toLowerCase());
     }
-    
+
     public static GolemArm[] getArms() {
         return GolemArm.arms;
     }
-    
+
     static {
         GolemArm.arms = new GolemArm[1];
         GolemArm.lastID = 0;
     }
-    
+
     public interface IArmFunction extends IGenericFunction
     {
         void onMeleeAttack(IGolemAPI p0, Entity p1);
-        
-        void onRangedAttack(IGolemAPI p0, EntityLivingBase p1, float p2);
-        
-        EntityAIAttackRanged getRangedAttackAI(IRangedAttackMob p0);
+
+        void onRangedAttack(IGolemAPI p0, LivingEntity p1, float p2);
+
+        RangedAttackGoal getRangedAttackAI(RangedAttackMob p0);
     }
 }

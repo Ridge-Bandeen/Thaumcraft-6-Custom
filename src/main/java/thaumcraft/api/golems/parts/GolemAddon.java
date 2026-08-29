@@ -1,6 +1,6 @@
 package thaumcraft.api.golems.parts;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.translation.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import thaumcraft.api.golems.EnumGolemTrait;
 
 
@@ -16,7 +16,7 @@ public class GolemAddon
     public IAddonFunction function;
     public PartModel model;
     private static byte lastID;
-    
+
     public GolemAddon(String key, String[] research, ResourceLocation icon, PartModel model, Object[] comp, EnumGolemTrait[] tags) {
         this.key = key;
         this.research = research;
@@ -26,12 +26,12 @@ public class GolemAddon
         this.model = model;
         function = null;
     }
-    
+
     public GolemAddon(String key, String[] research, ResourceLocation icon, PartModel model, Object[] comp, IAddonFunction function, EnumGolemTrait[] tags) {
         this(key, research, icon, model, comp, tags);
         this.function = function;
     }
-    
+
     public static void register(GolemAddon thing) {
         thing.id = GolemAddon.lastID;
         ++GolemAddon.lastID;
@@ -42,24 +42,25 @@ public class GolemAddon
         }
         GolemAddon.addons[thing.id] = thing;
     }
-    
-    public String getLocalizedName() {
-        return I18n.translateToLocal("golem.addon." + key.toLowerCase());
+
+    /** See {@link thaumcraft.api.aspects.Aspect#getLocalizedDescription()} for why this returns a Component now. */
+    public Component getLocalizedName() {
+        return Component.translatable("golem.addon." + key.toLowerCase());
     }
-    
-    public String getLocalizedDescription() {
-        return I18n.translateToLocal("golem.addon.text." + key.toLowerCase());
+
+    public Component getLocalizedDescription() {
+        return Component.translatable("golem.addon.text." + key.toLowerCase());
     }
-    
+
     public static GolemAddon[] getAddons() {
         return GolemAddon.addons;
     }
-    
+
     static {
         GolemAddon.addons = new GolemAddon[1];
         GolemAddon.lastID = 0;
     }
-    
+
     public interface IAddonFunction extends IGenericFunction
     {
     }

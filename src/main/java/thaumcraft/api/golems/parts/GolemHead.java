@@ -1,6 +1,6 @@
 package thaumcraft.api.golems.parts;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.translation.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import thaumcraft.api.golems.EnumGolemTrait;
 
 
@@ -16,7 +16,7 @@ public class GolemHead
     public IHeadFunction function;
     public PartModel model;
     private static byte lastID;
-    
+
     public GolemHead(String key, String[] research, ResourceLocation icon, PartModel model, Object[] comp, EnumGolemTrait[] tags) {
         this.key = key;
         this.research = research;
@@ -26,12 +26,12 @@ public class GolemHead
         this.model = model;
         function = null;
     }
-    
+
     public GolemHead(String key, String[] research, ResourceLocation icon, PartModel model, Object[] comp, IHeadFunction function, EnumGolemTrait[] tags) {
         this(key, research, icon, model, comp, tags);
         this.function = function;
     }
-    
+
     public static void register(GolemHead thing) {
         thing.id = GolemHead.lastID;
         ++GolemHead.lastID;
@@ -42,24 +42,25 @@ public class GolemHead
         }
         GolemHead.heads[thing.id] = thing;
     }
-    
-    public String getLocalizedName() {
-        return I18n.translateToLocal("golem.head." + key.toLowerCase());
+
+    /** See {@link thaumcraft.api.aspects.Aspect#getLocalizedDescription()} for why this returns a Component now. */
+    public Component getLocalizedName() {
+        return Component.translatable("golem.head." + key.toLowerCase());
     }
-    
-    public String getLocalizedDescription() {
-        return I18n.translateToLocal("golem.head.text." + key.toLowerCase());
+
+    public Component getLocalizedDescription() {
+        return Component.translatable("golem.head.text." + key.toLowerCase());
     }
-    
+
     public static GolemHead[] getHeads() {
         return GolemHead.heads;
     }
-    
+
     static {
         GolemHead.heads = new GolemHead[1];
         GolemHead.lastID = 0;
     }
-    
+
     public interface IHeadFunction extends IGenericFunction
     {
     }

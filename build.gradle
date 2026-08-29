@@ -57,6 +57,28 @@ sourceSets {
             include 'thaumcraft/api/research/ResearchEntry.java'
             include 'thaumcraft/api/research/ResearchEvent.java'
             include 'thaumcraft/api/research/ResearchStage.java'
+
+            include 'thaumcraft/api/golems/EnumGolemTrait.java'
+            include 'thaumcraft/api/golems/GolemHelper.java'
+            include 'thaumcraft/api/golems/IGolemAPI.java'
+            include 'thaumcraft/api/golems/IGolemProperties.java'
+            include 'thaumcraft/api/golems/ISealDisplayer.java'
+            include 'thaumcraft/api/golems/ProvisionRequest.java'
+            include 'thaumcraft/api/golems/parts/GolemAddon.java'
+            include 'thaumcraft/api/golems/parts/GolemArm.java'
+            include 'thaumcraft/api/golems/parts/GolemHead.java'
+            include 'thaumcraft/api/golems/parts/GolemLeg.java'
+            include 'thaumcraft/api/golems/parts/GolemMaterial.java'
+            include 'thaumcraft/api/golems/parts/IGenericFunction.java'
+            include 'thaumcraft/api/golems/parts/PartModel.java'
+            include 'thaumcraft/api/golems/seals/ISeal.java'
+            include 'thaumcraft/api/golems/seals/ISealConfigArea.java'
+            include 'thaumcraft/api/golems/seals/ISealConfigFilter.java'
+            include 'thaumcraft/api/golems/seals/ISealConfigToggles.java'
+            include 'thaumcraft/api/golems/seals/ISealEntity.java'
+            include 'thaumcraft/api/golems/seals/ISealGui.java'
+            include 'thaumcraft/api/golems/seals/SealPos.java'
+            include 'thaumcraft/api/golems/tasks/Task.java'
         }
     }
 }

@@ -1,12 +1,12 @@
 package thaumcraft.api.golems.seals;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.Level;
 
 
 public interface ISealEntity {
 
-	public void tickSealEntity(World world);
+	public void tickSealEntity(Level world);
 
 	public ISeal getSeal();
 
@@ -16,11 +16,11 @@ public interface ISealEntity {
 
 	public void setPriority(byte priority);
 
-	public void readNBT(NBTTagCompound nbt);
+	public void readNBT(CompoundTag nbt);
 
-	public NBTTagCompound writeNBT();
+	public CompoundTag writeNBT();
 
-	public void syncToClient(World world);
+	public void syncToClient(Level world);
 
 	public BlockPos getArea();
 
@@ -29,7 +29,7 @@ public interface ISealEntity {
 	boolean isLocked();
 
 	void setLocked(boolean locked);
-	
+
 	public boolean isRedstoneSensitive();
 
 	public void setRedstoneSensitive(boolean redstone);
@@ -37,11 +37,11 @@ public interface ISealEntity {
 	String getOwner();
 
 	void setOwner(String owner);
-	
+
 	public byte getColor();
 
 	public void setColor(byte color);
 
-	public boolean isStoppedByRedstone(World world);
+	public boolean isStoppedByRedstone(Level world);
 
 }

@@ -1,53 +1,54 @@
 package thaumcraft.api.golems;
-import net.minecraft.entity.Entity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
 import thaumcraft.api.golems.seals.ISealEntity;
 import thaumcraft.api.golems.tasks.Task;
 
 
-public class ProvisionRequest { 
+public class ProvisionRequest {
 	private ISealEntity seal;
 	private Entity entity;
 	private BlockPos pos;
-	private EnumFacing side;
+	private Direction side;
 	private ItemStack stack;
 	private int id;
 	private int ui = 0;
 	private Task linkedTask;
 	private boolean invalid;
 	private long timeout;
-	
+
 	ProvisionRequest(ISealEntity seal, ItemStack stack) {
 		this.seal = seal;
 		this.stack = stack.copy();
 		String s = seal.getSealPos().pos.toString() + seal.getSealPos().face.name() +stack.toString();
-		if (stack.hasTagCompound()) s += stack.getTagCompound().toString();
+		if (stack.has(DataComponents.CUSTOM_DATA)) s += stack.get(DataComponents.CUSTOM_DATA).toString();
 		id = s.hashCode();
 		timeout = System.currentTimeMillis() + 10000;
 	}
-	
-	ProvisionRequest(BlockPos pos, EnumFacing side, ItemStack stack) {
+
+	ProvisionRequest(BlockPos pos, Direction side, ItemStack stack) {
 		this.pos = pos;
 		this.side = side;
 		this.stack = stack.copy();
 		String s = pos.toString() + side.name() +stack.toString();
-		if (stack.hasTagCompound()) s += stack.getTagCompound().toString();
+		if (stack.has(DataComponents.CUSTOM_DATA)) s += stack.get(DataComponents.CUSTOM_DATA).toString();
 		id = s.hashCode();
 		timeout = System.currentTimeMillis() + 10000;
 	}
-	
+
 	ProvisionRequest(Entity entity, ItemStack stack) {
 		this.entity = entity;
 		this.stack = stack.copy();
-		String s = entity.getEntityId() + stack.toString();
-		if (stack.hasTagCompound()) s += stack.getTagCompound().toString();
+		String s = entity.getId() + stack.toString();
+		if (stack.has(DataComponents.CUSTOM_DATA)) s += stack.get(DataComponents.CUSTOM_DATA).toString();
 		id = s.hashCode();
 		timeout = System.currentTimeMillis() + 10000;
 	}
-		
-	
+
+
 
 	public long getTimeout() {
 		return timeout;
@@ -60,7 +61,7 @@ public class ProvisionRequest {
 	public void setId(int id) {
 		this.id = id;
 	}
-	
+
 	public void setUI(int ui) {
 		this.ui = ui;
 	}
@@ -68,15 +69,15 @@ public class ProvisionRequest {
 	public ISealEntity getSeal() {
 		return seal;
 	}
-	
+
 	public Entity getEntity() {
 		return entity;
 	}
-	
+
 	public ItemStack getStack() {
 		return stack;
 	}
-	
+
 	public BlockPos getPos() {
 		return pos;
 	}
@@ -84,12 +85,12 @@ public class ProvisionRequest {
 	public void setPos(BlockPos pos) {
 		this.pos = pos;
 	}
-	
-	public EnumFacing getSide() {
+
+	public Direction getSide() {
 		return side;
 	}
 
-	public void setSide(EnumFacing side) {
+	public void setSide(Direction side) {
 		this.side = side;
 	}
 
@@ -122,18 +123,16 @@ public class ProvisionRequest {
             return false;
         }
         else
-        {        	
-        	ProvisionRequest pr = (ProvisionRequest)p_equals_1_;        	
+        {
+        	ProvisionRequest pr = (ProvisionRequest)p_equals_1_;
             return id == pr.id && ui == pr.ui;
         }
     }
-	
+
 	private boolean isItemStackEqual(ItemStack first, ItemStack other)
     {
-        return first.getCount() != other.getCount() ? false : 
-        	(first.getItem() != other.getItem() ? false : 
-        		(first.getItemDamage() != other.getItemDamage() ? false : 
-        			(first.getTagCompound() == null && other.getTagCompound() != null ? false : 
-        				first.getTagCompound() == null || first.getTagCompound().equals(other.getTagCompound()))));
+        return first.getCount() != other.getCount() ? false :
+        	(first.getItem() != other.getItem() ? false :
+        		ItemStack.isSameItemSameComponents(first, other));
     }
 }

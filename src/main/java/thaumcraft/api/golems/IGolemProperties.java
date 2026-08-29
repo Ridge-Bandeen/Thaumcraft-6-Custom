@@ -1,6 +1,6 @@
 package thaumcraft.api.golems;
 import java.util.Set;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 import thaumcraft.api.golems.parts.GolemAddon;
 import thaumcraft.api.golems.parts.GolemArm;
 import thaumcraft.api.golems.parts.GolemHead;
@@ -14,12 +14,12 @@ public interface IGolemProperties {
 	public abstract Set<EnumGolemTrait> getTraits();
 
 	public abstract boolean hasTrait(EnumGolemTrait tag);
-	
+
 	public abstract long toLong();
 
 	public abstract ItemStack[] generateComponents();
-	
-	
+
+
 	//material
 	public abstract void setMaterial(GolemMaterial mat);
 
@@ -50,8 +50,7 @@ public interface IGolemProperties {
 
 	public abstract int getRank();
 
-	
-	
-	
+
+
 
 }
