@@ -38,6 +38,14 @@ sourceSets {
             include 'thaumcraft/api/entities/ITaintedMob.java'
             include 'thaumcraft/api/potions/MobEffectFluxTaint.java'
             include 'thaumcraft/api/potions/MobEffectVisExhaust.java'
+
+            include 'thaumcraft/api/aspects/Aspect.java'
+            include 'thaumcraft/api/aspects/AspectList.java'
+            include 'thaumcraft/api/aspects/AspectSourceHelper.java'
+            include 'thaumcraft/api/aspects/IAspectContainer.java'
+            include 'thaumcraft/api/aspects/IAspectSource.java'
+            include 'thaumcraft/api/aspects/IEssentiaContainerItem.java'
+            include 'thaumcraft/api/aspects/IEssentiaTransport.java'
         }
     }
 }
