@@ -1,0 +1,10 @@
+{
+  "_comment": "New (1.21.1) JSON-format lang file. Only holds keys introduced by the port so far; the bulk of the old en_us.lang still needs converting over — see thaumcraft-1211-port memory.",
+
+  "death.attack.thaumcraft.taint": "%1$s dissolved into the taint",
+  "death.attack.thaumcraft.tentacle": "%1$s was pulled apart by tentacles",
+  "death.attack.thaumcraft.tentacle.player": "%1$s was pulled apart by tentacles while trying to escape %2$s",
+  "death.attack.thaumcraft.swarm": "%1$s was devoured by a swarm",
+  "death.attack.thaumcraft.swarm.player": "%1$s was devoured by a swarm while trying to escape %2$s",
+  "death.attack.thaumcraft.dissolve": "%1$s dissolved"
+}

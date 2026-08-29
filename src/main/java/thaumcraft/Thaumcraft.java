@@ -11,6 +11,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.bus.api.SubscribeEvent;
+import thaumcraft.api.ThaumcraftAttributes;
 
 /**
  * NeoForge 1.21.1 entry point.
@@ -31,6 +32,8 @@ public class Thaumcraft {
     public Thaumcraft(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);
         NeoForge.EVENT_BUS.register(this);
+
+        ThaumcraftAttributes.ATTRIBUTES.register(modEventBus);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
