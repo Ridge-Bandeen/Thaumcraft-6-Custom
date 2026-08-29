@@ -1,26 +1,23 @@
 package thaumcraft.api.items;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagInt;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import thaumcraft.api.aura.AuraHelper;
 
 
 /**
- * 
+ *
  * @author Azanor
- * 
+ *
  * Helper methods to manipulate charge in items that use IRechargable.
- * 
+ *
  */
 public class RechargeHelper {
-	
-	public static String NBT_TAG = "tc.charge";
 
 	/**
-	 * This method is called to recharge an item from the aura. 
+	 * This method is called to recharge an item from the aura.
 	 * Call it wherever you need to call it from, but only if you add some way to recharge such items.
 	 * In general this should only be called every 5 ticks.
 	 * @param world
@@ -30,64 +27,63 @@ public class RechargeHelper {
 	 * @param amt
 	 * @return how much charge was actually added
 	 */
-	public static float rechargeItem(World world, ItemStack is, BlockPos pos, EntityPlayer player, int amt) {	
-		if (is==null || is.isEmpty() || !(is.getItem() instanceof IRechargable)) return 0;		
-		IRechargable chargeItem = (IRechargable)is.getItem();		
-		if (player!=null && AuraHelper.shouldPreserveAura(world,player,pos)) return 0;				
+	public static float rechargeItem(Level world, ItemStack is, BlockPos pos, Player player, int amt) {
+		if (is==null || is.isEmpty() || !(is.getItem() instanceof IRechargable)) return 0;
+		IRechargable chargeItem = (IRechargable)is.getItem();
+		if (player!=null && AuraHelper.shouldPreserveAura(world,player,pos)) return 0;
 		amt = Math.min(amt, chargeItem.getMaxCharge(is,player) - getCharge(is));
-		int drained = (int) AuraHelper.drainVis(world, pos, amt, false);		
+		int drained = (int) AuraHelper.drainVis(world, pos, amt, false);
 		if (drained>0) {
 			addCharge(is, player, drained);
 			return drained;
-		}		
+		}
 		return 0;
 	}
-	
+
 	/**
-	 * This method is called to recharge an item. 
+	 * This method is called to recharge an item.
 	 * Nothing is drained from the aura in this version - it is just recharged blindly.
 	 * @param is
 	 * @param player May be null
 	 * @param amt
 	 * @return how much charge was actually added
 	 */
-	public static float rechargeItemBlindly(ItemStack is, EntityPlayer player, int amt) {	
-		if (is==null || is.isEmpty() || !(is.getItem() instanceof IRechargable)) return 0;		
-		IRechargable chargeItem = (IRechargable)is.getItem();		
+	public static float rechargeItemBlindly(ItemStack is, Player player, int amt) {
+		if (is==null || is.isEmpty() || !(is.getItem() instanceof IRechargable)) return 0;
+		IRechargable chargeItem = (IRechargable)is.getItem();
 		amt = Math.min(amt, chargeItem.getMaxCharge(is,player) - getCharge(is));
-		if (amt>0) addCharge(is, player, amt);		
+		if (amt>0) addCharge(is, player, amt);
 		return amt;
 	}
-	
-	private static void addCharge(ItemStack is, EntityLivingBase player, int amt) {
+
+	private static void addCharge(ItemStack is, LivingEntity player, int amt) {
 		if (is==null || is.isEmpty() || !(is.getItem() instanceof IRechargable)) return;
 		IRechargable chargeItem = (IRechargable)is.getItem();
 		int amount = Math.min(chargeItem.getMaxCharge(is,player), amt + getCharge(is));
-		is.setTagInfo(NBT_TAG, new NBTTagInt(amount));
+		is.set(ThaumcraftDataComponents.CHARGE.get(), amount);
 	}
-	
+
 	/**
 	 * @param is
 	 * @return returns charge amount or -1 if item is not rechargable
 	 */
 	public static int getCharge(ItemStack is) {
 		if (is==null || is.isEmpty() || !(is.getItem() instanceof IRechargable)) return -1;
-		if (is.hasTagCompound()) return is.getTagCompound().getInteger(NBT_TAG);
-		return 0;
+		return is.getOrDefault(ThaumcraftDataComponents.CHARGE.get(), 0);
 	}
-	
+
 	/**
-	 * 
+	 *
 	 * @param is
 	 * @return return charge level as a float (with 1 being full)
 	 */
-	public static float getChargePercentage(ItemStack is, EntityPlayer player) {
+	public static float getChargePercentage(ItemStack is, Player player) {
 		if (is==null || is.isEmpty() || !(is.getItem() instanceof IRechargable)) return -1;
 		float c = getCharge(is);
 		float m =  ((IRechargable)is.getItem()).getMaxCharge(is, player);
 		return c / m;
 	}
-	
+
 	/**
 	 * Consumes vis charge from the item
 	 * @param is
@@ -95,15 +91,12 @@ public class RechargeHelper {
 	 * @param amt
 	 * @return if the item had the charge removed
 	 */
-	public static boolean consumeCharge(ItemStack is, EntityLivingBase player, int amt) {
+	public static boolean consumeCharge(ItemStack is, LivingEntity player, int amt) {
 		if (is==null || is.isEmpty() || !(is.getItem() instanceof IRechargable)) return false;
-		if (is.hasTagCompound()) {
-			int charge = is.getTagCompound().getInteger(NBT_TAG);
-			if (charge>=amt) {
-				charge -= amt;
-				is.setTagInfo(NBT_TAG, new NBTTagInt(charge));
-				return true;
-			}
+		int charge = getCharge(is);
+		if (charge>=amt) {
+			is.set(ThaumcraftDataComponents.CHARGE.get(), charge - amt);
+			return true;
 		}
 		return false;
 	}

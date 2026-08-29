@@ -96,6 +96,22 @@ sourceSets {
             include 'thaumcraft/api/crafting/Part.java'
             include 'thaumcraft/api/crafting/RecipeMisc.java'
             include 'thaumcraft/api/crafting/ThaumcraftRecipeTypes.java'
+
+            include 'thaumcraft/api/aura/AuraHelper.java'
+
+            include 'thaumcraft/api/blocks/ILabelable.java'
+
+            include 'thaumcraft/api/items/IArchitect.java'
+            include 'thaumcraft/api/items/IGoggles.java'
+            include 'thaumcraft/api/items/IGogglesDisplayExtended.java'
+            include 'thaumcraft/api/items/IRechargable.java'
+            include 'thaumcraft/api/items/IRevealer.java'
+            include 'thaumcraft/api/items/IScribeTools.java'
+            include 'thaumcraft/api/items/ItemGenericEssentiaContainer.java'
+            include 'thaumcraft/api/items/IVisDiscountGear.java'
+            include 'thaumcraft/api/items/IWarpingGear.java'
+            include 'thaumcraft/api/items/RechargeHelper.java'
+            include 'thaumcraft/api/items/ThaumcraftDataComponents.java'
         }
     }
 }

@@ -1,14 +1,12 @@
 package thaumcraft.api.items;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.NonNullList;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.aspects.IEssentiaContainerItem;
@@ -16,62 +14,60 @@ import thaumcraft.api.aspects.IEssentiaContainerItem;
 
 public class ItemGenericEssentiaContainer extends Item implements IEssentiaContainerItem
 {
-	
-	public ItemGenericEssentiaContainer(int base)
+
+	public ItemGenericEssentiaContainer(Properties properties, int base)
     {
-        super();
+        super(properties.stacksTo(64));
         this.base = base;
-        setMaxStackSize(64);
-        setHasSubtypes(true);
-        setMaxDamage(0);
-        
-    }	
-	
+    }
+
 	protected int base = 1;
-	
-    @Override
-	public void getSubItems(CreativeTabs tab, NonNullList<ItemStack> items) {
-    	for (Aspect tag:Aspect.aspects.values()) {
-    		ItemStack i = new ItemStack(this);
-    		setAspects(i, new AspectList().add(tag, base));
-    		items.add(i);
+
+	/**
+	 * One stack per registered aspect, each carrying {@code base} amount of that aspect. Was an override of
+	 * {@code Item#getSubItems(CreativeTabs, NonNullList<ItemStack>)}, which doesn't exist anymore - creative
+	 * tab contents are populated externally now (via {@code BuildCreativeModeTabContentsEvent} or
+	 * {@code CreativeModeTab.Builder#displayItems}), so whatever sets up this item's creative tab entry
+	 * should call this instead.
+	 */
+	public List<ItemStack> createAspectVariants() {
+		List<ItemStack> items = new ArrayList<>(Aspect.aspects.size());
+		for (Aspect tag : Aspect.aspects.values()) {
+			ItemStack i = new ItemStack(this);
+			setAspects(i, new AspectList().add(tag, base));
+			items.add(i);
 		}
+		return items;
 	}
-    
+
 	@Override
 	public AspectList getAspects(ItemStack itemstack) {
-		if (itemstack.hasTagCompound()) {
-			AspectList aspects = new AspectList();
-			aspects.readFromNBT(itemstack.getTagCompound());
-			return aspects.size()>0?aspects:null;
-		}
-		return null;
+		AspectList aspects = itemstack.get(ThaumcraftDataComponents.ASPECTS.get());
+		return aspects != null && aspects.size() > 0 ? aspects : null;
 	}
 
 	@Override
 	public void setAspects(ItemStack itemstack, AspectList aspects) {
-		if (!itemstack.hasTagCompound()) 
-			itemstack.setTagCompound(new NBTTagCompound());
-		aspects.writeToNBT(itemstack.getTagCompound());
-	}
-	
-	@Override
-	public boolean ignoreContainedAspects() {return false;}
-	
-	@Override
-	public void onUpdate(ItemStack stack, World world, Entity entity, int par4, boolean par5) {
-		if (!world.isRemote && !stack.hasTagCompound()) {
-			Aspect[] displayAspects = Aspect.aspects.values().toArray(new Aspect[]{});
-			setAspects(stack, new AspectList().add(displayAspects[world.rand.nextInt(displayAspects.length)], base));
-		}
-		super.onUpdate(stack, world, entity, par4, par5);
+		itemstack.set(ThaumcraftDataComponents.ASPECTS.get(), aspects);
 	}
 
 	@Override
-	public void onCreated(ItemStack stack, World world, EntityPlayer player) {
-		if (!world.isRemote && !stack.hasTagCompound()) {
+	public boolean ignoreContainedAspects() {return false;}
+
+	@Override
+	public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
+		if (!level.isClientSide && !stack.has(ThaumcraftDataComponents.ASPECTS.get())) {
 			Aspect[] displayAspects = Aspect.aspects.values().toArray(new Aspect[]{});
-			setAspects(stack, new AspectList().add(displayAspects[world.rand.nextInt(displayAspects.length)], base));
+			setAspects(stack, new AspectList().add(displayAspects[level.random.nextInt(displayAspects.length)], base));
+		}
+		super.inventoryTick(stack, level, entity, slotId, isSelected);
+	}
+
+	@Override
+	public void onCraftedBy(ItemStack stack, Level level, Player player) {
+		if (!level.isClientSide && !stack.has(ThaumcraftDataComponents.ASPECTS.get())) {
+			Aspect[] displayAspects = Aspect.aspects.values().toArray(new Aspect[]{});
+			setAspects(stack, new AspectList().add(displayAspects[level.random.nextInt(displayAspects.length)], base));
 		}
 	}
 }
