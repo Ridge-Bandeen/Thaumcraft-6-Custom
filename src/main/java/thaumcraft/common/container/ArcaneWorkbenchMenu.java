@@ -23,13 +23,17 @@ import thaumcraft.api.crafting.ArcaneRecipe;
 import thaumcraft.api.crafting.ThaumcraftRecipeTypes;
 import thaumcraft.common.registry.ThaumcraftMenus;
 import thaumcraft.common.tiles.crafting.TileArcaneWorkbench;
+import thaumcraft.common.world.aura.AuraHandler;
 
 /**
  * Replaces the old (1.12.2) {@code ContainerArcaneWorkbench}. Slot layout is unchanged: 0 = result,
  * 1-9 = 3x3 grid, 10-15 = crystal ring, 16-42 = player inventory, 43-51 = hotbar.
  *
- * Simplifications versus the original for this first pass (see TileArcaneWorkbench):
- * - No vis cost check (the aura system isn't ported yet - every recipe is treated as affordable).
+ * Now checks and spends real vis (via AuraHandler, drawn from the workbench's own chunk - the original
+ * also supported drawing from a wider area when an Arcane Workbench Charger is placed above it; that
+ * block isn't ported, so this always uses the single-chunk draw).
+ *
+ * Simplifications still remaining versus the original for this pass (see TileArcaneWorkbench):
  * - No fallback to plain vanilla 3x3 crafting-table recipes if no arcane recipe matches.
  * - No vanilla recipe-book integration (extends AbstractContainerMenu directly, not RecipeBookMenu).
  * - Taking the result only decrements grid ingredients by 1 each; doesn't swap in "crafting remainder"
@@ -116,13 +120,14 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 
 	@Override
 	public void slotsChanged(Container inventory) {
-		access.execute((level, pos) -> updateResult(level));
+		access.execute(this::updateResult);
 	}
 
-	private void updateResult(Level level) {
+	private void updateResult(Level level, net.minecraft.core.BlockPos pos) {
 		ArcaneCraftingInput input = buildInput();
 		currentRecipe = level.getRecipeManager().getRecipeFor(ThaumcraftRecipeTypes.ARCANE_TYPE.get(), input, level).orElse(null);
-		ItemStack result = currentRecipe != null ? currentRecipe.value().assemble(input, level.registryAccess()) : ItemStack.EMPTY;
+		boolean hasVis = currentRecipe == null || AuraHandler.getVis(level, pos) >= currentRecipe.value().getVis();
+		ItemStack result = currentRecipe != null && hasVis ? currentRecipe.value().assemble(input, level.registryAccess()) : ItemStack.EMPTY;
 		resultContainer.setItem(0, result);
 		setRemoteSlot(RESULT_SLOT, result);
 		broadcastChanges();
@@ -144,6 +149,7 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 			if (!container.getItem(i).isEmpty()) container.removeItem(i, 1);
 		}
 		if (currentRecipe != null) {
+			access.execute((level, pos) -> AuraHandler.drainVis(level, pos, currentRecipe.value().getVis(), false));
 			AspectList crystals = currentRecipe.value().getCrystals();
 			if (crystals != null) {
 				for (Aspect aspect : crystals.getAspects()) {

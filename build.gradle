@@ -146,6 +146,11 @@ sourceSets {
             include 'thaumcraft/common/items/casters/ItemFocusFire.java'
             include 'thaumcraft/common/items/casters/foci/FocusMediumTouch.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectFire.java'
+
+            include 'thaumcraft/common/world/aura/AuraChunk.java'
+            include 'thaumcraft/common/world/aura/AuraWorld.java'
+            include 'thaumcraft/common/world/aura/AuraHandler.java'
+            include 'thaumcraft/common/world/aura/AuraThread.java'
         }
     }
 }

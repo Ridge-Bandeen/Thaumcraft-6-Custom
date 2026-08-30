@@ -23,9 +23,8 @@ public final class ItemsTC {
 	public static final DeferredItem<Item> thaumometer =
 			ITEMS.registerSimpleItem("thaumometer", new Item.Properties().stacksTo(1));
 
-	/** 200 max vis, no aura draw yet - see ItemCaster's TODO. */
 	public static final DeferredItem<ItemCaster> casterBasic =
-			ITEMS.registerItem("caster_basic", props -> new ItemCaster(props, 200));
+			ITEMS.registerItem("caster_basic", ItemCaster::new);
 
 	public static final DeferredItem<ItemFocusFire> focus1 =
 			ITEMS.registerItem("focus_1", ItemFocusFire::new);

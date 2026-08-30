@@ -10,7 +10,9 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.bus.api.SubscribeEvent;
+import thaumcraft.common.world.aura.AuraHandler;
 import thaumcraft.api.ThaumcraftAttributes;
 import thaumcraft.api.crafting.ThaumcraftRecipeTypes;
 import thaumcraft.api.items.ThaumcraftDataComponents;
@@ -66,5 +68,12 @@ public class Thaumcraft {
     public void onServerStarting(ServerStartingEvent event) {
         // Command registration (CommandThaumcraft) will move here once the commands package
         // is ported.
+        AuraHandler.server = event.getServer();
+    }
+
+    @SubscribeEvent
+    public void onServerStopping(ServerStoppingEvent event) {
+        AuraHandler.stopAllThreads();
+        AuraHandler.server = null;
     }
 }

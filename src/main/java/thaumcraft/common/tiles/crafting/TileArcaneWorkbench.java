@@ -19,10 +19,10 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * indices 0-8 / 9-14) is unchanged from the original {@code InventoryArcaneWorkbench} - {@link ArcaneWorkbenchMenu}
  * addresses the same slot ranges.
  *
- * TODO: the original drew its vis cost from the world aura (AuraHandler, not ported yet - see the
- * port-tracking memory notes) via getAura()/spendAura(). For this first pass the workbench doesn't check
- * or spend vis at all; ArcaneWorkbenchMenu treats every recipe as affordable. Restore real vis costs once
- * the aura system exists.
+ * Vis cost checking/spending now happens directly in {@link ArcaneWorkbenchMenu} against the real
+ * {@code AuraHandler} (the original routed it through this class's own getAura()/spendAura() methods,
+ * which also supported drawing from a wider area via an Arcane Workbench Charger placed above - that
+ * block isn't ported, so the menu always draws from this tile's own chunk for now).
  */
 public class TileArcaneWorkbench extends BaseContainerBlockEntity {
 
