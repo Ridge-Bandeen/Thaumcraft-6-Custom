@@ -5,6 +5,8 @@ import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.api.blocks.BlocksTC;
+import thaumcraft.common.items.casters.ItemCaster;
+import thaumcraft.common.items.casters.ItemFocusFire;
 
 /**
  * See {@link BlocksTC} for why this only has a couple of fields so far instead of the ~150 the original
@@ -20,6 +22,13 @@ public final class ItemsTC {
 	/** Not yet wired up to the real scanning/research system - see the port-tracking memory notes. */
 	public static final DeferredItem<Item> thaumometer =
 			ITEMS.registerSimpleItem("thaumometer", new Item.Properties().stacksTo(1));
+
+	/** 200 max vis, no aura draw yet - see ItemCaster's TODO. */
+	public static final DeferredItem<ItemCaster> casterBasic =
+			ITEMS.registerItem("caster_basic", props -> new ItemCaster(props, 200));
+
+	public static final DeferredItem<ItemFocusFire> focus1 =
+			ITEMS.registerItem("focus_1", ItemFocusFire::new);
 
 	private ItemsTC() {
 	}

@@ -10,5 +10,16 @@
 
   "block.thaumcraft.arcane_workbench": "Arcane Workbench",
   "item.thaumcraft.thaumometer": "Thaumometer",
-  "container.thaumcraft.arcane_workbench": "Arcane Workbench"
+  "container.thaumcraft.arcane_workbench": "Arcane Workbench",
+
+  "item.thaumcraft.caster_basic": "Wand of the Apprentice",
+  "item.thaumcraft.focus_1": "Focus: Fire",
+  "item.thaumcraft.caster.vis": "Vis: %s / %s",
+  "item.thaumcraft.caster.no_focus": "No focus attached (shift-right-click with a focus in your offhand)",
+  "item.thaumcraft.focus.cost": "%s vis per use",
+
+  "thaumcraft.TOUCH.name": "Touch",
+  "thaumcraft.FIRE.name": "Fire",
+  "focus.common.power": "Power",
+  "focus.fire.burn": "Burn"
 }

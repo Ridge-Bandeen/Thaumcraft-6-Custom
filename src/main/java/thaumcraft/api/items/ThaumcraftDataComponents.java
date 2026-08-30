@@ -5,6 +5,7 @@ import com.mojang.serialization.Codec;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.api.aspects.AspectList;
@@ -33,6 +34,21 @@ public final class ThaumcraftDataComponents {
 			() -> DataComponentType.<Integer>builder()
 					.persistent(Codec.INT)
 					.networkSynchronized(ByteBufCodecs.VAR_INT)
+					.build());
+
+	/** Current stored vis in a caster (wand). Was a per-item internal field in the original, since 1.12.2
+	 *  casters didn't persist their own charge across saves the way this needs to now. */
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> WAND_VIS = DATA_COMPONENTS.register("wand_vis",
+			() -> DataComponentType.<Integer>builder()
+					.persistent(Codec.INT)
+					.networkSynchronized(ByteBufCodecs.VAR_INT)
+					.build());
+
+	/** The focus currently loaded into a caster (wand). Was the {@code "focus"} NBT sub-compound. */
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<ItemStack>> WAND_FOCUS = DATA_COMPONENTS.register("wand_focus",
+			() -> DataComponentType.<ItemStack>builder()
+					.persistent(ItemStack.CODEC)
+					.networkSynchronized(ItemStack.STREAM_CODEC)
 					.build());
 
 	private ThaumcraftDataComponents() {

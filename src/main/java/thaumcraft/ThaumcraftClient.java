@@ -7,6 +7,9 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.minecraft.client.renderer.item.ItemProperties;
+import net.minecraft.resources.ResourceLocation;
+import thaumcraft.api.items.ItemsTC;
 import thaumcraft.client.gui.GuiArcaneWorkbench;
 import thaumcraft.common.registry.ThaumcraftMenus;
 
@@ -24,6 +27,11 @@ public class ThaumcraftClient {
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
         Thaumcraft.LOGGER.info("Thaumcraft {} client setup", Thaumcraft.VERSION);
+
+        // caster_basic.json's item model switches on this ("predicate": {"focus": 0|1}) - reused
+        // unchanged from the original 1.12.2 asset.
+        event.enqueueWork(() -> ItemProperties.register(ItemsTC.casterBasic.get(), ResourceLocation.withDefaultNamespace("focus"),
+                (stack, level, entity, seed) -> ItemsTC.casterBasic.get().getFocus(stack) != null ? 1.0f : 0.0f));
     }
 
     @SubscribeEvent

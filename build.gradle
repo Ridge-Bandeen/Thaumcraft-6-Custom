@@ -140,6 +140,12 @@ sourceSets {
             include 'thaumcraft/common/registry/ThaumcraftBlockEntities.java'
             include 'thaumcraft/common/registry/ThaumcraftMenus.java'
             include 'thaumcraft/client/gui/GuiArcaneWorkbench.java'
+
+            include 'thaumcraft/common/items/casters/ItemCaster.java'
+            include 'thaumcraft/common/items/casters/ItemFocus.java'
+            include 'thaumcraft/common/items/casters/ItemFocusFire.java'
+            include 'thaumcraft/common/items/casters/foci/FocusMediumTouch.java'
+            include 'thaumcraft/common/items/casters/foci/FocusEffectFire.java'
         }
     }
 }

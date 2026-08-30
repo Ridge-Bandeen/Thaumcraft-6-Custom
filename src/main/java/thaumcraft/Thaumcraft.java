@@ -18,6 +18,10 @@ import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.api.items.ItemsTC;
 import thaumcraft.common.registry.ThaumcraftBlockEntities;
 import thaumcraft.common.registry.ThaumcraftMenus;
+import net.minecraft.resources.ResourceLocation;
+import thaumcraft.api.casters.FocusEngine;
+import thaumcraft.common.items.casters.foci.FocusEffectFire;
+import thaumcraft.common.items.casters.foci.FocusMediumTouch;
 
 /**
  * NeoForge 1.21.1 entry point.
@@ -51,6 +55,11 @@ public class Thaumcraft {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         LOGGER.info("Thaumcraft {} common setup (1.21.1 port in progress)", VERSION);
+
+        // Focus element registry (thaumcraft.api.casters.FocusEngine) - keyed by class, not a
+        // DeferredRegister, matching the original 1.12.2 design.
+        FocusEngine.registerElement(FocusMediumTouch.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/touch.png"), 11371909);
+        FocusEngine.registerElement(FocusEffectFire.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/fire.png"), 16734721);
     }
 
     @SubscribeEvent
