@@ -1,14 +1,23 @@
 package thaumcraft.gametest;
 
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeManager;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import thaumcraft.Thaumcraft;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.capabilities.IPlayerKnowledge;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
+import thaumcraft.api.crafting.CrucibleRecipe;
+
+import java.util.Optional;
 
 /**
  * First real use of NeoForge's GameTest harness in this port - replaces "boot a dedicated server and grep
@@ -82,6 +91,62 @@ public class ThaumcraftGameTests {
 		// AND: true only when every side is known.
 		helper.assertTrue(ThaumcraftCapabilities.knowsResearch(player, "KNOWNA&&KNOWNB"), "AND should be true when both entries are known");
 		helper.assertFalse(ThaumcraftCapabilities.knowsResearch(player, "KNOWNA&&UNKNOWNC"), "AND should be false when only one entry is known");
+
+		helper.succeed();
+	}
+
+	/**
+	 * Names every focus/caster/misc recipe this project has added and asserts each one is actually
+	 * registered - a direct replacement for eyeballing a "RecipeManager: Loaded N recipes" count in a
+	 * runServer log, which only ever proved the total changed by the right number, never which recipes
+	 * exist. A missing or misspelled recipe id now fails with the exact id that's missing.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focusRecipesRegistered(GameTestHelper helper) {
+		RecipeManager recipes = helper.getLevel().getRecipeManager();
+		String[] expectedIds = {
+				"focus_1", "focus_1_crucible",
+				"focus_frost", "focus_frost_crucible",
+				"focus_break", "focus_break_crucible",
+				"focus_fire_bolt", "focus_fire_bolt_crucible",
+				"focus_heal", "focus_heal_crucible",
+				"focus_curse", "focus_curse_crucible",
+				"caster_basic", "thaumometer", "quicksilver_smelting"
+		};
+		for (String id : expectedIds) {
+			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
+			Optional<RecipeHolder<?>> found = recipes.byKey(loc);
+			helper.assertTrue(found.isPresent(), "expected recipe " + loc + " to be registered, but it was missing");
+		}
+		helper.succeed();
+	}
+
+	/**
+	 * Direct coverage of {@link CrucibleRecipe#matches(AspectList, ItemStack)}'s superset-based aspect
+	 * matching and catalyst check - the logic every one of this project's crucible recipes (the parity
+	 * pass across all six foci) depends on, and the kind of edge case a boot-and-grep check would never
+	 * catch since a wrong catalyst or an aspect threshold typo still "loads" fine.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleRecipeMatching(GameTestHelper helper) {
+		AspectList required = new AspectList().add(Aspect.CRYSTAL, 5).add(Aspect.MAGIC, 3);
+		Ingredient catalyst = Ingredient.of(Items.QUARTZ);
+		CrucibleRecipe recipe = new CrucibleRecipe(Thaumcraft.MODID, "FIRSTSTEPS", new ItemStack(Items.STICK), catalyst, required);
+
+		AspectList exact = new AspectList().add(Aspect.CRYSTAL, 5).add(Aspect.MAGIC, 3);
+		helper.assertTrue(recipe.matches(exact, new ItemStack(Items.QUARTZ)),
+				"should match when the pool has exactly the required aspects and the right catalyst");
+
+		AspectList superset = new AspectList().add(Aspect.CRYSTAL, 10).add(Aspect.MAGIC, 10).add(Aspect.EARTH, 4);
+		helper.assertTrue(recipe.matches(superset, new ItemStack(Items.QUARTZ)),
+				"should match when the pool has more than enough of every required aspect, plus unrelated ones");
+
+		AspectList insufficient = new AspectList().add(Aspect.CRYSTAL, 5).add(Aspect.MAGIC, 2);
+		helper.assertFalse(recipe.matches(insufficient, new ItemStack(Items.QUARTZ)),
+				"should not match when one required aspect falls short, even if others are satisfied");
+
+		helper.assertFalse(recipe.matches(exact, new ItemStack(Items.COBBLESTONE)),
+				"should not match with the right aspects but the wrong catalyst item");
 
 		helper.succeed();
 	}
