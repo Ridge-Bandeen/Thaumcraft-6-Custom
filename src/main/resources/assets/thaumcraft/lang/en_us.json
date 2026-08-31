@@ -60,5 +60,8 @@
   "focus.projectile.speed": "Speed",
 
   "item.thaumcraft.focus_flux": "Focus: Flux",
-  "thaumcraft.FLUX.name": "Flux"
+  "thaumcraft.FLUX.name": "Flux",
+
+  "item.thaumcraft.focus_air": "Focus: Air",
+  "thaumcraft.AIR.name": "Air"
 }

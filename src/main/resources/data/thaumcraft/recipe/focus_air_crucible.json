@@ -1,0 +1,11 @@
+{
+  "type": "thaumcraft:crucible",
+  "research": "FIRSTSTEPS",
+  "catalyst": { "item": "minecraft:feather" },
+  "aspects": {
+    "vitreus": 5,
+    "praecantatio": 3,
+    "aer": 3
+  },
+  "result": { "id": "thaumcraft:focus_air" }
+}

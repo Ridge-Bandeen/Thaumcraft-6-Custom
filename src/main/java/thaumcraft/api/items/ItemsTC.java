@@ -6,6 +6,7 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.common.items.casters.ItemCaster;
+import thaumcraft.common.items.casters.ItemFocusAir;
 import thaumcraft.common.items.casters.ItemFocusBreak;
 import thaumcraft.common.items.casters.ItemFocusCurse;
 import thaumcraft.common.items.casters.ItemFocusEarth;
@@ -75,6 +76,9 @@ public final class ItemsTC {
 
 	public static final DeferredItem<ItemFocusFlux> focusFlux =
 			ITEMS.registerItem("focus_flux", ItemFocusFlux::new);
+
+	public static final DeferredItem<ItemFocusAir> focusAir =
+			ITEMS.registerItem("focus_air", ItemFocusAir::new);
 
 	private ItemsTC() {
 	}

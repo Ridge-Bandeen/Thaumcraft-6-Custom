@@ -27,6 +27,7 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
 import thaumcraft.common.registry.ThaumcraftMenus;
 import net.minecraft.resources.ResourceLocation;
 import thaumcraft.api.casters.FocusEngine;
+import thaumcraft.common.items.casters.foci.FocusEffectAir;
 import thaumcraft.common.items.casters.foci.FocusEffectBreak;
 import thaumcraft.common.items.casters.foci.FocusEffectCurse;
 import thaumcraft.common.items.casters.foci.FocusEffectEarth;
@@ -87,6 +88,7 @@ public class Thaumcraft {
         FocusEngine.registerElement(FocusEffectEarth.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/earth.png"), 5685248);
         FocusEngine.registerElement(FocusMediumProjectile.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/projectile.png"), 11382149);
         FocusEngine.registerElement(FocusEffectFlux.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/flux.png"), 8388736);
+        FocusEngine.registerElement(FocusEffectAir.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/air.png"), 16777086);
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {

@@ -186,6 +186,9 @@ sourceSets {
             include 'thaumcraft/common/items/casters/ItemFocusFlux.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectFlux.java'
 
+            include 'thaumcraft/common/items/casters/ItemFocusAir.java'
+            include 'thaumcraft/common/items/casters/foci/FocusEffectAir.java'
+
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
     }

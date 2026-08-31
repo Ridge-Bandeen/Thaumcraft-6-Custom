@@ -138,6 +138,7 @@ public class ThaumcraftGameTests {
 				"focus_earth", "focus_earth_crucible",
 				"focus_fireball", "focus_fireball_crucible",
 				"focus_flux", "focus_flux_crucible",
+				"focus_air", "focus_air_crucible",
 				"caster_basic", "thaumometer", "quicksilver_smelting"
 		};
 		for (String id : expectedIds) {
@@ -750,6 +751,21 @@ public class ThaumcraftGameTests {
 		cast(ItemsTC.focusFlux.get(), caster);
 
 		helper.assertTrue(pig.getHealth() < startingHealth, "casting Flux at the pig should have damaged it");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castAirFocusDamagesAndKnocksBackTarget(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Pig pig = spawnPigFacedBy(helper, caster, origin);
+		float startingHealth = pig.getHealth();
+		Vec3 startingVelocity = pig.getDeltaMovement();
+
+		cast(ItemsTC.focusAir.get(), caster);
+
+		helper.assertTrue(pig.getHealth() < startingHealth, "casting Air at the pig should have damaged it");
+		helper.assertTrue(!pig.getDeltaMovement().equals(startingVelocity), "casting Air at the pig should have knocked it back");
 		helper.succeed();
 	}
 }
