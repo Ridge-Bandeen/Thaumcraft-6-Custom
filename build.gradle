@@ -49,6 +49,7 @@ sourceSets {
 
             include 'thaumcraft/api/capabilities/IPlayerKnowledge.java'
             include 'thaumcraft/api/capabilities/IPlayerWarp.java'
+            include 'thaumcraft/api/capabilities/ThaumcraftCapabilities.java'
 
             include 'thaumcraft/api/research/IScanThing.java'
             include 'thaumcraft/api/research/ResearchAddendum.java'
@@ -151,6 +152,9 @@ sourceSets {
             include 'thaumcraft/common/world/aura/AuraWorld.java'
             include 'thaumcraft/common/world/aura/AuraHandler.java'
             include 'thaumcraft/common/world/aura/AuraThread.java'
+
+            include 'thaumcraft/common/lib/research/PlayerKnowledge.java'
+            include 'thaumcraft/common/lib/research/PlayerWarp.java'
         }
     }
 }

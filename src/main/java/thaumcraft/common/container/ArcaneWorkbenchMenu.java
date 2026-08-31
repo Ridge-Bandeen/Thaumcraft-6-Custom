@@ -127,7 +127,8 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 		ArcaneCraftingInput input = buildInput();
 		currentRecipe = level.getRecipeManager().getRecipeFor(ThaumcraftRecipeTypes.ARCANE_TYPE.get(), input, level).orElse(null);
 		boolean hasVis = currentRecipe == null || AuraHandler.getVis(level, pos) >= currentRecipe.value().getVis();
-		ItemStack result = currentRecipe != null && hasVis ? currentRecipe.value().assemble(input, level.registryAccess()) : ItemStack.EMPTY;
+		boolean known = currentRecipe == null || thaumcraft.api.capabilities.ThaumcraftCapabilities.knowsResearchStrict(player, currentRecipe.value().getResearch());
+		ItemStack result = currentRecipe != null && hasVis && known ? currentRecipe.value().assemble(input, level.registryAccess()) : ItemStack.EMPTY;
 		resultContainer.setItem(0, result);
 		setRemoteSlot(RESULT_SLOT, result);
 		broadcastChanges();

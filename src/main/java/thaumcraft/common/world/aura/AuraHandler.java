@@ -95,14 +95,11 @@ public class AuraHandler
         return getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4).getBase();
     }
 
-    /**
-     * TODO: the original also required the player to have completed the "AURAPRESERVE" research
-     * (ThaumcraftCapabilities isn't ported yet - see the port-tracking memory notes). Everyone gets the
-     * preservation behaviour for now.
-     */
     public static boolean shouldPreserveAura(Level level, Player player, BlockPos pos) {
         int base = getAuraBase(level, pos);
-        return base > 0 && getVis(level, pos) / base < 0.1;
+        return base > 0
+                && (player == null || thaumcraft.api.capabilities.ThaumcraftCapabilities.knowsResearchStrict(player, "AURAPRESERVE"))
+                && getVis(level, pos) / base < 0.1;
     }
 
     public static void addVis(Level level, BlockPos pos, float amount) {

@@ -13,6 +13,7 @@ import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import thaumcraft.common.world.aura.AuraHandler;
+import thaumcraft.api.capabilities.ThaumcraftCapabilities;
 import thaumcraft.api.ThaumcraftAttributes;
 import thaumcraft.api.crafting.ThaumcraftRecipeTypes;
 import thaumcraft.api.items.ThaumcraftDataComponents;
@@ -53,6 +54,7 @@ public class Thaumcraft {
         ItemsTC.ITEMS.register(modEventBus);
         ThaumcraftBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ThaumcraftMenus.MENUS.register(modEventBus);
+        ThaumcraftCapabilities.ATTACHMENT_TYPES.register(modEventBus);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
