@@ -119,6 +119,7 @@ public class AuraThread implements Runnable
         if (dirty) {
             auraChunk.setVis(currentVis);
             auraChunk.setFlux(currentFlux);
+            AuraHandler.markDirty(dim);
         }
 
         if (currentFlux > base * 0.75 && rand.nextFloat() < currentFlux / 500.0f / 10.0f) {

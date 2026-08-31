@@ -11,6 +11,8 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
+import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import thaumcraft.common.world.aura.AuraHandler;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
@@ -79,5 +81,12 @@ public class Thaumcraft {
     public void onServerStopping(ServerStoppingEvent event) {
         AuraHandler.stopAllThreads();
         AuraHandler.server = null;
+    }
+
+    @SubscribeEvent
+    public void onLevelLoad(LevelEvent.Load event) {
+        if (event.getLevel() instanceof ServerLevel level) {
+            AuraHandler.loadForLevel(level);
+        }
     }
 }

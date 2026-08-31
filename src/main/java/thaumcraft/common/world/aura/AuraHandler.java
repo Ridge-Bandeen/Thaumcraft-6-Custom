@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
@@ -17,18 +18,26 @@ import thaumcraft.Thaumcraft;
  * {@link thaumcraft.common.container.ArcaneWorkbenchMenu} now draw real vis from here instead of a fixed
  * pool / no check at all.
  *
- * Deliberately simplified versus the original for now, all worth revisiting later:
+ * Persistence: each dimension's {@link AuraWorld} is a real {@code SavedData} now, registered with that
+ * level's {@code DimensionDataStorage} via {@code Thaumcraft.onLevelLoad} (main thread). From there,
+ * vanilla's own per-level save routine already calls {@code DimensionDataStorage#save()} for every
+ * registered {@code SavedData} that's dirty - no extra save-side hook needed, just marking the object
+ * dirty (a plain boolean flip) at each real mutation point (see {@link #markDirty}), including from the
+ * background {@link AuraThread}. That thread otherwise never touches
+ * {@code DimensionDataStorage}/file I/O directly, only the in-memory {@link AuraChunk} objects (same as
+ * before). {@link #getAuraChunk} still falls back to creating a bare {@link AuraWorld} if a dimension is
+ * touched before its {@code LevelEvent.Load} fires (e.g. very first tick) - {@code computeIfAbsent} means
+ * that fallback is never allowed to clobber one already loaded from disk.
+ *
+ * Still deliberately simplified versus the original, worth revisiting later:
  * <ul>
- * <li>No persistence - aura state lives only in memory and resets on server restart. The original stored
- * it in each chunk's own save data; that needs a proper {@code SavedData}/chunk-capability hookup this
- * pass didn't build.</li>
  * <li>No per-biome variation on generation - every chunk seeds with the same flat baseline (+ noise). The
  * original weighted this by {@code BiomeDictionary} tags (a whole extra file, {@code BiomeHandler}) that
  * isn't ported.</li>
  * <li>High flux no longer spawns a flux rift (that needs {@code EntityFluxRift}, not ported) - just logged.</li>
- * <li>Chunks are created lazily on first read/write instead of via a world-gen/chunk-load hook, which
- * sidesteps needing to port that wiring for now - functionally equivalent from a "does this block have
- * vis" standpoint, just not primed ahead of time.</li>
+ * <li>Chunks are created lazily on first read/write instead of via a world-gen hook, which sidesteps
+ * needing to port that wiring for now - functionally equivalent from a "does this block have vis"
+ * standpoint, just not primed ahead of time.</li>
  * </ul>
  */
 public class AuraHandler
@@ -47,11 +56,21 @@ public class AuraHandler
         return auras.get(dim);
     }
 
+    /** Called from Thaumcraft.onLevelLoad (main thread) - loads/creates this dimension's saved aura data. */
+    public static void loadForLevel(ServerLevel level) {
+        AuraWorld world = level.getDataStorage().computeIfAbsent(AuraWorld.FACTORY, AuraWorld.id());
+        auras.put(level.dimension(), world);
+        ensureThreadStarted(level.dimension());
+    }
+
     public static AuraChunk getAuraChunk(ResourceKey<Level> dim, int x, int z) {
         boolean isNewDimension = !auras.containsKey(dim);
-        AuraWorld world = auras.computeIfAbsent(dim, AuraWorld::new);
+        AuraWorld world = auras.computeIfAbsent(dim, key -> new AuraWorld());
         if (isNewDimension) ensureThreadStarted(dim);
-        return world.getAuraChunks().computeIfAbsent(ChunkPos.asLong(x, z), key -> generateAuraChunk(new ChunkPos(x, z)));
+        return world.getAuraChunks().computeIfAbsent(ChunkPos.asLong(x, z), key -> {
+            world.setDirty();
+            return generateAuraChunk(new ChunkPos(x, z));
+        });
     }
 
     private static AuraChunk generateAuraChunk(ChunkPos pos) {
@@ -106,26 +125,40 @@ public class AuraHandler
         if (amount < 0.0f) return;
         AuraChunk ac = getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4);
         ac.setVis(ac.getVis() + amount);
+        markDirty(level.dimension());
     }
 
     public static void addFlux(Level level, BlockPos pos, float amount) {
         if (amount < 0.0f) return;
         AuraChunk ac = getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4);
         ac.setFlux(ac.getFlux() + amount);
+        markDirty(level.dimension());
     }
 
     public static float drainVis(Level level, BlockPos pos, float amount, boolean simulate) {
         AuraChunk ac = getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4);
         amount = Math.min(amount, ac.getVis());
-        if (!simulate) ac.setVis(ac.getVis() - amount);
+        if (!simulate) {
+            ac.setVis(ac.getVis() - amount);
+            markDirty(level.dimension());
+        }
         return amount;
     }
 
     public static float drainFlux(Level level, BlockPos pos, float amount, boolean simulate) {
         AuraChunk ac = getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4);
         amount = Math.min(amount, ac.getFlux());
-        if (!simulate) ac.setFlux(ac.getFlux() - amount);
+        if (!simulate) {
+            ac.setFlux(ac.getFlux() - amount);
+            markDirty(level.dimension());
+        }
         return amount;
+    }
+
+    /** Cheap - just flips a boolean on the (already in-memory) AuraWorld, safe to call from any thread. */
+    static void markDirty(ResourceKey<Level> dim) {
+        AuraWorld world = auras.get(dim);
+        if (world != null) world.setDirty();
     }
 
     static void onHighFlux(ResourceKey<Level> dim, BlockPos pos) {
