@@ -88,5 +88,8 @@
   "tc.research_category.GOLEMANCY": "Golemancy",
   "tc.research_category.ELDRITCH": "Eldritch",
 
-  "item.thaumcraft.mirrored_glass": "Mirrored Glass"
+  "item.thaumcraft.mirrored_glass": "Mirrored Glass",
+
+  "block.thaumcraft.amber_block": "Amber Block",
+  "block.thaumcraft.amber_brick": "Amber Brick"
 }

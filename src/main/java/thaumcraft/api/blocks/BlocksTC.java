@@ -2,6 +2,7 @@ package thaumcraft.api.blocks;
 
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.TransparentBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
 import net.neoforged.neoforge.registries.DeferredBlock;
@@ -59,6 +60,18 @@ public final class BlocksTC {
 	public static final DeferredBlock<Block> oreAmber = BLOCKS.registerBlock("ore_amber",
 			Block::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(1.5f).sound(SoundType.STONE).requiresCorrectToolForDrops());
+
+	/** Decorative amber storage blocks (compressed from the raw gem, and its brick variant). The original
+	 * {@code BlockTranslucent} (glass material, translucent render layer, valid beacon base, culls faces
+	 * against itself) maps directly onto vanilla's own {@link TransparentBlock} - the same base class
+	 * vanilla's stained glass uses - rather than needing a custom subclass. */
+	public static final DeferredBlock<TransparentBlock> amberBlock = BLOCKS.registerBlock("amber_block",
+			TransparentBlock::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_ORANGE).strength(0.5f).sound(SoundType.GLASS).noOcclusion());
+
+	public static final DeferredBlock<TransparentBlock> amberBrick = BLOCKS.registerBlock("amber_brick",
+			TransparentBlock::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_ORANGE).strength(0.5f).sound(SoundType.GLASS).noOcclusion());
 
 	private BlocksTC() {
 	}

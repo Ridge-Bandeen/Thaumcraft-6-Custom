@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "##",
+    "##"
+  ],
+  "key": {
+    "#": { "item": "thaumcraft:amber" }
+  },
+  "result": { "id": "thaumcraft:amber_block", "count": 1 }
+}
