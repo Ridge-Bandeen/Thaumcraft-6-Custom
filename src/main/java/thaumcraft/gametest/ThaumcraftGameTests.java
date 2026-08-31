@@ -633,4 +633,62 @@ public class ThaumcraftGameTests {
 				"the plain Fire focus (Touch medium, 5-block range) should not have reached a target 6 blocks away - if this starts failing, Touch's range changed");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// BlockCrucible's own player-interaction entrypoints (useItemOn / entityInside) - real, previously-
+	// untested code paths distinct from driving TileCrucible's methods directly the way the earlier
+	// crucible tests do. BlockState#useItemOn is the public dispatch method vanilla itself calls on right-
+	// click; the block's own override is protected, not reachable directly from this package.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleFillsAndEmptiesWithABucketOfWater(GameTestHelper helper) {
+		BlockPos relPos = BlockPos.ZERO;
+		helper.setBlock(relPos, BlocksTC.crucible.get());
+		BlockPos absolute = helper.absolutePos(relPos);
+		TileCrucible tile = helper.getBlockEntity(relPos);
+
+		ServerPlayer player = spawnCasterAt(helper, absolute);
+		// makeMockServerPlayerInLevel()'s isCreative()==true override propagates into a real
+		// abilities.instabuild = true (creative players don't consume items) - forcing it back off tests
+		// the survival-mode consumption path this is actually meant to verify, which is what a real
+		// player normally experiences.
+		player.getAbilities().instabuild = false;
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absolute), net.minecraft.core.Direction.UP, absolute, false);
+
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(Items.WATER_BUCKET));
+		helper.getBlockState(relPos).useItemOn(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND), helper.getLevel(), player,
+				net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+
+		helper.assertTrue(tile.hasWater, "right-clicking with a water bucket should have filled the crucible");
+		helper.assertTrue(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).is(Items.BUCKET), "the water bucket should have been swapped for an empty one");
+
+		helper.getBlockState(relPos).useItemOn(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND), helper.getLevel(), player,
+				net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+
+		helper.assertTrue(!tile.hasWater, "right-clicking a watered, empty (no aspects) crucible with an empty bucket should have emptied it");
+		helper.assertTrue(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).is(Items.WATER_BUCKET), "the empty bucket should have been swapped back for a full one");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleAutoConsumesADroppedItemThatLandsInIt(GameTestHelper helper) {
+		BlockPos relPos = BlockPos.ZERO;
+		TileCrucible tile = placeActiveCrucible(helper, relPos);
+		BlockPos absolute = helper.absolutePos(relPos);
+
+		ItemStack crystal = new ItemStack(ItemsTC.crystalEssence.get(), 1);
+		((ItemGenericEssentiaContainer) crystal.getItem()).setAspects(crystal, new AspectList().add(Aspect.EARTH, 1));
+		ItemEntity dropped = new ItemEntity(helper.getLevel(), absolute.getX() + 0.5, absolute.getY() + 0.5, absolute.getZ() + 0.5, crystal);
+		helper.getLevel().addFreshEntity(dropped);
+
+		// entityInside is driven by the entity's own physics tick noticing it's inside the crucible's
+		// block space - GameTest can just tick the world forward and let vanilla call it naturally.
+		helper.runAfterDelay(3, () -> {
+			helper.assertTrue(tile.getAspects().getAmount(Aspect.EARTH) == 1, "a dropped essentia item resting inside an active crucible should have been auto-consumed into the aspect pool");
+			helper.assertTrue(dropped.isRemoved(), "the consumed item entity should have been removed");
+			helper.succeed();
+		});
+	}
 }
