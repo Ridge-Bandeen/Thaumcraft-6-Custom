@@ -201,6 +201,9 @@ sourceSets {
             include 'thaumcraft/common/items/casters/foci/FocusMediumCloud.java'
             include 'thaumcraft/common/items/casters/ItemFocusSanctuary.java'
 
+            include 'thaumcraft/common/registry/ThaumcraftResearchCategories.java'
+            include 'thaumcraft/common/items/curios/ItemCurio.java'
+
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
     }

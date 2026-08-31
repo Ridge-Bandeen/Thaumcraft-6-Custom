@@ -41,6 +41,7 @@ import thaumcraft.common.items.casters.foci.FocusMediumMine;
 import thaumcraft.common.items.casters.foci.FocusMediumProjectile;
 import thaumcraft.common.items.casters.foci.FocusMediumTouch;
 import thaumcraft.common.registry.ThaumcraftEntities;
+import thaumcraft.common.registry.ThaumcraftResearchCategories;
 import thaumcraft.api.ThaumcraftApi;
 import thaumcraft.common.ThaumcraftInternalMethodHandler;
 
@@ -85,6 +86,11 @@ public class Thaumcraft {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         LOGGER.info("Thaumcraft {} common setup (1.21.1 port in progress)", VERSION);
+
+        // Research category metadata (thaumcraft.api.research.ResearchCategories) - see
+        // ThaumcraftResearchCategories' own doc comment for scope (category tabs only, no research
+        // entries/pages yet).
+        ThaumcraftResearchCategories.register();
 
         // Focus element registry (thaumcraft.api.casters.FocusEngine) - keyed by class, not a
         // DeferredRegister, matching the original 1.12.2 design.

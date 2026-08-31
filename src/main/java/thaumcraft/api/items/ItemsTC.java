@@ -18,6 +18,7 @@ import thaumcraft.common.items.casters.ItemFocusFrost;
 import thaumcraft.common.items.casters.ItemFocusHeal;
 import thaumcraft.common.items.casters.ItemFocusSanctuary;
 import thaumcraft.common.items.casters.ItemFocusTrap;
+import thaumcraft.common.items.curios.ItemCurio;
 
 /**
  * See {@link BlocksTC} for why this only has a couple of fields so far instead of the ~150 the original
@@ -87,6 +88,17 @@ public final class ItemsTC {
 
 	public static final DeferredItem<ItemFocusSanctuary> focusSanctuary =
 			ITEMS.registerItem("focus_sanctuary", ItemFocusSanctuary::new);
+
+	public static final DeferredItem<BlockItem> oreAmber =
+			ITEMS.registerSimpleBlockItem("ore_amber", BlocksTC.oreAmber);
+
+	/** The raw gem itself - inert for now (the original used it in several not-yet-ported recipes:
+	 * warded glass, arcane ear, various golemancy items). */
+	public static final DeferredItem<Item> amber =
+			ITEMS.registerSimpleItem("amber");
+
+	public static final DeferredItem<ItemCurio> curio =
+			ITEMS.registerItem("curio", ItemCurio::new);
 
 	private ItemsTC() {
 	}

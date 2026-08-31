@@ -34,6 +34,8 @@ import thaumcraft.api.casters.FocusPackage;
 import thaumcraft.api.crafting.CrucibleRecipe;
 import thaumcraft.api.items.ItemGenericEssentiaContainer;
 import thaumcraft.api.items.ItemsTC;
+import thaumcraft.api.research.ResearchCategories;
+import thaumcraft.api.research.ResearchCategory;
 import thaumcraft.common.container.ArcaneWorkbenchMenu;
 import thaumcraft.common.items.casters.ItemFocus;
 import thaumcraft.common.tiles.crafting.TileArcaneWorkbench;
@@ -865,5 +867,56 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(warp.get(IPlayerWarp.EnumWarpType.NORMAL) == 3, "addWarpToPlayer should have added directly to the player's real IPlayerWarp");
 		helper.assertTrue(thaumcraft.api.ThaumcraftApi.internalMethods.getActualWarp(player) == before + 3, "getActualWarp should reflect the newly-added warp");
 		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Amber ore + Curio - a genuinely new consumer of the just-unlocked addKnowledge/addWarpToPlayer path,
+	// plus the first real content in thaumcraft.api.research.ResearchCategories (previously a working but
+	// entirely empty registry - see ThaumcraftResearchCategories' own doc comment).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void researchCategoriesAreRegistered(GameTestHelper helper) {
+		String[] expectedKeys = { "BASICS", "AUROMANCY", "ALCHEMY", "ARTIFICE", "INFUSION", "GOLEMANCY", "ELDRITCH" };
+		for (String key : expectedKeys) {
+			ResearchCategory cat = ResearchCategories.getResearchCategory(key);
+			helper.assertTrue(cat != null, "research category '" + key + "' should be registered");
+			helper.assertTrue(cat.key.equals(key), "registered category should report its own key back");
+		}
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void curioGrantsKnowledgeAndIsConsumed(GameTestHelper helper) {
+		@SuppressWarnings("removal")
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		player.getAbilities().instabuild = false;
+		ThaumcraftCapabilities.getKnowledge(player).clear();
+
+		ItemStack curio = new ItemStack(ItemsTC.curio.get());
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, curio);
+
+		int totalBefore = totalKnowledge(player);
+		ItemsTC.curio.get().use(helper.getLevel(), player, net.minecraft.world.InteractionHand.MAIN_HAND);
+		int totalAfter = totalKnowledge(player);
+
+		helper.assertTrue(totalAfter > totalBefore, "using a curio should have granted some Observation/Theory knowledge, total went from " + totalBefore + " to " + totalAfter);
+		helper.assertTrue(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).isEmpty(), "the single-count curio should have been consumed on use in survival mode");
+		helper.succeed();
+	}
+
+	/**
+	 * Sums raw accumulated knowledge points, not {@code getKnowledge}'s progression-scaled "levels" view
+	 * (which divides by {@code EnumKnowledgeType.getProgression()}, 16/32 - a single curio use only grants
+	 * a fraction of one level's worth of raw points, so that view would floor to 0 even on a real grant).
+	 */
+	private static int totalKnowledge(ServerPlayer player) {
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		int total = 0;
+		for (ResearchCategory cat : ResearchCategories.researchCategories.values()) {
+			total += knowledge.getKnowledgeRaw(IPlayerKnowledge.EnumKnowledgeType.OBSERVATION, cat);
+			total += knowledge.getKnowledgeRaw(IPlayerKnowledge.EnumKnowledgeType.THEORY, cat);
+		}
+		return total;
 	}
 }

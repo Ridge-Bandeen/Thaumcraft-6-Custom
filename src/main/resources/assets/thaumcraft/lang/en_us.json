@@ -73,5 +73,18 @@
 
   "item.thaumcraft.focus_sanctuary": "Focus: Sanctuary",
   "thaumcraft.CLOUD.name": "Cloud",
-  "focus.common.radius": "Radius"
+  "focus.common.radius": "Radius",
+
+  "block.thaumcraft.ore_amber": "Amber Ore",
+  "item.thaumcraft.amber": "Amber",
+  "item.thaumcraft.curio": "Curio",
+  "item.curio.text": "A strange trinket that hums with knowledge",
+  "tc.knowledge.gained": "You feel a rush of understanding.",
+  "tc.research_category.BASICS": "Basics",
+  "tc.research_category.AUROMANCY": "Auromancy",
+  "tc.research_category.ALCHEMY": "Alchemy",
+  "tc.research_category.ARTIFICE": "Artifice",
+  "tc.research_category.INFUSION": "Infusion",
+  "tc.research_category.GOLEMANCY": "Golemancy",
+  "tc.research_category.ELDRITCH": "Eldritch"
 }

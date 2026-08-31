@@ -51,6 +51,15 @@ public final class BlocksTC {
 			Block::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE).requiresCorrectToolForDrops());
 
+	/** Third ore. The original ({@code BlockOreTC}) special-cased amber alone with a variable 1-2 quantity
+	 * and a rare (6.6%) bonus {@code ItemCurio} drop replacing one of the amber items - both reproduced in
+	 * {@code data/thaumcraft/loot_table/blocks/ore_amber.json} rather than in a custom Block subclass,
+	 * consistent with this project's data-driven-drops preference. Harvest level (stone pickaxe) matches
+	 * the original's {@code setHarvestLevel("pickaxe", 1)}. */
+	public static final DeferredBlock<Block> oreAmber = BLOCKS.registerBlock("ore_amber",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(1.5f).sound(SoundType.STONE).requiresCorrectToolForDrops());
+
 	private BlocksTC() {
 	}
 }
