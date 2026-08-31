@@ -33,7 +33,9 @@ import thaumcraft.api.casters.FocusPackage;
 import thaumcraft.api.crafting.CrucibleRecipe;
 import thaumcraft.api.items.ItemGenericEssentiaContainer;
 import thaumcraft.api.items.ItemsTC;
+import thaumcraft.common.container.ArcaneWorkbenchMenu;
 import thaumcraft.common.items.casters.ItemFocus;
+import thaumcraft.common.tiles.crafting.TileArcaneWorkbench;
 import thaumcraft.common.tiles.crafting.TileCrucible;
 import thaumcraft.common.world.aura.AuraHandler;
 
@@ -516,6 +518,77 @@ public class ThaumcraftGameTests {
 		cast(ItemsTC.focusBreak.get(), caster);
 
 		helper.assertFalse(helper.getBlockState(relPos).isAir(), "casting Excavation at bedrock should never break it, no matter the power setting");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// ArcaneWorkbenchMenu: places a real workbench block, wires up a real menu against it (not just the
+	// recipe matching ArcaneShapedRecipeTest already covers as pure JUnit), and drives the vis/research
+	// gating in updateResult() the same way a player opening the workbench would. Uses focus_1.json
+	// (blaze powder + redstone, no crystal-ring requirement, research "FIRSTSTEPS", vis 15) since it's the
+	// simplest real recipe on the books - no crystal-ring items needed to set up.
+	// --------------------------------------------------------------------------------------------------
+
+	@SuppressWarnings("removal")
+	private static ArcaneWorkbenchMenu placeWorkbenchWithFocus1Ingredients(GameTestHelper helper, ServerPlayer player) {
+		BlockPos relPos = new BlockPos(0, 0, 0);
+		helper.setBlock(relPos, BlocksTC.arcaneWorkbench.get());
+		TileArcaneWorkbench tile = helper.getBlockEntity(relPos);
+
+		// focus_1.json's pattern: " B " / "BRB" / " B " over a 3x3 grid (indices 0-8, row-major).
+		tile.setItem(1, new ItemStack(Items.BLAZE_POWDER));
+		tile.setItem(3, new ItemStack(Items.BLAZE_POWDER));
+		tile.setItem(4, new ItemStack(Items.REDSTONE));
+		tile.setItem(5, new ItemStack(Items.BLAZE_POWDER));
+		tile.setItem(7, new ItemStack(Items.BLAZE_POWDER));
+
+		ArcaneWorkbenchMenu menu = new ArcaneWorkbenchMenu(0, player.getInventory(), tile);
+		menu.slotsChanged(tile);
+		return menu;
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void workbenchCraftsAMatchingRecipeAndConsumesVisAndIngredients(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		float visBefore = AuraHandler.getVis(helper.getLevel(), origin);
+
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+
+		ItemStack result = menu.slots.get(0).getItem();
+		helper.assertTrue(result.is(ItemsTC.focus1.get()), "matching ingredients, enough vis, and known research should have produced a focus_1 in the result slot, got " + result);
+
+		menu.slots.get(0).onTake(player, result);
+
+		helper.assertTrue(menu.slots.get(1).getItem().isEmpty(), "taking the result should have consumed the grid ingredients");
+		float visAfter = AuraHandler.getVis(helper.getLevel(), origin);
+		helper.assertTrue(visAfter == visBefore - 15, "taking the result should have drained exactly the recipe's vis cost (15), before=" + visBefore + " after=" + visAfter);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void workbenchRefusesToCraftWithoutEnoughVis(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		// Drain the workbench's chunk down to less than focus_1's 15-vis cost.
+		AuraHandler.drainVis(helper.getLevel(), origin, AuraHandler.getVis(helper.getLevel(), origin), false);
+		AuraHandler.addVis(helper.getLevel(), origin, 5.0f);
+
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+
+		helper.assertTrue(menu.slots.get(0).getItem().isEmpty(), "matching ingredients with insufficient vis should not have produced a result");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void workbenchRefusesToCraftWithoutTheRequiredResearch(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		ThaumcraftCapabilities.getKnowledge(player).clear();
+
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+
+		helper.assertTrue(menu.slots.get(0).getItem().isEmpty(), "matching ingredients and enough vis with no known research should not have produced a result");
 		helper.succeed();
 	}
 }
