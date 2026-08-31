@@ -16,6 +16,7 @@ import thaumcraft.common.items.casters.ItemFocusFlux;
 import thaumcraft.common.items.casters.ItemFocusFireBolt;
 import thaumcraft.common.items.casters.ItemFocusFrost;
 import thaumcraft.common.items.casters.ItemFocusHeal;
+import thaumcraft.common.items.casters.ItemFocusSanctuary;
 import thaumcraft.common.items.casters.ItemFocusTrap;
 
 /**
@@ -83,6 +84,9 @@ public final class ItemsTC {
 
 	public static final DeferredItem<ItemFocusTrap> focusTrap =
 			ITEMS.registerItem("focus_trap", ItemFocusTrap::new);
+
+	public static final DeferredItem<ItemFocusSanctuary> focusSanctuary =
+			ITEMS.registerItem("focus_sanctuary", ItemFocusSanctuary::new);
 
 	private ItemsTC() {
 	}

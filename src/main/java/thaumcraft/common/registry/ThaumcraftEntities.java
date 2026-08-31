@@ -5,6 +5,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import thaumcraft.common.entities.projectile.EntityFocusCloud;
 import thaumcraft.common.entities.projectile.EntityFocusMine;
 import thaumcraft.common.entities.projectile.EntityFocusProjectile;
 
@@ -28,6 +29,14 @@ public final class ThaumcraftEntities {
 					.updateInterval(10)
 					.noSave()
 					.build("focus_mine"));
+
+	public static final DeferredHolder<EntityType<?>, EntityType<EntityFocusCloud>> FOCUS_CLOUD = ENTITY_TYPES.register("focus_cloud",
+			() -> EntityType.Builder.<EntityFocusCloud>of(EntityFocusCloud::new, MobCategory.MISC)
+					.sized(1.0f, 0.5f)
+					.clientTrackingRange(64)
+					.updateInterval(10)
+					.noSave()
+					.build("focus_cloud"));
 
 	private ThaumcraftEntities() {
 	}

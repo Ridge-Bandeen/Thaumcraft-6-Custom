@@ -69,5 +69,9 @@
   "thaumcraft.MINE.name": "Mine",
   "focus.common.target": "Target",
   "focus.common.enemy": "Enemy",
-  "focus.common.friend": "Friend"
+  "focus.common.friend": "Friend",
+
+  "item.thaumcraft.focus_sanctuary": "Focus: Sanctuary",
+  "thaumcraft.CLOUD.name": "Cloud",
+  "focus.common.radius": "Radius"
 }

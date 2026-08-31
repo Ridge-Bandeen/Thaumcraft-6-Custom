@@ -193,6 +193,10 @@ sourceSets {
             include 'thaumcraft/common/items/casters/foci/FocusMediumMine.java'
             include 'thaumcraft/common/items/casters/ItemFocusTrap.java'
 
+            include 'thaumcraft/common/entities/projectile/EntityFocusCloud.java'
+            include 'thaumcraft/common/items/casters/foci/FocusMediumCloud.java'
+            include 'thaumcraft/common/items/casters/ItemFocusSanctuary.java'
+
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
     }

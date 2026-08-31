@@ -140,6 +140,7 @@ public class ThaumcraftGameTests {
 				"focus_flux", "focus_flux_crucible",
 				"focus_air", "focus_air_crucible",
 				"focus_trap", "focus_trap_crucible",
+				"focus_sanctuary", "focus_sanctuary_crucible",
 				"caster_basic", "thaumometer", "quicksilver_smelting"
 		};
 		for (String id : expectedIds) {
@@ -797,5 +798,25 @@ public class ThaumcraftGameTests {
 
 		helper.succeedWhen(() -> helper.assertTrue(zombie.getHealth() < startingHealth,
 				"the trap should have armed on the block and cursed the zombie waiting next to it, health=" + zombie.getHealth()));
+	}
+
+	/**
+	 * Focus: Sanctuary - the last of the five mediums, {@link thaumcraft.common.entities.projectile.EntityFocusCloud},
+	 * a stationary lingering AoE rather than a moving/self-destructing carrier. Casts it directly onto a
+	 * damaged pig (Root#setupFromCaster already aims/spawns at the caster's own feet-adjacent position by
+	 * default with the default radius (1) comfortably covering a pig standing right next to the caster) and
+	 * polls via succeedWhen since the cloud only re-triggers every 5 ticks.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castSanctuaryFocusHealsANearbyDamagedTarget(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Pig pig = spawnPigFacedBy(helper, caster, origin, 0.8);
+		pig.setHealth(1.0f);
+
+		cast(ItemsTC.focusSanctuary.get(), caster);
+
+		helper.succeedWhen(() -> helper.assertTrue(pig.getHealth() > 1.0f,
+				"the sanctuary cloud should have healed the nearby damaged pig by now, health=" + pig.getHealth()));
 	}
 }
