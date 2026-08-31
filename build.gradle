@@ -167,6 +167,9 @@ sourceSets {
 
             include 'thaumcraft/common/items/casters/ItemFocusFireBolt.java'
             include 'thaumcraft/common/items/casters/foci/FocusMediumBolt.java'
+
+            include 'thaumcraft/common/items/casters/ItemFocusHeal.java'
+            include 'thaumcraft/common/items/casters/foci/FocusEffectHeal.java'
         }
     }
 }

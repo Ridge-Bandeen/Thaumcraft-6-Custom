@@ -10,6 +10,7 @@ import thaumcraft.common.items.casters.ItemFocusBreak;
 import thaumcraft.common.items.casters.ItemFocusFire;
 import thaumcraft.common.items.casters.ItemFocusFireBolt;
 import thaumcraft.common.items.casters.ItemFocusFrost;
+import thaumcraft.common.items.casters.ItemFocusHeal;
 
 /**
  * See {@link BlocksTC} for why this only has a couple of fields so far instead of the ~150 the original
@@ -46,6 +47,9 @@ public final class ItemsTC {
 
 	public static final DeferredItem<ItemFocusFireBolt> focusFireBolt =
 			ITEMS.registerItem("focus_fire_bolt", ItemFocusFireBolt::new);
+
+	public static final DeferredItem<ItemFocusHeal> focusHeal =
+			ITEMS.registerItem("focus_heal", ItemFocusHeal::new);
 
 	private ItemsTC() {
 	}
