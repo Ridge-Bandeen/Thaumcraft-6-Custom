@@ -1,0 +1,11 @@
+{
+  "type": "thaumcraft:crucible",
+  "research": "FIRSTSTEPS",
+  "catalyst": { "item": "minecraft:golden_apple" },
+  "aspects": {
+    "vitreus": 5,
+    "praecantatio": 3,
+    "victus": 3
+  },
+  "result": { "id": "thaumcraft:focus_heal" }
+}

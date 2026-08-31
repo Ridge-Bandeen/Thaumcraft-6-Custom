@@ -1,0 +1,11 @@
+{
+  "type": "thaumcraft:crucible",
+  "research": "FIRSTSTEPS",
+  "catalyst": { "item": "minecraft:ice" },
+  "aspects": {
+    "vitreus": 5,
+    "praecantatio": 3,
+    "gelum": 3
+  },
+  "result": { "id": "thaumcraft:focus_frost" }
+}
