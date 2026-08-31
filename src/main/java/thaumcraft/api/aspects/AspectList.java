@@ -297,4 +297,34 @@ public class AspectList implements Serializable {
 			}
     }
 
+	/**
+	 * Found by the test suite, not by playing the game: {@code AspectList} is used as the value type for a
+	 * {@code DataComponentType} ({@link thaumcraft.api.items.ThaumcraftDataComponents#ASPECTS}), and
+	 * NeoForge requires data component values to implement {@code equals()}/{@code hashCode()} - checked by
+	 * a dev-mode-only validator ({@code CommonHooks#validateComponent}, gated on
+	 * {@code SharedConstants.IS_RUNNING_IN_IDE}) that apparently doesn't trip under a plain
+	 * {@code ./gradlew runServer}/{@code runGameTestServer} CLI invocation, only under the JUnit test
+	 * launcher - which is exactly why setting up {@code ./gradlew test} surfaced this and manually playing
+	 * through every {@code runServer} boot this session never did. Without this, two otherwise-identical
+	 * essentia-container item stacks (e.g. two Crystal Essence items both carrying one {@code aer}) would
+	 * be treated as never-equal by anything that compares data components (stacking, network sync,
+	 * recipe-ingredient matching) - a real, if subtle, correctness bug, not just a test-environment
+	 * technicality.
+	 *
+	 * Equality is by content ({@code aspects} map), same as any normal value type - this doesn't make
+	 * {@code AspectList} actually immutable (it's mutated in place all over this codebase, e.g. every
+	 * {@code TileCrucible}), which NeoForge's own validator only warns about, not enforces.
+	 */
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (!(o instanceof AspectList other)) return false;
+		return aspects.equals(other.aspects);
+	}
+
+	@Override
+	public int hashCode() {
+		return aspects.hashCode();
+	}
+
 }

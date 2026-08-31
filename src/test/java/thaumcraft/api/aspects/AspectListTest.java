@@ -135,6 +135,23 @@ class AspectListTest {
 	}
 
 	@Test
+	void equalsAndHashCodeAreContentBased() {
+		// Regression test for a real bug the test suite itself found: AspectList is used as a
+		// DataComponentType value, and NeoForge's dev-mode component validator requires equals/hashCode -
+		// without them, two otherwise-identical essentia-container stacks would never compare equal. See
+		// AspectList's own equals()/hashCode() doc comment for the full story.
+		AspectList a = new AspectList().add(Aspect.FIRE, 5).add(Aspect.WATER, 2);
+		AspectList b = new AspectList().add(Aspect.WATER, 2).add(Aspect.FIRE, 5);
+		AspectList different = new AspectList().add(Aspect.FIRE, 5);
+
+		assertTrue(a.equals(b), "two lists with the same contents (even added in a different order) should be equal");
+		assertEquals(a.hashCode(), b.hashCode(), "equal objects must have equal hashCodes");
+		assertFalse(a.equals(different), "lists with different contents should not be equal");
+		assertFalse(a.equals(null));
+		assertFalse(a.equals("not an AspectList"));
+	}
+
+	@Test
 	void itemStackConstructorIsCurrentlyAStubReturningAnEmptyList() {
 		// Documents a known, deliberate simplification (see the constructor's own doc comment): the
 		// original looked aspects up via AspectHelper.getObjectAspects(stack), which needs the full
