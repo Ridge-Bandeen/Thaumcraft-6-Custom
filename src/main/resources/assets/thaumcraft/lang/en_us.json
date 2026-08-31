@@ -63,5 +63,11 @@
   "thaumcraft.FLUX.name": "Flux",
 
   "item.thaumcraft.focus_air": "Focus: Air",
-  "thaumcraft.AIR.name": "Air"
+  "thaumcraft.AIR.name": "Air",
+
+  "item.thaumcraft.focus_trap": "Focus: Trap",
+  "thaumcraft.MINE.name": "Mine",
+  "focus.common.target": "Target",
+  "focus.common.enemy": "Enemy",
+  "focus.common.friend": "Friend"
 }

@@ -139,6 +139,7 @@ public class ThaumcraftGameTests {
 				"focus_fireball", "focus_fireball_crucible",
 				"focus_flux", "focus_flux_crucible",
 				"focus_air", "focus_air_crucible",
+				"focus_trap", "focus_trap_crucible",
 				"caster_basic", "thaumometer", "quicksilver_smelting"
 		};
 		for (String id : expectedIds) {
@@ -767,5 +768,34 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(pig.getHealth() < startingHealth, "casting Air at the pig should have damaged it");
 		helper.assertTrue(!pig.getDeltaMovement().equals(startingVelocity), "casting Air at the pig should have knocked it back");
 		helper.succeed();
+	}
+
+	/**
+	 * Focus: Trap - places a real EntityFocusMine (see its own doc comment) that arms on landing and
+	 * curses the next matching entity that wanders within range. Aims point-blank at a placed block so the
+	 * mine arms almost immediately, with the target already waiting right next to the landing spot -
+	 * avoids needing to simulate anything actually wandering into range. Uses {@code succeedWhen} rather
+	 * than a fixed delay, same reasoning as the Fireball test (the mine's own trigger check only runs
+	 * every 5 ticks).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castTrapFocusArmsAndCursesAnEnemyThatWandersNear(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(0, 1, 2);
+		helper.setBlock(relPos, Blocks.STONE);
+		BlockPos absolute = helper.absolutePos(relPos);
+
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		caster.lookAt(EntityAnchorArgument.Anchor.EYES, Vec3.atCenterOf(absolute));
+
+		Zombie zombie = EntityType.ZOMBIE.create(helper.getLevel());
+		zombie.moveTo(absolute.getX() + 0.5, absolute.getY() + 1.0, absolute.getZ() + 0.5, 0, 0);
+		helper.getLevel().addFreshEntity(zombie);
+		float startingHealth = zombie.getHealth();
+
+		cast(ItemsTC.focusTrap.get(), caster);
+
+		helper.succeedWhen(() -> helper.assertTrue(zombie.getHealth() < startingHealth,
+				"the trap should have armed on the block and cursed the zombie waiting next to it, health=" + zombie.getHealth()));
 	}
 }

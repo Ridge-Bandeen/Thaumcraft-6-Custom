@@ -36,6 +36,7 @@ import thaumcraft.common.items.casters.foci.FocusEffectFlux;
 import thaumcraft.common.items.casters.foci.FocusEffectFrost;
 import thaumcraft.common.items.casters.foci.FocusEffectHeal;
 import thaumcraft.common.items.casters.foci.FocusMediumBolt;
+import thaumcraft.common.items.casters.foci.FocusMediumMine;
 import thaumcraft.common.items.casters.foci.FocusMediumProjectile;
 import thaumcraft.common.items.casters.foci.FocusMediumTouch;
 import thaumcraft.common.registry.ThaumcraftEntities;
@@ -89,6 +90,7 @@ public class Thaumcraft {
         FocusEngine.registerElement(FocusMediumProjectile.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/projectile.png"), 11382149);
         FocusEngine.registerElement(FocusEffectFlux.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/flux.png"), 8388736);
         FocusEngine.registerElement(FocusEffectAir.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/air.png"), 16777086);
+        FocusEngine.registerElement(FocusMediumMine.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/mine.png"), 8760709);
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {
