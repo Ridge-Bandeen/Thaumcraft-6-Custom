@@ -177,6 +177,12 @@ sourceSets {
             include 'thaumcraft/common/items/casters/ItemFocusEarth.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectEarth.java'
 
+            include 'thaumcraft/common/registry/ThaumcraftEntities.java'
+            include 'thaumcraft/common/entities/projectile/EntityFocusProjectile.java'
+            include 'thaumcraft/common/items/casters/foci/FocusMediumProjectile.java'
+            include 'thaumcraft/common/items/casters/ItemFocusFireball.java'
+            include 'thaumcraft/client/render/RenderFocusProjectile.java'
+
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
     }

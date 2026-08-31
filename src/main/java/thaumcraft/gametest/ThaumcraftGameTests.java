@@ -136,6 +136,7 @@ public class ThaumcraftGameTests {
 				"focus_heal", "focus_heal_crucible",
 				"focus_curse", "focus_curse_crucible",
 				"focus_earth", "focus_earth_crucible",
+				"focus_fireball", "focus_fireball_crucible",
 				"caster_basic", "thaumometer", "quicksilver_smelting"
 		};
 		for (String id : expectedIds) {
@@ -704,5 +705,37 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(pig.getHealth() < startingHealth, "casting Earth at the pig should have damaged it");
 		helper.succeed();
+	}
+
+	/**
+	 * Focus: Fireball - the wand's first entity-backed medium (see
+	 * {@link thaumcraft.common.entities.projectile.EntityFocusProjectile}'s doc comment). Unlike every
+	 * other cast test, the effect doesn't run synchronously with {@code cast()} - the projectile has to
+	 * actually fly there first, so this polls every tick via {@code succeedWhen} until the pig actually
+	 * takes damage or the test's own timeout (100 ticks by default) is hit, rather than guessing a fixed
+	 * delay.
+	 *
+	 * Aims at the pig's bounding-box center rather than its eye position, and at a shorter distance (2.5
+	 * blocks) than the other cast tests use - an interim diagnostic run showed the projectile actually
+	 * flying straight past a pig aimed-at-eye-height at the usual 3.5-block distance without registering a
+	 * hit. {@code ThrowableProjectile}'s own hit detection only inflates a target's hitbox by 0.3 blocks
+	 * (vanilla's default, {@code ProjectileUtil#getHitResultOnMoveVector}), much tighter than
+	 * {@code FocusMediumTouch}'s raytrace (1.0 block of search-box padding) - the same small aim offset
+	 * that Touch shrugs off is enough margin for a real, fast-moving projectile to clip past. This isn't a
+	 * bug worth chasing further: a real player firing an actual projectile at a barely-eye-level-aimed
+	 * target can genuinely miss the same way.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castFireballFocusFliesToAndBurnsATarget(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Pig pig = spawnPigFacedBy(helper, caster, origin, 2.5);
+		caster.lookAt(EntityAnchorArgument.Anchor.EYES, pig.getBoundingBox().getCenter());
+		float startingHealth = pig.getHealth();
+
+		cast(ItemsTC.focusFireball.get(), caster);
+
+		helper.succeedWhen(() -> helper.assertTrue(pig.getHealth() < startingHealth,
+				"the fireball should have flown to the pig and burned it by now, health=" + pig.getHealth() + " (was " + startingHealth + ")"));
 	}
 }

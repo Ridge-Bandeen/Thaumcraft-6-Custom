@@ -6,11 +6,14 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.resources.ResourceLocation;
 import thaumcraft.api.items.ItemsTC;
 import thaumcraft.client.gui.GuiArcaneWorkbench;
+import thaumcraft.client.render.RenderFocusProjectile;
+import thaumcraft.common.registry.ThaumcraftEntities;
 import thaumcraft.common.registry.ThaumcraftMenus;
 
 /**
@@ -37,5 +40,10 @@ public class ThaumcraftClient {
     @SubscribeEvent
     static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
         event.register(ThaumcraftMenus.ARCANE_WORKBENCH.get(), GuiArcaneWorkbench::new);
+    }
+
+    @SubscribeEvent
+    static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerEntityRenderer(ThaumcraftEntities.FOCUS_PROJECTILE.get(), RenderFocusProjectile::new);
     }
 }

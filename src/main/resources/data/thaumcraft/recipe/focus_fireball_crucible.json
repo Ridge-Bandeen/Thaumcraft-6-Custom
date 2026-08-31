@@ -1,0 +1,12 @@
+{
+  "type": "thaumcraft:crucible",
+  "research": "FIRSTSTEPS",
+  "catalyst": { "item": "minecraft:magma_cream" },
+  "aspects": {
+    "vitreus": 5,
+    "praecantatio": 3,
+    "motus": 3,
+    "ignis": 2
+  },
+  "result": { "id": "thaumcraft:focus_fireball" }
+}

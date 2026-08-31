@@ -53,5 +53,9 @@
   "thaumcraft.CURSE.name": "Curse",
 
   "item.thaumcraft.focus_earth": "Focus: Earth",
-  "thaumcraft.EARTH.name": "Earth"
+  "thaumcraft.EARTH.name": "Earth",
+
+  "item.thaumcraft.focus_fireball": "Focus: Fireball",
+  "thaumcraft.PROJECTILE.name": "Projectile",
+  "focus.projectile.speed": "Speed"
 }

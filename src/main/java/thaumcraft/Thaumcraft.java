@@ -34,7 +34,9 @@ import thaumcraft.common.items.casters.foci.FocusEffectFire;
 import thaumcraft.common.items.casters.foci.FocusEffectFrost;
 import thaumcraft.common.items.casters.foci.FocusEffectHeal;
 import thaumcraft.common.items.casters.foci.FocusMediumBolt;
+import thaumcraft.common.items.casters.foci.FocusMediumProjectile;
 import thaumcraft.common.items.casters.foci.FocusMediumTouch;
+import thaumcraft.common.registry.ThaumcraftEntities;
 
 /**
  * NeoForge 1.21.1 entry point.
@@ -66,6 +68,7 @@ public class Thaumcraft {
         ThaumcraftBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ThaumcraftMenus.MENUS.register(modEventBus);
         ThaumcraftCapabilities.ATTACHMENT_TYPES.register(modEventBus);
+        ThaumcraftEntities.ENTITY_TYPES.register(modEventBus);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
@@ -81,6 +84,7 @@ public class Thaumcraft {
         FocusEngine.registerElement(FocusEffectHeal.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/heal.png"), 14548997);
         FocusEngine.registerElement(FocusEffectCurse.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/curse.png"), 6946821);
         FocusEngine.registerElement(FocusEffectEarth.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/earth.png"), 5685248);
+        FocusEngine.registerElement(FocusMediumProjectile.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/projectile.png"), 11382149);
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {
