@@ -1,0 +1,15 @@
+{
+  "type": "thaumcraft:arcane_shaped",
+  "research": "FIRSTSTEPS",
+  "vis": 15,
+  "pattern": [
+    " I ",
+    "ISI",
+    " I "
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_pickaxe" },
+    "S": { "item": "minecraft:stick" }
+  },
+  "result": { "id": "thaumcraft:focus_break" }
+}

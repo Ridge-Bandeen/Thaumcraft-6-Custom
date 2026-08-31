@@ -161,6 +161,9 @@ sourceSets {
 
             include 'thaumcraft/common/items/casters/ItemFocusFrost.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectFrost.java'
+
+            include 'thaumcraft/common/items/casters/ItemFocusBreak.java'
+            include 'thaumcraft/common/items/casters/foci/FocusEffectBreak.java'
         }
     }
 }

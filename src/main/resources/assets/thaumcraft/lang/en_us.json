@@ -28,5 +28,13 @@
 
   "item.thaumcraft.focus_frost": "Focus: Frost",
   "thaumcraft.FROST.name": "Frost",
-  "focus.common.duration": "Duration"
+  "focus.common.duration": "Duration",
+
+  "item.thaumcraft.focus_break": "Focus: Excavation",
+  "thaumcraft.BREAK.name": "Excavation",
+  "focus.break.power": "Power",
+  "focus.common.fortune": "Fortune",
+  "focus.common.silk": "Silk Touch",
+  "focus.common.no": "No",
+  "focus.common.yes": "Yes"
 }
