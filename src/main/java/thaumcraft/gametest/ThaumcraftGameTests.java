@@ -16,19 +16,26 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import thaumcraft.Thaumcraft;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
+import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.api.capabilities.IPlayerKnowledge;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
 import thaumcraft.api.casters.FocusEngine;
 import thaumcraft.api.casters.FocusPackage;
 import thaumcraft.api.crafting.CrucibleRecipe;
+import thaumcraft.api.items.ItemGenericEssentiaContainer;
 import thaumcraft.api.items.ItemsTC;
 import thaumcraft.common.items.casters.ItemFocus;
+import thaumcraft.common.tiles.crafting.TileCrucible;
 import thaumcraft.common.world.aura.AuraHandler;
+
+import java.util.List;
 
 import java.util.Optional;
 
@@ -370,6 +377,82 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(pig.getHealth() < startingHealth, "casting Curse at the pig should have damaged it");
 		helper.assertTrue(pig.hasEffect(net.minecraft.world.effect.MobEffects.POISON),
 				"casting Curse at the pig should always apply poison (the other debuffs are only chance-based)");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// TileCrucible: places a real crucible block and drives it the way a player actually would (heat it,
+	// throw items in via attemptSmelt), rather than only exercising CrucibleRecipe#matches in isolation
+	// (crucibleRecipeMatching, above) - that covered the matching logic but never the tile itself:
+	// dissolving an essentia item into the aspect pool, and a completed recipe actually ejecting its
+	// result. GameTestHelper#setBlock/getBlockEntity take structure-relative positions (unlike entity
+	// spawning above, which needs absolute world positions) - see their own doc comments in
+	// GameTestHelper for why.
+	// --------------------------------------------------------------------------------------------------
+
+	private static TileCrucible placeActiveCrucible(GameTestHelper helper, BlockPos pos) {
+		helper.setBlock(pos, BlocksTC.crucible.get());
+		TileCrucible tile = helper.getBlockEntity(pos);
+		tile.hasWater = true;
+		tile.heat = 200; // above ACTIVE_HEAT (150) so isActive() is true without waiting on the tick-based heat-up
+		return tile;
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleDissolvesEssentiaItemsIntoItsAspectPool(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		TileCrucible crucible = placeActiveCrucible(helper, pos);
+
+		ItemStack crystal = new ItemStack(ItemsTC.crystalEssence.get(), 3);
+		((ItemGenericEssentiaContainer) crystal.getItem()).setAspects(crystal, new AspectList().add(Aspect.FIRE, 1));
+
+		ItemStack remainder = crucible.attemptSmelt(crystal, helper.getLevel());
+
+		helper.assertTrue(crucible.getAspects().getAmount(Aspect.FIRE) == 1, "dissolving one essentia item should add exactly its aspect amount to the pool, got "
+				+ crucible.getAspects().getAmount(Aspect.FIRE));
+		helper.assertTrue(remainder.getCount() == 2, "attemptSmelt should shrink the input stack by 1 per dissolved item, got count " + remainder.getCount());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleWithoutHeatOrWaterDoesNotDissolveAnything(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		helper.setBlock(pos, BlocksTC.crucible.get());
+		TileCrucible crucible = helper.getBlockEntity(pos);
+		// hasWater/heat left at their defaults (false/0) - isActive() should be false.
+
+		ItemStack crystal = new ItemStack(ItemsTC.crystalEssence.get(), 1);
+		((ItemGenericEssentiaContainer) crystal.getItem()).setAspects(crystal, new AspectList().add(Aspect.FIRE, 1));
+
+		ItemStack remainder = crucible.attemptSmelt(crystal, helper.getLevel());
+
+		helper.assertTrue(crucible.getAspects().size() == 0, "an inactive crucible (no heat/water) should not dissolve anything");
+		helper.assertTrue(remainder.getCount() == 1, "an inactive crucible should return the item untouched");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleCompletesARecipeAndEjectsTheResult(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		TileCrucible crucible = placeActiveCrucible(helper, pos);
+
+		// focus_1_crucible.json's requirement: quartz catalyst + vitreus 5 / praecantatio 3 / auram 2.
+		// Setting the pool directly rather than dissolving essentia items one at a time for this test -
+		// crucibleDissolvesEssentiaItemsIntoItsAspectPool already covers dissolving itself.
+		crucible.setAspects(new AspectList().add(Aspect.CRYSTAL, 5).add(Aspect.MAGIC, 3).add(Aspect.AURA, 2));
+
+		ItemStack catalyst = new ItemStack(Items.QUARTZ);
+		ItemStack remainder = crucible.attemptSmelt(catalyst, helper.getLevel());
+
+		helper.assertTrue(remainder.getCount() == 0, "the catalyst item should have been fully consumed (shrunk from 1 to 0)");
+		helper.assertTrue(crucible.getAspects().getAmount(Aspect.CRYSTAL) == 0, "a completed recipe should remove exactly the aspects it consumed");
+
+		BlockPos absolute = helper.absolutePos(pos);
+		List<ItemEntity> ejected = helper.getLevel()
+				.getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0));
+		boolean foundFocus = ejected.stream().anyMatch(e -> e.getItem().is(ItemsTC.focus1.get()));
+		helper.assertTrue(foundFocus, "completing focus_1_crucible should have ejected a thaumcraft:focus_1 item near the crucible, found: "
+				+ ejected.stream().map(e -> e.getItem().toString()).toList());
 		helper.succeed();
 	}
 }
