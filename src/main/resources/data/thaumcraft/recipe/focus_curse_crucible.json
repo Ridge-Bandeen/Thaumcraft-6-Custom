@@ -1,0 +1,11 @@
+{
+  "type": "thaumcraft:crucible",
+  "research": "FIRSTSTEPS",
+  "catalyst": { "item": "minecraft:fermented_spider_eye" },
+  "aspects": {
+    "vitreus": 5,
+    "praecantatio": 3,
+    "mortuus": 3
+  },
+  "result": { "id": "thaumcraft:focus_curse" }
+}

@@ -1,130 +1,115 @@
 package thaumcraft.common.items.casters.foci;
-import java.util.Iterator;
-import net.minecraft.client.particle.Particle;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.MobEffects;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.potion.PotionEffect;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.common.network.NetworkRegistry;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 import thaumcraft.api.aspects.Aspect;
-import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.api.casters.FocusEffect;
 import thaumcraft.api.casters.NodeSetting;
 import thaumcraft.api.casters.Trajectory;
-import thaumcraft.client.fx.ParticleEngine;
-import thaumcraft.client.fx.particles.FXGeneric;
-import thaumcraft.common.lib.network.PacketHandler;
-import thaumcraft.common.lib.network.fx.PacketFXBlockBamf;
 
+/**
+ * Replaces the old (1.12.2) {@code FocusEffectCurse}. Damages the target and stacks a cascade of debuffs
+ * on it (poison always, then slowness/weakness/mining fatigue/hunger/unluck each with decreasing odds -
+ * same probabilities and durations as the original). Field names changed under the hood:
+ * {@code MobEffects.SLOWNESS}/{@code MINING_FATIGUE} are {@link MobEffects#MOVEMENT_SLOWDOWN}/
+ * {@link MobEffects#DIG_SLOWDOWN} now, and {@code PotionEffect} is {@link MobEffectInstance} taking a
+ * {@code Holder<MobEffect>} instead of a raw {@code Potion}.
+ *
+ * Simplified: drops the original's block-hit branch (surrounding the impact point with
+ * {@code BlocksTC.effectSap}, a sticky-web trap block) entirely - that block isn't ported, and there's
+ * nothing sensible to fall back to. Only the entity-hit branch (damage + debuffs) exists here; a block hit
+ * is a no-op, same as every other focus in this package that only reacts to entities.
+ */
+public class FocusEffectCurse extends FocusEffect {
 
-public class FocusEffectCurse extends FocusEffect
-{
-    @Override
-    public String getResearch() {
-        return "FOCUSCURSE";
-    }
-    
-    @Override
-    public String getKey() {
-        return "thaumcraft.CURSE";
-    }
-    
-    @Override
-    public Aspect getAspect() {
-        return Aspect.DEATH;
-    }
-    
-    @Override
-    public int getComplexity() {
-        return getSettingValue("duration") + getSettingValue("power") * 3;
-    }
-    
-    @Override
-    public float getDamageForDisplay(float finalPower) {
-        return (1.0f + getSettingValue("power")) * finalPower;
-    }
-    
-    @Override
-    public boolean execute(RayTraceResult target, Trajectory trajectory, float finalPower, int num) {
-        PacketHandler.INSTANCE.sendToAllAround(new PacketFXBlockBamf(target.hitVec.x, target.hitVec.y, target.hitVec.z, 6946821, true, true, null), new NetworkRegistry.TargetPoint(getPackage().world.provider.getDimension(), target.hitVec.x, target.hitVec.y, target.hitVec.z, 64.0));
-        if (target.typeOfHit == RayTraceResult.Type.ENTITY && target.entityHit != null) {
-            float damage = getDamageForDisplay(finalPower);
-            int duration = 20 * getSettingValue("duration");
-            int eff = (int)(getSettingValue("power") * finalPower / 2.0f);
-            if (eff < 0) {
-                eff = 0;
-            }
-            target.entityHit.attackEntityFrom(DamageSource.causeIndirectMagicDamage((target.entityHit != null) ? target.entityHit : getPackage().getCaster(), getPackage().getCaster()), damage);
-            if (target.entityHit instanceof EntityLivingBase) {
-                ((EntityLivingBase)target.entityHit).addPotionEffect(new PotionEffect(MobEffects.POISON, duration, Math.round((float)eff)));
-                float c = 0.85f;
-                if (getPackage().world.rand.nextFloat() < c) {
-                    ((EntityLivingBase)target.entityHit).addPotionEffect(new PotionEffect(MobEffects.SLOWNESS, duration, Math.round((float)eff)));
-                    c -= 0.15f;
-                }
-                if (getPackage().world.rand.nextFloat() < c) {
-                    ((EntityLivingBase)target.entityHit).addPotionEffect(new PotionEffect(MobEffects.WEAKNESS, duration, Math.round((float)eff)));
-                    c -= 0.15f;
-                }
-                if (getPackage().world.rand.nextFloat() < c) {
-                    ((EntityLivingBase)target.entityHit).addPotionEffect(new PotionEffect(MobEffects.MINING_FATIGUE, duration * 2, Math.round((float)eff)));
-                    c -= 0.15f;
-                }
-                if (getPackage().world.rand.nextFloat() < c) {
-                    ((EntityLivingBase)target.entityHit).addPotionEffect(new PotionEffect(MobEffects.HUNGER, duration * 3, Math.round((float)eff)));
-                    c -= 0.15f;
-                }
-                if (getPackage().world.rand.nextFloat() < c) {
-                    ((EntityLivingBase)target.entityHit).addPotionEffect(new PotionEffect(MobEffects.UNLUCK, duration * 3, Math.round((float)eff)));
-                }
-            }
-        }
-        else if (target.typeOfHit == RayTraceResult.Type.BLOCK) {
-            float f = (float)Math.min(8.0, 1.5 * getSettingValue("power") * finalPower);
-            for (BlockPos.MutableBlockPos blockpos$mutableblockpos1 : BlockPos.getAllInBoxMutable(target.getBlockPos().add(-f, -f, -f), target.getBlockPos().add(f, f, f))) {
-                if (blockpos$mutableblockpos1.distanceSqToCenter(target.hitVec.x, target.hitVec.y, target.hitVec.z) <= f * f && getPackage().world.isAirBlock(blockpos$mutableblockpos1.up()) && getPackage().world.isBlockFullCube(blockpos$mutableblockpos1)) {
-                    getPackage().world.setBlockState(blockpos$mutableblockpos1.up(), BlocksTC.effectSap.getDefaultState());
-                }
-            }
-        }
-        return false;
-    }
-    
-    @Override
-    public NodeSetting[] createSettings() {
-        return new NodeSetting[] { new NodeSetting("power", "focus.common.power", new NodeSetting.NodeSettingIntRange(1, 5)), new NodeSetting("duration", "focus.common.duration", new NodeSetting.NodeSettingIntRange(1, 10)) };
-    }
-    
-    @SideOnly(Side.CLIENT)
-    @Override
-    public void renderParticleFX(World world, double posX, double posY, double posZ, double motionX, double motionY, double motionZ) {
-        FXGeneric fb = new FXGeneric(world, posX, posY, posZ, motionX, motionY, motionZ);
-        fb.setMaxAge(8);
-        fb.setRBGColorF(0.41f + world.rand.nextFloat() * 0.2f, 0.0f, 0.019f + world.rand.nextFloat() * 0.2f);
-        fb.setAlphaF(0.0f, world.rand.nextFloat(), world.rand.nextFloat(), world.rand.nextFloat(), 0.0f);
-        fb.setGridSize(16);
-        fb.setParticles(72 + world.rand.nextInt(4), 1, 1);
-        fb.setScale(2.0f + world.rand.nextFloat() * 4.0f);
-        fb.setLoop(false);
-        fb.setSlowDown(0.9);
-        fb.setGravity(0.0f);
-        fb.setRotationSpeed(world.rand.nextFloat(), 0.0f);
-        ParticleEngine.addEffectWithDelay(world, fb, world.rand.nextInt(4));
-    }
-    
-    @Override
-    public void onCast(Entity caster) {
-        caster.world.playSound(null, caster.getPosition().up(), SoundEvents.ENTITY_ELDER_GUARDIAN_CURSE, SoundCategory.PLAYERS, 0.15f, 1.0f + caster.getEntityWorld().rand.nextFloat() / 2.0f);
-    }
+	@Override
+	public String getResearch() {
+		return "FOCUSCURSE";
+	}
+
+	@Override
+	public String getKey() {
+		return "thaumcraft.CURSE";
+	}
+
+	@Override
+	public Aspect getAspect() {
+		return Aspect.DEATH;
+	}
+
+	@Override
+	public int getComplexity() {
+		return getSettingValue("duration") + getSettingValue("power") * 3;
+	}
+
+	@Override
+	public float getDamageForDisplay(float finalPower) {
+		return (1.0f + getSettingValue("power")) * finalPower;
+	}
+
+	@Override
+	public boolean execute(HitResult target, Trajectory trajectory, float finalPower, int num) {
+		Level level = getPackage().world;
+		if (level == null) return false;
+
+		if (!(target instanceof EntityHitResult entityHit) || !(entityHit.getEntity() instanceof LivingEntity living)) {
+			return false;
+		}
+
+		float damage = getDamageForDisplay(finalPower);
+		int duration = 20 * getSettingValue("duration");
+		int amplifier = Math.max(0, Math.round(getSettingValue("power") * finalPower / 2.0f));
+
+		Entity caster = getPackage().getCaster();
+		living.hurt(level.damageSources().indirectMagic(caster, caster), damage);
+
+		living.addEffect(new MobEffectInstance(MobEffects.POISON, duration, amplifier));
+		float chance = 0.85f;
+		if (level.random.nextFloat() < chance) {
+			living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, duration, amplifier));
+			chance -= 0.15f;
+		}
+		if (level.random.nextFloat() < chance) {
+			living.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, duration, amplifier));
+			chance -= 0.15f;
+		}
+		if (level.random.nextFloat() < chance) {
+			living.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, duration * 2, amplifier));
+			chance -= 0.15f;
+		}
+		if (level.random.nextFloat() < chance) {
+			living.addEffect(new MobEffectInstance(MobEffects.HUNGER, duration * 3, amplifier));
+			chance -= 0.15f;
+		}
+		if (level.random.nextFloat() < chance) {
+			living.addEffect(new MobEffectInstance(MobEffects.UNLUCK, duration * 3, amplifier));
+		}
+		return true;
+	}
+
+	@Override
+	public NodeSetting[] createSettings() {
+		return new NodeSetting[] {
+				new NodeSetting("power", "focus.common.power", new NodeSetting.NodeSettingIntRange(1, 5)),
+				new NodeSetting("duration", "focus.common.duration", new NodeSetting.NodeSettingIntRange(1, 10))
+		};
+	}
+
+	@Override
+	public void renderParticleFX(Level world, double posX, double posY, double posZ, double motionX, double motionY, double motionZ) {
+		// no-op for now - depends on the not-yet-ported client particle dispatcher (FXDispatcher)
+	}
+
+	@Override
+	public void onCast(Entity caster) {
+		caster.level().playSound(null, caster.blockPosition().above(), SoundEvents.ELDER_GUARDIAN_CURSE, SoundSource.PLAYERS, 0.15f,
+				1.0f + caster.level().random.nextFloat() / 2.0f);
+	}
 }

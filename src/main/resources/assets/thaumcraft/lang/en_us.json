@@ -47,5 +47,8 @@
 
   "block.thaumcraft.ore_quartz": "Quartz Ore",
   "block.thaumcraft.ore_cinnabar": "Cinnabar Ore",
-  "item.thaumcraft.quicksilver": "Quicksilver"
+  "item.thaumcraft.quicksilver": "Quicksilver",
+
+  "item.thaumcraft.focus_curse": "Focus: Curse",
+  "thaumcraft.CURSE.name": "Curse"
 }

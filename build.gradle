@@ -170,6 +170,9 @@ sourceSets {
 
             include 'thaumcraft/common/items/casters/ItemFocusHeal.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectHeal.java'
+
+            include 'thaumcraft/common/items/casters/ItemFocusCurse.java'
+            include 'thaumcraft/common/items/casters/foci/FocusEffectCurse.java'
         }
     }
 }
