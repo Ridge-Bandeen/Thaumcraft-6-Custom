@@ -100,6 +100,11 @@ public final class ItemsTC {
 	public static final DeferredItem<ItemCurio> curio =
 			ITEMS.registerItem("curio", ItemCurio::new);
 
+	/** Quicksilver's first real use - a reflective glass pane. Inert beyond that for now (the original's
+	 * hand mirror/scrying mirror/golem sight devices that consume it aren't ported). */
+	public static final DeferredItem<Item> mirroredGlass =
+			ITEMS.registerSimpleItem("mirrored_glass");
+
 	private ItemsTC() {
 	}
 }

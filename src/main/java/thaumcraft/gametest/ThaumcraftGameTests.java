@@ -144,7 +144,7 @@ public class ThaumcraftGameTests {
 				"focus_air", "focus_air_crucible",
 				"focus_trap", "focus_trap_crucible",
 				"focus_sanctuary", "focus_sanctuary_crucible",
-				"caster_basic", "thaumometer", "quicksilver_smelting"
+				"caster_basic", "thaumometer", "quicksilver_smelting", "mirrored_glass"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);

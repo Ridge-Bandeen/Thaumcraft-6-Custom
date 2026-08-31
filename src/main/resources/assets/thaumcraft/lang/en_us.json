@@ -86,5 +86,7 @@
   "tc.research_category.ARTIFICE": "Artifice",
   "tc.research_category.INFUSION": "Infusion",
   "tc.research_category.GOLEMANCY": "Golemancy",
-  "tc.research_category.ELDRITCH": "Eldritch"
+  "tc.research_category.ELDRITCH": "Eldritch",
+
+  "item.thaumcraft.mirrored_glass": "Mirrored Glass"
 }
