@@ -43,6 +43,14 @@ public final class BlocksTC {
 			Block::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0f).sound(SoundType.STONE).requiresCorrectToolForDrops());
 
+	/** Drops itself (smelts into quicksilver - see {@code data/thaumcraft/recipe/quicksilver_smelting.json}),
+	 * unlike quartz ore which drops a separate item - so its loot table is a plain self-drop, no fortune
+	 * scaling, matching the original {@code BlockOreTC.quantityDroppedWithBonus}'s rule that fortune only
+	 * applies when the dropped item differs from the block itself. */
+	public static final DeferredBlock<Block> oreCinnabar = BLOCKS.registerBlock("ore_cinnabar",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE).requiresCorrectToolForDrops());
+
 	private BlocksTC() {
 	}
 }

@@ -39,6 +39,12 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> oreQuartz =
 			ITEMS.registerSimpleBlockItem("ore_quartz", BlocksTC.oreQuartz);
 
+	public static final DeferredItem<BlockItem> oreCinnabar =
+			ITEMS.registerSimpleBlockItem("ore_cinnabar", BlocksTC.oreCinnabar);
+
+	public static final DeferredItem<Item> quicksilver =
+			ITEMS.registerSimpleItem("quicksilver");
+
 	public static final DeferredItem<ItemGenericEssentiaContainer> crystalEssence =
 			ITEMS.registerItem("crystal_essence", props -> new ItemGenericEssentiaContainer(props, 1));
 

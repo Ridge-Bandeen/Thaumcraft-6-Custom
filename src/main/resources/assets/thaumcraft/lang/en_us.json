@@ -45,5 +45,7 @@
   "thaumcraft.HEAL.name": "Heal",
   "focus.heal.power": "Power",
 
-  "block.thaumcraft.ore_quartz": "Quartz Ore"
+  "block.thaumcraft.ore_quartz": "Quartz Ore",
+  "block.thaumcraft.ore_cinnabar": "Cinnabar Ore",
+  "item.thaumcraft.quicksilver": "Quicksilver"
 }
