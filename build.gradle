@@ -233,6 +233,16 @@ neoForge {
             sourceSet(sourceSets.main)
         }
     }
+
+    // Runs src/test/java under the real bootstrapped game environment (registries, SharedConstants, etc.)
+    // via NeoForge's own "junit" run-type - pure JUnit tests for logic that GameTest's live-server-per-
+    // test overhead isn't worth for (Aspect/AspectList arithmetic, parsing, pure math). Run with
+    // `./gradlew test`. Complements, not replaces, thaumcraft.gametest.ThaumcraftGameTests - anything that
+    // needs a real Level/BlockEntity/player interaction still belongs there.
+    unitTest {
+        enable()
+        testedMod = mods.named(mod_id)
+    }
 }
 
 configurations {
@@ -242,6 +252,17 @@ configurations {
 dependencies {
     // Baubles has no NeoForge 1.21.1 port; the API surface it provided (curio-style equipment
     // slots) will need to be re-implemented, likely against Curios, once we get to that package.
+
+    // neoForge.unitTest.enable() wires up the game-environment bootstrap for `./gradlew test` (via
+    // NeoForge's "junit" run-type) but doesn't pull in JUnit Jupiter itself - that's still a normal
+    // Gradle test dependency.
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
