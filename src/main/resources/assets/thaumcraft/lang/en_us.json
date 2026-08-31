@@ -43,5 +43,7 @@
 
   "item.thaumcraft.focus_heal": "Focus: Heal",
   "thaumcraft.HEAL.name": "Heal",
-  "focus.heal.power": "Power"
+  "focus.heal.power": "Power",
+
+  "block.thaumcraft.ore_quartz": "Quartz Ore"
 }

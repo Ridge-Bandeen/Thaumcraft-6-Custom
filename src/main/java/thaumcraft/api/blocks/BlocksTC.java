@@ -1,5 +1,6 @@
 package thaumcraft.api.blocks;
 
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
@@ -28,6 +29,19 @@ public final class BlocksTC {
 	public static final DeferredBlock<BlockCrucible> crucible = BLOCKS.registerBlock("crucible",
 			BlockCrucible::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(3.0f).sound(SoundType.METAL).noOcclusion());
+
+	/**
+	 * First step into world generation - the original's overworld quartz ore variant. No custom Block
+	 * subclass needed (unlike {@code BlockOreTC}, which only special-cased amber's bonus curio drop and
+	 * variable quantities - neither of which apply to quartz); tool requirement (stone pickaxe) and drops
+	 * (vanilla quartz, fortune-scaled, self-dropping on silk touch) are both handled by data
+	 * (tags/loot table), matching this project's "full data-driven" preference. See
+	 * {@code data/thaumcraft/worldgen/**} and {@code data/thaumcraft/neoforge/biome_modifier/ore_quartz.json}
+	 * for the generation side.
+	 */
+	public static final DeferredBlock<Block> oreQuartz = BLOCKS.registerBlock("ore_quartz",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0f).sound(SoundType.STONE).requiresCorrectToolForDrops());
 
 	private BlocksTC() {
 	}
