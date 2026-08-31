@@ -57,5 +57,8 @@
 
   "item.thaumcraft.focus_fireball": "Focus: Fireball",
   "thaumcraft.PROJECTILE.name": "Projectile",
-  "focus.projectile.speed": "Speed"
+  "focus.projectile.speed": "Speed",
+
+  "item.thaumcraft.focus_flux": "Focus: Flux",
+  "thaumcraft.FLUX.name": "Flux"
 }

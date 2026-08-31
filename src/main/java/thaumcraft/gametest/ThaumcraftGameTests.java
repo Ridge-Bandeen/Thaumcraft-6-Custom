@@ -137,6 +137,7 @@ public class ThaumcraftGameTests {
 				"focus_curse", "focus_curse_crucible",
 				"focus_earth", "focus_earth_crucible",
 				"focus_fireball", "focus_fireball_crucible",
+				"focus_flux", "focus_flux_crucible",
 				"caster_basic", "thaumometer", "quicksilver_smelting"
 		};
 		for (String id : expectedIds) {
@@ -737,5 +738,18 @@ public class ThaumcraftGameTests {
 
 		helper.succeedWhen(() -> helper.assertTrue(pig.getHealth() < startingHealth,
 				"the fireball should have flown to the pig and burned it by now, health=" + pig.getHealth() + " (was " + startingHealth + ")"));
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castFluxFocusDamagesTarget(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Pig pig = spawnPigFacedBy(helper, caster, origin);
+		float startingHealth = pig.getHealth();
+
+		cast(ItemsTC.focusFlux.get(), caster);
+
+		helper.assertTrue(pig.getHealth() < startingHealth, "casting Flux at the pig should have damaged it");
+		helper.succeed();
 	}
 }

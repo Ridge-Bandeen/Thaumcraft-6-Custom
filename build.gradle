@@ -183,6 +183,9 @@ sourceSets {
             include 'thaumcraft/common/items/casters/ItemFocusFireball.java'
             include 'thaumcraft/client/render/RenderFocusProjectile.java'
 
+            include 'thaumcraft/common/items/casters/ItemFocusFlux.java'
+            include 'thaumcraft/common/items/casters/foci/FocusEffectFlux.java'
+
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
     }
