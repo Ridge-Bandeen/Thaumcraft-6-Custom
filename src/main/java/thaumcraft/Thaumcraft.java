@@ -24,6 +24,7 @@ import thaumcraft.common.registry.ThaumcraftMenus;
 import net.minecraft.resources.ResourceLocation;
 import thaumcraft.api.casters.FocusEngine;
 import thaumcraft.common.items.casters.foci.FocusEffectFire;
+import thaumcraft.common.items.casters.foci.FocusEffectFrost;
 import thaumcraft.common.items.casters.foci.FocusMediumTouch;
 
 /**
@@ -64,6 +65,7 @@ public class Thaumcraft {
         // DeferredRegister, matching the original 1.12.2 design.
         FocusEngine.registerElement(FocusMediumTouch.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/touch.png"), 11371909);
         FocusEngine.registerElement(FocusEffectFire.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/fire.png"), 16734721);
+        FocusEngine.registerElement(FocusEffectFrost.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/frost.png"), 14811135);
     }
 
     @SubscribeEvent

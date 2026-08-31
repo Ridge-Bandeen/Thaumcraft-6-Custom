@@ -158,6 +158,9 @@ sourceSets {
 
             include 'thaumcraft/common/blocks/crafting/BlockCrucible.java'
             include 'thaumcraft/common/tiles/crafting/TileCrucible.java'
+
+            include 'thaumcraft/common/items/casters/ItemFocusFrost.java'
+            include 'thaumcraft/common/items/casters/foci/FocusEffectFrost.java'
         }
     }
 }

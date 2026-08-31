@@ -24,5 +24,9 @@
   "focus.fire.burn": "Burn",
 
   "block.thaumcraft.crucible": "Crucible",
-  "item.thaumcraft.crystal_essence": "Crystal Essence"
+  "item.thaumcraft.crystal_essence": "Crystal Essence",
+
+  "item.thaumcraft.focus_frost": "Focus: Frost",
+  "thaumcraft.FROST.name": "Frost",
+  "focus.common.duration": "Duration"
 }

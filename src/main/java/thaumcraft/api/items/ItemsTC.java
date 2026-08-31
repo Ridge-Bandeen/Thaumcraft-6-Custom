@@ -7,6 +7,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.common.items.casters.ItemCaster;
 import thaumcraft.common.items.casters.ItemFocusFire;
+import thaumcraft.common.items.casters.ItemFocusFrost;
 
 /**
  * See {@link BlocksTC} for why this only has a couple of fields so far instead of the ~150 the original
@@ -34,6 +35,9 @@ public final class ItemsTC {
 
 	public static final DeferredItem<ItemGenericEssentiaContainer> crystalEssence =
 			ITEMS.registerItem("crystal_essence", props -> new ItemGenericEssentiaContainer(props, 1));
+
+	public static final DeferredItem<ItemFocusFrost> focusFrost =
+			ITEMS.registerItem("focus_frost", ItemFocusFrost::new);
 
 	private ItemsTC() {
 	}
