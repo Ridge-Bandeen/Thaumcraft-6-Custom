@@ -1,375 +1,252 @@
 package thaumcraft.common.tiles.crafting;
-import java.awt.Color;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.ITickable;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.fluids.FluidRegistry;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.FluidTank;
-import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.fluids.capability.IFluidTankProperties;
-import net.minecraftforge.fml.common.FMLCommonHandler;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+
+import java.util.Optional;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.AABB;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.aspects.IAspectContainer;
+import thaumcraft.api.aspects.IEssentiaContainerItem;
 import thaumcraft.api.aura.AuraHelper;
-import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.api.crafting.CrucibleRecipe;
-import thaumcraft.client.fx.FXDispatcher;
-import thaumcraft.common.container.InventoryFake;
-import thaumcraft.common.entities.EntitySpecialItem;
-import thaumcraft.common.lib.SoundsTC;
-import thaumcraft.common.lib.crafting.ThaumcraftCraftingManager;
-import thaumcraft.common.tiles.TileThaumcraft;
+import thaumcraft.api.crafting.CrucibleRecipeInput;
+import thaumcraft.api.crafting.ThaumcraftRecipeTypes;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
+import thaumcraft.common.world.aura.AuraHandler;
 
+/**
+ * Replaces the old (1.12.2) {@code TileCrucible}. Same core loop: heat up (lava/fire/magma below) with
+ * water in it, throw items in (by hand or by them colliding as dropped item entities), and either they
+ * dissolve into the crucible's aspect pool or - once the pool + catalyst match a recipe - get consumed to
+ * produce the result.
+ *
+ * Simplified for this pass (all real features, just not built yet):
+ * <ul>
+ * <li>No {@code IFluidHandler} capability - "has water" is a plain boolean set by right-clicking with a
+ * water bucket, not a real fluid tank other mods/pipes could interact with.</li>
+ * <li>Only items implementing {@link IEssentiaContainerItem} (crystal essence, etc.) dissolve into
+ * aspects. The original looked up aspects for *any* item via a global object-tag database
+ * ({@code ThaumcraftCraftingManager.getObjectTags}, backed by the still-deferred
+ * {@code AspectHelper}/{@code ThaumcraftApi.internalMethods} - see the port-tracking memory notes).</li>
+ * <li>No particle effects (bubbling, froth) or custom crucible sounds - both need the not-ported client FX
+ * dispatcher / sound registry.</li>
+ * <li>Collision shape is a plain approximation of the original's legs+walls, not an exact match.</li>
+ * </ul>
+ */
+public class TileCrucible extends BlockEntity implements IAspectContainer {
 
-public class TileCrucible extends TileThaumcraft implements ITickable, IFluidHandler, IAspectContainer
-{
-    public short heat;
-    public AspectList aspects;
-    public int maxTags = 500;
-    int bellows;
-    private int delay;
-    private long counter;
-    int prevcolor;
-    int prevx;
-    int prevy;
-    public FluidTank tank;
-    
-    public TileCrucible() {
-        aspects = new AspectList();
-        bellows = -1;
-        delay = 0;
-        counter = -100L;
-        prevcolor = 0;
-        prevx = 0;
-        prevy = 0;
-        tank = new FluidTank(FluidRegistry.WATER, 0, 1000);
-        heat = 0;
-    }
-    
-    @Override
-    public void readSyncNBT(NBTTagCompound nbttagcompound) {
-        heat = nbttagcompound.getShort("Heat");
-        tank.readFromNBT(nbttagcompound);
-        if (nbttagcompound.hasKey("Empty")) {
-            tank.setFluid(null);
-        }
-        aspects.readFromNBT(nbttagcompound);
-    }
-    
-    @Override
-    public NBTTagCompound writeSyncNBT(NBTTagCompound nbttagcompound) {
-        nbttagcompound.setShort("Heat", heat);
-        tank.writeToNBT(nbttagcompound);
-        aspects.writeToNBT(nbttagcompound);
-        return nbttagcompound;
-    }
-    
-    public void update() {
-        ++counter;
-        int prevheat = heat;
-        if (!world.isRemote) {
-            if (tank.getFluidAmount() > 0) {
-                IBlockState block = world.getBlockState(getPos().down());
-                if (block.getMaterial() == Material.LAVA || block.getMaterial() == Material.FIRE || BlocksTC.nitor.containsValue(block.getBlock()) || block.getBlock() == Blocks.MAGMA) {
-                    if (heat < 200) {
-                        ++heat;
-                        if (prevheat < 151 && heat >= 151) {
-                            markDirty();
-                            syncTile(false);
-                        }
-                    }
-                }
-                else if (heat > 0) {
-                    --heat;
-                    if (heat == 149) {
-                        markDirty();
-                        syncTile(false);
-                    }
-                }
-            }
-            else if (heat > 0) {
-                --heat;
-            }
-            if (aspects.visSize() > 500) {
-                spillRandom();
-            }
-            if (counter >= 100L) {
-                spillRandom();
-                counter = 0L;
-            }
-        }
-        else if (tank.getFluidAmount() > 0) {
-            drawEffects();
-        }
-        if (world.isRemote && prevheat < 151 && heat >= 151) {
-            ++heat;
-        }
-    }
-    
-    private void drawEffects() {
-        if (heat > 150) {
-            FXDispatcher.INSTANCE.crucibleFroth(pos.getX() + 0.2f + world.rand.nextFloat() * 0.6f, pos.getY() + getFluidHeight(), pos.getZ() + 0.2f + world.rand.nextFloat() * 0.6f);
-            if (aspects.visSize() > 500) {
-                for (int a = 0; a < 2; ++a) {
-                    FXDispatcher.INSTANCE.crucibleFrothDown((float) pos.getX(), (float)(pos.getY() + 1), pos.getZ() + world.rand.nextFloat());
-                    FXDispatcher.INSTANCE.crucibleFrothDown((float)(pos.getX() + 1), (float)(pos.getY() + 1), pos.getZ() + world.rand.nextFloat());
-                    FXDispatcher.INSTANCE.crucibleFrothDown(pos.getX() + world.rand.nextFloat(), (float)(pos.getY() + 1), (float) pos.getZ());
-                    FXDispatcher.INSTANCE.crucibleFrothDown(pos.getX() + world.rand.nextFloat(), (float)(pos.getY() + 1), (float)(pos.getZ() + 1));
-                }
-            }
-        }
-        if (world.rand.nextInt(6) == 0 && aspects.size() > 0) {
-            int color = aspects.getAspects()[world.rand.nextInt(aspects.size())].getColor() - 16777216;
-            int x = 5 + world.rand.nextInt(22);
-            int y = 5 + world.rand.nextInt(22);
-            delay = world.rand.nextInt(10);
-            prevcolor = color;
-            prevx = x;
-            prevy = y;
-            Color c = new Color(color);
-            float r = c.getRed() / 255.0f;
-            float g = c.getGreen() / 255.0f;
-            float b = c.getBlue() / 255.0f;
-            FXDispatcher.INSTANCE.crucibleBubble(pos.getX() + x / 32.0f + 0.015625f, pos.getY() + 0.05f + getFluidHeight(), pos.getZ() + y / 32.0f + 0.015625f, r, g, b);
-        }
-    }
-    
-    public void ejectItem(ItemStack items) {
-        boolean first = true;
-        do {
-            ItemStack spitout = items.copy();
-            if (spitout.getCount() > spitout.getMaxStackSize()) {
-                spitout.setCount(spitout.getMaxStackSize());
-            }
-            items.shrink(spitout.getCount());
-            EntitySpecialItem entityitem = new EntitySpecialItem(world, pos.getX() + 0.5f, pos.getY() + 0.71f, pos.getZ() + 0.5f, spitout);
-            entityitem.motionY = 0.07500000298023224;
-            entityitem.motionX = (first ? 0.0 : ((world.rand.nextFloat() - world.rand.nextFloat()) * 0.01f));
-            entityitem.motionZ = (first ? 0.0 : ((world.rand.nextFloat() - world.rand.nextFloat()) * 0.01f));
-            world.spawnEntity(entityitem);
-            first = false;
-        } while (items.getCount() > 0);
-    }
-    
-    public ItemStack attemptSmelt(ItemStack item, String username) {
-        boolean bubble = false;
-        boolean craftDone = false;
-        int stacksize = item.getCount();
-        EntityPlayer player = world.getPlayerEntityByName(username);
-        for (int a = 0; a < stacksize; ++a) {
-            CrucibleRecipe rc = ThaumcraftCraftingManager.findMatchingCrucibleRecipe(player, aspects, item);
-            if (rc != null && tank.getFluidAmount() > 0) {
-                ItemStack out = rc.getRecipeOutput().copy();
-                if (player != null) {
-                    FMLCommonHandler.instance().firePlayerCraftingEvent(player, out, new InventoryFake(item));
-                }
-                aspects = rc.removeMatching(aspects);
-                tank.drain(50, true);
-                ejectItem(out);
-                craftDone = true;
-                --stacksize;
-                counter = -250L;
-            }
-            else {
-                AspectList ot = ThaumcraftCraftingManager.getObjectTags(item);
-                if (ot != null) {
-                    if (ot.size() != 0) {
-                        for (Aspect tag : ot.getAspects()) {
-                            aspects.add(tag, ot.getAmount(tag));
-                        }
-                        bubble = true;
-                        --stacksize;
-                        counter = -150L;
-                    }
-                }
-            }
-        }
-        if (bubble) {
-            world.playSound(null, pos, SoundsTC.bubble, SoundCategory.BLOCKS, 0.2f, 1.0f + world.rand.nextFloat() * 0.4f);
-            syncTile(false);
-            world.addBlockEvent(pos, BlocksTC.crucible, 2, 1);
-        }
-        if (craftDone) {
-            syncTile(false);
-            world.addBlockEvent(pos, BlocksTC.crucible, 99, 0);
-        }
-        markDirty();
-        if (stacksize <= 0) {
-            return null;
-        }
-        item.setCount(stacksize);
-        return item;
-    }
-    
-    public void attemptSmelt(EntityItem entity) {
-        ItemStack item = entity.getItem();
-        NBTTagCompound itemData = entity.getEntityData();
-        String username = itemData.getString("thrower");
-        ItemStack res = attemptSmelt(item, username);
-        if (res == null || res.getCount() <= 0) {
-            entity.setDead();
-        }
-        else {
-            item.setCount(res.getCount());
-            entity.setItem(item);
-        }
-    }
-    
-    public float getFluidHeight() {
-        float base = 0.3f + 0.5f * (tank.getFluidAmount() / (float) tank.getCapacity());
-        float out = base + aspects.visSize() / 500.0f * (1.0f - base);
-        if (out > 1.0f) {
-            out = 1.001f;
-        }
-        if (out == 1.0f) {
-            out = 0.9999f;
-        }
-        return out;
-    }
-    
-    public void spillRandom() {
-        if (aspects.size() > 0) {
-            Aspect tag = aspects.getAspects()[world.rand.nextInt(aspects.getAspects().length)];
-            aspects.remove(tag, 1);
-            AuraHelper.polluteAura(world, getPos(), (tag == Aspect.FLUX) ? 1.0f : 0.25f, true);
-        }
-        markDirty();
-        syncTile(false);
-    }
-    
-    public void spillRemnants() {
-        int vs = aspects.visSize();
-        if (tank.getFluidAmount() > 0 || vs > 0) {
-            tank.setFluid(null);
-            AuraHelper.polluteAura(world, getPos(), vs * 0.25f, true);
-            int f = aspects.getAmount(Aspect.FLUX);
-            if (f > 0) {
-                AuraHelper.polluteAura(world, getPos(), f * 0.75f, false);
-            }
-            aspects = new AspectList();
-            world.addBlockEvent(pos, BlocksTC.crucible, 2, 5);
-            markDirty();
-            syncTile(false);
-        }
-    }
-    
-    public boolean receiveClientEvent(int i, int j) {
-        if (i == 99) {
-            if (world.isRemote) {
-                FXDispatcher.INSTANCE.drawBamf(pos.getX() + 0.5, pos.getY() + 1.25f, pos.getZ() + 0.5, true, true, EnumFacing.UP);
-                world.playSound(pos.getX() + 0.5f, pos.getY() + 0.5f, pos.getZ() + 0.5f, SoundsTC.spill, SoundCategory.BLOCKS, 0.2f, 1.0f, false);
-            }
-            return true;
-        }
-        if (i == 1) {
-            if (world.isRemote) {
-                FXDispatcher.INSTANCE.drawBamf(pos.up(), true, true, EnumFacing.UP);
-            }
-            return true;
-        }
-        if (i == 2) {
-            world.playSound(pos.getX() + 0.5f, pos.getY() + 0.5f, pos.getZ() + 0.5f, SoundsTC.spill, SoundCategory.BLOCKS, 0.2f, 1.0f, false);
-            if (world.isRemote) {
-                for (int q = 0; q < 10; ++q) {
-                    FXDispatcher.INSTANCE.crucibleBoil(pos, this, j);
-                }
-            }
-            return true;
-        }
-        return super.receiveClientEvent(i, j);
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public AxisAlignedBB getRenderBoundingBox() {
-        return new AxisAlignedBB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1);
-    }
-    
-    public AspectList getAspects() {
-        return aspects;
-    }
-    
-    public void setAspects(AspectList aspects) {
-    }
-    
-    public int addToContainer(Aspect tag, int amount) {
-        return 0;
-    }
-    
-    public boolean takeFromContainer(Aspect tag, int amount) {
-        return false;
-    }
-    
-    public boolean takeFromContainer(AspectList ot) {
-        return false;
-    }
-    
-    public boolean doesContainerContainAmount(Aspect tag, int amount) {
-        return false;
-    }
-    
-    public boolean doesContainerContain(AspectList ot) {
-        return false;
-    }
-    
-    public int containerContains(Aspect tag) {
-        return 0;
-    }
-    
-    public boolean doesContainerAccept(Aspect tag) {
-        return true;
-    }
-    
-    public boolean hasCapability(@Nonnull Capability<?> capability, @Nullable EnumFacing facing) {
-        return capability == CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY || super.hasCapability(capability, facing);
-    }
-    
-    @Nullable
-    public <T> T getCapability(@Nonnull Capability<T> capability, @Nullable EnumFacing facing) {
-        if (capability == CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY) {
-            return (T) tank;
-        }
-        return (T)super.getCapability((Capability)capability, facing);
-    }
-    
-    public IFluidTankProperties[] getTankProperties() {
-        return tank.getTankProperties();
-    }
-    
-    public int fill(FluidStack resource, boolean doFill) {
-        markDirty();
-        syncTile(false);
-        return tank.fill(resource, doFill);
-    }
-    
-    public FluidStack drain(FluidStack resource, boolean doDrain) {
-        FluidStack fs = tank.drain(resource, doDrain);
-        markDirty();
-        syncTile(false);
-        return fs;
-    }
-    
-    public FluidStack drain(int maxDrain, boolean doDrain) {
-        FluidStack fs = tank.drain(maxDrain, doDrain);
-        markDirty();
-        syncTile(false);
-        return fs;
-    }
+	public static final int MAX_ASPECTS = 500;
+	private static final int ACTIVE_HEAT = 150;
+	private static final int MAX_HEAT = 200;
+
+	public int heat;
+	public boolean hasWater;
+	public AspectList aspects = new AspectList();
+	private long idleTicks;
+
+	public TileCrucible(BlockPos pos, BlockState state) {
+		super(ThaumcraftBlockEntities.CRUCIBLE.get(), pos, state);
+	}
+
+	public boolean isActive() {
+		return hasWater && heat > ACTIVE_HEAT;
+	}
+
+	public static void tick(Level level, BlockPos pos, BlockState state, TileCrucible tile) {
+		tile.idleTicks++;
+		if (level.isClientSide) return;
+
+		if (tile.hasWater) {
+			BlockState below = level.getBlockState(pos.below());
+			boolean hot = below.is(net.minecraft.world.level.block.Blocks.LAVA) || below.is(net.minecraft.world.level.block.Blocks.FIRE)
+					|| below.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK) || below.is(net.minecraft.world.level.block.Blocks.SOUL_FIRE);
+			if (hot && tile.heat < MAX_HEAT) {
+				tile.heat++;
+				tile.setChanged();
+			} else if (!hot && tile.heat > 0) {
+				tile.heat--;
+				tile.setChanged();
+			}
+		} else if (tile.heat > 0) {
+			tile.heat--;
+		}
+
+		if (tile.aspects.visSize() > MAX_ASPECTS || tile.idleTicks >= 100) {
+			tile.spillRandom(level);
+			tile.idleTicks = 0;
+		}
+	}
+
+	/**
+	 * Feeds one item into the crucible - dissolves it into aspects, or if it completes a recipe, crafts
+	 * the result. Returns the (possibly shrunk) input stack.
+	 */
+	public ItemStack attemptSmelt(ItemStack item, Level level) {
+		if (!isActive() || item.isEmpty()) return item;
+
+		CrucibleRecipeInput input = new CrucibleRecipeInput(item, aspects);
+		Optional<RecipeHolder<CrucibleRecipe>> match = level.getRecipeManager().getRecipeFor(ThaumcraftRecipeTypes.CRUCIBLE_TYPE.get(), input, level);
+		if (match.isPresent()) {
+			CrucibleRecipe recipe = match.get().value();
+			ItemStack out = recipe.assemble(input, level.registryAccess());
+			aspects = recipe.removeMatching(aspects);
+			ejectItem(level, out);
+			item.shrink(1);
+			idleTicks = 0;
+			setChanged();
+			if (level instanceof ServerLevel serverLevel) {
+				serverLevel.playSound(null, worldPosition, SoundEvents.BREWING_STAND_BREW, SoundSource.BLOCKS, 0.6f, 1.2f);
+			}
+			return item;
+		}
+
+		if (item.getItem() instanceof IEssentiaContainerItem container) {
+			AspectList itemAspects = container.getAspects(item);
+			if (itemAspects != null && itemAspects.size() > 0) {
+				aspects.add(itemAspects);
+				item.shrink(1);
+				idleTicks = 0;
+				setChanged();
+				if (level instanceof ServerLevel serverLevel) {
+					serverLevel.playSound(null, worldPosition, SoundEvents.BREWING_STAND_BREW, SoundSource.BLOCKS, 0.2f, 1.6f);
+				}
+			}
+		}
+		return item;
+	}
+
+	public void tryConsume(ItemEntity itemEntity) {
+		ItemStack remaining = attemptSmelt(itemEntity.getItem(), itemEntity.level());
+		if (remaining.isEmpty()) {
+			itemEntity.discard();
+		} else {
+			itemEntity.setItem(remaining);
+		}
+	}
+
+	private void ejectItem(Level level, ItemStack stack) {
+		if (stack.isEmpty()) return;
+		ItemEntity out = new ItemEntity(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.71, worldPosition.getZ() + 0.5, stack);
+		out.setDeltaMovement(0, 0.075, 0);
+		level.addFreshEntity(out);
+	}
+
+	public void spillRandom(Level level) {
+		if (aspects.size() > 0) {
+			Aspect[] all = aspects.getAspects();
+			Aspect tag = all[level.getRandom().nextInt(all.length)];
+			aspects.remove(tag, 1);
+			AuraHandler.addFlux(level, worldPosition, tag == Aspect.FLUX ? 1.0f : 0.25f);
+			setChanged();
+		}
+	}
+
+	public void spillRemnants(Level level) {
+		int vis = aspects.visSize();
+		if (hasWater || vis > 0) {
+			hasWater = false;
+			heat = 0;
+			if (vis > 0) {
+				AuraHandler.addFlux(level, worldPosition, vis * 0.25f);
+				int flux = aspects.getAmount(Aspect.FLUX);
+				if (flux > 0) AuraHandler.addFlux(level, worldPosition, flux * 0.75f);
+			}
+			aspects = new AspectList();
+			level.playSound(null, worldPosition, SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 0.5f, 1.0f);
+			setChanged();
+		}
+	}
+
+	@Override
+	public AspectList getAspects() {
+		return aspects;
+	}
+
+	@Override
+	public void setAspects(AspectList aspects) {
+		this.aspects = aspects;
+	}
+
+	@Override
+	public boolean doesContainerAccept(Aspect tag) {
+		return true;
+	}
+
+	@Override
+	public int addToContainer(Aspect tag, int amount) {
+		aspects.add(tag, amount);
+		setChanged();
+		return 0;
+	}
+
+	@Override
+	public boolean takeFromContainer(Aspect tag, int amount) {
+		return aspects.reduce(tag, amount);
+	}
+
+	@Override
+	public boolean takeFromContainer(AspectList ot) {
+		return false;
+	}
+
+	@Override
+	public boolean doesContainerContainAmount(Aspect tag, int amount) {
+		return aspects.getAmount(tag) >= amount;
+	}
+
+	@Override
+	public boolean doesContainerContain(AspectList ot) {
+		return false;
+	}
+
+	@Override
+	public int containerContains(Aspect tag) {
+		return aspects.getAmount(tag);
+	}
+
+	public int getComparatorSignal() {
+		float ratio = aspects.visSize() / (float) MAX_ASPECTS;
+		return net.minecraft.util.Mth.floor(ratio * 14.0f) + (aspects.visSize() > 0 ? 1 : 0);
+	}
+
+	@Override
+	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.loadAdditional(tag, registries);
+		heat = tag.getInt("heat");
+		hasWater = tag.getBoolean("hasWater");
+		aspects.readFromNBT(tag);
+	}
+
+	@Override
+	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.saveAdditional(tag, registries);
+		tag.putInt("heat", heat);
+		tag.putBoolean("hasWater", hasWater);
+		aspects.writeToNBT(tag);
+	}
+
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
 }

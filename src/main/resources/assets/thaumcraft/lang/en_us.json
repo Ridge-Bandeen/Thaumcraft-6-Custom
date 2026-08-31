@@ -21,5 +21,8 @@
   "thaumcraft.TOUCH.name": "Touch",
   "thaumcraft.FIRE.name": "Fire",
   "focus.common.power": "Power",
-  "focus.fire.burn": "Burn"
+  "focus.fire.burn": "Burn",
+
+  "block.thaumcraft.crucible": "Crucible",
+  "item.thaumcraft.crystal_essence": "Crystal Essence"
 }

@@ -29,6 +29,12 @@ public final class ItemsTC {
 	public static final DeferredItem<ItemFocusFire> focus1 =
 			ITEMS.registerItem("focus_1", ItemFocusFire::new);
 
+	public static final DeferredItem<BlockItem> crucible =
+			ITEMS.registerSimpleBlockItem("crucible", BlocksTC.crucible);
+
+	public static final DeferredItem<ItemGenericEssentiaContainer> crystalEssence =
+			ITEMS.registerItem("crystal_essence", props -> new ItemGenericEssentiaContainer(props, 1));
+
 	private ItemsTC() {
 	}
 }

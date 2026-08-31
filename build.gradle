@@ -155,6 +155,9 @@ sourceSets {
 
             include 'thaumcraft/common/lib/research/PlayerKnowledge.java'
             include 'thaumcraft/common/lib/research/PlayerWarp.java'
+
+            include 'thaumcraft/common/blocks/crafting/BlockCrucible.java'
+            include 'thaumcraft/common/tiles/crafting/TileCrucible.java'
         }
     }
 }

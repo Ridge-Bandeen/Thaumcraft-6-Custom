@@ -1,0 +1,11 @@
+{
+  "type": "thaumcraft:crucible",
+  "research": "FIRSTSTEPS",
+  "catalyst": { "item": "minecraft:quartz" },
+  "aspects": {
+    "vitreus": 5,
+    "praecantatio": 3,
+    "auram": 2
+  },
+  "result": { "id": "thaumcraft:focus_1" }
+}

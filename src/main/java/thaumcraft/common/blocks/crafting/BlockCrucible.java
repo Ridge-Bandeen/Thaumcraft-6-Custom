@@ -1,182 +1,154 @@
 package thaumcraft.common.blocks.crafting;
-import java.util.List;
-import java.util.Random;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidRegistry;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.FluidUtil;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.api.casters.ICaster;
-import thaumcraft.common.blocks.BlockTCTile;
-import thaumcraft.common.entities.EntitySpecialItem;
+
+import javax.annotation.Nullable;
+
+import com.mojang.serialization.MapCodec;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.BooleanOp;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import thaumcraft.common.tiles.crafting.TileCrucible;
 
+/**
+ * Replaces the old (1.12.2) {@code BlockCrucible}. See {@link TileCrucible}'s doc for what's simplified
+ * this pass. Base class is vanilla {@code Block} directly ({@code BlockTCTile}, the original's shared base,
+ * isn't ported).
+ */
+public class BlockCrucible extends Block implements EntityBlock {
 
-public class BlockCrucible extends BlockTCTile
-{
-    private int delay;
-    protected static AxisAlignedBB AABB_LEGS;
-    protected static AxisAlignedBB AABB_WALL_NORTH;
-    protected static AxisAlignedBB AABB_WALL_SOUTH;
-    protected static AxisAlignedBB AABB_WALL_EAST;
-    protected static AxisAlignedBB AABB_WALL_WEST;
-    
-    public BlockCrucible() {
-        super(Material.IRON, TileCrucible.class, "crucible");
-        delay = 0;
-        setSoundType(SoundType.METAL);
-    }
-    
-    public void onEntityCollidedWithBlock(World world, BlockPos pos, IBlockState state, Entity entity) {
-        if (!world.isRemote) {
-            TileCrucible tile = (TileCrucible)world.getTileEntity(pos);
-            if (tile != null && entity instanceof EntityItem && !(entity instanceof EntitySpecialItem) && tile.heat > 150 && tile.tank.getFluidAmount() > 0) {
-                tile.attemptSmelt((EntityItem)entity);
-            }
-            else {
-                ++delay;
-                if (delay < 10) {
-                    return;
-                }
-                delay = 0;
-                if (entity instanceof EntityLivingBase && tile != null && tile.heat > 150 && tile.tank.getFluidAmount() > 0) {
-                    entity.attackEntityFrom(DamageSource.IN_FIRE, 1.0f);
-                    world.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, SoundEvents.BLOCK_LAVA_EXTINGUISH, SoundCategory.BLOCKS, 0.4f, 2.0f + world.rand.nextFloat() * 0.4f);
-                }
-            }
-        }
-        super.onEntityCollidedWithBlock(world, pos, state, entity);
-    }
-    
-    public void addCollisionBoxToList(IBlockState state, World worldIn, BlockPos pos, AxisAlignedBB AABB, List<AxisAlignedBB> list, Entity p_185477_6_, boolean isActualState) {
-        addCollisionBoxToList(pos, AABB, list, BlockCrucible.AABB_LEGS);
-        addCollisionBoxToList(pos, AABB, list, BlockCrucible.AABB_WALL_WEST);
-        addCollisionBoxToList(pos, AABB, list, BlockCrucible.AABB_WALL_NORTH);
-        addCollisionBoxToList(pos, AABB, list, BlockCrucible.AABB_WALL_EAST);
-        addCollisionBoxToList(pos, AABB, list, BlockCrucible.AABB_WALL_SOUTH);
-    }
-    
-    public AxisAlignedBB getBoundingBox(IBlockState state, IBlockAccess source, BlockPos pos) {
-        return BlockCrucible.FULL_BLOCK_AABB;
-    }
-    
-    public boolean isOpaqueCube(IBlockState state) {
-        return false;
-    }
-    
-    public boolean isFullCube(IBlockState state) {
-        return false;
-    }
-    
-    @Override
-    public void breakBlock(World worldIn, BlockPos pos, IBlockState state) {
-        TileEntity te = worldIn.getTileEntity(pos);
-        if (te != null && te instanceof TileCrucible) {
-            ((TileCrucible)te).spillRemnants();
-        }
-        super.breakBlock(worldIn, pos, state);
-    }
-    
-    public boolean onBlockActivated(World world, BlockPos pos, IBlockState state, EntityPlayer player, EnumHand hand, EnumFacing side, float hitX, float hitY, float hitZ) {
-        if (!world.isRemote) {
-            FluidStack fs = FluidUtil.getFluidContained(player.getHeldItem(hand));
-            if (fs != null) {
-                FluidStack fluidStack = fs;
-                Fluid water = FluidRegistry.WATER;
-                Fluid water2 = FluidRegistry.WATER;
-                if (fluidStack.containsFluid(new FluidStack(water, 1000))) {
-                    TileEntity te = world.getTileEntity(pos);
-                    if (te != null && te instanceof TileCrucible) {
-                        TileCrucible tile = (TileCrucible)te;
-                        if (tile.tank.getFluidAmount() < tile.tank.getCapacity()) {
-                            if (FluidUtil.interactWithFluidHandler(player, hand, tile.tank)) {
-                                player.inventoryContainer.detectAndSendChanges();
-                                te.markDirty();
-                                world.markAndNotifyBlock(pos, world.getChunkFromBlockCoords(pos), state, state, 3);
-                                world.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.BLOCKS, 0.33f, 1.0f + (world.rand.nextFloat() - world.rand.nextFloat()) * 0.3f);
-                            }
-                            return true;
-                        }
-                    }
-                    return super.onBlockActivated(world, pos, state, player, hand, side, hitX, hitY, hitZ);
-                }
-            }
-            if (!player.isSneaking() && !(player.getHeldItem(hand).getItem() instanceof ICaster) && side == EnumFacing.UP) {
-                TileEntity te = world.getTileEntity(pos);
-                if (te != null && te instanceof TileCrucible) {
-                    TileCrucible tile = (TileCrucible)te;
-                    ItemStack ti = player.getHeldItem(hand).copy();
-                    ti.setCount(1);
-                    if (tile.heat > 150 && tile.tank.getFluidAmount() > 0 && tile.attemptSmelt(ti, player.getName()) == null) {
-                        player.inventory.decrStackSize(player.inventory.currentItem, 1);
-                        return true;
-                    }
-                }
-            }
-            else if (player.getHeldItem(hand).isEmpty() && player.isSneaking()) {
-                TileEntity te = world.getTileEntity(pos);
-                if (te != null && te instanceof TileCrucible) {
-                    TileCrucible tile = (TileCrucible)te;
-                    tile.spillRemnants();
-                    return true;
-                }
-            }
-            return super.onBlockActivated(world, pos, state, player, hand, side, hitX, hitY, hitZ);
-        }
-        return true;
-    }
-    
-    public boolean hasComparatorInputOverride(IBlockState state) {
-        return true;
-    }
-    
-    public int getComparatorInputOverride(IBlockState state, World world, BlockPos pos) {
-        TileEntity te = world.getTileEntity(pos);
-        if (te != null && te instanceof TileCrucible) {
-            float n = (float)((TileCrucible)te).aspects.visSize();
-            te.getClass();
-            float r = n / 500.0f;
-            return MathHelper.floor(r * 14.0f) + ((((TileCrucible)te).aspects.visSize() > 0) ? 1 : 0);
-        }
-        return 0;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void randomDisplayTick(IBlockState state, World w, BlockPos pos, Random r) {
-        if (r.nextInt(10) == 0) {
-            TileEntity te = w.getTileEntity(pos);
-            if (te != null && te instanceof TileCrucible && ((TileCrucible)te).tank.getFluidAmount() > 0 && ((TileCrucible)te).heat > 150) {
-                w.playSound(pos.getX(), pos.getY(), pos.getZ(), SoundEvents.BLOCK_LAVA_POP, SoundCategory.BLOCKS, 0.1f + r.nextFloat() * 0.1f, 1.2f + r.nextFloat() * 0.2f, false);
-            }
-        }
-    }
-    
-    static {
-        AABB_LEGS = new AxisAlignedBB(0.0, 0.0, 0.0, 1.0, 0.3125, 1.0);
-        AABB_WALL_NORTH = new AxisAlignedBB(0.0, 0.0, 0.0, 1.0, 1.0, 0.125);
-        AABB_WALL_SOUTH = new AxisAlignedBB(0.0, 0.0, 0.875, 1.0, 1.0, 1.0);
-        AABB_WALL_EAST = new AxisAlignedBB(0.875, 0.0, 0.0, 1.0, 1.0, 1.0);
-        AABB_WALL_WEST = new AxisAlignedBB(0.0, 0.0, 0.0, 0.125, 1.0, 1.0);
-    }
+	public static final MapCodec<BlockCrucible> CODEC = simpleCodec(BlockCrucible::new);
+
+	private static final VoxelShape SHAPE = Shapes.or(
+			Shapes.box(0, 0, 0, 1, 0.3125, 1),
+			Shapes.box(0, 0, 0, 0.125, 1, 1),
+			Shapes.box(0.875, 0, 0, 1, 1, 1),
+			Shapes.box(0, 0, 0, 1, 1, 0.125),
+			Shapes.box(0, 0, 0.875, 1, 1, 1)
+	);
+
+	public BlockCrucible(BlockBehaviour.Properties properties) {
+		super(properties);
+	}
+
+	@Override
+	protected MapCodec<? extends Block> codec() {
+		return CODEC;
+	}
+
+	@Override
+	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		return SHAPE;
+	}
+
+	@Override
+	protected boolean useShapeForLightOcclusion(BlockState state) {
+		return true;
+	}
+
+	@Nullable
+	@Override
+	public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+		return new TileCrucible(pos, state);
+	}
+
+	@Nullable
+	@Override
+	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+		return type == thaumcraft.common.registry.ThaumcraftBlockEntities.CRUCIBLE.get()
+				? (lvl, pos, st, be) -> TileCrucible.tick(lvl, pos, st, (TileCrucible) be)
+				: null;
+	}
+
+	@Override
+	protected void entityInside(BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.Entity entity) {
+		if (!level.isClientSide && entity instanceof ItemEntity itemEntity
+				&& level.getBlockEntity(pos) instanceof TileCrucible tile && tile.isActive()) {
+			tile.tryConsume(itemEntity);
+		}
+	}
+
+	@Override
+	protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, net.minecraft.world.InteractionHand hand, BlockHitResult hitResult) {
+		if (level.isClientSide) return ItemInteractionResult.sidedSuccess(true);
+		if (!(level.getBlockEntity(pos) instanceof TileCrucible tile)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+
+		if (stack.is(Items.WATER_BUCKET) && !tile.hasWater) {
+			tile.hasWater = true;
+			tile.setChanged();
+			if (!player.getAbilities().instabuild) {
+				player.setItemInHand(hand, new ItemStack(Items.BUCKET));
+			}
+			level.playSound(null, pos, SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 0.5f, 1.0f);
+			return ItemInteractionResult.SUCCESS;
+		}
+
+		if (stack.is(Items.BUCKET) && tile.hasWater && tile.aspects.size() == 0) {
+			tile.hasWater = false;
+			tile.setChanged();
+			if (!player.getAbilities().instabuild) {
+				player.setItemInHand(hand, new ItemStack(Items.WATER_BUCKET));
+			}
+			level.playSound(null, pos, SoundEvents.BUCKET_FILL, SoundSource.BLOCKS, 0.5f, 1.0f);
+			return ItemInteractionResult.SUCCESS;
+		}
+
+		if (!stack.isEmpty() && hitResult.getDirection() == Direction.UP && tile.isActive()) {
+			ItemStack single = stack.copyWithCount(1);
+			ItemStack leftover = tile.attemptSmelt(single, level);
+			if (leftover.isEmpty()) {
+				stack.shrink(1);
+				return ItemInteractionResult.SUCCESS;
+			}
+		}
+
+		return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+	}
+
+	@Override
+	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+		if (!level.isClientSide && player.isCrouching() && level.getBlockEntity(pos) instanceof TileCrucible tile) {
+			tile.spillRemnants(level);
+			return InteractionResult.CONSUME;
+		}
+		return InteractionResult.PASS;
+	}
+
+	@Override
+	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+		if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TileCrucible tile) {
+			tile.spillRemnants(level);
+		}
+		super.onRemove(state, level, pos, newState, movedByPiston);
+	}
+
+	@Override
+	protected boolean hasAnalogOutputSignal(BlockState state) {
+		return true;
+	}
+
+	@Override
+	protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+		return level.getBlockEntity(pos) instanceof TileCrucible tile ? tile.getComparatorSignal() : 0;
+	}
 }

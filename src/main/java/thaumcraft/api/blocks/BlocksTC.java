@@ -6,6 +6,7 @@ import net.minecraft.world.level.material.MapColor;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.common.blocks.crafting.BlockArcaneWorkbench;
+import thaumcraft.common.blocks.crafting.BlockCrucible;
 
 /**
  * Registered block references, addon-facing the same way the old (1.12.2) {@code BlocksTC} was - fields
@@ -23,6 +24,10 @@ public final class BlocksTC {
 	public static final DeferredBlock<BlockArcaneWorkbench> arcaneWorkbench = BLOCKS.registerBlock("arcane_workbench",
 			BlockArcaneWorkbench::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD));
+
+	public static final DeferredBlock<BlockCrucible> crucible = BLOCKS.registerBlock("crucible",
+			BlockCrucible::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(3.0f).sound(SoundType.METAL).noOcclusion());
 
 	private BlocksTC() {
 	}
