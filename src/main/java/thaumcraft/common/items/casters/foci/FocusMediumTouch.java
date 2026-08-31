@@ -88,11 +88,16 @@ public class FocusMediumTouch extends FocusMedium {
 		Vec3 end = source.source.add(dir.scale(getRange()));
 
 		BlockHitResult blockHit = level.clip(new ClipContext(source.source, end, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, caster));
-		double blockDistance = blockHit.getType() != HitResult.Type.MISS ? blockHit.getLocation().distanceTo(source.source) : getRange();
+		// Squared, not linear: ProjectileUtil#getEntityHitResult's 6-arg overload (the one below) compares
+		// its "distance" cutoff against Vec3#distanceToSqr results internally (d1 < d0, both meant to be
+		// squared) - a real bug an end-to-end GameTest found in this port's own code, not a vanilla quirk.
+		// Passing a linear distance here (e.g. 5.0 for a 5-block range) made it reject any real target,
+		// since even a 3-block-away hit has a squared distance of 9.0 - always greater than a linear 5.0.
+		double blockDistanceSq = blockHit.getType() != HitResult.Type.MISS ? blockHit.getLocation().distanceToSqr(source.source) : getRange() * getRange();
 
 		AABB searchBox = caster.getBoundingBox().expandTowards(dir.scale(getRange())).inflate(1.0);
 		EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(caster, source.source, end, searchBox,
-				e -> !e.isSpectator() && e.isPickable() && e != caster, blockDistance);
+				e -> !e.isSpectator() && e.isPickable() && e != caster, blockDistanceSq);
 
 		if (entityHit != null) return entityHit;
 		return blockHit.getType() != HitResult.Type.MISS ? blockHit : null;

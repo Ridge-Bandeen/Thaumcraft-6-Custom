@@ -222,8 +222,21 @@ public class FocusPackage implements IFocusElement {
 		return fp;
 	}
 
+	/**
+	 * Real bug found by an end-to-end GameTest, not by playing the game: a {@code FocusPackage} built via
+	 * {@code ItemFocus#getPackage(ItemStack)} uses the no-arg constructor (never sets {@code caster}), and
+	 * neither {@code ItemCaster#use} nor this method used to set it either - only {@code getCasterUUID()}
+	 * relies on {@code caster} already being non-null to derive it, so {@link #getCaster()} silently
+	 * returned null down the whole real casting path, which every {@code FocusMedium}'s raytrace bails out
+	 * on ({@code if (level == null || caster == null) return null;}). Every "verified via runServer" check
+	 * this session only checked boot cleanliness (recipe counts, no crash) - none of them ever actually
+	 * cast a focus at a target, so this had been silently broken the whole time. Fixed by setting
+	 * {@code this.caster} here too - {@code initialize} is exactly the "wire this package up to a real
+	 * caster" step, so this is the natural, minimal fix.
+	 */
 	public void initialize(LivingEntity caster) {
 		world=caster.level();
+		this.caster = caster;
 		IFocusElement node = nodes.get(0);
 		if (node instanceof FocusMediumRoot && ((FocusMediumRoot)node).supplyTargets()==null) {
 			((FocusMediumRoot)node).setupFromCaster(caster);

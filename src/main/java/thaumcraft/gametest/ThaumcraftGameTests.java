@@ -1,10 +1,16 @@
 package thaumcraft.gametest;
 
+import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.animal.Pig;
+import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -17,7 +23,11 @@ import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.capabilities.IPlayerKnowledge;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
+import thaumcraft.api.casters.FocusEngine;
+import thaumcraft.api.casters.FocusPackage;
 import thaumcraft.api.crafting.CrucibleRecipe;
+import thaumcraft.api.items.ItemsTC;
+import thaumcraft.common.items.casters.ItemFocus;
 import thaumcraft.common.world.aura.AuraHandler;
 
 import java.util.Optional;
@@ -238,6 +248,128 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(AuraHandler.shouldPreserveAura(level, player, pos),
 				"a player who knows AURAPRESERVE should trigger preservation at low vis");
 
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// End-to-end wand casting: spawns a mock player and a zombie in front of them, then reproduces exactly
+	// what ItemCaster#use does (focus.getPackage(stack) -> core.initialize(caster) ->
+	// FocusEngine.castFocusPackage(caster, core, true)) rather than calling a FocusEffect's execute method
+	// directly - this exercises the real medium-raytrace-to-effect pipeline (Root -> Touch -> effect), not
+	// just the effect's own logic in isolation. Every prior GameTest/JUnit test for the foci this session
+	// tested logic in isolation (CrucibleRecipe matching, aspect math); these are the first to prove the
+	// whole cast chain actually connects a real caster to a real target - which, on the first attempt at
+	// writing this, it didn't: see FocusPackage#initialize's doc comment for the real bug this test found
+	// (getCaster() silently returning null down the whole cast path). Aiming uses Entity#lookAt to rotate
+	// the mock player toward the target, same as a real player would turn to face something before casting.
+	// --------------------------------------------------------------------------------------------------
+
+	@SuppressWarnings("removal")
+	private static ServerPlayer spawnCasterAt(GameTestHelper helper, BlockPos origin) {
+		ServerPlayer caster = helper.makeMockServerPlayerInLevel();
+		caster.setPos(origin.getX() + 0.5, origin.getY() + 1.0, origin.getZ() + 0.5);
+		return caster;
+	}
+
+	private static Zombie spawnZombieFacedBy(GameTestHelper helper, ServerPlayer caster, BlockPos origin) {
+		return spawnFacedBy(helper, caster, origin, EntityType.ZOMBIE);
+	}
+
+	/**
+	 * Living-but-not-undead target, for the two effects that treat undead specially: Heal (heals the
+	 * living, hurts the undead - a zombie here would test the wrong branch) and Curse's poison (vanilla
+	 * itself makes undead mobs immune to poison, so a zombie would never show the effect regardless of
+	 * whether the focus applied it correctly).
+	 */
+	private static Pig spawnPigFacedBy(GameTestHelper helper, ServerPlayer caster, BlockPos origin) {
+		return spawnFacedBy(helper, caster, origin, EntityType.PIG);
+	}
+
+	private static <T extends Mob> T spawnFacedBy(GameTestHelper helper, ServerPlayer caster, BlockPos origin, EntityType<T> type) {
+		ServerLevel level = helper.getLevel();
+		T mob = type.create(level);
+		mob.moveTo(origin.getX() + 0.5, origin.getY() + 1.0, origin.getZ() + 3.5, 0, 0);
+		level.addFreshEntity(mob);
+		caster.lookAt(EntityAnchorArgument.Anchor.EYES, mob.getEyePosition());
+		return mob;
+	}
+
+	private static void cast(ItemFocus focusItem, ServerPlayer caster) {
+		ItemStack focusStack = new ItemStack(focusItem);
+		FocusPackage core = focusItem.getPackage(focusStack);
+		core.initialize(caster);
+		FocusEngine.castFocusPackage(caster, core, true);
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castFireFocusDamagesAndIgnitesTarget(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Zombie zombie = spawnZombieFacedBy(helper, caster, origin);
+		float startingHealth = zombie.getHealth();
+
+		cast(ItemsTC.focus1.get(), caster);
+
+		helper.assertTrue(zombie.getHealth() < startingHealth, "casting Fire at the zombie should have damaged it");
+		helper.assertTrue(zombie.getRemainingFireTicks() > 0, "casting Fire at the zombie should have ignited it");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castFrostFocusDamagesAndSlowsTarget(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Zombie zombie = spawnZombieFacedBy(helper, caster, origin);
+		float startingHealth = zombie.getHealth();
+
+		cast(ItemsTC.focusFrost.get(), caster);
+
+		helper.assertTrue(zombie.getHealth() < startingHealth, "casting Frost at the zombie should have damaged it");
+		helper.assertTrue(zombie.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN),
+				"casting Frost at the zombie should have applied a slowness effect");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castHealFocusHealsALivingTarget(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Pig pig = spawnPigFacedBy(helper, caster, origin);
+		pig.setHealth(1.0f);
+
+		cast(ItemsTC.focusHeal.get(), caster);
+
+		helper.assertTrue(pig.getHealth() > 1.0f, "casting Heal at a damaged living target should have healed it");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castHealFocusHurtsAnUndeadTarget(GameTestHelper helper) {
+		// The other half of FocusEffectHeal's "heals the living, hurts the undead" design - a zombie is
+		// exactly the case castHealFocusHealsALivingTarget deliberately avoids.
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Zombie zombie = spawnZombieFacedBy(helper, caster, origin);
+		float startingHealth = zombie.getHealth();
+
+		cast(ItemsTC.focusHeal.get(), caster);
+
+		helper.assertTrue(zombie.getHealth() < startingHealth, "casting Heal at an undead target should have hurt it instead of healing it");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castCurseFocusDamagesAndAppliesPoison(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Pig pig = spawnPigFacedBy(helper, caster, origin);
+		float startingHealth = pig.getHealth();
+
+		cast(ItemsTC.focusCurse.get(), caster);
+
+		helper.assertTrue(pig.getHealth() < startingHealth, "casting Curse at the pig should have damaged it");
+		helper.assertTrue(pig.hasEffect(net.minecraft.world.effect.MobEffects.POISON),
+				"casting Curse at the pig should always apply poison (the other debuffs are only chance-based)");
 		helper.succeed();
 	}
 }
