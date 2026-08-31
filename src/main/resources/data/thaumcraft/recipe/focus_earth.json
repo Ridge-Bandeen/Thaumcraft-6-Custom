@@ -1,0 +1,15 @@
+{
+  "type": "thaumcraft:arcane_shaped",
+  "research": "FIRSTSTEPS",
+  "vis": 15,
+  "pattern": [
+    " D ",
+    "DID",
+    " D "
+  ],
+  "key": {
+    "D": { "item": "minecraft:dirt" },
+    "I": { "item": "minecraft:iron_ingot" }
+  },
+  "result": { "id": "thaumcraft:focus_earth" }
+}

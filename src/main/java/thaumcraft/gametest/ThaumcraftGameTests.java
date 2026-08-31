@@ -135,6 +135,7 @@ public class ThaumcraftGameTests {
 				"focus_fire_bolt", "focus_fire_bolt_crucible",
 				"focus_heal", "focus_heal_crucible",
 				"focus_curse", "focus_curse_crucible",
+				"focus_earth", "focus_earth_crucible",
 				"caster_basic", "thaumometer", "quicksilver_smelting"
 		};
 		for (String id : expectedIds) {
@@ -690,5 +691,18 @@ public class ThaumcraftGameTests {
 			helper.assertTrue(dropped.isRemoved(), "the consumed item entity should have been removed");
 			helper.succeed();
 		});
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castEarthFocusDamagesTarget(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Pig pig = spawnPigFacedBy(helper, caster, origin);
+		float startingHealth = pig.getHealth();
+
+		cast(ItemsTC.focusEarth.get(), caster);
+
+		helper.assertTrue(pig.getHealth() < startingHealth, "casting Earth at the pig should have damaged it");
+		helper.succeed();
 	}
 }

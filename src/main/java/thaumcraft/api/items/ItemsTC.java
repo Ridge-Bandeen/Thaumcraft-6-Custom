@@ -8,6 +8,7 @@ import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.common.items.casters.ItemCaster;
 import thaumcraft.common.items.casters.ItemFocusBreak;
 import thaumcraft.common.items.casters.ItemFocusCurse;
+import thaumcraft.common.items.casters.ItemFocusEarth;
 import thaumcraft.common.items.casters.ItemFocusFire;
 import thaumcraft.common.items.casters.ItemFocusFireBolt;
 import thaumcraft.common.items.casters.ItemFocusFrost;
@@ -63,6 +64,9 @@ public final class ItemsTC {
 
 	public static final DeferredItem<ItemFocusCurse> focusCurse =
 			ITEMS.registerItem("focus_curse", ItemFocusCurse::new);
+
+	public static final DeferredItem<ItemFocusEarth> focusEarth =
+			ITEMS.registerItem("focus_earth", ItemFocusEarth::new);
 
 	private ItemsTC() {
 	}

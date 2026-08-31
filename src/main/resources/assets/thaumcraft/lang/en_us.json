@@ -50,5 +50,8 @@
   "item.thaumcraft.quicksilver": "Quicksilver",
 
   "item.thaumcraft.focus_curse": "Focus: Curse",
-  "thaumcraft.CURSE.name": "Curse"
+  "thaumcraft.CURSE.name": "Curse",
+
+  "item.thaumcraft.focus_earth": "Focus: Earth",
+  "thaumcraft.EARTH.name": "Earth"
 }
