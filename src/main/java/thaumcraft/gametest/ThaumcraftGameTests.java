@@ -18,7 +18,9 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import thaumcraft.Thaumcraft;
 import thaumcraft.api.aspects.Aspect;
@@ -453,6 +455,67 @@ public class ThaumcraftGameTests {
 		boolean foundFocus = ejected.stream().anyMatch(e -> e.getItem().is(ItemsTC.focus1.get()));
 		helper.assertTrue(foundFocus, "completing focus_1_crucible should have ejected a thaumcraft:focus_1 item near the crucible, found: "
 				+ ejected.stream().map(e -> e.getItem().toString()).toList());
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Focus: Excavation - casts at a real placed block rather than a target entity (a BlockHitResult path
+	// through the exact same Touch-medium raytrace the entity-targeting tests exercise), covering
+	// FocusEffectBreak#execute's actual early-return conditions (hardness-too-high, unbreakable) alongside
+	// the successful-break/real-loot-drop case, not just the successful case alone.
+	// --------------------------------------------------------------------------------------------------
+
+	private static BlockPos placeTargetBlock(GameTestHelper helper, ServerPlayer caster, net.minecraft.world.level.block.Block block) {
+		BlockPos relPos = new BlockPos(0, 1, 3);
+		helper.setBlock(relPos, block);
+		BlockPos absolute = helper.absolutePos(relPos);
+		caster.lookAt(EntityAnchorArgument.Anchor.EYES, Vec3.atCenterOf(absolute));
+		return relPos;
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castExcavationFocusBreaksAStoneBlockAndDropsRealLoot(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		BlockPos relPos = placeTargetBlock(helper, caster, Blocks.STONE);
+
+		cast(ItemsTC.focusBreak.get(), caster);
+
+		helper.assertTrue(helper.getBlockState(relPos).isAir(), "casting Excavation at a stone block (hardness 1.5, well under the default power's threshold) should have broken it");
+
+		BlockPos absolute = helper.absolutePos(relPos);
+		List<ItemEntity> dropped = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0));
+		boolean foundCobblestone = dropped.stream().anyMatch(e -> e.getItem().is(Blocks.COBBLESTONE.asItem()));
+		helper.assertTrue(foundCobblestone, "breaking stone should have dropped real cobblestone via the block's actual loot table, found: "
+				+ dropped.stream().map(e -> e.getItem().toString()).toList());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castExcavationFocusRefusesABlockHarderThanItsPowerAllows(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		// Obsidian's hardness (50) is far past what the default power setting (1) allows (hardness > power
+		// * 2.0f is rejected, i.e. anything over 2.0 here).
+		BlockPos relPos = placeTargetBlock(helper, caster, Blocks.OBSIDIAN);
+
+		cast(ItemsTC.focusBreak.get(), caster);
+
+		helper.assertFalse(helper.getBlockState(relPos).isAir(), "casting Excavation at a block far harder than the focus's power should not have broken it");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castExcavationFocusNeverBreaksAnUnbreakableBlock(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		// Bedrock's hardness is -1 (unbreakable) - execute()'s first check (hardness < 0) rejects it
+		// unconditionally, regardless of power.
+		BlockPos relPos = placeTargetBlock(helper, caster, Blocks.BEDROCK);
+
+		cast(ItemsTC.focusBreak.get(), caster);
+
+		helper.assertFalse(helper.getBlockState(relPos).isAir(), "casting Excavation at bedrock should never break it, no matter the power setting");
 		helper.succeed();
 	}
 }
