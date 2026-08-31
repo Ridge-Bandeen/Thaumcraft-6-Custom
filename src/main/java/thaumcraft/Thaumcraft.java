@@ -28,6 +28,7 @@ import thaumcraft.api.casters.FocusEngine;
 import thaumcraft.common.items.casters.foci.FocusEffectBreak;
 import thaumcraft.common.items.casters.foci.FocusEffectFire;
 import thaumcraft.common.items.casters.foci.FocusEffectFrost;
+import thaumcraft.common.items.casters.foci.FocusMediumBolt;
 import thaumcraft.common.items.casters.foci.FocusMediumTouch;
 
 /**
@@ -70,6 +71,7 @@ public class Thaumcraft {
         FocusEngine.registerElement(FocusEffectFire.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/fire.png"), 16734721);
         FocusEngine.registerElement(FocusEffectFrost.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/frost.png"), 14811135);
         FocusEngine.registerElement(FocusEffectBreak.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/break.png"), 9063176);
+        FocusEngine.registerElement(FocusMediumBolt.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/bolt.png"), 11377029);
     }
 
     @SubscribeEvent

@@ -36,5 +36,8 @@
   "focus.common.fortune": "Fortune",
   "focus.common.silk": "Silk Touch",
   "focus.common.no": "No",
-  "focus.common.yes": "Yes"
+  "focus.common.yes": "Yes",
+
+  "item.thaumcraft.focus_fire_bolt": "Focus: Fire Bolt",
+  "thaumcraft.BOLT.name": "Bolt"
 }
