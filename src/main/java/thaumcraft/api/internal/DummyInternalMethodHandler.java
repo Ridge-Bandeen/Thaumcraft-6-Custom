@@ -1,8 +1,10 @@
 package thaumcraft.api.internal;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.capabilities.IPlayerKnowledge.EnumKnowledgeType;
 import thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType;
@@ -12,143 +14,115 @@ import thaumcraft.api.golems.seals.SealPos;
 import thaumcraft.api.golems.tasks.Task;
 import thaumcraft.api.research.ResearchCategory;
 
-
+/**
+ * Replaces the old (1.12.2) {@code DummyInternalMethodHandler} - the do-nothing default
+ * {@code ThaumcraftApi.internalMethods} starts as, before {@code Thaumcraft}'s own real
+ * {@code ThaumcraftInternalMethodHandler} replaces it during mod construction.
+ */
 public class DummyInternalMethodHandler implements IInternalMethodHandler {
-	
+
 	@Override
-	public boolean completeResearch(EntityPlayer player, String researchkey) {
-		// TODO Auto-generated method stub
+	public boolean completeResearch(Player player, String researchkey) {
 		return false;
 	}
 
 	@Override
-	public void addWarpToPlayer(EntityPlayer player, int amount, EnumWarpType type) {
-		// TODO Auto-generated method stub
-		
+	public void addWarpToPlayer(Player player, int amount, EnumWarpType type) {
 	}
 
 	@Override
 	public AspectList getObjectAspects(ItemStack is) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public AspectList generateTags(ItemStack is) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public float drainVis(World world, BlockPos pos, float amount, boolean simulate) {
-		// TODO Auto-generated method stub
+	public float drainVis(Level level, BlockPos pos, float amount, boolean simulate) {
 		return 0;
 	}
 
 	@Override
-	public float drainFlux(World world, BlockPos pos, float amount, boolean simulate) {
-		// TODO Auto-generated method stub
+	public float drainFlux(Level level, BlockPos pos, float amount, boolean simulate) {
 		return 0;
 	}
 
 	@Override
-	public void addVis(World world, BlockPos pos, float amount) {
-		// TODO Auto-generated method stub
-		
+	public void addVis(Level level, BlockPos pos, float amount) {
 	}
 
 	@Override
-	public void addFlux(World world, BlockPos pos, float amount, boolean showEffect) {
-		// TODO Auto-generated method stub
-		
+	public void addFlux(Level level, BlockPos pos, float amount, boolean showEffect) {
 	}
 
 	@Override
-	public float getTotalAura(World world, BlockPos pos) {
-		// TODO Auto-generated method stub
+	public float getTotalAura(Level level, BlockPos pos) {
 		return 0;
 	}
 
 	@Override
-	public float getVis(World world, BlockPos pos) {
-		// TODO Auto-generated method stub
+	public float getVis(Level level, BlockPos pos) {
 		return 0;
 	}
 
 	@Override
-	public float getFlux(World world, BlockPos pos) {
-		// TODO Auto-generated method stub
+	public float getFlux(Level level, BlockPos pos) {
 		return 0;
 	}
 
 	@Override
-	public int getAuraBase(World world, BlockPos pos) {
-		// TODO Auto-generated method stub
+	public int getAuraBase(Level level, BlockPos pos) {
 		return 0;
 	}
 
 	@Override
 	public void registerSeal(ISeal seal) {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public ISeal getSeal(String key) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public ISealEntity getSealEntity(int dim, SealPos pos) {
-		// TODO Auto-generated method stub
+	public ISealEntity getSealEntity(ResourceKey<Level> dim, SealPos pos) {
 		return null;
 	}
 
 	@Override
-	public void addGolemTask(int dim, Task task) {
-		// TODO Auto-generated method stub
-		
+	public void addGolemTask(ResourceKey<Level> dim, Task task) {
 	}
 
 	@Override
-	public boolean shouldPreserveAura(World world, EntityPlayer player,
-			BlockPos pos) {
-		// TODO Auto-generated method stub
+	public boolean shouldPreserveAura(Level level, Player player, BlockPos pos) {
 		return false;
 	}
 
 	@Override
 	public ItemStack getSealStack(String key) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public boolean doesPlayerHaveRequisites(EntityPlayer player, String researchkey) {
-		// TODO Auto-generated method stub
+	public boolean doesPlayerHaveRequisites(Player player, String researchkey) {
 		return false;
 	}
 
 	@Override
-	public boolean addKnowledge(EntityPlayer player, EnumKnowledgeType type, ResearchCategory field, int amount) {
-		// TODO Auto-generated method stub
+	public boolean addKnowledge(Player player, EnumKnowledgeType type, ResearchCategory field, int amount) {
 		return false;
 	}
 
 	@Override
-	public boolean progressResearch(EntityPlayer player, String researchkey) {
-		// TODO Auto-generated method stub
+	public boolean progressResearch(Player player, String researchkey) {
 		return false;
 	}
 
 	@Override
-	public int getActualWarp(EntityPlayer player) {
-		// TODO Auto-generated method stub
+	public int getActualWarp(Player player) {
 		return 0;
 	}
-
-	
-
-	
 }

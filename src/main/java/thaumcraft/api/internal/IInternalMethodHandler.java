@@ -1,8 +1,10 @@
 package thaumcraft.api.internal;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.capabilities.IPlayerKnowledge.EnumKnowledgeType;
 import thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType;
@@ -12,121 +14,86 @@ import thaumcraft.api.golems.seals.SealPos;
 import thaumcraft.api.golems.tasks.Task;
 import thaumcraft.api.research.ResearchCategory;
 
-
 /**
- * 
- * @author Azanor
+ * Replaces the old (1.12.2) {@code IInternalMethodHandler} - the interface {@code ThaumcraftApi.internalMethods}
+ * is typed as, and the whole reason {@code AuraHelper}/{@code GolemHelper} stayed stubs for most of this
+ * port ("designed as a thin pass-through to {@code ThaumcraftApi.internalMethods}, an indirection layer
+ * purely so the API package wouldn't need to reference {@code thaumcraft.common}" - see those classes'
+ * own doc comments).
  *
- * @see IInternalMethodHandler#addKnowledge
- * @see IInternalMethodHandler#progressResearch
- * @see IInternalMethodHandler#completeResearch
- * @see IInternalMethodHandler#doesPlayerHaveRequisites
- * @see IInternalMethodHandler#addWarpToPlayer
- * @see IInternalMethodHandler#getObjectAspects
- * @see IInternalMethodHandler#generateTags
- * @see IInternalMethodHandler#drainVis
- * @see IInternalMethodHandler#drainFlux
- * @see IInternalMethodHandler#addVis
- * @see IInternalMethodHandler#addFlux
- * @see IInternalMethodHandler#getTotalAura
- * @see IInternalMethodHandler#getVis
- * @see IInternalMethodHandler#getFlux
- * @see IInternalMethodHandler#getAuraBase
- * @see IInternalMethodHandler#shouldPreserveAura
- * @see IInternalMethodHandler#registerSeal
- * @see IInternalMethodHandler#getSeal
- * @see IInternalMethodHandler#getSealEntity
- * @see IInternalMethodHandler#addGolemTask 
- * @see IInternalMethodHandler#getSealStack
+ * This port's real implementation is {@link thaumcraft.common.ThaumcraftInternalMethodHandler} -
+ * deliberately minimal, not a full recreation of the original: the aura/knowledge/warp methods (already
+ * real subsystems in this port - {@code AuraHandler}, {@code ThaumcraftCapabilities}) are wired through for
+ * real, but {@code getObjectAspects}/{@code generateTags} (the original's global item-to-aspect database,
+ * a project-sized subsystem on its own - see that class's doc comment for why it's out of scope for now)
+ * and the seal/golem-task registry methods (no seals/golems ported yet) stay no-ops, same shape as the
+ * original's own {@code DummyInternalMethodHandler} for those specific methods.
  */
 public interface IInternalMethodHandler {
-	
+
 	/**
 	 * Add raw knowledge points (not whole knowledges) to the given player.
-	 * This method will trigger appropriate gui notifications, etc.
-	 * @param player
-	 * @param type
-	 * @param category
-	 * @param amount
-	 * @return if the knowledge was added
 	 */
-	public boolean addKnowledge(EntityPlayer player, EnumKnowledgeType type, ResearchCategory category, int amount);
-	
+	boolean addKnowledge(Player player, EnumKnowledgeType type, ResearchCategory category, int amount);
+
 	/**
-	 * Progresses research with all the proper bells and whistles (popups, sounds, warp, etc)
-	 * If the research is linked to a research entry with stages the player's current stage will be increased 
-	 * by 1, or set to 1 if the research was not known before.
-	 * @param player
-	 * @param researchkey
-	 * @return if operation succeeded
+	 * Progresses research - if linked to a multi-stage research entry, advances by one stage (or starts at
+	 * stage 1 if not known before).
 	 */
-	boolean progressResearch(EntityPlayer player, String researchkey);
-	
+	boolean progressResearch(Player player, String researchkey);
+
 	/**
-	 * Completes research with all the proper bells and whistles (popups, sounds, warp, etc)
-	 * This automatically sets all its stages as complete. 
-	 * Most of the time you should probably use progressResearch instead.
-	 * @param player
-	 * @param researchkey
-	 * @return if operation succeeded
+	 * Completes research outright (all stages).
 	 */
-	public boolean completeResearch(EntityPlayer player, String researchkey);
-	
+	boolean completeResearch(Player player, String researchkey);
+
 	/**
-	 * @param player 
-	 * @param researchkey the key of the research you want to check
 	 * @return does the player have all the required knowledge to complete the passed researchkey
 	 */
-	boolean doesPlayerHaveRequisites(EntityPlayer player, String researchkey);
-	
+	boolean doesPlayerHaveRequisites(Player player, String researchkey);
+
 	/**
-	 * Adds warp with all the proper bells and whistles (text, sounds, etc)
-	 * @param player
-	 * @param researchkey
-	 * @return
+	 * Adds warp to the player.
 	 */
-	public void addWarpToPlayer(EntityPlayer player, int amount, EnumWarpType type);
-	
+	void addWarpToPlayer(Player player, int amount, EnumWarpType type);
+
 	/**
-	 * The total of the players normal + permanent warp. NOT temporary warp.
-	 * @param player
-	 * @return
+	 * The total of the player's normal + permanent warp. NOT temporary warp.
 	 */
-	public int getActualWarp(EntityPlayer player);
+	int getActualWarp(Player player);
 
-	public AspectList getObjectAspects(ItemStack is);
-	public AspectList generateTags(ItemStack is);
-	
-	public float drainVis(World world, BlockPos pos, float amount, boolean simulate);
-	public float drainFlux(World world, BlockPos pos, float amount, boolean simulate);	
-	public void addVis(World world, BlockPos pos, float amount);
-	public void addFlux(World world, BlockPos pos, float amount, boolean showEffect);			
-	
+	AspectList getObjectAspects(ItemStack is);
+
+	AspectList generateTags(ItemStack is);
+
+	float drainVis(Level level, BlockPos pos, float amount, boolean simulate);
+
+	float drainFlux(Level level, BlockPos pos, float amount, boolean simulate);
+
+	void addVis(Level level, BlockPos pos, float amount);
+
+	void addFlux(Level level, BlockPos pos, float amount, boolean showEffect);
+
 	/**
-	 * returns the aura and flux in a chunk added together
-	 * @param world
-	 * @param pos
-	 * @return
+	 * The aura and flux in a chunk, added together.
 	 */
-	public float getTotalAura(World world, BlockPos pos);
-	public float getVis(World world, BlockPos pos);
-	public float getFlux(World world, BlockPos pos);
-	public int getAuraBase(World world, BlockPos pos);	
-	
-	public void registerSeal(ISeal seal);
-	public ISeal getSeal(String key);
-	public ISealEntity getSealEntity(int dim, SealPos pos);
-	public void addGolemTask(int dim, Task task);
-	public boolean shouldPreserveAura(World world, EntityPlayer player, BlockPos pos);
-	public ItemStack getSealStack(String key);
+	float getTotalAura(Level level, BlockPos pos);
 
-	
+	float getVis(Level level, BlockPos pos);
 
-	
+	float getFlux(Level level, BlockPos pos);
 
-	
+	int getAuraBase(Level level, BlockPos pos);
 
-	
-	
-	
+	boolean shouldPreserveAura(Level level, Player player, BlockPos pos);
+
+	void registerSeal(ISeal seal);
+
+	ISeal getSeal(String key);
+
+	ISealEntity getSealEntity(ResourceKey<Level> dim, SealPos pos);
+
+	void addGolemTask(ResourceKey<Level> dim, Task task);
+
+	ItemStack getSealStack(String key);
 }

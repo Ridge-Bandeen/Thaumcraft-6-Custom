@@ -41,6 +41,8 @@ import thaumcraft.common.items.casters.foci.FocusMediumMine;
 import thaumcraft.common.items.casters.foci.FocusMediumProjectile;
 import thaumcraft.common.items.casters.foci.FocusMediumTouch;
 import thaumcraft.common.registry.ThaumcraftEntities;
+import thaumcraft.api.ThaumcraftApi;
+import thaumcraft.common.ThaumcraftInternalMethodHandler;
 
 /**
  * NeoForge 1.21.1 entry point.
@@ -73,6 +75,12 @@ public class Thaumcraft {
         ThaumcraftMenus.MENUS.register(modEventBus);
         ThaumcraftCapabilities.ATTACHMENT_TYPES.register(modEventBus);
         ThaumcraftEntities.ENTITY_TYPES.register(modEventBus);
+
+        // Installs the real IInternalMethodHandler over ThaumcraftApi's DummyInternalMethodHandler default -
+        // see ThaumcraftInternalMethodHandler's own doc comment for what this actually unlocks (AuraHelper,
+        // mainly). Done here (constructor) rather than commonSetup since AuraHelper could plausibly be
+        // called very early.
+        ThaumcraftApi.internalMethods = new ThaumcraftInternalMethodHandler();
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

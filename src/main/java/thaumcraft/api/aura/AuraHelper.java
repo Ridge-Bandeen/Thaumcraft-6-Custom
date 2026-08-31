@@ -2,15 +2,20 @@ package thaumcraft.api.aura;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import thaumcraft.api.ThaumcraftApi;
 
 
 /**
- * TODO: every method here delegates to ThaumcraftApi.internalMethods, which is still deferred (see
- * thaumcraft.api.golems.GolemHelper for the same situation and why). Stubbed to the same no-op behaviour
- * the game already has before Thaumcraft finishes loading today.
+ * Delegates to {@code ThaumcraftApi.internalMethods} (see that class's own doc comment for why this
+ * indirection exists: it keeps this API package from needing to reference {@code thaumcraft.common}
+ * directly). Was a permanent stub for most of this port - {@code ThaumcraftApi.internalMethods} defaulted
+ * to a no-op {@code DummyInternalMethodHandler} until {@code Thaumcraft}'s constructor installed the real
+ * {@code ThaumcraftInternalMethodHandler}, which wires these straight through to the already-real
+ * {@link thaumcraft.common.world.aura.AuraHandler}. Common-package consumers that were already bypassing
+ * this class to call {@code AuraHandler} directly (e.g. {@code ItemCaster}, {@code TileArcaneWorkbench})
+ * don't need to change - both paths reach the same place now.
  */
 public class AuraHelper {
-
 
 	/**
 	 * Consume vis from the aura at the given location
@@ -21,7 +26,7 @@ public class AuraHelper {
 	 * @return how much was actually drained
 	 */
 	public static float drainVis(Level world, BlockPos pos, float amount, boolean simulate) {
-		return 0;
+		return ThaumcraftApi.internalMethods.drainVis(world, pos, amount, simulate);
 	}
 
 	/**
@@ -34,7 +39,7 @@ public class AuraHelper {
 	 * @return how much was actually drained
 	 */
 	public static float drainFlux(Level world, BlockPos pos, float amount, boolean simulate) {
-		return 0;
+		return ThaumcraftApi.internalMethods.drainFlux(world, pos, amount, simulate);
 	}
 
 	/**
@@ -45,6 +50,7 @@ public class AuraHelper {
 	 * @param amount
 	 */
 	public static void addVis(Level world, BlockPos pos, float amount) {
+		ThaumcraftApi.internalMethods.addVis(world, pos, amount);
 	}
 
 	/**
@@ -54,7 +60,7 @@ public class AuraHelper {
 	 * @return
 	 */
 	public static float getVis(Level world, BlockPos pos) {
-		return 0;
+		return ThaumcraftApi.internalMethods.getVis(world, pos);
 	}
 
 	/**
@@ -65,6 +71,7 @@ public class AuraHelper {
 	 * @param showEffect if set to true, a flux smoke effect and sound will also be displayed. Use in moderation.
 	 */
 	public static void polluteAura(Level world, BlockPos pos, float amount, boolean showEffect) {
+		ThaumcraftApi.internalMethods.addFlux(world, pos, amount, showEffect);
 	}
 
 	/**
@@ -74,7 +81,7 @@ public class AuraHelper {
 	 * @return
 	 */
 	public static float getFlux(Level world, BlockPos pos) {
-		return 0;
+		return ThaumcraftApi.internalMethods.getFlux(world, pos);
 	}
 
 	/**
@@ -84,7 +91,7 @@ public class AuraHelper {
 	 * @return
 	 */
 	public static int getAuraBase(Level world, BlockPos pos) {
-		return 0;
+		return ThaumcraftApi.internalMethods.getAuraBase(world, pos);
 	}
 
 	/**
@@ -96,6 +103,6 @@ public class AuraHelper {
 	 * @return
 	 */
 	public static boolean shouldPreserveAura(Level world, Player player, BlockPos pos) {
-		return false;
+		return ThaumcraftApi.internalMethods.shouldPreserveAura(world, player, pos);
 	}
 }

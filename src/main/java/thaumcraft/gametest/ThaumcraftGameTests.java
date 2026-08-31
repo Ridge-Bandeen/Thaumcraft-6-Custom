@@ -27,6 +27,7 @@ import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.api.capabilities.IPlayerKnowledge;
+import thaumcraft.api.capabilities.IPlayerWarp;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
 import thaumcraft.api.casters.FocusEngine;
 import thaumcraft.api.casters.FocusPackage;
@@ -818,5 +819,51 @@ public class ThaumcraftGameTests {
 
 		helper.succeedWhen(() -> helper.assertTrue(pig.getHealth() > 1.0f,
 				"the sanctuary cloud should have healed the nearby damaged pig by now, health=" + pig.getHealth()));
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// ThaumcraftInternalMethodHandler - the real IInternalMethodHandler installed over ThaumcraftApi's
+	// DummyInternalMethodHandler default, finally letting thaumcraft.api.aura.AuraHelper (and the
+	// knowledge/warp methods) do something instead of being permanent stubs. Thaumcraft's constructor
+	// installs it during normal mod loading, which GameTest goes through the same as any other boot - no
+	// special setup needed here, just confirming it's actually the real one and not still the dummy.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void auraHelperDelegatesToTheRealAuraHandler(GameTestHelper helper) {
+		Level level = helper.getLevel();
+		BlockPos pos = helper.absolutePos(BlockPos.ZERO);
+
+		float base = thaumcraft.api.aura.AuraHelper.getVis(level, pos);
+		thaumcraft.api.aura.AuraHelper.addVis(level, pos, 10.0f);
+		helper.assertTrue(thaumcraft.api.aura.AuraHelper.getVis(level, pos) == base + 10.0f,
+				"AuraHelper.addVis should have reached the real AuraHandler, not silently no-opped like the old stub");
+
+		float drained = thaumcraft.api.aura.AuraHelper.drainVis(level, pos, 5.0f, false);
+		helper.assertTrue(drained == 5.0f, "AuraHelper.drainVis should return what it actually drained, not 0 like the old stub");
+		helper.assertTrue(thaumcraft.api.aura.AuraHelper.getVis(level, pos) == base + 5.0f, "the drain should have actually reduced the stored vis");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void internalMethodHandlerProgressesResearchAndGrantsWarp(GameTestHelper helper) {
+		@SuppressWarnings("removal")
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		knowledge.clear();
+
+		boolean progressed = thaumcraft.api.ThaumcraftApi.internalMethods.progressResearch(player, "TESTRESEARCH");
+		helper.assertTrue(progressed, "progressResearch should report success");
+		helper.assertTrue(knowledge.getResearchStage("TESTRESEARCH") == 1, "a never-known research should progress to stage 1, got " + knowledge.getResearchStage("TESTRESEARCH"));
+
+		thaumcraft.api.ThaumcraftApi.internalMethods.progressResearch(player, "TESTRESEARCH");
+		helper.assertTrue(knowledge.getResearchStage("TESTRESEARCH") == 2, "progressing an already-known stage-1 research should advance it to stage 2, got " + knowledge.getResearchStage("TESTRESEARCH"));
+
+		IPlayerWarp warp = ThaumcraftCapabilities.getWarp(player);
+		int before = thaumcraft.api.ThaumcraftApi.internalMethods.getActualWarp(player);
+		thaumcraft.api.ThaumcraftApi.internalMethods.addWarpToPlayer(player, 3, IPlayerWarp.EnumWarpType.NORMAL);
+		helper.assertTrue(warp.get(IPlayerWarp.EnumWarpType.NORMAL) == 3, "addWarpToPlayer should have added directly to the player's real IPlayerWarp");
+		helper.assertTrue(thaumcraft.api.ThaumcraftApi.internalMethods.getActualWarp(player) == before + 3, "getActualWarp should reflect the newly-added warp");
+		helper.succeed();
 	}
 }
