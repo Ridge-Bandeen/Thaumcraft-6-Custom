@@ -173,6 +173,8 @@ sourceSets {
 
             include 'thaumcraft/common/items/casters/ItemFocusCurse.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectCurse.java'
+
+            include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
     }
 }

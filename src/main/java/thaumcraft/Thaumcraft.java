@@ -9,11 +9,13 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
+import thaumcraft.gametest.ThaumcraftGameTests;
 import thaumcraft.common.world.aura.AuraHandler;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
 import thaumcraft.api.ThaumcraftAttributes;
@@ -51,6 +53,7 @@ public class Thaumcraft {
 
     public Thaumcraft(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener(this::onRegisterGameTests);
         NeoForge.EVENT_BUS.register(this);
 
         ThaumcraftAttributes.ATTRIBUTES.register(modEventBus);
@@ -76,6 +79,12 @@ public class Thaumcraft {
         FocusEngine.registerElement(FocusMediumBolt.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/bolt.png"), 11377029);
         FocusEngine.registerElement(FocusEffectHeal.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/heal.png"), 14548997);
         FocusEngine.registerElement(FocusEffectCurse.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/curse.png"), 6946821);
+    }
+
+    private void onRegisterGameTests(RegisterGameTestsEvent event) {
+        // Explicit registration rather than relying on @GameTestHolder auto-discovery - see the class
+        // doc comment on ThaumcraftGameTests for why this exists and how to run it.
+        event.register(ThaumcraftGameTests.class);
     }
 
     @SubscribeEvent
