@@ -296,10 +296,18 @@ public class ThaumcraftGameTests {
 		return spawnFacedBy(helper, caster, origin, EntityType.PIG);
 	}
 
+	private static Pig spawnPigFacedBy(GameTestHelper helper, ServerPlayer caster, BlockPos origin, double distanceZ) {
+		return spawnFacedBy(helper, caster, origin, EntityType.PIG, distanceZ);
+	}
+
 	private static <T extends Mob> T spawnFacedBy(GameTestHelper helper, ServerPlayer caster, BlockPos origin, EntityType<T> type) {
+		return spawnFacedBy(helper, caster, origin, type, 3.5);
+	}
+
+	private static <T extends Mob> T spawnFacedBy(GameTestHelper helper, ServerPlayer caster, BlockPos origin, EntityType<T> type, double distanceZ) {
 		ServerLevel level = helper.getLevel();
 		T mob = type.create(level);
-		mob.moveTo(origin.getX() + 0.5, origin.getY() + 1.0, origin.getZ() + 3.5, 0, 0);
+		mob.moveTo(origin.getX() + 0.5, origin.getY() + 1.0, origin.getZ() + distanceZ, 0, 0);
 		level.addFreshEntity(mob);
 		caster.lookAt(EntityAnchorArgument.Anchor.EYES, mob.getEyePosition());
 		return mob;
@@ -589,6 +597,40 @@ public class ThaumcraftGameTests {
 		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
 
 		helper.assertTrue(menu.slots.get(0).getItem().isEmpty(), "matching ingredients and enough vis with no known research should not have produced a result");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Focus: Fire Bolt - the wand's only non-Touch medium so far. Every entity-targeting test above uses
+	// FocusMediumTouch's 5-block range; these confirm FocusMediumBolt's 16-block range is actually
+	// different in practice, not just in the getRange() override - a target 6 blocks out is exactly the
+	// kind of distance Touch is documented to miss and Bolt is documented to reach.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castFireBoltReachesATargetBeyondTouchRange(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Pig pig = spawnPigFacedBy(helper, caster, origin, 6.5);
+		float startingHealth = pig.getHealth();
+
+		cast(ItemsTC.focusFireBolt.get(), caster);
+
+		helper.assertTrue(pig.getHealth() < startingHealth, "Fire Bolt's 16-block range should have reached a target 6 blocks away");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castFireFocusMissesATargetBeyondTouchRange(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Pig pig = spawnPigFacedBy(helper, caster, origin, 6.5);
+		float startingHealth = pig.getHealth();
+
+		cast(ItemsTC.focus1.get(), caster);
+
+		helper.assertTrue(pig.getHealth() == startingHealth,
+				"the plain Fire focus (Touch medium, 5-block range) should not have reached a target 6 blocks away - if this starts failing, Touch's range changed");
 		helper.succeed();
 	}
 }

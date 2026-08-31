@@ -4,7 +4,9 @@ import com.mojang.serialization.Codec;
 
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -44,12 +46,29 @@ public final class ThaumcraftDataComponents {
 					.networkSynchronized(ByteBufCodecs.VAR_INT)
 					.build());
 
-	/** The focus currently loaded into a caster (wand). Was the {@code "focus"} NBT sub-compound. */
-	public static final DeferredHolder<DataComponentType<?>, DataComponentType<ItemStack>> WAND_FOCUS = DATA_COMPONENTS.register("wand_focus",
-			() -> DataComponentType.<ItemStack>builder()
-					.persistent(ItemStack.CODEC)
-					.networkSynchronized(ItemStack.STREAM_CODEC)
+	/**
+	 * The focus currently loaded into a caster (wand). Was the {@code "focus"} NBT sub-compound.
+	 *
+	 * Wrapped in {@link WandFocus} rather than storing a bare {@link ItemStack} directly - found by the
+	 * test suite, not by playing the game: {@code ItemStack} deliberately doesn't override
+	 * {@code equals()}/{@code hashCode()} (vanilla's own convention - use {@code ItemStack#matches}/
+	 * {@code isSameItemSameComponents} instead), which trips the exact same dev-mode-only data-component
+	 * validator {@link AspectList}'s missing equals/hashCode did (see that class's own doc comment for the
+	 * full story). Vanilla's own {@code ItemStack}-holding components (bundle contents, container
+	 * contents) never store a bare {@code ItemStack} either, always a small wrapper record - this follows
+	 * that same idiomatic pattern.
+	 */
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<WandFocus>> WAND_FOCUS = DATA_COMPONENTS.register("wand_focus",
+			() -> DataComponentType.<WandFocus>builder()
+					.persistent(WandFocus.CODEC)
+					.networkSynchronized(WandFocus.STREAM_CODEC)
 					.build());
+
+	/** See {@link #WAND_FOCUS}'s doc comment for why this wrapper exists. */
+	public record WandFocus(ItemStack stack) {
+		public static final Codec<WandFocus> CODEC = ItemStack.CODEC.xmap(WandFocus::new, WandFocus::stack);
+		public static final StreamCodec<RegistryFriendlyByteBuf, WandFocus> STREAM_CODEC = ItemStack.STREAM_CODEC.map(WandFocus::new, WandFocus::stack);
+	}
 
 	private ThaumcraftDataComponents() {
 	}

@@ -60,7 +60,8 @@ public class ItemCaster extends Item implements ICaster {
 
 	@Override
 	public ItemStack getFocusStack(ItemStack stack) {
-		return stack.getOrDefault(ThaumcraftDataComponents.WAND_FOCUS.get(), ItemStack.EMPTY);
+		ThaumcraftDataComponents.WandFocus wandFocus = stack.get(ThaumcraftDataComponents.WAND_FOCUS.get());
+		return wandFocus == null ? ItemStack.EMPTY : wandFocus.stack();
 	}
 
 	@Override
@@ -68,7 +69,7 @@ public class ItemCaster extends Item implements ICaster {
 		if (focus == null || focus.isEmpty()) {
 			stack.remove(ThaumcraftDataComponents.WAND_FOCUS.get());
 		} else {
-			stack.set(ThaumcraftDataComponents.WAND_FOCUS.get(), focus.copyWithCount(1));
+			stack.set(ThaumcraftDataComponents.WAND_FOCUS.get(), new ThaumcraftDataComponents.WandFocus(focus.copyWithCount(1)));
 		}
 	}
 
