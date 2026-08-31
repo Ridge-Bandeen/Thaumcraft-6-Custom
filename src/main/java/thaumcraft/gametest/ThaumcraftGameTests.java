@@ -1,5 +1,6 @@
 package thaumcraft.gametest;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -9,6 +10,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import thaumcraft.Thaumcraft;
 import thaumcraft.api.aspects.Aspect;
@@ -16,6 +18,7 @@ import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.capabilities.IPlayerKnowledge;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
 import thaumcraft.api.crafting.CrucibleRecipe;
+import thaumcraft.common.world.aura.AuraHandler;
 
 import java.util.Optional;
 
@@ -147,6 +150,93 @@ public class ThaumcraftGameTests {
 
 		helper.assertFalse(recipe.matches(exact, new ItemStack(Items.COBBLESTONE)),
 				"should not match with the right aspects but the wrong catalyst item");
+
+		helper.succeed();
+	}
+
+	/**
+	 * Coverage for {@link AuraHandler}'s add/drain API - the real per-chunk vis simulation
+	 * {@code ItemCaster}/{@code ArcaneWorkbenchMenu}/{@code RechargeHelper} all draw from, replacing the
+	 * fixed-pool/no-check stand-ins those had before the aura system was ported. Needs a real
+	 * {@code ServerLevel} (for {@code Level#dimension()}, which {@code AuraHandler} keys its per-dimension
+	 * state on) - not something a plain unit test can provide, hence GameTest rather than JUnit here.
+	 * Each GameTest method's structure is placed far apart in the test world (confirmed in earlier boot
+	 * logs, e.g. "2 tests are now running at position 3117146, -59, -10963976"), so different test methods
+	 * never share an aura chunk even though this one only ever asserts inside a single method - no explicit
+	 * position offsetting needed. Assumes the whole method runs well under the background
+	 * {@code AuraThread}'s ~1-second regen tick, same as every other GameTest in this batch finishing in a
+	 * few hundred milliseconds total - if this ever gets flaky, that assumption is the first thing to
+	 * revisit.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void auraVisAddAndDrain(GameTestHelper helper) {
+		Level level = helper.getLevel();
+		BlockPos pos = helper.absolutePos(BlockPos.ZERO);
+
+		float base = AuraHandler.getVis(level, pos);
+
+		AuraHandler.addVis(level, pos, 10.0f);
+		helper.assertTrue(AuraHandler.getVis(level, pos) == base + 10.0f, "addVis should increase vis by exactly the given amount");
+
+		float simulated = AuraHandler.drainVis(level, pos, 5.0f, true);
+		helper.assertTrue(simulated == 5.0f, "simulate=true should report how much would be drained");
+		helper.assertTrue(AuraHandler.getVis(level, pos) == base + 10.0f, "simulate=true must not actually mutate the vis");
+
+		float drained = AuraHandler.drainVis(level, pos, 5.0f, false);
+		helper.assertTrue(drained == 5.0f, "a real drain within the available amount should return exactly what was asked for");
+		helper.assertTrue(AuraHandler.getVis(level, pos) == base + 5.0f, "a real drain should actually reduce the stored vis");
+
+		float remaining = AuraHandler.getVis(level, pos);
+		float overDrained = AuraHandler.drainVis(level, pos, remaining + 1000.0f, false);
+		helper.assertTrue(overDrained == remaining, "draining more than is available should cap at what's actually there");
+		helper.assertTrue(AuraHandler.getVis(level, pos) == 0.0f, "after draining everything, vis should be exactly 0, never negative");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void auraAddNegativeAmountIsRejected(GameTestHelper helper) {
+		Level level = helper.getLevel();
+		BlockPos pos = helper.absolutePos(BlockPos.ZERO);
+
+		float baseVis = AuraHandler.getVis(level, pos);
+		AuraHandler.addVis(level, pos, -50.0f);
+		helper.assertTrue(AuraHandler.getVis(level, pos) == baseVis, "addVis with a negative amount should be a no-op, not subtract");
+
+		float baseFlux = AuraHandler.getFlux(level, pos);
+		AuraHandler.addFlux(level, pos, -50.0f);
+		helper.assertTrue(AuraHandler.getFlux(level, pos) == baseFlux, "addFlux with a negative amount should also be a no-op");
+
+		helper.succeed();
+	}
+
+	/**
+	 * Coverage for {@link AuraHandler#shouldPreserveAura} - gates {@code RechargeHelper}'s vis draining and
+	 * (per its own doc comment) is meant to require the "AURAPRESERVE" research when a real player is
+	 * involved, but bypass that check entirely when called with a null player.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void auraShouldPreserveAura(GameTestHelper helper) {
+		Level level = helper.getLevel();
+		BlockPos pos = helper.absolutePos(BlockPos.ZERO);
+
+		// Drain to (near) zero so vis/base is comfortably under the 10% threshold regardless of exactly
+		// what the randomly-noised base turned out to be.
+		AuraHandler.drainVis(level, pos, AuraHandler.getVis(level, pos), false);
+		helper.assertTrue(AuraHandler.getVis(level, pos) == 0.0f, "draining all available vis first should leave exactly 0");
+
+		helper.assertTrue(AuraHandler.shouldPreserveAura(level, null, pos),
+				"low vis with no player to check research against should bypass the research check and preserve");
+
+		@SuppressWarnings("removal")
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		ThaumcraftCapabilities.getKnowledge(player).clear();
+		helper.assertFalse(AuraHandler.shouldPreserveAura(level, player, pos),
+				"a player without AURAPRESERVE should not trigger preservation even at low vis");
+
+		ThaumcraftCapabilities.getKnowledge(player).addResearch("AURAPRESERVE");
+		helper.assertTrue(AuraHandler.shouldPreserveAura(level, player, pos),
+				"a player who knows AURAPRESERVE should trigger preservation at low vis");
 
 		helper.succeed();
 	}
