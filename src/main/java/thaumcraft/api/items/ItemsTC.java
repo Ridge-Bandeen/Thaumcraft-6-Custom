@@ -159,6 +159,9 @@ public final class ItemsTC {
 	public static final DeferredItem<ItemAlumentum> alumentum =
 			ITEMS.registerItem("alumentum", ItemAlumentum::new);
 
+	public static final DeferredItem<BlockItem> rechargePedestal =
+			ITEMS.registerSimpleBlockItem("recharge_pedestal", BlocksTC.rechargePedestal);
+
 	private ItemsTC() {
 	}
 }

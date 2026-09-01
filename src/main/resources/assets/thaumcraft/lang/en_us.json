@@ -108,5 +108,7 @@
   "block.thaumcraft.silverwood_slab": "Silverwood Slab",
 
   "item.thaumcraft.vis_resonator": "Vis Resonator",
-  "item.thaumcraft.alumentum": "Alumentum"
+  "item.thaumcraft.alumentum": "Alumentum",
+
+  "block.thaumcraft.recharge_pedestal": "Recharge Pedestal"
 }

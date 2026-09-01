@@ -44,6 +44,9 @@ import thaumcraft.common.registry.ThaumcraftEntities;
 import thaumcraft.common.registry.ThaumcraftResearchCategories;
 import thaumcraft.api.ThaumcraftApi;
 import thaumcraft.common.ThaumcraftInternalMethodHandler;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import thaumcraft.common.tiles.devices.TileRechargePedestal;
 
 /**
  * NeoForge 1.21.1 entry point.
@@ -64,6 +67,7 @@ public class Thaumcraft {
     public Thaumcraft(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::onRegisterGameTests);
+        modEventBus.addListener(this::registerCapabilities);
         NeoForge.EVENT_BUS.register(this);
 
         ThaumcraftAttributes.ATTRIBUTES.register(modEventBus);
@@ -76,6 +80,7 @@ public class Thaumcraft {
         ThaumcraftMenus.MENUS.register(modEventBus);
         ThaumcraftCapabilities.ATTACHMENT_TYPES.register(modEventBus);
         ThaumcraftEntities.ENTITY_TYPES.register(modEventBus);
+        ThaumcraftGameTests.register(modEventBus);
 
         // Installs the real IInternalMethodHandler over ThaumcraftApi's DummyInternalMethodHandler default -
         // see ThaumcraftInternalMethodHandler's own doc comment for what this actually unlocks (AuraHelper,
@@ -107,6 +112,14 @@ public class Thaumcraft {
         FocusEngine.registerElement(FocusEffectAir.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/air.png"), 16777086);
         FocusEngine.registerElement(FocusMediumMine.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/mine.png"), 8760709);
         FocusEngine.registerElement(FocusMediumCloud.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/cloud.png"), 10071429);
+    }
+
+    private void registerCapabilities(RegisterCapabilitiesEvent event) {
+        // First real use of NeoForge's modern capability-registration API in this port (see
+        // TileRechargePedestal's own doc comment) - exposes its single item slot to hoppers/pipes, the
+        // same way the original's ISidedInventory did.
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ThaumcraftBlockEntities.RECHARGE_PEDESTAL.get(),
+                (tile, side) -> ((TileRechargePedestal) tile).getItemHandler());
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {

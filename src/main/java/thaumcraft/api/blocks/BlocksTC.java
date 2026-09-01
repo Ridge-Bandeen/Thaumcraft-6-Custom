@@ -159,6 +159,13 @@ public final class BlocksTC {
 			SlabBlock::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0f).sound(SoundType.WOOD).ignitedByLava());
 
+	/** First device since the "shared inventory-tile base" was scoped and repeatedly deferred - see
+	 * {@link thaumcraft.common.tiles.devices.TileRechargePedestal}'s own doc comment for why this is a
+	 * purpose-built {@code BlockEntity} rather than a ported generic base. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockRechargePedestal> rechargePedestal = BLOCKS.registerBlock("recharge_pedestal",
+			thaumcraft.common.blocks.devices.BlockRechargePedestal::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(1.5f, 2.0f).sound(SoundType.STONE).noOcclusion());
+
 	private BlocksTC() {
 	}
 }

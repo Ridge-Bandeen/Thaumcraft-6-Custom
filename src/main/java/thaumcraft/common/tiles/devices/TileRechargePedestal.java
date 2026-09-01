@@ -1,135 +1,98 @@
 package thaumcraft.common.tiles.devices;
-import java.util.ArrayList;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.api.aspects.Aspect;
-import thaumcraft.api.aspects.AspectList;
-import thaumcraft.api.aspects.IAspectContainer;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import thaumcraft.api.items.IRechargable;
 import thaumcraft.api.items.RechargeHelper;
-import thaumcraft.client.fx.FXDispatcher;
-import thaumcraft.common.tiles.TileThaumcraftInventory;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 
+/**
+ * Replaces the old (1.12.2) {@code TileRechargePedestal} - and the first device this port has built since
+ * the "shared inventory-tile base" was scoped and deferred several times (Infernal Furnace, Alembic).
+ * Rather than porting a generic {@code TileThaumcraftInventory}/{@code BlockTCDevice} pair (both fully
+ * superseded by modern machinery - see the port-tracking memory notes on why), this is a purpose-built
+ * {@link BlockEntity} using NeoForge's own real {@link ItemStackHandler} directly, the same
+ * "purpose-build it standalone" pattern {@link thaumcraft.common.tiles.crafting.TileCrucible} already
+ * established. A second, differently-shaped device would still need its own inventory wiring - there's
+ * been no second real consumer yet to justify factoring out a shared abstract base speculatively.
+ *
+ * Core loop unchanged from the original: holds one {@link IRechargable} item, and every 10 ticks calls
+ * {@link RechargeHelper#rechargeItem} to drain vis from the local aura into it - now genuinely functional,
+ * since {@code AuraHelper} (which {@code RechargeHelper} calls through) stopped being a stub earlier this
+ * session.
+ *
+ * Simplified vs the original:
+ * <ul>
+ * <li>No {@code IAspectContainer} implementation (goggles-of-revealing display) - goggles aren't ported,
+ * so there's no consumer for it yet.</li>
+ * <li>No particle/sound FX on a successful recharge tick, same as every other device this session.</li>
+ * <li>Custom packet-based partial-slot sync ({@code TileThaumcraftInventory#syncSlots}) is replaced by
+ * vanilla's own full block-entity sync ({@code getUpdateTag}/{@code handleUpdateTag}, inherited unchanged
+ * from {@link BlockEntity}) - the original's whole-tile sync-splitting existed to reduce 1.12.2 network
+ * traffic and has no real modern equivalent (nor is one needed for a single-slot device).</li>
+ * </ul>
+ */
+public class TileRechargePedestal extends BlockEntity {
 
-public class TileRechargePedestal extends TileThaumcraftInventory implements IAspectContainer
-{
-    private static int[] slots;
-    int counter;
-    
-    public TileRechargePedestal() {
-        super(1);
-        counter = 0;
-        syncedSlots = new int[] { 0 };
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public AxisAlignedBB getRenderBoundingBox() {
-        return new AxisAlignedBB(getPos().getX(), getPos().getY(), getPos().getZ(), getPos().getX() + 1, getPos().getY() + 1, getPos().getZ() + 1).grow(2.0, 2.0, 2.0);
-    }
-    
-    @Override
-    public void update() {
-        super.update();
-        if (!getWorld().isRemote && counter++ % 10 == 0 && getStackInSlot(0) != null && RechargeHelper.rechargeItem(getWorld(), getStackInSlot(0), pos, null, 5) > 0.0f) {
-            syncTile(false);
-            markDirty();
-            ArrayList<Aspect> al = Aspect.getPrimalAspects();
-            world.addBlockEvent(pos, getBlockType(), 5, al.get(getWorld().rand.nextInt(al.size())).getColor());
-        }
-    }
-    
-    public void setInventorySlotContentsFromInfusion(int par1, ItemStack stack2) {
-        setInventorySlotContents(par1, stack2);
-        markDirty();
-        if (!world.isRemote) {
-            syncTile(false);
-        }
-    }
-    
-    @Override
-    public boolean isItemValidForSlot(int par1, ItemStack stack) {
-        return stack.getItem() instanceof IRechargable;
-    }
-    
-    @Override
-    public int[] getSlotsForFace(EnumFacing side) {
-        return TileRechargePedestal.slots;
-    }
-    
-    @Override
-    public boolean canInsertItem(int par1, ItemStack stack, EnumFacing par3) {
-        return stack.getItem() instanceof IRechargable;
-    }
-    
-    @Override
-    public boolean canExtractItem(int par1, ItemStack stack2, EnumFacing par3) {
-        return true;
-    }
-    
-    @Override
-    public AspectList getAspects() {
-        ItemStack s = (world == null || world.isRemote) ? getSyncedStackInSlot(0) : getStackInSlot(0);
-        if (s != null && s.getItem() instanceof IRechargable) {
-            float c = (float)RechargeHelper.getCharge(s);
-            return new AspectList().add(Aspect.ENERGY, Math.round(c));
-        }
-        return null;
-    }
-    
-    @Override
-    public void setAspects(AspectList aspects) {
-    }
-    
-    @Override
-    public int addToContainer(Aspect tag, int amount) {
-        return 0;
-    }
-    
-    @Override
-    public boolean takeFromContainer(Aspect tag, int amount) {
-        return false;
-    }
-    
-    @Override
-    public boolean takeFromContainer(AspectList ot) {
-        return false;
-    }
-    
-    @Override
-    public boolean doesContainerContainAmount(Aspect tag, int amount) {
-        return false;
-    }
-    
-    @Override
-    public boolean doesContainerContain(AspectList ot) {
-        return false;
-    }
-    
-    @Override
-    public int containerContains(Aspect tag) {
-        return 0;
-    }
-    
-    @Override
-    public boolean doesContainerAccept(Aspect tag) {
-        return true;
-    }
-    
-    public boolean receiveClientEvent(int i, int j) {
-        if (i == 5) {
-            if (world.isRemote) {
-                FXDispatcher.INSTANCE.visSparkle(pos.getX() + getWorld().rand.nextInt(3) - getWorld().rand.nextInt(3), pos.up().getY() + getWorld().rand.nextInt(3), pos.getZ() + getWorld().rand.nextInt(3) - getWorld().rand.nextInt(3), pos.getX(), pos.up().getY(), pos.getZ(), j);
-            }
-            return true;
-        }
-        return super.receiveClientEvent(i, j);
-    }
-    
-    static {
-        slots = new int[] { 0 };
-    }
+	private final ItemStackHandler items = new ItemStackHandler(1) {
+		@Override
+		public boolean isItemValid(int slot, ItemStack stack) {
+			return stack.getItem() instanceof IRechargable;
+		}
+
+		@Override
+		protected void onContentsChanged(int slot) {
+			setChanged();
+		}
+	};
+
+	private int counter;
+
+	public TileRechargePedestal(BlockPos pos, BlockState state) {
+		super(ThaumcraftBlockEntities.RECHARGE_PEDESTAL.get(), pos, state);
+	}
+
+	public ItemStack getItem() {
+		return items.getStackInSlot(0);
+	}
+
+	public void setItem(ItemStack stack) {
+		items.setStackInSlot(0, stack);
+	}
+
+	public boolean accepts(ItemStack stack) {
+		return items.isItemValid(0, stack);
+	}
+
+	public IItemHandler getItemHandler() {
+		return items;
+	}
+
+	public static void tick(Level level, BlockPos pos, BlockState state, TileRechargePedestal tile) {
+		if (level.isClientSide) return;
+		if (tile.counter++ % 10 != 0) return;
+		ItemStack stack = tile.getItem();
+		if (!stack.isEmpty() && RechargeHelper.rechargeItem(level, stack, pos, null, 5) > 0.0f) {
+			tile.setChanged();
+		}
+	}
+
+	@Override
+	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.saveAdditional(tag, registries);
+		tag.put("Items", items.serializeNBT(registries));
+	}
+
+	@Override
+	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.loadAdditional(tag, registries);
+		items.deserializeNBT(registries, tag.getCompound("Items"));
+	}
 }

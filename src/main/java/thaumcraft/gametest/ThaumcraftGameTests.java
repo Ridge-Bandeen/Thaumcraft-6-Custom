@@ -69,6 +69,41 @@ import java.util.Optional;
 public class ThaumcraftGameTests {
 
 	/**
+	 * A real, registered item for GameTest use only - constructing a bare {@code new Item(...)} at test
+	 * time throws ("Registry is already frozen"), since 1.21.1 freezes registries after the normal mod
+	 * loading pass finishes, unlike 1.12.2. Registered the same way every other item in this project is
+	 * (a {@code DeferredRegister}, wired to the mod bus from {@code Thaumcraft}'s constructor via
+	 * {@link #register}), just never given a lang entry or added to a creative tab, since it exists purely
+	 * to exercise {@code TileRechargePedestal} against a real {@code IRechargable} implementation without
+	 * needing a full production item (none are registered yet - see that tile's own doc comment).
+	 */
+	private static final net.neoforged.neoforge.registries.DeferredRegister.Items TEST_ITEMS =
+			net.neoforged.neoforge.registries.DeferredRegister.createItems(Thaumcraft.MODID);
+
+	public static final net.neoforged.neoforge.registries.DeferredItem<TestRechargableItem> TEST_RECHARGABLE_ITEM =
+			TEST_ITEMS.registerItem("test_rechargable_item", TestRechargableItem::new);
+
+	public static void register(net.neoforged.bus.api.IEventBus modEventBus) {
+		TEST_ITEMS.register(modEventBus);
+	}
+
+	private static final class TestRechargableItem extends net.minecraft.world.item.Item implements thaumcraft.api.items.IRechargable {
+		TestRechargableItem(Properties properties) {
+			super(properties);
+		}
+
+		@Override
+		public int getMaxCharge(ItemStack stack, net.minecraft.world.entity.LivingEntity player) {
+			return 1000;
+		}
+
+		@Override
+		public EnumChargeDisplay showInHud(ItemStack stack, net.minecraft.world.entity.LivingEntity player) {
+			return EnumChargeDisplay.NEVER;
+		}
+	}
+
+	/**
 	 * Regression coverage for the add/reduce arithmetic {@code TileCrucible} and the crucible recipe
 	 * matcher build on.
 	 */
@@ -145,6 +180,7 @@ public class ThaumcraftGameTests {
 				"focus_trap", "focus_trap_crucible",
 				"focus_sanctuary", "focus_sanctuary_crucible",
 				"caster_basic", "thaumometer", "quicksilver_smelting", "mirrored_glass", "vis_resonator", "alumentum",
+				"recharge_pedestal",
 				"amber_block", "amber_block_to_amber", "amber_brick", "amber_brick_to_block",
 				"crystal_essence_aer", "crystal_essence_aqua", "crystal_essence_ignis",
 				"crystal_essence_terra", "crystal_essence_ordo", "crystal_essence_perditio",
@@ -1085,5 +1121,42 @@ public class ThaumcraftGameTests {
 
 		helper.succeedWhen(() -> helper.assertTrue(pig.getHealth() < startingHealth,
 				"the thrown alumentum should have exploded near the pig and damaged it by now, health=" + pig.getHealth() + " (was " + startingHealth + ")"));
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Recharge Pedestal - the first device built since the "shared inventory-tile base" question was
+	// scoped and repeatedly deferred (see thaumcraft.common.tiles.devices.TileRechargePedestal's own doc
+	// comment for why it's purpose-built rather than a ported generic base). No real production
+	// IRechargable item is registered yet (ItemGrappleGun etc. still need their own unported dependencies),
+	// so this exercises the pedestal against TEST_RECHARGABLE_ITEM (see this class's own field doc comment
+	// for why that has to be a real registered item, not a bare `new Item(...)`).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void rechargePedestalAcceptsRechargesAndEjectsAnItem(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(2, 1, 2);
+		BlockPos absolute = helper.absolutePos(relPos);
+		helper.setBlock(relPos, BlocksTC.rechargePedestal.get());
+		thaumcraft.common.tiles.devices.TileRechargePedestal tile = helper.getBlockEntity(relPos);
+
+		AuraHandler.addVis(helper.getLevel(), absolute, 500.0f);
+
+		ItemStack rechargable = new ItemStack(TEST_RECHARGABLE_ITEM.get());
+		helper.assertTrue(tile.accepts(rechargable), "the pedestal should accept an IRechargable item");
+		helper.assertFalse(tile.accepts(new ItemStack(Items.STICK)), "the pedestal should reject a non-IRechargable item");
+
+		tile.setItem(rechargable);
+		float visBefore = AuraHandler.getVis(helper.getLevel(), absolute);
+
+		thaumcraft.common.tiles.devices.TileRechargePedestal.tick(helper.getLevel(), absolute, helper.getLevel().getBlockState(absolute), tile);
+
+		int chargeAfter = thaumcraft.api.items.RechargeHelper.getCharge(tile.getItem());
+		helper.assertTrue(chargeAfter > 0, "ticking the pedestal should have recharged the held item from the local aura, charge=" + chargeAfter);
+		helper.assertTrue(AuraHandler.getVis(helper.getLevel(), absolute) < visBefore, "recharging should have drained real vis from the local aura");
+
+		ItemStack ejected = tile.getItem();
+		tile.setItem(ItemStack.EMPTY);
+		helper.assertTrue(ejected.getItem() == TEST_RECHARGABLE_ITEM.get(), "the ejected item should be the same recharged stack");
+		helper.succeed();
 	}
 }
