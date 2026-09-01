@@ -412,7 +412,8 @@ public class ThaumcraftGameTests {
 				"tallow", "candle_white", "candle_black", "candle_blue", "candle_brown", "candle_cyan",
 				"candle_gray", "candle_green", "candle_lightblue", "candle_lime", "candle_magenta",
 				"candle_orange", "candle_pink", "candle_purple", "candle_red", "candle_silver", "candle_yellow",
-				"phial", "label"
+				"phial", "label",
+				"flesh_block", "rotten_flesh_from_block", "sanity_soap"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -2070,6 +2071,22 @@ public class ThaumcraftGameTests {
 		}
 
 		helper.assertTrue(foundDrop, "a zombie brain should have dropped at least once in 200 rolls at a 15% chance each");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sanitySoapClearsAllWarpWhenUsedUp(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		thaumcraft.api.ThaumcraftApi.internalMethods.addWarpToPlayer(player, 5, IPlayerWarp.EnumWarpType.NORMAL);
+		thaumcraft.api.ThaumcraftApi.internalMethods.addWarpToPlayer(player, 4, IPlayerWarp.EnumWarpType.TEMPORARY);
+		IPlayerWarp warp = ThaumcraftCapabilities.getWarp(player);
+		helper.assertTrue(warp.get(IPlayerWarp.EnumWarpType.NORMAL) == 5 && warp.get(IPlayerWarp.EnumWarpType.TEMPORARY) == 4,
+				"warp should be seeded before cleansing, found normal=" + warp.get(IPlayerWarp.EnumWarpType.NORMAL) + " temporary=" + warp.get(IPlayerWarp.EnumWarpType.TEMPORARY));
+
+		thaumcraft.common.items.consumables.ItemSanitySoap.cleanse(player);
+
+		helper.assertTrue(warp.get(IPlayerWarp.EnumWarpType.NORMAL) == 4, "cleansing should remove exactly 1 point of Normal warp, found: " + warp.get(IPlayerWarp.EnumWarpType.NORMAL));
+		helper.assertTrue(warp.get(IPlayerWarp.EnumWarpType.TEMPORARY) == 0, "cleansing should clear all Temporary warp, found: " + warp.get(IPlayerWarp.EnumWarpType.TEMPORARY));
 		helper.succeed();
 	}
 

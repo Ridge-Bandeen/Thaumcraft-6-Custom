@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "###",
+    "###",
+    "###"
+  ],
+  "key": {
+    "#": { "item": "minecraft:rotten_flesh" }
+  },
+  "result": { "id": "thaumcraft:flesh_block" }
+}

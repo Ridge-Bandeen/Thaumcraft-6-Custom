@@ -46,6 +46,8 @@ sourceSets {
             include 'thaumcraft/common/items/resources/ItemCrystalEssence.java'
             include 'thaumcraft/common/items/consumables/ItemLabel.java'
             include 'thaumcraft/common/items/consumables/ItemZombieBrain.java'
+            include 'thaumcraft/common/blocks/misc/BlockFlesh.java'
+            include 'thaumcraft/common/items/consumables/ItemSanitySoap.java'
             include 'thaumcraft/api/damagesource/ThaumcraftDamageTypes.java'
             include 'thaumcraft/api/entities/IEldritchMob.java'
             include 'thaumcraft/api/entities/ITaintedMob.java'

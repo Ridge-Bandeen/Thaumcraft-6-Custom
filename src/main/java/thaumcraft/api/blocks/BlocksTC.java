@@ -347,6 +347,12 @@ public final class BlocksTC {
 		return dye.getSerializedName();
 	}
 
+	/** Mainly useful as the Crucible catalyst for Sanity Soap - see
+	 * {@link thaumcraft.common.blocks.misc.BlockFlesh}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockFlesh> fleshBlock = BLOCKS.registerBlock("flesh_block",
+			thaumcraft.common.blocks.misc.BlockFlesh::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(0.25f, 2.0f).sound(SoundType.SLIME_BLOCK));
+
 	private BlocksTC() {
 	}
 }
