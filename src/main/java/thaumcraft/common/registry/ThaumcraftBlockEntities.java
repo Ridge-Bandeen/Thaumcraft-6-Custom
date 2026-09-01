@@ -68,6 +68,9 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.devices.TileDioptra>> DIOPTRA = BLOCK_ENTITIES.register("dioptra",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.devices.TileDioptra::new, BlocksTC.dioptra.get()).build(null));
 
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.devices.TileCondenser>> CONDENSER = BLOCK_ENTITIES.register("condenser",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.devices.TileCondenser::new, BlocksTC.condenser.get()).build(null));
+
 	private ThaumcraftBlockEntities() {
 	}
 }

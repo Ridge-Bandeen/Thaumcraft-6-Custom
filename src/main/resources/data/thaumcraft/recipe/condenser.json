@@ -1,0 +1,23 @@
+{
+  "type": "thaumcraft:arcane_shaped",
+  "research": "FIRSTSTEPS",
+  "vis": 500,
+  "crystals": {
+    "aer": 5,
+    "aqua": 5,
+    "perditio": 5
+  },
+  "pattern": [
+    "BCB",
+    "WMW",
+    "BTB"
+  ],
+  "key": {
+    "B": { "item": "thaumcraft:plate_thaumium" },
+    "C": { "item": "minecraft:comparator" },
+    "W": { "tag": "minecraft:planks" },
+    "M": { "item": "minecraft:redstone_block" },
+    "T": { "item": "thaumcraft:tube" }
+  },
+  "result": { "id": "thaumcraft:condenser" }
+}

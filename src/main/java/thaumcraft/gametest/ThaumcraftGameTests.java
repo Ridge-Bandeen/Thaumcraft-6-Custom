@@ -217,6 +217,10 @@ public class ThaumcraftGameTests {
 	private static final class TestEssentiaSourceBlockEntity extends net.minecraft.world.level.block.entity.BlockEntity implements thaumcraft.api.aspects.IEssentiaTransport {
 		Aspect aspect;
 		int amount;
+		/** Defaults to DOWN (the original "stands in for a device/tube outputting downward" use case) but
+		 * settable per-test since some devices - e.g. TileCondenser's fill(), which only ever checks
+		 * horizontal neighbors - need a source exposed on a different face. */
+		net.minecraft.core.Direction outputFace = net.minecraft.core.Direction.DOWN;
 
 		TestEssentiaSourceBlockEntity(BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
 			super(TEST_ESSENTIA_SOURCE_BE.get(), pos, state);
@@ -224,7 +228,7 @@ public class ThaumcraftGameTests {
 
 		@Override
 		public boolean isConnectable(net.minecraft.core.Direction face) {
-			return face == net.minecraft.core.Direction.DOWN;
+			return face == outputFace;
 		}
 
 		@Override
@@ -234,7 +238,7 @@ public class ThaumcraftGameTests {
 
 		@Override
 		public boolean canOutputTo(net.minecraft.core.Direction face) {
-			return face == net.minecraft.core.Direction.DOWN;
+			return face == outputFace;
 		}
 
 		@Override
@@ -400,7 +404,8 @@ public class ThaumcraftGameTests {
 				"metal_block_thaumium", "ingot_thaumium_from_block", "plate_thaumium",
 				"thaumium_pick", "thaumium_axe", "thaumium_shovel", "thaumium_hoe", "thaumium_sword",
 				"thaumium_helm", "thaumium_chest", "thaumium_legs", "thaumium_boots",
-				"vis_battery", "dioptra"
+				"vis_battery", "dioptra",
+				"filter", "condenser", "condenser_lattice"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -1801,6 +1806,64 @@ public class ThaumcraftGameTests {
 		helper.getBlockState(pos).useWithoutItem(helper.getLevel(), player, hit);
 		helper.assertTrue(helper.getBlockState(pos).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED),
 				"right-clicking again should switch it back to vis mode (enabled)");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Flux Condenser - converts real world flux + stored essentia into stored Flux essentia, paced by a
+	// connected BlockCondenserLattice structure above it. Calls TileCondenser.tick(...) directly, same
+	// "test the real entry point" precedent as every ticking device above.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void condenserLatticeStructureGivesTheCondenserARealLatticeCount(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.condenser.get());
+		helper.setBlock(pos.above(), BlocksTC.condenserLattice.get());
+		helper.setBlock(pos.above(2), BlocksTC.condenserLattice.get());
+		helper.setBlock(pos.above(3), BlocksTC.condenserLattice.get());
+
+		thaumcraft.common.tiles.devices.TileCondenser tile = helper.getBlockEntity(pos);
+		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(pos);
+		thaumcraft.common.tiles.devices.TileCondenser.tick(helper.getLevel(), absolute, state, tile);
+
+		helper.assertTrue(tile.getLatticeCount() > 0.0f, "a condenser with a connected lattice above it should have a positive lattice count, found: " + tile.getLatticeCount());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void condenserConvertsEssentiaAndWorldFluxIntoStoredFluxEssentia(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.condenser.get());
+		helper.setBlock(pos.above(), BlocksTC.condenserLattice.get());
+		helper.setBlock(pos.above(2), BlocksTC.condenserLattice.get());
+
+		// TileCondenser.addEssentia (the IEssentiaTransport interface method) is a faithfully-ported
+		// original quirk that computes how much *could* be added but never actually stores it - the real
+		// condenser only ever gains essentia through its own fill() pulling from a real neighbor, so that's
+		// what this test exercises too, via the same test-only IEssentiaTransport source used for the Jar/
+		// Tube tests (reconfigured to output on its SOUTH face, since fill() only checks horizontal sides).
+		helper.setBlock(pos.north(), TEST_ESSENTIA_SOURCE_BLOCK.get());
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(pos.north());
+		source.aspect = Aspect.AIR;
+		source.amount = 50;
+		source.outputFace = net.minecraft.core.Direction.SOUTH;
+
+		thaumcraft.common.tiles.devices.TileCondenser tile = helper.getBlockEntity(pos);
+		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(pos);
+		AuraHandler.addFlux(helper.getLevel(), absolute, 50.0f);
+		float worldFluxBefore = AuraHandler.getFlux(helper.getLevel(), absolute);
+
+		for (int i = 0; i < 700; i++) {
+			thaumcraft.common.tiles.devices.TileCondenser.tick(helper.getLevel(), absolute, state, tile);
+			if (tile.getFluxStored() > 0) break;
+		}
+
+		helper.assertTrue(tile.getFluxStored() > 0, "the condenser should have converted at least 1 point of Flux essentia by now, found: " + tile.getFluxStored());
+		helper.assertTrue(tile.getEssentia() >= 0 && source.amount < 50, "the condenser should have pulled essentia from the source, source now has: " + source.amount);
+		helper.assertTrue(AuraHandler.getFlux(helper.getLevel(), absolute) < worldFluxBefore, "converting should have drained real world flux");
 		helper.succeed();
 	}
 

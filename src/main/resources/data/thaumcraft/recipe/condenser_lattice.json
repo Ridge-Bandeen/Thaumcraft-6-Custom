@@ -1,0 +1,20 @@
+{
+  "type": "thaumcraft:arcane_shaped",
+  "research": "FIRSTSTEPS",
+  "vis": 100,
+  "crystals": {
+    "terra": 3,
+    "aer": 3
+  },
+  "pattern": [
+    "QTQ",
+    "QFQ",
+    "QTQ"
+  ],
+  "key": {
+    "T": { "item": "thaumcraft:plate_thaumium" },
+    "F": { "item": "thaumcraft:filter" },
+    "Q": { "item": "minecraft:quartz" }
+  },
+  "result": { "id": "thaumcraft:condenser_lattice" }
+}

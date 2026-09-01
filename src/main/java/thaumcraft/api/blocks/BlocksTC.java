@@ -293,6 +293,25 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.devices.BlockDioptra::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(0.5f).sound(SoundType.STONE).noOcclusion());
 
+	/** Converts real world flux into pure Flux essentia - see
+	 * {@link thaumcraft.common.tiles.devices.TileCondenser}'s own doc comment for the lattice-paced
+	 * conversion logic. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockCondenser> condenser = BLOCKS.registerBlock("condenser",
+			thaumcraft.common.blocks.devices.BlockCondenser::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.METAL).noOcclusion());
+
+	/** The connective structure a condenser scans upward through - see
+	 * {@link thaumcraft.common.blocks.devices.BlockCondenserLattice}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockCondenserLattice> condenserLattice = BLOCKS.registerBlock("condenser_lattice",
+			props -> new thaumcraft.common.blocks.devices.BlockCondenserLattice(props, false),
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(0.5f).explosionResistance(5.0f).sound(SoundType.METAL).noOcclusion().lightLevel(state -> 5));
+
+	/** Same block as {@link #condenserLattice}, clogged - set programmatically, never placed directly by a
+	 * player (no {@code BlockItem} registered for it), matching the original. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockCondenserLattice> condenserLatticeDirty = BLOCKS.registerBlock("condenser_lattice_dirty",
+			props -> new thaumcraft.common.blocks.devices.BlockCondenserLattice(props, true),
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(0.5f).explosionResistance(5.0f).sound(SoundType.METAL).noOcclusion());
+
 	private BlocksTC() {
 	}
 }

@@ -156,5 +156,10 @@
   "item.thaumcraft.thaumium_boots": "Thaumium Boots",
 
   "block.thaumcraft.vis_battery": "Vis Battery",
-  "block.thaumcraft.dioptra": "Dioptra"
+  "block.thaumcraft.dioptra": "Dioptra",
+
+  "item.thaumcraft.filter": "Filter",
+  "block.thaumcraft.condenser": "Flux Condenser",
+  "block.thaumcraft.condenser_lattice": "Condenser Lattice",
+  "block.thaumcraft.condenser_lattice_dirty": "Condenser Lattice"
 }

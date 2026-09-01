@@ -1,210 +1,156 @@
 package thaumcraft.common.blocks.devices;
+
 import java.util.ArrayList;
-import net.minecraft.block.Block;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.properties.PropertyBool;
-import net.minecraft.block.state.BlockFaceShape;
-import net.minecraft.block.state.BlockStateContainer;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
+import java.util.List;
+
+import com.mojang.serialization.MapCodec;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.PipeBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.phys.BlockHitResult;
+import thaumcraft.api.aspects.Aspect;
+import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.blocks.BlocksTC;
+import thaumcraft.api.items.ItemGenericEssentiaContainer;
 import thaumcraft.api.items.ItemsTC;
-import thaumcraft.common.blocks.BlockTC;
-import thaumcraft.common.config.ConfigItems;
-import thaumcraft.common.tiles.devices.TileCondenser;
 
+/**
+ * Replaces the old (1.12.2) {@code BlockCondenserLattice} - the connective structure a {@link
+ * thaumcraft.common.tiles.devices.TileCondenser} scans upward through (see its own doc comment). Folded the
+ * original's clean/dirty pair into a single class with a {@code dirty} flag, same "one class, two codecs"
+ * shape as {@link BlockArcaneEar}, rather than a trivial subclass.
+ *
+ * Reuses vanilla's own {@code PipeBlock.PROPERTY_BY_DIRECTION} for the 6 connection booleans - same choice
+ * as {@link thaumcraft.common.tiles.essentia.TileTube} - recomputed from real neighbor state on every shape
+ * update purely for rendering the multipart model.
+ *
+ * A lattice block drops itself if it's ever left with no live BFS path back to a condenser (checked on
+ * placement, on a lattice/condenser neighbor changing, and on harvest, exactly like the original's own
+ * {@code triggerUpdate} calls). Right-clicking a dirty lattice block with an {@link ItemsTC#filter} clears it
+ * back to clean, with a 50% chance of also ejecting a Flux crystal essence (an {@code ItemGenericEssentiaContainer}
+ * stack tagged with 1 Flux, the modern equivalent of the original's damage-value-keyed
+ * {@code ConfigItems.FLUX_CRYSTAL}).
+ */
+public class BlockCondenserLattice extends Block {
 
-public class BlockCondenserLattice extends BlockTC
-{
-    public static PropertyBool NORTH;
-    public static PropertyBool EAST;
-    public static PropertyBool SOUTH;
-    public static PropertyBool WEST;
-    public static PropertyBool UP;
-    public static PropertyBool DOWN;
-    private ArrayList<Long> history;
-    
-    public BlockCondenserLattice(boolean dirty) {
-        super(Material.IRON, dirty ? "condenser_lattice_dirty" : "condenser_lattice");
-        history = new ArrayList<Long>();
-        setHardness(0.5f);
-        setResistance(5.0f);
-        setSoundType(SoundType.METAL);
-        setLightLevel(dirty ? 0.0f : 0.33f);
-        setDefaultState(blockState.getBaseState().withProperty((IProperty)BlockCondenserLattice.NORTH, (Comparable)false).withProperty((IProperty)BlockCondenserLattice.EAST, (Comparable)false).withProperty((IProperty)BlockCondenserLattice.SOUTH, (Comparable)false).withProperty((IProperty)BlockCondenserLattice.WEST, (Comparable)false).withProperty((IProperty)BlockCondenserLattice.UP, (Comparable)false).withProperty((IProperty)BlockCondenserLattice.DOWN, (Comparable)false));
-    }
-    
-    public BlockFaceShape getBlockFaceShape(IBlockAccess worldIn, IBlockState state, BlockPos pos, EnumFacing face) {
-        return BlockFaceShape.UNDEFINED;
-    }
-    
-    protected BlockStateContainer createBlockState() {
-        return new BlockStateContainer(this, BlockCondenserLattice.NORTH, BlockCondenserLattice.EAST, BlockCondenserLattice.SOUTH, BlockCondenserLattice.WEST, BlockCondenserLattice.UP, BlockCondenserLattice.DOWN);
-    }
-    
-    public boolean isOpaqueCube(IBlockState state) {
-        return false;
-    }
-    
-    public boolean isFullCube(IBlockState state) {
-        return false;
-    }
-    
-    public int getMetaFromState(IBlockState state) {
-        return 0;
-    }
-    
-    public IBlockState getActualState(IBlockState state, IBlockAccess worldIn, BlockPos pos) {
-        Boolean[] cons = makeConnections(state, worldIn, pos);
-        return state.withProperty((IProperty)BlockCondenserLattice.DOWN, (Comparable)cons[0]).withProperty((IProperty)BlockCondenserLattice.UP, (Comparable)cons[1]).withProperty((IProperty)BlockCondenserLattice.NORTH, (Comparable)cons[2]).withProperty((IProperty)BlockCondenserLattice.SOUTH, (Comparable)cons[3]).withProperty((IProperty)BlockCondenserLattice.WEST, (Comparable)cons[4]).withProperty((IProperty)BlockCondenserLattice.EAST, (Comparable)cons[5]);
-    }
-    
-    private Boolean[] makeConnections(IBlockState state, IBlockAccess world, BlockPos pos) {
-        Boolean[] cons = { false, false, false, false, false, false };
-        int a = 0;
-        for (EnumFacing face : EnumFacing.VALUES) {
-            Block b = world.getBlockState(pos.offset(face)).getBlock();
-            if (b instanceof BlockCondenserLattice || (face == EnumFacing.DOWN && b == BlocksTC.condenser)) {
-                cons[a] = true;
-            }
-            ++a;
-        }
-        return cons;
-    }
-    
-    public void onBlockAdded(World worldIn, BlockPos pos, IBlockState state) {
-        super.onBlockAdded(worldIn, pos, state);
-        triggerUpdate(worldIn, pos);
-    }
-    
-    public void neighborChanged(IBlockState state, World worldIn, BlockPos pos, Block blockIn, BlockPos fromPos) {
-        super.neighborChanged(state, worldIn, pos, blockIn, fromPos);
-        if (blockIn == BlocksTC.condenserlattice || blockIn == BlocksTC.condenserlatticeDirty || blockIn == BlocksTC.condenser) {
-            triggerUpdate(worldIn, pos);
-        }
-    }
-    
-    public boolean onBlockActivated(World worldIn, BlockPos pos, IBlockState state, EntityPlayer playerIn, EnumHand hand, EnumFacing facing, float hitX, float hitY, float hitZ) {
-        if (worldIn.isRemote) {
-            return true;
-        }
-        if (state.getBlock() == BlocksTC.condenserlatticeDirty && playerIn.getHeldItem(hand).getItem() == ItemsTC.filter) {
-            playerIn.getHeldItem(hand).shrink(1);
-            if (worldIn.rand.nextBoolean()) {
-                worldIn.spawnEntity(new EntityItem(worldIn, pos.getX() + 0.5f + facing.getFrontOffsetX() / 3.0f, pos.getY() + 0.5f, pos.getZ() + 0.5f + facing.getFrontOffsetZ() / 3.0f, ConfigItems.FLUX_CRYSTAL.copy()));
-            }
-            worldIn.playSound(null, pos, SoundEvents.ENTITY_ITEM_PICKUP, SoundCategory.BLOCKS, 0.2f, ((worldIn.rand.nextFloat() - worldIn.rand.nextFloat()) * 0.7f + 1.0f) * 1.6f);
-            worldIn.setBlockState(pos, BlocksTC.condenserlattice.getDefaultState(), 3);
-            IBlockState state2 = worldIn.getBlockState(pos);
-            if (state2.getBlock() instanceof BlockCondenserLattice) {
-                ((BlockCondenserLattice)state2.getBlock()).triggerUpdate(worldIn, pos);
-            }
-        }
-        return super.onBlockActivated(worldIn, pos, state, playerIn, hand, facing, hitX, hitY, hitZ);
-    }
-    
-    public void onBlockHarvested(World worldIn, BlockPos pos, IBlockState state, EntityPlayer player) {
-        super.onBlockHarvested(worldIn, pos, state, player);
-        triggerUpdate(worldIn, pos);
-    }
-    
-    public void triggerUpdate(World world, BlockPos pos) {
-        history.clear();
-        BlockPos p = processUpdate(world, pos);
-        if (p == null || p.distanceSq(pos) > 74.0) {
-            dropBlockAsItem(world, pos, getDefaultState(), 0);
-            world.setBlockToAir(pos);
-        }
-        history.clear();
-    }
-    
-    private BlockPos processUpdate(World world, BlockPos pos) {
-        history.add(pos.toLong());
-        for (EnumFacing face : EnumFacing.VALUES) {
-            BlockPos p2 = pos.offset(face);
-            if (!history.contains(p2.toLong())) {
-                Block b = world.getBlockState(p2).getBlock();
-                if (b instanceof BlockCondenserLattice) {
-                    BlockPos pp = processUpdate(world, p2);
-                    if (pp != null) {
-                        return pp;
-                    }
-                }
-                if (face == EnumFacing.DOWN && b == BlocksTC.condenser) {
-                    TileEntity te = world.getTileEntity(p2);
-                    if (te != null && te instanceof TileCondenser) {
-                        ((TileCondenser)te).latticeCount = -1.0f;
-                    }
-                    return p2;
-                }
-            }
-        }
-        return null;
-    }
-    
-    public AxisAlignedBB getBoundingBox(IBlockState state, IBlockAccess source, BlockPos pos) {
-        float minx = 0.3125f;
-        float maxx = 0.6875f;
-        float miny = 0.3125f;
-        float maxy = 0.6875f;
-        float minz = 0.3125f;
-        float maxz = 0.6875f;
-        EnumFacing fd = null;
-        for (int side = 0; side < 6; ++side) {
-            fd = EnumFacing.VALUES[side];
-            Block b = source.getBlockState(pos.offset(fd)).getBlock();
-            if (b instanceof BlockCondenserLattice || (fd == EnumFacing.DOWN && b == BlocksTC.condenser)) {
-                switch (side) {
-                    case 0: {
-                        miny = 0.0f;
-                        break;
-                    }
-                    case 1: {
-                        maxy = 1.0f;
-                        break;
-                    }
-                    case 2: {
-                        minz = 0.0f;
-                        break;
-                    }
-                    case 3: {
-                        maxz = 1.0f;
-                        break;
-                    }
-                    case 4: {
-                        minx = 0.0f;
-                        break;
-                    }
-                    case 5: {
-                        maxx = 1.0f;
-                        break;
-                    }
-                }
-            }
-        }
-        return new AxisAlignedBB(minx, miny, minz, maxx, maxy, maxz);
-    }
-    
-    static {
-        NORTH = PropertyBool.create("north");
-        EAST = PropertyBool.create("east");
-        SOUTH = PropertyBool.create("south");
-        WEST = PropertyBool.create("west");
-        UP = PropertyBool.create("up");
-        DOWN = PropertyBool.create("down");
-    }
+	public static final MapCodec<BlockCondenserLattice> CODEC = simpleCodec(props -> new BlockCondenserLattice(props, false));
+	public static final MapCodec<BlockCondenserLattice> DIRTY_CODEC = simpleCodec(props -> new BlockCondenserLattice(props, true));
+
+	private final boolean dirty;
+
+	public BlockCondenserLattice(BlockBehaviour.Properties properties, boolean dirty) {
+		super(properties);
+		this.dirty = dirty;
+		BlockState any = getStateDefinition().any();
+		for (Direction dir : Direction.values()) {
+			any = any.setValue(PipeBlock.PROPERTY_BY_DIRECTION.get(dir), false);
+		}
+		registerDefaultState(any);
+	}
+
+	@Override
+	protected MapCodec<? extends Block> codec() {
+		return dirty ? DIRTY_CODEC : CODEC;
+	}
+
+	@Override
+	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+		builder.add(PipeBlock.NORTH, PipeBlock.SOUTH, PipeBlock.EAST, PipeBlock.WEST, PipeBlock.UP, PipeBlock.DOWN);
+	}
+
+	@Override
+	protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+		return state.setValue(PipeBlock.PROPERTY_BY_DIRECTION.get(direction), connectsTo(level, pos, direction));
+	}
+
+	private boolean connectsTo(LevelAccessor level, BlockPos pos, Direction dir) {
+		BlockState neighbor = level.getBlockState(pos.relative(dir));
+		return neighbor.getBlock() instanceof BlockCondenserLattice
+				|| (dir == Direction.DOWN && neighbor.getBlock() == BlocksTC.condenser.get());
+	}
+
+	@Override
+	protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
+		super.onPlace(state, level, pos, oldState, movedByPiston);
+		triggerUpdate(level, pos);
+	}
+
+	@Override
+	protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock, BlockPos neighborPos, boolean movedByPiston) {
+		super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);
+		if (neighborBlock == BlocksTC.condenserLattice.get() || neighborBlock == BlocksTC.condenserLatticeDirty.get() || neighborBlock == BlocksTC.condenser.get()) {
+			triggerUpdate(level, pos);
+		}
+	}
+
+	@Override
+	public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+		BlockState result = super.playerWillDestroy(level, pos, state, player);
+		if (!level.isClientSide) triggerUpdate(level, pos);
+		return result;
+	}
+
+	@Override
+	protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, net.minecraft.world.InteractionHand hand, BlockHitResult hitResult) {
+		if (level.isClientSide) return ItemInteractionResult.sidedSuccess(true);
+		if (dirty && stack.is(ItemsTC.filter.get())) {
+			stack.shrink(1);
+			if (level.random.nextBoolean()) {
+				ItemStack crystal = new ItemStack(ItemsTC.crystalEssence.get(), 1);
+				((ItemGenericEssentiaContainer) crystal.getItem()).setAspects(crystal, new AspectList().add(Aspect.FLUX, 1));
+				Block.popResource(level, pos, crystal);
+			}
+			level.playSound(null, pos, net.minecraft.sounds.SoundEvents.ITEM_PICKUP, net.minecraft.sounds.SoundSource.BLOCKS,
+					0.2f, ((level.random.nextFloat() - level.random.nextFloat()) * 0.7f + 1.0f) * 1.6f);
+			level.setBlock(pos, BlocksTC.condenserLattice.get().defaultBlockState(), 3);
+			if (level.getBlockState(pos).getBlock() instanceof BlockCondenserLattice lattice) {
+				lattice.triggerUpdate(level, pos);
+			}
+			return ItemInteractionResult.CONSUME;
+		}
+		return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+	}
+
+	/** Depth-limited BFS (same ~8.6 block cap as {@code TileCondenser}'s own scan) back down to a real
+	 * condenser; drops itself as an item and turns to air if no live path exists any more. */
+	public void triggerUpdate(Level level, BlockPos pos) {
+		List<Long> history = new ArrayList<>();
+		BlockPos found = processUpdate(level, pos, history);
+		if (found == null || found.distSqr(pos) > 74.0) {
+			// Always drop the clean lattice item, even for the dirty variant (which has no BlockItem of its
+			// own, same as the original) - a small, deliberate improvement over silently dropping nothing.
+			popResource(level, pos, new ItemStack(BlocksTC.condenserLattice.get()));
+			level.removeBlock(pos, false);
+		}
+	}
+
+	private BlockPos processUpdate(Level level, BlockPos pos, List<Long> history) {
+		history.add(pos.asLong());
+		for (Direction face : Direction.values()) {
+			BlockPos p2 = pos.relative(face);
+			if (history.contains(p2.asLong())) continue;
+			Block b = level.getBlockState(p2).getBlock();
+			if (b instanceof BlockCondenserLattice) {
+				BlockPos found = processUpdate(level, p2, history);
+				if (found != null) return found;
+			}
+			if (face == Direction.DOWN && b == BlocksTC.condenser.get()) {
+				if (level.getBlockEntity(p2) instanceof thaumcraft.common.tiles.devices.TileCondenser condenser) {
+					condenser.markLatticeDirty();
+				}
+				return p2;
+			}
+		}
+		return null;
+	}
 }

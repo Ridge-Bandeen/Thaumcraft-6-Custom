@@ -280,6 +280,18 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> dioptra =
 			ITEMS.registerSimpleBlockItem("dioptra", BlocksTC.dioptra);
 
+	/** A simple crafted component (gold + silverwood plank) reused by several still-unbuilt devices in the
+	 * original (Tube Filter, Alembic, Smelter Vent, Condenser Lattice) - worth porting now as a real base
+	 * item rather than improvising a one-off substitute for each device separately later. */
+	public static final DeferredItem<Item> filter =
+			ITEMS.registerSimpleItem("filter");
+
+	public static final DeferredItem<BlockItem> condenser =
+			ITEMS.registerSimpleBlockItem("condenser", BlocksTC.condenser);
+
+	public static final DeferredItem<BlockItem> condenserLattice =
+			ITEMS.registerSimpleBlockItem("condenser_lattice", BlocksTC.condenserLattice);
+
 	public static final DeferredItem<Item> thaumiumHelm = ITEMS.registerItem("thaumium_helm",
 			props -> new ArmorItem(ThaumcraftArmorMaterials.THAUMIUM, ArmorItem.Type.HELMET,
 					props.durability(ArmorItem.Type.HELMET.getDurability(25))));
