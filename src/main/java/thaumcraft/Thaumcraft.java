@@ -185,4 +185,27 @@ public class Thaumcraft {
     public void onLevelTickPost(LevelTickEvent.Post event) {
         TileArcaneEar.clearNoteEvents(event.getLevel());
     }
+
+    /** A real vanilla Zombie kill has a chance to drop a Zombie Brain - see {@code ItemZombieBrain}'s own
+     * doc comment. Simplified vs the original: no looting-level scaling (that event field isn't exposed by
+     * NeoForge's modern {@code LivingDropsEvent} the same way) and no exclusion for the original's own
+     * {@code EntityBrainyZombie} variant (not built) - a flat 15% chance on any recently-hit vanilla Zombie
+     * death, roughly the middle of the original's own looting-scaled ~10-30% range.
+     */
+    @SubscribeEvent
+    public void onLivingDrops(net.neoforged.neoforge.event.entity.living.LivingDropsEvent event) {
+        if (event.getEntity().level().isClientSide) return;
+        if (!(event.getEntity() instanceof net.minecraft.world.entity.monster.Zombie zombie)) return;
+        if (!event.isRecentlyHit()) return;
+        rollZombieBrainDrop(zombie, event.getDrops());
+    }
+
+    /** The real drop-roll logic, split out so GameTests can call it directly with a fixed random draw
+     * rather than depending on a real, statistically-rare combat kill. */
+    public static void rollZombieBrainDrop(net.minecraft.world.entity.monster.Zombie zombie, java.util.Collection<net.minecraft.world.entity.item.ItemEntity> drops) {
+        if (zombie.getRandom().nextFloat() >= 0.15f) return;
+        drops.add(new net.minecraft.world.entity.item.ItemEntity(
+                zombie.level(), zombie.getX(), zombie.getY() + zombie.getEyeHeight(), zombie.getZ(),
+                new net.minecraft.world.item.ItemStack(thaumcraft.api.items.ItemsTC.brain.get())));
+    }
 }

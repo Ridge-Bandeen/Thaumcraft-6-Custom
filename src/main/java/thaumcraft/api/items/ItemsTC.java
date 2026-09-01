@@ -310,6 +310,15 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.items.consumables.ItemLabel> label = ITEMS.registerItem("label",
 			props -> new thaumcraft.common.items.consumables.ItemLabel(props.stacksTo(64)));
 
+	/** A random vanilla Zombie kill has a chance to drop one - see
+	 * {@link thaumcraft.common.items.consumables.ItemZombieBrain}'s own doc comment for the warp risk/reward. */
+	public static final DeferredItem<thaumcraft.common.items.consumables.ItemZombieBrain> brain = ITEMS.registerItem("brain",
+			props -> new thaumcraft.common.items.consumables.ItemZombieBrain(props.food(
+					new net.minecraft.world.food.FoodProperties.Builder()
+							.nutrition(4).saturationModifier(0.2f)
+							.effect(() -> new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.HUNGER, 30, 0), 0.8f)
+							.build())));
+
 	public static final java.util.Map<net.minecraft.world.item.DyeColor, DeferredItem<BlockItem>> candles = new java.util.EnumMap<>(net.minecraft.world.item.DyeColor.class);
 	static {
 		BlocksTC.candles.forEach((dye, block) -> candles.put(dye, ITEMS.registerSimpleBlockItem("candle_" + BlocksTC.candleDyeName(dye), block)));

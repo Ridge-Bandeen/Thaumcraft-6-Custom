@@ -2046,6 +2046,34 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
+	// Zombie Brain - a random vanilla Zombie kill has a chance to drop one (Thaumcraft#onLivingDrops).
+	// Calls Thaumcraft.rollZombieBrainDrop directly across many attempts (a real, statistically-rare kill
+	// isn't practical to simulate here) rather than depending on real combat, same "test the real entry
+	// point" precedent as every probabilistic mechanic this session.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void zombieKillsSometimesDropABrain(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 1, 2);
+		helper.setBlock(pos.below(), Blocks.STONE);
+		BlockPos absolute = helper.absolutePos(pos);
+
+		net.minecraft.world.entity.monster.Zombie zombie = net.minecraft.world.entity.EntityType.ZOMBIE.create(helper.getLevel());
+		zombie.moveTo(absolute.getX() + 0.5, absolute.getY(), absolute.getZ() + 0.5, 0, 0);
+		helper.getLevel().addFreshEntity(zombie);
+
+		java.util.List<net.minecraft.world.entity.item.ItemEntity> drops = new java.util.ArrayList<>();
+		boolean foundDrop = false;
+		for (int i = 0; i < 200 && !foundDrop; i++) {
+			thaumcraft.Thaumcraft.rollZombieBrainDrop(zombie, drops);
+			foundDrop = drops.stream().anyMatch(e -> e.getItem().getItem() == ItemsTC.brain.get());
+		}
+
+		helper.assertTrue(foundDrop, "a zombie brain should have dropped at least once in 200 rolls at a 15% chance each");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
 	// Everfull Urn (TileWaterJug) - see TileWaterJug's own doc comment for what's simplified (the
 	// original's 5x5x3 neighbor auto-fill scanning is dropped; this keeps the core "infinite water source"
 	// identity). Bucket/bottle interaction uses the real BlockState#useItemOn public dispatch, same pattern
