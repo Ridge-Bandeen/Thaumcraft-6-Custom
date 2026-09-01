@@ -2797,4 +2797,27 @@ public class ThaumcraftGameTests {
 				"a lone, unmatched stabilizer should penalize stabilityReplenish, got " + matrix.stabilityReplenish);
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void casterBasicActivatesAnInfusionMatrixThroughOnItemUseFirst(GameTestHelper helper) {
+		BlockPos matrixPos = new BlockPos(4, 4, 4);
+		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		helper.setBlock(matrixPos.below(2), BlocksTC.pedestal.get());
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+
+		ServerPlayer player = spawnCasterAt(helper, matrixAbs);
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		ItemStack wand = new ItemStack(ItemsTC.casterBasic.get());
+		player.setItemInHand(hand, wand);
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(matrixAbs), net.minecraft.core.Direction.UP, matrixAbs, false);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(helper.getLevel(), player, hand, wand, hit);
+
+		net.minecraft.world.InteractionResult result = wand.getItem().onItemUseFirst(wand, context);
+
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.CONSUME, "a caster right-clicking a valid infusion matrix should consume the interaction, got " + result);
+		helper.assertTrue(matrix.active, "the matrix should have activated through the caster's onItemUseFirst dispatch");
+		helper.succeed();
+	}
 }

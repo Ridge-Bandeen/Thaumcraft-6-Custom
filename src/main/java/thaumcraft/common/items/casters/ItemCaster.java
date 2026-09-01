@@ -4,16 +4,19 @@ import java.util.List;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import thaumcraft.api.casters.FocusEngine;
 import thaumcraft.api.casters.FocusPackage;
 import thaumcraft.api.casters.ICaster;
 import thaumcraft.api.casters.IFocusElement;
+import thaumcraft.api.casters.IInteractWithCaster;
 import thaumcraft.api.items.ThaumcraftDataComponents;
 import thaumcraft.common.world.aura.AuraHandler;
 
@@ -89,6 +92,30 @@ public class ItemCaster extends Item implements ICaster {
 		} else {
 			tooltip.add(Component.translatable("item.thaumcraft.caster.no_focus"));
 		}
+	}
+
+	/**
+	 * Lets a block the wand is pointed at handle the click itself before the default block interaction or
+	 * this item's own focus-casting {@link #use} runs - the modern equivalent of the original's
+	 * caster-trigger-on-right-clicked-block dispatch. Currently the only real implementer is
+	 * {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix} (its own doc comment already anticipated
+	 * this: it was calling {@code activate} directly from a plain block right-click as a stand-in until a
+	 * wand item existed to call {@code onCasterRightClick} for real - this is that wiring, added with no
+	 * changes needed on the tile's side). The block right-click fallback stays in place alongside this,
+	 * purely additive - not worth removing an already-working, already-tested path.
+	 */
+	@Override
+	public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+		Player player = context.getPlayer();
+		Level level = context.getLevel();
+		if (player == null) return InteractionResult.PASS;
+		if (level.getBlockEntity(context.getClickedPos()) instanceof IInteractWithCaster caster) {
+			boolean handled = caster.onCasterRightClick(level, stack, player, context.getClickedPos(), context.getClickedFace(), context.getHand());
+			if (handled) {
+				return level.isClientSide ? InteractionResult.SUCCESS : InteractionResult.CONSUME;
+			}
+		}
+		return InteractionResult.PASS;
 	}
 
 	@Override
