@@ -397,7 +397,8 @@ public class ThaumcraftGameTests {
 				"lamp_growth", "lamp_fertility",
 				"tube",
 				"ingot_thaumium", "nugget_thaumium", "ingot_thaumium_from_nuggets",
-				"metal_block_thaumium", "ingot_thaumium_from_block", "plate_thaumium"
+				"metal_block_thaumium", "ingot_thaumium_from_block", "plate_thaumium",
+				"thaumium_pick", "thaumium_axe", "thaumium_shovel", "thaumium_hoe", "thaumium_sword"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -752,6 +753,32 @@ public class ThaumcraftGameTests {
 		boolean foundThaumium = ejected.stream().anyMatch(e -> e.getItem().is(ItemsTC.ingotThaumium.get()));
 		helper.assertTrue(foundThaumium, "completing ingot_thaumium should have ejected a thaumcraft:ingot_thaumium item near the crucible, found: "
 				+ ejected.stream().map(e -> e.getItem().toString()).toList());
+		helper.succeed();
+	}
+
+	/**
+	 * Thaumium tools (thaumium_pick/axe/shovel/hoe/sword) use a hand-built {@code Tier} (see
+	 * {@code ItemsTC.TIER_THAUMIUM}) reproducing the original's {@code TOOLMAT_THAUMIUM} stats: harvest
+	 * level 3 == diamond-equivalent, 500 uses, repairable with a Thaumium ingot. This checks the actual
+	 * derived behaviour (durability, correct-tool-for-drops, repairability) rather than just that the item
+	 * exists, since those are all computed by the vanilla Tier/DiggerItem/TieredItem machinery and a wiring
+	 * mistake there wouldn't show up any other way.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumiumPickaxeHasCorrectTierBehaviour(GameTestHelper helper) {
+		ItemStack pick = new ItemStack(ItemsTC.thaumiumPick.get());
+
+		helper.assertTrue(pick.getMaxDamage() == 500, "thaumium_pick should have 500 uses (durability), found: " + pick.getMaxDamage());
+
+		net.minecraft.world.level.block.state.BlockState obsidian = Blocks.OBSIDIAN.defaultBlockState();
+		helper.assertTrue(pick.isCorrectToolForDrops(obsidian), "a diamond-equivalent pickaxe should be able to correctly mine obsidian");
+
+		helper.assertTrue(pick.getDestroySpeed(obsidian) == 7.0F,
+				"thaumium_pick's mining speed on a correct-tool block should be its 7.0 tier speed, found: " + pick.getDestroySpeed(obsidian));
+
+		helper.assertTrue(pick.getItem().isValidRepairItem(pick, new ItemStack(ItemsTC.ingotThaumium.get())), "thaumium_pick should be repairable with a Thaumium ingot");
+		helper.assertFalse(pick.getItem().isValidRepairItem(pick, new ItemStack(Items.IRON_INGOT)), "thaumium_pick should not be repairable with a plain iron ingot");
+
 		helper.succeed();
 	}
 

@@ -1,7 +1,16 @@
 package thaumcraft.api.items;
 
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.PickaxeItem;
+import net.minecraft.world.item.ShovelItem;
+import net.minecraft.world.item.SwordItem;
+import net.minecraft.world.item.Tier;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.neoforged.neoforge.common.SimpleTier;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.api.blocks.BlocksTC;
@@ -231,6 +240,31 @@ public final class ItemsTC {
 
 	public static final DeferredItem<BlockItem> metalBlockThaumium =
 			ITEMS.registerSimpleBlockItem("metal_block_thaumium", BlocksTC.metalBlockThaumium);
+
+	/** {@code ThaumcraftMaterials.TOOLMAT_THAUMIUM} from the original: harvest level 3 (diamond-equivalent -
+	 * modern Minecraft has no numeric harvest level any more, blocks are gated by a "can't be harvested by"
+	 * tag instead, so this maps to the same tag diamond tools are exempt from), 500 uses, 7.0 mining speed,
+	 * +2.5 attack damage, 22 enchantability, repairable with a Thaumium ingot. {@link SimpleTier} is
+	 * NeoForge's own helper for exactly this - a custom {@link Tier} with no enum entry. Not registered with
+	 * {@code TierSortingRegistry} (that only matters for cross-mod tier ordering in smithing-table repair
+	 * predicates and villager trades, neither of which exist here yet). */
+	private static final Tier TIER_THAUMIUM = new SimpleTier(BlockTags.INCORRECT_FOR_DIAMOND_TOOL, 500, 7.0F, 2.5F, 22,
+			() -> Ingredient.of(ItemsTC.ingotThaumium));
+
+	public static final DeferredItem<Item> thaumiumPick = ITEMS.registerItem("thaumium_pick",
+			props -> new PickaxeItem(TIER_THAUMIUM, props.attributes(PickaxeItem.createAttributes(TIER_THAUMIUM, 1.0F, -2.8F))));
+
+	public static final DeferredItem<Item> thaumiumAxe = ITEMS.registerItem("thaumium_axe",
+			props -> new AxeItem(TIER_THAUMIUM, props.attributes(AxeItem.createAttributes(TIER_THAUMIUM, 5.0F, -3.0F))));
+
+	public static final DeferredItem<Item> thaumiumShovel = ITEMS.registerItem("thaumium_shovel",
+			props -> new ShovelItem(TIER_THAUMIUM, props.attributes(ShovelItem.createAttributes(TIER_THAUMIUM, 1.5F, -3.0F))));
+
+	public static final DeferredItem<Item> thaumiumHoe = ITEMS.registerItem("thaumium_hoe",
+			props -> new HoeItem(TIER_THAUMIUM, props.attributes(HoeItem.createAttributes(TIER_THAUMIUM, -3.0F, 0.0F))));
+
+	public static final DeferredItem<Item> thaumiumSword = ITEMS.registerItem("thaumium_sword",
+			props -> new SwordItem(TIER_THAUMIUM, props.attributes(SwordItem.createAttributes(TIER_THAUMIUM, 3, -2.4F))));
 
 	private ItemsTC() {
 	}

@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "II",
+    "SI",
+    "S "
+  ],
+  "key": {
+    "I": { "item": "thaumcraft:ingot_thaumium" },
+    "S": { "item": "minecraft:stick" }
+  },
+  "result": { "id": "thaumcraft:thaumium_axe", "count": 1 }
+}

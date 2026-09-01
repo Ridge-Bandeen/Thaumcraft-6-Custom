@@ -142,5 +142,11 @@
   "item.thaumcraft.ingot_thaumium": "Thaumium Ingot",
   "item.thaumcraft.nugget_thaumium": "Thaumium Nugget",
   "item.thaumcraft.plate_thaumium": "Thaumium Plate",
-  "block.thaumcraft.metal_block_thaumium": "Block of Thaumium"
+  "block.thaumcraft.metal_block_thaumium": "Block of Thaumium",
+
+  "item.thaumcraft.thaumium_pick": "Thaumium Pickaxe",
+  "item.thaumcraft.thaumium_axe": "Thaumium Axe",
+  "item.thaumcraft.thaumium_shovel": "Thaumium Shovel",
+  "item.thaumcraft.thaumium_hoe": "Thaumium Hoe",
+  "item.thaumcraft.thaumium_sword": "Thaumium Sword"
 }
