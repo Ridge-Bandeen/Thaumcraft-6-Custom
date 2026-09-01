@@ -1,0 +1,10 @@
+{
+  "type": "thaumcraft:crucible",
+  "research": "FIRSTSTEPS",
+  "catalyst": { "item": "minecraft:iron_ingot" },
+  "aspects": {
+    "praecantatio": 5,
+    "terra": 5
+  },
+  "result": { "id": "thaumcraft:ingot_thaumium" }
+}

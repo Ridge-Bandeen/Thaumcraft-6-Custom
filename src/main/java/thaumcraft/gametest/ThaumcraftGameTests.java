@@ -395,7 +395,9 @@ public class ThaumcraftGameTests {
 				"arcane_ear", "arcane_ear_toggle",
 				"jar_normal",
 				"lamp_growth", "lamp_fertility",
-				"tube"
+				"tube",
+				"ingot_thaumium", "nugget_thaumium", "ingot_thaumium_from_nuggets",
+				"metal_block_thaumium", "ingot_thaumium_from_block", "plate_thaumium"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -724,6 +726,31 @@ public class ThaumcraftGameTests {
 				.getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0));
 		boolean foundFocus = ejected.stream().anyMatch(e -> e.getItem().is(ItemsTC.focus1.get()));
 		helper.assertTrue(foundFocus, "completing focus_1_crucible should have ejected a thaumcraft:focus_1 item near the crucible, found: "
+				+ ejected.stream().map(e -> e.getItem().toString()).toList());
+		helper.succeed();
+	}
+
+	/**
+	 * Thaumium - the mod's own base metal tier - is obtained by dissolving a plain iron ingot in the
+	 * Crucible (data/thaumcraft/recipe/ingot_thaumium.json: praecantatio 5 + terra 5). Real regression
+	 * coverage for the material chain's actual root, not just the plain vanilla-crafting conversions
+	 * (nugget/block/plate) layered on top of it.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleCompletesTheThaumiumIngotRecipe(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		TileCrucible crucible = placeActiveCrucible(helper, pos);
+		crucible.setAspects(new AspectList().add(Aspect.MAGIC, 5).add(Aspect.EARTH, 5));
+
+		ItemStack catalyst = new ItemStack(Items.IRON_INGOT);
+		ItemStack remainder = crucible.attemptSmelt(catalyst, helper.getLevel());
+
+		helper.assertTrue(remainder.getCount() == 0, "the iron ingot catalyst should have been fully consumed");
+
+		BlockPos absolute = helper.absolutePos(pos);
+		List<ItemEntity> ejected = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0));
+		boolean foundThaumium = ejected.stream().anyMatch(e -> e.getItem().is(ItemsTC.ingotThaumium.get()));
+		helper.assertTrue(foundThaumium, "completing ingot_thaumium should have ejected a thaumcraft:ingot_thaumium item near the crucible, found: "
 				+ ejected.stream().map(e -> e.getItem().toString()).toList());
 		helper.succeed();
 	}

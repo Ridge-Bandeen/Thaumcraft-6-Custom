@@ -137,5 +137,10 @@
 
   "block.thaumcraft.lamp_fertility": "Fertility Lamp",
 
-  "block.thaumcraft.tube": "Essentia Tube"
+  "block.thaumcraft.tube": "Essentia Tube",
+
+  "item.thaumcraft.ingot_thaumium": "Thaumium Ingot",
+  "item.thaumcraft.nugget_thaumium": "Thaumium Nugget",
+  "item.thaumcraft.plate_thaumium": "Thaumium Plate",
+  "block.thaumcraft.metal_block_thaumium": "Block of Thaumium"
 }

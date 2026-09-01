@@ -272,6 +272,13 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.essentia.BlockTube::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.5f).sound(SoundType.METAL).noOcclusion());
 
+	/** Storage block for Thaumium ingots - see {@link thaumcraft.api.items.ItemsTC#ingotThaumium}'s own doc
+	 * comment for the material's real, reachable crucible-based origin. Plain block, same shape as vanilla's
+	 * own metal blocks. */
+	public static final DeferredBlock<Block> metalBlockThaumium = BLOCKS.registerBlock("metal_block_thaumium",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE).strength(5.0f, 6.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
+
 	private BlocksTC() {
 	}
 }
