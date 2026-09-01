@@ -400,7 +400,7 @@ public class ThaumcraftGameTests {
 				"metal_block_thaumium", "ingot_thaumium_from_block", "plate_thaumium",
 				"thaumium_pick", "thaumium_axe", "thaumium_shovel", "thaumium_hoe", "thaumium_sword",
 				"thaumium_helm", "thaumium_chest", "thaumium_legs", "thaumium_boots",
-				"vis_battery"
+				"vis_battery", "dioptra"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -1751,6 +1751,56 @@ public class ThaumcraftGameTests {
 		int charge = helper.getBlockState(pos).getValue(thaumcraft.common.blocks.devices.BlockVisBattery.CHARGE);
 		helper.assertTrue(charge == 4, "a powered battery should discharge one charge per tick, found: " + charge);
 		helper.assertTrue(AuraHandler.getVis(helper.getLevel(), absolute) > visBefore, "discharging should have raised the local aura's vis");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Dioptra - an aura radar with no visual rendering ported (see TileDioptra's own doc comment). Calls
+	// TileDioptra.tick(...) directly 20 times to cross its "every 20 ticks" scan gate rather than waiting
+	// out real tick timing, same precedent as the Vis Battery/Vis Generator tests above.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void dioptraScansTheLocalAuraIntoItsGridAndComparatorOutput(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.dioptra.get());
+		AuraHandler.addVis(helper.getLevel(), absolute, 500.0f);
+
+		thaumcraft.common.tiles.devices.TileDioptra tile = helper.getBlockEntity(pos);
+		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(pos);
+		helper.assertTrue(state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED),
+				"a freshly placed dioptra should default to vis mode (enabled)");
+
+		for (int i = 0; i < 20; i++) {
+			thaumcraft.common.tiles.devices.TileDioptra.tick(helper.getLevel(), absolute, state, tile);
+		}
+
+		helper.assertTrue(tile.gridAmount[84] > 0, "the center cell (this dioptra's own chunk) should reflect the 500 vis just added, found: " + tile.gridAmount[84]);
+
+		int signal = helper.getBlockState(pos).getAnalogOutputSignal(helper.getLevel(), absolute);
+		helper.assertTrue(signal > 0, "a dioptra sitting on a real vis reading should produce a nonzero comparator signal, found: " + signal);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void dioptraRightClickTogglesBetweenVisAndFluxMode(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos.below(), Blocks.DIRT);
+		helper.setBlock(pos, BlocksTC.dioptra.get());
+		BlockPos absolute = helper.absolutePos(pos);
+
+		ServerPlayer player = spawnCasterAt(helper, absolute);
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absolute), net.minecraft.core.Direction.UP, absolute, false);
+		helper.getBlockState(pos).useWithoutItem(helper.getLevel(), player, hit);
+
+		helper.assertTrue(!helper.getBlockState(pos).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED),
+				"right-clicking an enabled dioptra should switch it to flux mode (disabled)");
+
+		helper.getBlockState(pos).useWithoutItem(helper.getLevel(), player, hit);
+		helper.assertTrue(helper.getBlockState(pos).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED),
+				"right-clicking again should switch it back to vis mode (enabled)");
 		helper.succeed();
 	}
 

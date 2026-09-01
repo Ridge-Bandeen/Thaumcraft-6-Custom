@@ -287,6 +287,12 @@ public final class BlocksTC {
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(0.5f).sound(SoundType.STONE)
 					.lightLevel(state -> state.getValue(thaumcraft.common.blocks.devices.BlockVisBattery.CHARGE)));
 
+	/** An aura radar - see {@link thaumcraft.common.blocks.devices.BlockDioptra}'s own doc comment for the
+	 * scan behaviour and what's not ported (the radar's custom-renderer visual). */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockDioptra> dioptra = BLOCKS.registerBlock("dioptra",
+			thaumcraft.common.blocks.devices.BlockDioptra::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(0.5f).sound(SoundType.STONE).noOcclusion());
+
 	private BlocksTC() {
 	}
 }

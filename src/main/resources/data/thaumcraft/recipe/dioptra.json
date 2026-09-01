@@ -1,0 +1,21 @@
+{
+  "type": "thaumcraft:arcane_shaped",
+  "research": "FIRSTSTEPS",
+  "vis": 50,
+  "crystals": {
+    "aer": 1,
+    "aqua": 1
+  },
+  "pattern": [
+    "APA",
+    "IGI",
+    "AAA"
+  ],
+  "key": {
+    "A": { "item": "thaumcraft:stone_arcane" },
+    "G": { "item": "thaumcraft:thaumometer" },
+    "P": { "item": "thaumcraft:vis_resonator" },
+    "I": { "item": "minecraft:iron_ingot" }
+  },
+  "result": { "id": "thaumcraft:dioptra" }
+}

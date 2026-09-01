@@ -277,6 +277,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> visBattery =
 			ITEMS.registerSimpleBlockItem("vis_battery", BlocksTC.visBattery);
 
+	public static final DeferredItem<BlockItem> dioptra =
+			ITEMS.registerSimpleBlockItem("dioptra", BlocksTC.dioptra);
+
 	public static final DeferredItem<Item> thaumiumHelm = ITEMS.registerItem("thaumium_helm",
 			props -> new ArmorItem(ThaumcraftArmorMaterials.THAUMIUM, ArmorItem.Type.HELMET,
 					props.durability(ArmorItem.Type.HELMET.getDurability(25))));

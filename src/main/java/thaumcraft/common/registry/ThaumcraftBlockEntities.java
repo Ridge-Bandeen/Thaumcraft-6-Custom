@@ -65,6 +65,9 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileTube>> TUBE = BLOCK_ENTITIES.register("tube",
 			() -> BlockEntityType.Builder.of(TileTube::new, BlocksTC.tube.get()).build(null));
 
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.devices.TileDioptra>> DIOPTRA = BLOCK_ENTITIES.register("dioptra",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.devices.TileDioptra::new, BlocksTC.dioptra.get()).build(null));
+
 	private ThaumcraftBlockEntities() {
 	}
 }

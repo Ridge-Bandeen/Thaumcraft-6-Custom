@@ -35,6 +35,8 @@ sourceSets {
             include 'thaumcraft/api/ThaumcraftAttributes.java'
             include 'thaumcraft/api/ThaumcraftArmorMaterials.java'
             include 'thaumcraft/common/blocks/devices/BlockVisBattery.java'
+            include 'thaumcraft/common/blocks/devices/BlockDioptra.java'
+            include 'thaumcraft/common/tiles/devices/TileDioptra.java'
             include 'thaumcraft/api/damagesource/ThaumcraftDamageTypes.java'
             include 'thaumcraft/api/entities/IEldritchMob.java'
             include 'thaumcraft/api/entities/ITaintedMob.java'
