@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": 3.0,
+      "bonus_rolls": 1.0,
+      "entries": [
+        { "type": "minecraft:item", "weight": 10, "name": "minecraft:bread", "functions": [ { "function": "minecraft:set_count", "count": { "min": 1.0, "max": 3.0 } } ] },
+        { "type": "minecraft:item", "weight": 10, "name": "minecraft:apple", "functions": [ { "function": "minecraft:set_count", "count": { "min": 1.0, "max": 2.0 } } ] },
+        { "type": "minecraft:item", "weight": 10, "name": "minecraft:coal", "functions": [ { "function": "minecraft:set_count", "count": { "min": 1.0, "max": 4.0 } } ] },
+        { "type": "minecraft:item", "weight": 10, "name": "minecraft:string", "functions": [ { "function": "minecraft:set_count", "count": { "min": 1.0, "max": 3.0 } } ] },
+        { "type": "minecraft:item", "weight": 10, "name": "minecraft:leather" },
+        { "type": "minecraft:item", "weight": 10, "name": "minecraft:iron_nugget", "functions": [ { "function": "minecraft:set_count", "count": { "min": 2.0, "max": 5.0 } } ] },
+        { "type": "minecraft:item", "weight": 8, "name": "minecraft:arrow", "functions": [ { "function": "minecraft:set_count", "count": { "min": 3.0, "max": 8.0 } } ] },
+        { "type": "minecraft:item", "weight": 4, "name": "minecraft:iron_ingot" }
+      ]
+    }
+  ]
+}

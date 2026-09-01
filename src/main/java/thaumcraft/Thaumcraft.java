@@ -195,9 +195,13 @@ public class Thaumcraft {
     @SubscribeEvent
     public void onLivingDrops(net.neoforged.neoforge.event.entity.living.LivingDropsEvent event) {
         if (event.getEntity().level().isClientSide) return;
-        if (!(event.getEntity() instanceof net.minecraft.world.entity.monster.Zombie zombie)) return;
         if (!event.isRecentlyHit()) return;
-        rollZombieBrainDrop(zombie, event.getDrops());
+        if (event.getEntity() instanceof net.minecraft.world.entity.monster.Zombie zombie) {
+            rollZombieBrainDrop(zombie, event.getDrops());
+        }
+        if (event.getEntity() instanceof net.minecraft.world.entity.monster.Monster monster) {
+            rollLootBagDrop(monster, event.getDrops());
+        }
     }
 
     /** The real drop-roll logic, split out so GameTests can call it directly with a fixed random draw
@@ -207,5 +211,28 @@ public class Thaumcraft {
         drops.add(new net.minecraft.world.entity.item.ItemEntity(
                 zombie.level(), zombie.getX(), zombie.getY() + zombie.getEyeHeight(), zombie.getZ(),
                 new net.minecraft.world.item.ItemStack(thaumcraft.api.items.ItemsTC.brain.get())));
+    }
+
+    /** A recently-hit vanilla hostile mob has a chance to drop a loot bag - see {@code ItemLootBag}'s own
+     * doc comment. Simplified vs the original: the real original gate was actually the "champion" mutation
+     * system (a whole separate Taint subsystem this session hasn't built - the champion attribute it checks
+     * never carries a non-default value here, so translating that condition literally would make loot bags
+     * permanently undroppable), replaced with a flat 8% chance on any recently-hit vanilla {@code Monster}.
+     * Tier is a simple weighted pick (60% common/30% uncommon/10% rare) rather than the original's real
+     * looting-level scaling - that event field isn't exposed by NeoForge's modern {@code LivingDropsEvent}
+     * the same way (deriving it from the weapon's own Looting enchantment level is possible but adds real
+     * complexity for a flavor-only scaling factor).
+     */
+    public static void rollLootBagDrop(net.minecraft.world.entity.monster.Monster monster, java.util.Collection<net.minecraft.world.entity.item.ItemEntity> drops) {
+        net.minecraft.util.RandomSource random = monster.getRandom();
+        if (random.nextFloat() >= 0.08f) return;
+        float roll = random.nextFloat();
+        net.neoforged.neoforge.registries.DeferredItem<thaumcraft.common.items.curios.ItemLootBag> tier =
+                roll < 0.6f ? thaumcraft.api.items.ItemsTC.lootBagCommon
+                        : roll < 0.9f ? thaumcraft.api.items.ItemsTC.lootBagUncommon
+                        : thaumcraft.api.items.ItemsTC.lootBagRare;
+        drops.add(new net.minecraft.world.entity.item.ItemEntity(
+                monster.level(), monster.getX(), monster.getY() + monster.getEyeHeight(), monster.getZ(),
+                new net.minecraft.world.item.ItemStack(tier.get())));
     }
 }

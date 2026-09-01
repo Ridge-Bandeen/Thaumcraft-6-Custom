@@ -1,5 +1,6 @@
 package thaumcraft.api.items;
 
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.AxeItem;
@@ -319,6 +320,20 @@ public final class ItemsTC {
 	 * {@link thaumcraft.common.items.consumables.ItemSanitySoap}'s own doc comment. */
 	public static final DeferredItem<thaumcraft.common.items.consumables.ItemSanitySoap> sanitySoap = ITEMS.registerItem("sanity_soap",
 			thaumcraft.common.items.consumables.ItemSanitySoap::new);
+
+	/** Right-click to spill random loot - see {@link thaumcraft.common.items.curios.ItemLootBag}'s own doc
+	 * comment. A recently-hit vanilla hostile mob has a chance to drop one, tiered by looting level. */
+	public static final DeferredItem<thaumcraft.common.items.curios.ItemLootBag> lootBagCommon = ITEMS.registerItem("loot_bag_common",
+			props -> new thaumcraft.common.items.curios.ItemLootBag(props.stacksTo(16).rarity(net.minecraft.world.item.Rarity.COMMON),
+					ResourceLocation.fromNamespaceAndPath("thaumcraft", "gameplay/loot_bag_common")));
+
+	public static final DeferredItem<thaumcraft.common.items.curios.ItemLootBag> lootBagUncommon = ITEMS.registerItem("loot_bag_uncommon",
+			props -> new thaumcraft.common.items.curios.ItemLootBag(props.stacksTo(16).rarity(net.minecraft.world.item.Rarity.UNCOMMON),
+					ResourceLocation.fromNamespaceAndPath("thaumcraft", "gameplay/loot_bag_uncommon")));
+
+	public static final DeferredItem<thaumcraft.common.items.curios.ItemLootBag> lootBagRare = ITEMS.registerItem("loot_bag_rare",
+			props -> new thaumcraft.common.items.curios.ItemLootBag(props.stacksTo(16).rarity(net.minecraft.world.item.Rarity.RARE),
+					ResourceLocation.fromNamespaceAndPath("thaumcraft", "gameplay/loot_bag_rare")));
 
 	public static final DeferredItem<thaumcraft.common.items.consumables.ItemZombieBrain> brain = ITEMS.registerItem("brain",
 			props -> new thaumcraft.common.items.consumables.ItemZombieBrain(props.food(

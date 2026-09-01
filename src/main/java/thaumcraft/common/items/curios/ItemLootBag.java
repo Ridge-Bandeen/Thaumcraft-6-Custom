@@ -1,61 +1,62 @@
 package thaumcraft.common.items.curios;
-import java.util.List;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.EnumRarity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.EnumActionResult;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.text.translation.I18n;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.common.items.ItemTCBase;
-import thaumcraft.common.lib.SoundsTC;
-import thaumcraft.common.lib.utils.Utils;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
-public class ItemLootBag extends ItemTCBase
-{
-    public ItemLootBag() {
-        super("loot_bag", "common", "uncommon", "rare");
-        setMaxStackSize(16);
-    }
-    
-    public EnumRarity getRarity(ItemStack stack) {
-        switch (stack.getItemDamage()) {
-            case 1: {
-                return EnumRarity.UNCOMMON;
-            }
-            case 2: {
-                return EnumRarity.RARE;
-            }
-            default: {
-                return EnumRarity.COMMON;
-            }
-        }
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void addInformation(ItemStack stack, World worldIn, List<String> tooltip, ITooltipFlag flagIn) {
-        super.addInformation(stack, worldIn, tooltip, flagIn);
-        tooltip.add(I18n.translateToLocal("tc.lootbag"));
-    }
-    
-    public ActionResult<ItemStack> onItemRightClick(World world, EntityPlayer player, EnumHand hand) {
-        if (!world.isRemote) {
-            for (int q = 8 + world.rand.nextInt(5), a = 0; a < q; ++a) {
-                ItemStack is = Utils.generateLoot(player.getHeldItem(hand).getItemDamage(), world.rand);
-                if (is != null && !is.isEmpty()) {
-                    world.spawnEntity(new EntityItem(world, player.posX, player.posY, player.posZ, is.copy()));
-                }
-            }
-            player.playSound(SoundsTC.coins, 0.75f, 1.0f);
-        }
-        player.getHeldItem(hand).shrink(1);
-        return (ActionResult<ItemStack>)new ActionResult(EnumActionResult.SUCCESS, player.getHeldItem(hand));
-    }
+/**
+ * Replaces the old (1.12.2) {@code ItemLootBag} - right-click to consume and spill several random items on
+ * the ground, three separate tiers (common/uncommon/rare, each its own item rather than the original's
+ * damage-value variants). A recently-hit vanilla hostile mob has a chance to drop one, tiered by looting
+ * level - see {@code Thaumcraft#onLivingDrops}.
+ *
+ * The original rolled its own hand-written weighted item pool ({@code Utils.generateLoot}/{@code genGear} -
+ * a full random-gear generator picking from the leather-through-diamond progression with random
+ * enchantments and durability) referencing a large, mostly still-unbuilt mod item pool. Reproduced here with
+ * vanilla's own data-driven loot table system instead - each tier is a real loot table
+ * ({@code loot_table/gameplay/loot_bag_<tier>.json}) rolled via {@code LootContextParamSets.GIFT} (the same
+ * context vanilla uses for villager gifts - a good semantic match for "open this, get random stuff"). Same
+ * net shape (better tier, better stuff) with a much smaller, curated vanilla-only pool rather than porting a
+ * generator that mostly targets items this port doesn't have yet.
+ */
+public class ItemLootBag extends Item {
+
+	private final ResourceKey<LootTable> lootTable;
+
+	public ItemLootBag(Properties properties, ResourceLocation lootTableId) {
+		super(properties);
+		this.lootTable = ResourceKey.create(Registries.LOOT_TABLE, lootTableId);
+	}
+
+	@Override
+	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+		ItemStack stack = player.getItemInHand(hand);
+		if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer) {
+			LootTable table = serverLevel.getServer().reloadableRegistries().getLootTable(lootTable);
+			LootParams params = new LootParams.Builder(serverLevel)
+					.withParameter(LootContextParams.ORIGIN, player.position())
+					.withParameter(LootContextParams.THIS_ENTITY, player)
+					.create(LootContextParamSets.GIFT);
+			for (ItemStack loot : table.getRandomItems(params)) {
+				player.spawnAtLocation(loot);
+			}
+			level.playSound(null, player.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.75f, 1.0f);
+		}
+		stack.shrink(1);
+		return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+	}
 }

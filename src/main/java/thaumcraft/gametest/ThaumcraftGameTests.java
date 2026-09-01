@@ -415,6 +415,9 @@ public class ThaumcraftGameTests {
 				"phial", "label",
 				"flesh_block", "rotten_flesh_from_block", "sanity_soap"
 		};
+		// loot_bag_common/uncommon/rare have no crafting recipe (mob-drop only, matching the original) so
+		// they aren't in expectedIds above - their loot tables are exercised directly instead, see
+		// lootBagOpensAndSpillsRealLoot / zombieOrOtherMonsterKillsSometimesDropALootBag.
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
 			Optional<RecipeHolder<?>> found = recipes.byKey(loc);
@@ -2087,6 +2090,47 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(warp.get(IPlayerWarp.EnumWarpType.NORMAL) == 4, "cleansing should remove exactly 1 point of Normal warp, found: " + warp.get(IPlayerWarp.EnumWarpType.NORMAL));
 		helper.assertTrue(warp.get(IPlayerWarp.EnumWarpType.TEMPORARY) == 0, "cleansing should clear all Temporary warp, found: " + warp.get(IPlayerWarp.EnumWarpType.TEMPORARY));
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Loot Bag - rolls a real vanilla-format loot table (LootContextParamSets.GIFT) rather than the
+	// original's hand-written weighted item generator. A recently-hit vanilla hostile mob has a chance to
+	// drop one, tiered by a simple weighted pick - see Thaumcraft#rollLootBagDrop's own doc comment for why
+	// the original's champion-gated condition and looting-level scaling are both simplified away.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void lootBagOpensAndSpillsRealLoot(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		ItemStack bag = new ItemStack(ItemsTC.lootBagCommon.get());
+		player.setItemInHand(hand, bag);
+
+		ItemsTC.lootBagCommon.get().use(helper.getLevel(), player, hand);
+
+		List<ItemEntity> spilled = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(origin).inflate(3.0));
+		helper.assertTrue(!spilled.isEmpty(), "opening a common loot bag should have spilled at least one real item");
+		helper.assertTrue(player.getItemInHand(hand).isEmpty(), "the bag itself should have been consumed");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void monsterKillsSometimesDropALootBag(GameTestHelper helper) {
+		net.minecraft.world.entity.monster.Monster monster = net.minecraft.world.entity.EntityType.ZOMBIE.create(helper.getLevel());
+		BlockPos absolute = helper.absolutePos(BlockPos.ZERO);
+		monster.moveTo(absolute.getX() + 0.5, absolute.getY(), absolute.getZ() + 0.5, 0, 0);
+		helper.getLevel().addFreshEntity(monster);
+
+		List<ItemEntity> drops = new java.util.ArrayList<>();
+		boolean foundDrop = false;
+		for (int i = 0; i < 300 && !foundDrop; i++) {
+			thaumcraft.Thaumcraft.rollLootBagDrop(monster, drops);
+			foundDrop = drops.stream().anyMatch(e -> e.getItem().getItem() instanceof thaumcraft.common.items.curios.ItemLootBag);
+		}
+
+		helper.assertTrue(foundDrop, "a loot bag should have dropped at least once in 300 rolls at an 8% chance each");
 		helper.succeed();
 	}
 
