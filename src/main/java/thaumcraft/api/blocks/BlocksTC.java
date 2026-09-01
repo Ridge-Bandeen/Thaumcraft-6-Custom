@@ -149,6 +149,16 @@ public final class BlocksTC {
 			BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().randomTicks().instabreak().sound(SoundType.GRASS)
 					.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
 
+	/** Silverwood's own stairs/slab, same shape as the Arcane Stone family's - vanilla's {@link StairBlock}/
+	 * {@link SlabBlock}, no custom subclasses. */
+	public static final DeferredBlock<StairBlock> silverwoodStairs = BLOCKS.registerBlock("silverwood_stairs",
+			props -> new StairBlock(plankSilverwood.get().defaultBlockState(), props),
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0f).sound(SoundType.WOOD).ignitedByLava());
+
+	public static final DeferredBlock<SlabBlock> silverwoodSlab = BLOCKS.registerBlock("silverwood_slab",
+			SlabBlock::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0f).sound(SoundType.WOOD).ignitedByLava());
+
 	private BlocksTC() {
 	}
 }

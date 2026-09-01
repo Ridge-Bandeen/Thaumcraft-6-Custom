@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "thaumcraft:block/silverwood_slab"
+    },
+    "type=double": {
+      "model": "thaumcraft:block/plank_silverwood"
+    },
+    "type=top": {
+      "model": "thaumcraft:block/silverwood_slab_top"
+    }
+  }
+}

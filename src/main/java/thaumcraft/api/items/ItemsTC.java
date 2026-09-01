@@ -141,6 +141,12 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> saplingSilverwood =
 			ITEMS.registerSimpleBlockItem("sapling_silverwood", BlocksTC.saplingSilverwood);
 
+	public static final DeferredItem<BlockItem> silverwoodStairs =
+			ITEMS.registerSimpleBlockItem("silverwood_stairs", BlocksTC.silverwoodStairs);
+
+	public static final DeferredItem<BlockItem> silverwoodSlab =
+			ITEMS.registerSimpleBlockItem("silverwood_slab", BlocksTC.silverwoodSlab);
+
 	private ItemsTC() {
 	}
 }
