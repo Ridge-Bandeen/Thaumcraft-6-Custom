@@ -266,6 +266,12 @@ public final class BlocksTC {
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.METAL).noOcclusion()
 					.lightLevel(state -> state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED) ? 15 : 0));
 
+	/** A single-unit essentia relay - see {@link thaumcraft.common.tiles.essentia.TileTube}'s own doc
+	 * comment for the mechanic and what's simplified (no per-face wand toggling). */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockTube> tube = BLOCKS.registerBlock("tube",
+			thaumcraft.common.blocks.essentia.BlockTube::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.5f).sound(SoundType.METAL).noOcclusion());
+
 	private BlocksTC() {
 	}
 }

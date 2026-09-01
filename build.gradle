@@ -239,6 +239,9 @@ sourceSets {
             include 'thaumcraft/common/blocks/devices/BlockLampFertility.java'
             include 'thaumcraft/common/tiles/devices/TileLampFertility.java'
 
+            include 'thaumcraft/common/blocks/essentia/BlockTube.java'
+            include 'thaumcraft/common/tiles/essentia/TileTube.java'
+
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
     }

@@ -135,5 +135,7 @@
 
   "block.thaumcraft.lamp_growth": "Growth Lamp",
 
-  "block.thaumcraft.lamp_fertility": "Fertility Lamp"
+  "block.thaumcraft.lamp_fertility": "Fertility Lamp",
+
+  "block.thaumcraft.tube": "Essentia Tube"
 }

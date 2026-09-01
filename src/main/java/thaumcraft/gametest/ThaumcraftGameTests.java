@@ -394,7 +394,8 @@ public class ThaumcraftGameTests {
 				"plank_greatwood", "greatwood_stairs", "greatwood_slab",
 				"arcane_ear", "arcane_ear_toggle",
 				"jar_normal",
-				"lamp_growth", "lamp_fertility"
+				"lamp_growth", "lamp_fertility",
+				"tube"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -1998,6 +1999,60 @@ public class ThaumcraftGameTests {
 		helper.setBlock(lampPos.below(), Blocks.AIR);
 
 		helper.assertTrue(helper.getBlockState(lampPos).isAir(), "removing the block a fertility lamp draws essentia from should make the lamp itself pop off");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Essentia Tube (TileTube) - see its own doc comment for the relay mechanic and what's simplified (no
+	// per-face wand toggling). This is the actual point of the tube: extending IEssentiaTransport's reach
+	// beyond direct adjacency, which the Warded Jar/Growth Lamp/Fertility Lamp chunks proved works but only
+	// ever tested one hop at a time.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeRelaysEssentiaFromASourceToAJarBelow(GameTestHelper helper) {
+		BlockPos sourcePos = new BlockPos(4, 3, 4);
+		BlockPos tubePos = sourcePos.below();
+		BlockPos jarPos = tubePos.below();
+
+		helper.setBlock(sourcePos, TEST_ESSENTIA_SOURCE_BLOCK.get());
+		helper.setBlock(tubePos, BlocksTC.tube.get());
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+
+		BlockPos tubeAbs = helper.absolutePos(tubePos);
+		BlockPos jarAbs = helper.absolutePos(jarPos);
+
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(sourcePos);
+		source.aspect = Aspect.EARTH;
+		source.amount = 999;
+
+		thaumcraft.common.tiles.essentia.TileTube tube = helper.getBlockEntity(tubePos);
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(jarPos);
+
+		for (int i = 0; i < 200; i++) {
+			thaumcraft.common.tiles.essentia.TileTube.tick(helper.getLevel(), tubeAbs, helper.getBlockState(tubePos), tube);
+			thaumcraft.common.tiles.essentia.TileJarFillable.tick(helper.getLevel(), jarAbs, helper.getBlockState(jarPos), jar);
+		}
+
+		helper.assertTrue(jar.getAspects().getAmount(Aspect.EARTH) > 0,
+				"essentia should have relayed from the source, through the tube, into the jar below it, got " + jar.getAspects());
+		helper.assertTrue(source.amount < 999, "the original source should have been drawn down, still at " + source.amount);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeConnectionStateReflectsRealNeighbors(GameTestHelper helper) {
+		BlockPos tubePos = new BlockPos(2, 2, 2);
+		BlockPos jarPos = tubePos.below();
+
+		helper.setBlock(tubePos, BlocksTC.tube.get());
+		helper.assertTrue(!helper.getBlockState(tubePos).getValue(net.minecraft.world.level.block.PipeBlock.DOWN),
+				"a freshly placed tube with nothing below it should not show a connection downward");
+
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+
+		helper.assertTrue(helper.getBlockState(tubePos).getValue(net.minecraft.world.level.block.PipeBlock.DOWN),
+				"placing a real IEssentiaTransport tile (a jar) below the tube should update its DOWN connection property");
 		helper.succeed();
 	}
 }
