@@ -185,6 +185,9 @@ public class ThaumcraftGameTests {
 				"crystal_essence_aer", "crystal_essence_aqua", "crystal_essence_ignis",
 				"crystal_essence_terra", "crystal_essence_ordo", "crystal_essence_perditio",
 				"crystal_essence_auram", "crystal_essence_praecantatio", "crystal_essence_vitreus",
+				"crystal_essence_vacuos", "crystal_essence_lux", "crystal_essence_motus",
+				"crystal_essence_gelum", "crystal_essence_metallum", "crystal_essence_victus",
+				"crystal_essence_mortuus", "crystal_essence_potentia", "crystal_essence_permutatio",
 				"stone_arcane", "stone_arcane_stairs", "stone_arcane_slab",
 				"stone_arcane_brick", "stone_arcane_brick_stairs", "stone_arcane_brick_slab",
 				"plank_silverwood", "silverwood_stairs", "silverwood_slab"
@@ -1292,8 +1295,10 @@ public class ThaumcraftGameTests {
 		// containment barrier (solid, so isEmptyBlock rejects it every time), the same class of issue the
 		// Silverwood tree test hit earlier this session. Enough direct attempts makes the odds of at least
 		// one landing inside the structure's own open interior overwhelming, without needing a bigger
-		// dedicated structure just for this one test.
-		for (int i = 0; i < 300; i++) {
+		// dedicated structure just for this one test. 300 was observed to be flaky in practice (failed
+		// roughly 1 run in 2) - 3000 drives the failure probability low enough to be effectively zero while
+		// still running in a few milliseconds (this is a tight direct-call loop, not real ticks).
+		for (int i = 0; i < 3000; i++) {
 			tile.scatterAttempt(helper.getLevel(), absolute);
 		}
 
