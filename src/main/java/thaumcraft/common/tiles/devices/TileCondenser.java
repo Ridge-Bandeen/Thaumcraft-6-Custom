@@ -51,6 +51,16 @@ public class TileCondenser extends BlockEntity implements IEssentiaTransport {
 		super(ThaumcraftBlockEntities.CONDENSER.get(), pos, state);
 	}
 
+	/** Exposed for {@link thaumcraft.common.items.tools.ItemResonator}'s condenser-specific readout. */
+	public int getCost() {
+		return cost;
+	}
+
+	/** Exposed for {@link thaumcraft.common.items.tools.ItemResonator}'s condenser-specific readout. */
+	public int getInterval() {
+		return interval;
+	}
+
 	public static void tick(Level level, BlockPos pos, BlockState state, TileCondenser tile) {
 		if (level.isClientSide) return;
 		if (tile.latticeCount < 0.0f) {

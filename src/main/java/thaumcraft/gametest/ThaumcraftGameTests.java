@@ -2840,4 +2840,48 @@ public class ThaumcraftGameTests {
 				"a matched symmetrical pair of inlays should be a net positive to stabilityReplenish, got " + matrix.stabilityReplenish);
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Essentia Resonator - a pure diagnostic tool, same onItemUseFirst shape as the caster wiring above.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void resonatorReportsOnARealEssentiaTransportTile(GameTestHelper helper) {
+		BlockPos jarPos = new BlockPos(2, 2, 2);
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		BlockPos jarAbs = helper.absolutePos(jarPos);
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(jarPos);
+		jar.addToContainer(Aspect.EARTH, 10);
+
+		ServerPlayer player = spawnCasterAt(helper, jarAbs.above());
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		ItemStack resonator = new ItemStack(ItemsTC.resonator.get());
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(jarAbs), net.minecraft.core.Direction.UP, jarAbs, false);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(helper.getLevel(), player, hand, resonator, hit);
+
+		net.minecraft.world.InteractionResult result = resonator.getItem().onItemUseFirst(resonator, context);
+
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.SUCCESS, "the resonator should succeed against a real IEssentiaTransport tile, got " + result);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void resonatorFailsOnANonTransportBlock(GameTestHelper helper) {
+		BlockPos stonePos = new BlockPos(2, 2, 2);
+		helper.setBlock(stonePos, Blocks.STONE);
+		BlockPos stoneAbs = helper.absolutePos(stonePos);
+
+		ServerPlayer player = spawnCasterAt(helper, stoneAbs.above());
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		ItemStack resonator = new ItemStack(ItemsTC.resonator.get());
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(stoneAbs), net.minecraft.core.Direction.UP, stoneAbs, false);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(helper.getLevel(), player, hand, resonator, hit);
+
+		net.minecraft.world.InteractionResult result = resonator.getItem().onItemUseFirst(resonator, context);
+
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.FAIL, "the resonator should fail against a block with no IEssentiaTransport tile, got " + result);
+		helper.succeed();
+	}
 }

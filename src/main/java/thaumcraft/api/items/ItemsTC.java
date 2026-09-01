@@ -384,6 +384,10 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> inlay =
 			ITEMS.registerSimpleBlockItem("inlay", BlocksTC.inlay);
 
+	/** Diagnostic tool - see {@link thaumcraft.common.items.tools.ItemResonator}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemResonator> resonator =
+			ITEMS.registerItem("resonator", props -> new thaumcraft.common.items.tools.ItemResonator(props.rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+
 	private ItemsTC() {
 	}
 }

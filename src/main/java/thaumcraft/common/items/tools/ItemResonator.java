@@ -1,80 +1,71 @@
 package thaumcraft.common.items.tools;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.item.EnumRarity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumActionResult;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentTranslation;
-import net.minecraft.util.text.translation.I18n;
-import net.minecraft.world.World;
+
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
 import thaumcraft.api.aspects.Aspect;
-import thaumcraft.api.aspects.IAspectContainer;
 import thaumcraft.api.aspects.IEssentiaTransport;
-import thaumcraft.codechicken.lib.raytracer.RayTracer;
-import thaumcraft.common.config.ConfigItems;
-import thaumcraft.common.items.ItemTCBase;
 import thaumcraft.common.tiles.devices.TileCondenser;
-import thaumcraft.common.tiles.essentia.TileTubeBuffer;
 
+/**
+ * Replaces the old (1.12.2) {@code ItemResonator}. A pure diagnostic tool - right-click any block whose
+ * {@code BlockEntity} implements {@link IEssentiaTransport} (a Tube, Tube Filter/Restrict, Warded Jar, or
+ * the Flux Condenser - all already ported) to report its essentia contents and suction demand on the
+ * clicked face to chat, same as the original.
+ *
+ * Simplified for this pass:
+ * <ul>
+ * <li>No CodeChicken raytrace face refinement ({@code RayTracer.retraceBlock}/{@code subHit}) - uses
+ * {@link UseOnContext#getClickedFace()} directly, which is exactly what the original itself already fell
+ * back to whenever that raytrace came back null, so this is a lossless simplification, not a cut feature.</li>
+ * <li>No {@code TileTubeBuffer} branch - that tile isn't ported (its original needs CodeChicken raytrace
+ * cuboids as its own core interaction), so no block will ever exist in-world to hit that branch anyway.</li>
+ * <li>Vanilla {@code ITEM_PICKUP} chime in place of the original's custom "shield block" resonance sound -
+ * no mod-specific sound registry ({@code SoundsTC}) is ported.</li>
+ * </ul>
+ */
+public class ItemResonator extends Item {
 
-public class ItemResonator extends ItemTCBase
-{
-    public ItemResonator() {
-        super("resonator");
-        setMaxStackSize(1);
-        setMaxStackSize(1);
-        setCreativeTab(ConfigItems.TABTC);
-    }
-    
-    public EnumRarity getRarity(ItemStack itemstack) {
-        return EnumRarity.UNCOMMON;
-    }
-    
-    public boolean hasEffect(ItemStack stack1) {
-        return stack1.hasTagCompound();
-    }
-    
-    public EnumActionResult onItemUseFirst(EntityPlayer player, World world, BlockPos pos, EnumFacing side, float hitX, float hitY, float hitZ, EnumHand hand) {
-        TileEntity tile = world.getTileEntity(pos);
-        if (tile == null || !(tile instanceof IEssentiaTransport)) {
-            return EnumActionResult.FAIL;
-        }
-        if (world.isRemote) {
-            player.swingArm(hand);
-            return super.onItemUseFirst(player, world, pos, side, hitX, hitY, hitZ, hand);
-        }
-        IEssentiaTransport et = (IEssentiaTransport)tile;
-        RayTraceResult hit = RayTracer.retraceBlock(world, player, pos);
-        if (hit != null && hit.subHit >= 0 && hit.subHit < 6) {
-            side = EnumFacing.VALUES[hit.subHit];
-        }
-        if (!(tile instanceof TileTubeBuffer) && et.getEssentiaType(side) != null) {
-            player.sendMessage(new TextComponentTranslation("tc.resonator1", "" + et.getEssentiaAmount(side), et.getEssentiaType(side).getName()));
-        }
-        else if (tile instanceof TileTubeBuffer && ((IAspectContainer)tile).getAspects().size() > 0) {
-            for (Aspect aspect : ((IAspectContainer)tile).getAspects().getAspectsSortedByName()) {
-                player.sendMessage(new TextComponentTranslation("tc.resonator1", "" + ((IAspectContainer)tile).getAspects().getAmount(aspect), aspect.getName()));
-            }
-        }
-        String s = I18n.translateToLocal("tc.resonator3");
-        if (et.getSuctionType(side) != null) {
-            s = et.getSuctionType(side).getName();
-        }
-        player.sendMessage(new TextComponentTranslation("tc.resonator2", "" + et.getSuctionAmount(side), s));
-        world.playSound(null, pos.getX(), pos.getY(), pos.getZ(), SoundEvents.ITEM_SHIELD_BLOCK, SoundCategory.BLOCKS, 0.5f, 1.9f + world.rand.nextFloat() * 0.1f);
-        if (tile != null && tile instanceof TileCondenser) {
-            TileCondenser tc = (TileCondenser)tile;
-            player.sendMessage(new TextComponentTranslation("tc.condenser1", "" + tc.cost));
-            int s2 = tc.interval / 20;
-            player.sendMessage(new TextComponentTranslation("tc.condenser2", "" + tc.interval, "" + s2));
-        }
-        return EnumActionResult.SUCCESS;
-    }
+	public ItemResonator(Properties properties) {
+		super(properties.stacksTo(1));
+	}
+
+	@Override
+	public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+		Level level = context.getLevel();
+		Player player = context.getPlayer();
+		if (player == null) return InteractionResult.PASS;
+		if (!(level.getBlockEntity(context.getClickedPos()) instanceof IEssentiaTransport transport)) {
+			return InteractionResult.FAIL;
+		}
+		if (level.isClientSide) {
+			player.swing(context.getHand());
+			return InteractionResult.SUCCESS;
+		}
+
+		Direction face = context.getClickedFace();
+		Aspect essentiaType = transport.getEssentiaType(face);
+		if (essentiaType != null) {
+			player.sendSystemMessage(Component.translatable("tc.resonator1", transport.getEssentiaAmount(face), essentiaType.getName()));
+		}
+
+		Aspect suctionType = transport.getSuctionType(face);
+		String suctionLabel = suctionType != null ? suctionType.getName() : Component.translatable("tc.resonator3").getString();
+		player.sendSystemMessage(Component.translatable("tc.resonator2", transport.getSuctionAmount(face), suctionLabel));
+
+		level.playSound(null, context.getClickedPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.5f, 1.9f + level.random.nextFloat() * 0.1f);
+
+		if (level.getBlockEntity(context.getClickedPos()) instanceof TileCondenser condenser) {
+			player.sendSystemMessage(Component.translatable("tc.condenser1", condenser.getCost()));
+			player.sendSystemMessage(Component.translatable("tc.condenser2", condenser.getInterval(), condenser.getInterval() / 20));
+		}
+		return InteractionResult.SUCCESS;
+	}
 }

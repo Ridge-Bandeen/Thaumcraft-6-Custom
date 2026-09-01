@@ -1,0 +1,16 @@
+{
+  "type": "thaumcraft:arcane_shaped",
+  "research": "TUBES",
+  "vis": 50,
+  "pattern": [
+    "I I",
+    "INI",
+    " S "
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "N": { "item": "minecraft:quartz" },
+    "S": { "item": "minecraft:stick" }
+  },
+  "result": { "id": "thaumcraft:resonator" }
+}
