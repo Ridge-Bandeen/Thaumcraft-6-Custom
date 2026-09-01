@@ -7,6 +7,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.common.items.casters.ItemCaster;
 import thaumcraft.common.items.consumables.ItemAlumentum;
+import thaumcraft.common.items.resources.ItemMagicDust;
 import thaumcraft.common.items.casters.ItemFocusAir;
 import thaumcraft.common.items.casters.ItemFocusBreak;
 import thaumcraft.common.items.casters.ItemFocusCurse;
@@ -164,6 +165,9 @@ public final class ItemsTC {
 
 	public static final DeferredItem<BlockItem> hungryChest =
 			ITEMS.registerSimpleBlockItem("hungry_chest", BlocksTC.hungryChest);
+
+	public static final DeferredItem<ItemMagicDust> salisMundus =
+			ITEMS.registerItem("salis_mundus", ItemMagicDust::new);
 
 	private ItemsTC() {
 	}

@@ -180,7 +180,7 @@ public class ThaumcraftGameTests {
 				"focus_trap", "focus_trap_crucible",
 				"focus_sanctuary", "focus_sanctuary_crucible",
 				"caster_basic", "thaumometer", "quicksilver_smelting", "mirrored_glass", "vis_resonator", "alumentum",
-				"recharge_pedestal", "hungry_chest",
+				"recharge_pedestal", "hungry_chest", "salis_mundus",
 				"amber_block", "amber_block_to_amber", "amber_brick", "amber_brick_to_block",
 				"crystal_essence_aer", "crystal_essence_aqua", "crystal_essence_ignis",
 				"crystal_essence_terra", "crystal_essence_ordo", "crystal_essence_perditio",
@@ -1212,6 +1212,65 @@ public class ThaumcraftGameTests {
 				helper.getBlockState(posB).getValue(net.minecraft.world.level.block.ChestBlock.TYPE);
 		helper.assertTrue(typeA == net.minecraft.world.level.block.state.properties.ChestType.SINGLE, "two adjacent hungry chests should never link - chest A was " + typeA);
 		helper.assertTrue(typeB == net.minecraft.world.level.block.state.properties.ChestType.SINGLE, "two adjacent hungry chests should never link - chest B was " + typeB);
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Salis Mundus (thaumcraft.common.items.resources.ItemMagicDust) - closes a loop flagged much earlier
+	// this session: the Arcane Workbench was originally built as a directly-registered block "with the
+	// dust-conversion + research-gate explicitly flagged as a TODO to restore once research exists". It
+	// does now (ThaumcraftCapabilities), so this exercises that real dust-trigger conversion path -
+	// FIRSTSTEPS@1 is in every player's default knowledge, so a fresh mock player can use it immediately.
+	// --------------------------------------------------------------------------------------------------
+
+	private static net.minecraft.world.InteractionResult useSalisMundusOn(GameTestHelper helper, ServerPlayer player, BlockPos relPos) {
+		BlockPos absolute = helper.absolutePos(relPos);
+		ItemStack dust = new ItemStack(ItemsTC.salisMundus.get());
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, dust);
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absolute), net.minecraft.core.Direction.UP, absolute, false);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(
+				player, net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+		return ItemsTC.salisMundus.get().useOn(context);
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void salisMundusConvertsACraftingTableIntoAnArcaneWorkbench(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(2, 1, 2);
+		helper.setBlock(relPos, Blocks.CRAFTING_TABLE);
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		player.getAbilities().instabuild = false;
+
+		useSalisMundusOn(helper, player, relPos);
+
+		helper.assertTrue(helper.getBlockState(relPos).is(BlocksTC.arcaneWorkbench.get()), "the crafting table should have become an arcane workbench");
+		helper.assertTrue(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).isEmpty(), "the single-count dust should have been consumed in survival mode");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void salisMundusConvertsACauldronIntoACrucible(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(2, 1, 2);
+		helper.setBlock(relPos, Blocks.CAULDRON);
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+
+		useSalisMundusOn(helper, player, relPos);
+
+		helper.assertTrue(helper.getBlockState(relPos).is(BlocksTC.crucible.get()), "the cauldron should have become a crucible");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void salisMundusDoesNothingToAnUnrelatedBlock(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(2, 1, 2);
+		helper.setBlock(relPos, Blocks.DIRT);
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		player.getAbilities().instabuild = false;
+
+		useSalisMundusOn(helper, player, relPos);
+
+		helper.assertTrue(helper.getBlockState(relPos).is(Blocks.DIRT), "an unrelated block should be untouched");
+		helper.assertFalse(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).isEmpty(), "the dust should not have been consumed when no trigger matched");
 		helper.succeed();
 	}
 }

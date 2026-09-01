@@ -214,6 +214,10 @@ sourceSets {
             include 'thaumcraft/common/blocks/devices/BlockHungryChest.java'
             include 'thaumcraft/common/tiles/devices/TileHungryChest.java'
 
+            include 'thaumcraft/common/lib/crafting/DustTriggerSimple.java'
+            include 'thaumcraft/common/items/resources/ItemMagicDust.java'
+            include 'thaumcraft/common/registry/ThaumcraftDustTriggers.java'
+
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
     }

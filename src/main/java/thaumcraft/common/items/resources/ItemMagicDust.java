@@ -1,80 +1,49 @@
 package thaumcraft.common.items.resources;
-import java.util.Iterator;
-import java.util.List;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.EnumRarity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.EnumActionResult;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.World;
+
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
+import net.minecraft.world.item.context.UseOnContext;
 import thaumcraft.api.crafting.IDustTrigger;
-import thaumcraft.client.fx.FXDispatcher;
-import thaumcraft.common.items.ItemTCBase;
-import thaumcraft.common.lib.SoundsTC;
-import thaumcraft.common.lib.utils.EntityUtils;
 
+/**
+ * Replaces the old (1.12.2) {@code ItemMagicDust} - Salis Mundus, a dust that converts specific blocks
+ * into their Thaumcraft counterparts (see {@code thaumcraft.common.lib.crafting.DustTriggerSimple}'s own
+ * doc comment). {@link Item#useOn} is the modern equivalent of the original's {@code onItemUseFirst} - it
+ * runs before the clicked block's own interaction handler, letting this preempt (e.g.) the crafting
+ * table's GUI the same way the original did.
+ *
+ * Simplified: no sparkle particle trail / custom dust sound on use, same "no client FX" precedent as every
+ * other item this session - just a plain sound cue confirming the swap happened.
+ */
+public class ItemMagicDust extends Item {
 
-public class ItemMagicDust extends ItemTCBase
-{
-    public ItemMagicDust() {
-        super("salis_mundus");
-    }
-    
-    public EnumRarity getRarity(ItemStack itemstack) {
-        return EnumRarity.UNCOMMON;
-    }
-    
-    public EnumActionResult onItemUseFirst(EntityPlayer player, World world, BlockPos pos, EnumFacing side, float hitX, float hitY, float hitZ, EnumHand hand) {
-        if (!player.canPlayerEdit(pos, side, player.getHeldItem(hand))) {
-            return EnumActionResult.FAIL;
-        }
-        if (player.isSneaking()) {
-            return EnumActionResult.PASS;
-        }
-        player.swingArm(hand);
-        for (IDustTrigger trigger : IDustTrigger.triggers) {
-            IDustTrigger.Placement place = trigger.getValidFace(world, player, pos, side);
-            if (place != null) {
-                if (!player.capabilities.isCreativeMode) {
-                    player.getHeldItem(hand).shrink(1);
-                }
-                trigger.execute(world, player, pos, place, side);
-                if (world.isRemote) {
-                    doSparkles(player, world, pos, hitX, hitY, hitZ, hand, trigger, place);
-                    break;
-                }
-                return EnumActionResult.SUCCESS;
-            }
-        }
-        return super.onItemUseFirst(player, world, pos, side, hitX, hitY, hitZ, hand);
-    }
-    
-    private void doSparkles(EntityPlayer player, World world, BlockPos pos, float hitX, float hitY, float hitZ, EnumHand hand, IDustTrigger trigger, IDustTrigger.Placement place) {
-        Vec3d v1 = EntityUtils.posToHand(player, hand);
-        Vec3d v2 = new Vec3d(pos);
-        v2 = v2.addVector(0.5, 0.5, 0.5);
-        v2 = v2.subtract(v1);
-        for (int cnt = 50, a = 0; a < cnt; ++a) {
-            boolean floaty = a < cnt / 3;
-            float r = MathHelper.getInt(world.rand, 255, 255) / 255.0f;
-            float g = MathHelper.getInt(world.rand, 189, 255) / 255.0f;
-            float b = MathHelper.getInt(world.rand, 64, 255) / 255.0f;
-            FXDispatcher.INSTANCE.drawSimpleSparkle(world.rand, v1.x, v1.y, v1.z, v2.x / 6.0 + world.rand.nextGaussian() * 0.05, v2.y / 6.0 + world.rand.nextGaussian() * 0.05 + (floaty ? 0.05 : 0.15), v2.z / 6.0 + world.rand.nextGaussian() * 0.05, 0.5f, r, g, b, world.rand.nextInt(5), floaty ? (0.3f + world.rand.nextFloat() * 0.5f) : 0.85f, floaty ? 0.2f : 0.5f, 16);
-        }
-        world.playSound(pos.getX(), pos.getY(), pos.getZ(), SoundsTC.dust, SoundCategory.PLAYERS, 0.33f, 1.0f + (float)world.rand.nextGaussian() * 0.05f, false);
-        List<BlockPos> sparkles = trigger.sparkle(world, player, pos, place);
-        if (sparkles != null) {
-            Vec3d v3 = new Vec3d(pos).addVector(hitX, hitY, hitZ);
-            for (BlockPos p : sparkles) {
-                FXDispatcher.INSTANCE.drawBlockSparkles(p, v3);
-            }
-        }
-    }
+	public ItemMagicDust(Properties properties) {
+		super(properties.stacksTo(64).rarity(Rarity.UNCOMMON));
+	}
+
+	@Override
+	public InteractionResult useOn(UseOnContext context) {
+		if (context.getPlayer() != null && context.isSecondaryUseActive()) {
+			return InteractionResult.PASS;
+		}
+		for (IDustTrigger trigger : IDustTrigger.triggers) {
+			IDustTrigger.Placement place = trigger.getValidFace(context.getLevel(), context.getPlayer(), context.getClickedPos(), context.getClickedFace());
+			if (place == null) continue;
+
+			if (!context.getLevel().isClientSide) {
+				ItemStack stack = context.getItemInHand();
+				if (context.getPlayer() != null && !context.getPlayer().getAbilities().instabuild) {
+					stack.shrink(1);
+				}
+				trigger.execute(context.getLevel(), context.getPlayer(), context.getClickedPos(), place, context.getClickedFace());
+				context.getLevel().playSound(null, context.getClickedPos(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 0.5f, 1.0f);
+			}
+			return InteractionResult.SUCCESS;
+		}
+		return InteractionResult.PASS;
+	}
 }

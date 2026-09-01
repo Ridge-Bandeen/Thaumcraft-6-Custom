@@ -42,6 +42,7 @@ import thaumcraft.common.items.casters.foci.FocusMediumProjectile;
 import thaumcraft.common.items.casters.foci.FocusMediumTouch;
 import thaumcraft.common.registry.ThaumcraftEntities;
 import thaumcraft.common.registry.ThaumcraftResearchCategories;
+import thaumcraft.common.registry.ThaumcraftDustTriggers;
 import thaumcraft.api.ThaumcraftApi;
 import thaumcraft.common.ThaumcraftInternalMethodHandler;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -96,6 +97,10 @@ public class Thaumcraft {
         // ThaumcraftResearchCategories' own doc comment for scope (category tabs only, no research
         // entries/pages yet).
         ThaumcraftResearchCategories.register();
+
+        // Salis Mundus dust triggers (thaumcraft.api.crafting.IDustTrigger) - see
+        // ThaumcraftDustTriggers' own doc comment for what this unlocks and what's still deferred.
+        ThaumcraftDustTriggers.register();
 
         // Focus element registry (thaumcraft.api.casters.FocusEngine) - keyed by class, not a
         // DeferredRegister, matching the original 1.12.2 design.
