@@ -1,0 +1,20 @@
+{
+  "type": "thaumcraft:arcane_shaped",
+  "research": "FIRSTSTEPS",
+  "vis": 15,
+  "crystals": {
+    "aer": 1
+  },
+  "pattern": [
+    "P P",
+    " G ",
+    "WRW"
+  ],
+  "key": {
+    "P": { "item": "minecraft:copper_ingot" },
+    "G": { "item": "minecraft:repeater" },
+    "R": { "item": "minecraft:redstone" },
+    "W": { "tag": "minecraft:wooden_slabs" }
+  },
+  "result": { "id": "thaumcraft:arcane_ear" }
+}

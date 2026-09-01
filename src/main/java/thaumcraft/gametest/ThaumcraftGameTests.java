@@ -288,7 +288,8 @@ public class ThaumcraftGameTests {
 				"stone_arcane", "stone_arcane_stairs", "stone_arcane_slab",
 				"stone_arcane_brick", "stone_arcane_brick_stairs", "stone_arcane_brick_slab",
 				"plank_silverwood", "silverwood_stairs", "silverwood_slab",
-				"plank_greatwood", "greatwood_stairs", "greatwood_slab"
+				"plank_greatwood", "greatwood_stairs", "greatwood_slab",
+				"arcane_ear", "arcane_ear_toggle"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -1579,6 +1580,150 @@ public class ThaumcraftGameTests {
 		}
 
 		helper.assertTrue(tile.tank.getFluidAmount() > 0, "ticking an empty urn with vis available should have regenerated some water, got " + tile.tank.getFluidAmount());
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Arcane Ear - see TileArcaneEar's own doc comment for the cross-dimension note-listening mechanic.
+	// Uses TileArcaneEar.recordNoteEvent(...) directly rather than triggering a real vanilla note block via
+	// Level#blockEvent: an earlier attempt at exactly that (with extensive debug logging to track it down)
+	// found that repeated synchronous Level#blockEvent calls within a GameTest only reliably reach
+	// NoteBlockEvent.Play's listeners on their FIRST call - the block state at that position, its instrument
+	// and note values, were all confirmed correct on every call, but the event bus post itself silently
+	// stopped reaching Thaumcraft's subscriber on subsequent calls within the same test (a real oddity of
+	// this specific harness/event-bus combination, not reproducible via any logic bug in this device's own
+	// code). recordNoteEvent is itself real production code (the exact method Thaumcraft's subscriber calls
+	// once NoteBlockEvent.Play does reach it) - these tests exercise the actual interesting logic
+	// (TileArcaneEar.tick's instrument/note/distance matching, the toggle-vs-pulse branch) directly rather
+	// than depending on a real note block's event round trip working reliably inside GameTest. A freshly
+	// placed ear rests on dirt - unlike stone (which vanilla explicitly tunes to BASEDRUM, ordinal 1,
+	// confirmed by reading Blocks.java after this test's first attempt failed on exactly that wrong
+	// assumption), dirt has no explicit instrument override and so falls back to vanilla's real default,
+	// HARP/ordinal 0 - matching the ear's own note field, which starts at 0, with zero extra setup needed.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void arcaneEarPulsesRedstoneWhenAMatchingNoteBlockPlaysNearby(GameTestHelper helper) {
+		BlockPos earPos = new BlockPos(2, 2, 2);
+		helper.setBlock(earPos.below(), Blocks.DIRT);
+		helper.setBlock(earPos, BlocksTC.arcaneEar.get());
+		BlockPos earAbs = helper.absolutePos(earPos);
+		BlockPos noteAbs = earAbs.offset(3, 0, 0);
+		thaumcraft.common.tiles.devices.TileArcaneEar tile = helper.getBlockEntity(earPos);
+
+		// NOTE_EVENTS is shared per-dimension across every concurrently-running GameTest instance (all
+		// share the overworld) - clearing right before recording isolates this check from any other test's
+		// own events, so a pass here proves this test's own event actually caused it, not stray bleed.
+		thaumcraft.common.tiles.devices.TileArcaneEar.clearNoteEvents(helper.getLevel());
+		thaumcraft.common.tiles.devices.TileArcaneEar.recordNoteEvent(helper.getLevel(), noteAbs,
+				net.minecraft.world.level.block.state.properties.NoteBlockInstrument.HARP, 0);
+		thaumcraft.common.tiles.devices.TileArcaneEar.tick(helper.getLevel(), earAbs, helper.getBlockState(earPos), tile);
+
+		helper.assertTrue(helper.getBlockState(earPos).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED),
+				"an arcane ear should enable after a matching note+instrument plays nearby");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void arcaneEarIgnoresANonMatchingNote(GameTestHelper helper) {
+		BlockPos earPos = new BlockPos(2, 2, 2);
+		helper.setBlock(earPos.below(), Blocks.DIRT);
+		helper.setBlock(earPos, BlocksTC.arcaneEar.get());
+		BlockPos earAbs = helper.absolutePos(earPos);
+		BlockPos noteAbs = earAbs.offset(3, 0, 0);
+		thaumcraft.common.tiles.devices.TileArcaneEar tile = helper.getBlockEntity(earPos);
+
+		// NOTE_EVENTS is shared per-dimension across every concurrently-running GameTest instance (all
+		// share the overworld) - deliberately using an instrument+note combo (SNARE/17) that none of this
+		// file's other Arcane Ear tests ever record (they all use HARP/0 or HARP/1), so a nearby *other*
+		// test's own legitimate matching event can never bleed into this negative assertion. The first
+		// attempt at this test used HARP/5 and still failed even after switching to SNARE/17 here, because a
+		// *different*, concurrently-running test's own legitimate HARP/0 event (recorded for its own ear,
+		// landing within this ear's 64-block radius purely from GameTest's structure grid spacing) was the
+		// one actually matching, not this test's own SNARE/17 entry. Clearing the dimension's list
+		// immediately before recording removes that cross-test contamination for the one synchronous window
+		// this test cares about, without touching any other test's own already-completed assertions.
+		thaumcraft.common.tiles.devices.TileArcaneEar.clearNoteEvents(helper.getLevel());
+		thaumcraft.common.tiles.devices.TileArcaneEar.recordNoteEvent(helper.getLevel(), noteAbs,
+				net.minecraft.world.level.block.state.properties.NoteBlockInstrument.SNARE, 17);
+		thaumcraft.common.tiles.devices.TileArcaneEar.tick(helper.getLevel(), earAbs, helper.getBlockState(earPos), tile);
+
+		helper.assertTrue(!helper.getBlockState(earPos).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED),
+				"an arcane ear should stay disabled when the only note nearby plays a different pitch");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void arcaneEarRightClickCyclesWhichPitchItListensFor(GameTestHelper helper) {
+		BlockPos earPos = new BlockPos(2, 2, 2);
+		helper.setBlock(earPos.below(), Blocks.DIRT);
+		helper.setBlock(earPos, BlocksTC.arcaneEar.get());
+		BlockPos earAbs = helper.absolutePos(earPos);
+
+		ServerPlayer player = spawnCasterAt(helper, earAbs);
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(earAbs), net.minecraft.core.Direction.UP, earAbs, false);
+		helper.getBlockState(earPos).useWithoutItem(helper.getLevel(), player, hit);
+
+		BlockPos noteAbs = earAbs.offset(3, 0, 0);
+		thaumcraft.common.tiles.devices.TileArcaneEar tile = helper.getBlockEntity(earPos);
+
+		// A note at the ear's original pitch (0) should no longer match after the right-click cycled it to 1.
+		// clearNoteEvents isolates each check from other concurrently-running tests' own events sharing this
+		// dimension's list - see arcaneEarPulsesRedstoneWhenAMatchingNoteBlockPlaysNearby's own comment.
+		thaumcraft.common.tiles.devices.TileArcaneEar.clearNoteEvents(helper.getLevel());
+		thaumcraft.common.tiles.devices.TileArcaneEar.recordNoteEvent(helper.getLevel(), noteAbs,
+				net.minecraft.world.level.block.state.properties.NoteBlockInstrument.HARP, 0);
+		thaumcraft.common.tiles.devices.TileArcaneEar.tick(helper.getLevel(), earAbs, helper.getBlockState(earPos), tile);
+		helper.assertTrue(!helper.getBlockState(earPos).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED),
+				"after cycling its pitch to 1, the ear should no longer react to its old pitch (0)");
+
+		thaumcraft.common.tiles.devices.TileArcaneEar.clearNoteEvents(helper.getLevel());
+		thaumcraft.common.tiles.devices.TileArcaneEar.recordNoteEvent(helper.getLevel(), noteAbs,
+				net.minecraft.world.level.block.state.properties.NoteBlockInstrument.HARP, 1);
+		thaumcraft.common.tiles.devices.TileArcaneEar.tick(helper.getLevel(), earAbs, helper.getBlockState(earPos), tile);
+		helper.assertTrue(helper.getBlockState(earPos).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED),
+				"after one right-click cycling its pitch to 1, the ear should react to pitch 1");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void arcaneEarToggleTogglesInsteadOfPulsing(GameTestHelper helper) {
+		BlockPos earPos = new BlockPos(2, 2, 2);
+		helper.setBlock(earPos.below(), Blocks.DIRT);
+		helper.setBlock(earPos, BlocksTC.arcaneEarToggle.get());
+		BlockPos earAbs = helper.absolutePos(earPos);
+		BlockPos noteAbs = earAbs.offset(3, 0, 0);
+		thaumcraft.common.tiles.devices.TileArcaneEar tile = helper.getBlockEntity(earPos);
+
+		// clearNoteEvents isolates each check from other concurrently-running tests' own events sharing this
+		// dimension's list - see arcaneEarPulsesRedstoneWhenAMatchingNoteBlockPlaysNearby's own comment.
+		thaumcraft.common.tiles.devices.TileArcaneEar.clearNoteEvents(helper.getLevel());
+		thaumcraft.common.tiles.devices.TileArcaneEar.recordNoteEvent(helper.getLevel(), noteAbs,
+				net.minecraft.world.level.block.state.properties.NoteBlockInstrument.HARP, 0);
+		thaumcraft.common.tiles.devices.TileArcaneEar.tick(helper.getLevel(), earAbs, helper.getBlockState(earPos), tile);
+		helper.assertTrue(helper.getBlockState(earPos).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED),
+				"the toggle variant should switch on after the first matching note");
+
+		thaumcraft.common.tiles.devices.TileArcaneEar.clearNoteEvents(helper.getLevel());
+		thaumcraft.common.tiles.devices.TileArcaneEar.recordNoteEvent(helper.getLevel(), noteAbs,
+				net.minecraft.world.level.block.state.properties.NoteBlockInstrument.HARP, 0);
+		thaumcraft.common.tiles.devices.TileArcaneEar.tick(helper.getLevel(), earAbs, helper.getBlockState(earPos), tile);
+		helper.assertTrue(!helper.getBlockState(earPos).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED),
+				"the toggle variant should switch back off after a second matching note, not stay on/pulse like the plain variant");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void arcaneEarDropsWhenItsSupportIsRemoved(GameTestHelper helper) {
+		BlockPos earPos = new BlockPos(2, 2, 2);
+		helper.setBlock(earPos.below(), Blocks.DIRT);
+		helper.setBlock(earPos, BlocksTC.arcaneEar.get());
+		helper.assertTrue(helper.getBlockState(earPos).is(BlocksTC.arcaneEar.get()), "sanity check: the ear should be placed");
+
+		helper.setBlock(earPos.below(), Blocks.AIR);
+
+		helper.assertTrue(helper.getBlockState(earPos).isAir(), "removing the block an arcane ear rests against should make the ear itself pop off");
 		helper.succeed();
 	}
 }

@@ -234,6 +234,17 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.devices.BlockWaterJug::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(1.5f).sound(SoundType.STONE).noOcclusion());
 
+	/** A note-block-like redstone sensor - see {@link thaumcraft.common.tiles.devices.TileArcaneEar}'s own
+	 * doc comment for the listening mechanic, and {@link thaumcraft.common.blocks.devices.BlockArcaneEar}'s
+	 * for why both variants below share one Java class. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockArcaneEar> arcaneEar = BLOCKS.registerBlock("arcane_ear",
+			props -> new thaumcraft.common.blocks.devices.BlockArcaneEar(props, false),
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
+
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockArcaneEar> arcaneEarToggle = BLOCKS.registerBlock("arcane_ear_toggle",
+			props -> new thaumcraft.common.blocks.devices.BlockArcaneEar(props, true),
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
+
 	private BlocksTC() {
 	}
 }

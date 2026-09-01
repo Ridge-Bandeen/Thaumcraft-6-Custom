@@ -1,187 +1,140 @@
 package thaumcraft.common.tiles.devices;
+
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.WeakHashMap;
-import net.minecraft.block.Block;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.init.Blocks;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.ITickable;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import thaumcraft.common.blocks.IBlockEnabled;
-import thaumcraft.common.blocks.devices.BlockArcaneEarToggle;
-import thaumcraft.common.lib.utils.BlockStateUtils;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.NoteBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
+import thaumcraft.common.blocks.devices.BlockArcaneEar;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 
-public class TileArcaneEar extends TileEntity implements ITickable
-{
-    public byte note;
-    public byte tone;
-    public int redstoneSignal;
-    public static WeakHashMap<Integer, ArrayList<Integer[]>> noteBlockEvents;
-    
-    public TileArcaneEar() {
-        note = 0;
-        tone = 0;
-        redstoneSignal = 0;
-    }
-    
-    public NBTTagCompound writeToNBT(NBTTagCompound par1NBTTagCompound) {
-        super.writeToNBT(par1NBTTagCompound);
-        par1NBTTagCompound.setByte("note", note);
-        par1NBTTagCompound.setByte("tone", tone);
-        return par1NBTTagCompound;
-    }
-    
-    public void readFromNBT(NBTTagCompound par1NBTTagCompound) {
-        super.readFromNBT(par1NBTTagCompound);
-        note = par1NBTTagCompound.getByte("note");
-        tone = par1NBTTagCompound.getByte("tone");
-        if (note < 0) {
-            note = 0;
-        }
-        if (note > 24) {
-            note = 24;
-        }
-    }
-    
-    public void update() {
-        if (!world.isRemote) {
-            if (redstoneSignal > 0) {
-                --redstoneSignal;
-                if (redstoneSignal == 0) {
-                    EnumFacing facing = BlockStateUtils.getFacing(getBlockMetadata()).getOpposite();
-                    TileEntity tileentity = world.getTileEntity(pos);
-                    world.setBlockState(pos, world.getBlockState(pos).withProperty((IProperty)IBlockEnabled.ENABLED, (Comparable)false), 3);
-                    if (tileentity != null) {
-                        tileentity.validate();
-                        world.setTileEntity(pos, tileentity);
-                    }
-                    world.notifyNeighborsOfStateChange(pos, getBlockType(), true);
-                    world.notifyNeighborsOfStateChange(pos.offset(facing), getBlockType(), true);
-                    IBlockState state = world.getBlockState(pos);
-                    world.markAndNotifyBlock(pos, world.getChunkFromBlockCoords(pos), state, state, 3);
-                }
-            }
-            ArrayList<Integer[]> nbe = TileArcaneEar.noteBlockEvents.get(world.provider.getDimension());
-            if (nbe != null) {
-                for (Integer[] dat : nbe) {
-                    if (dat[3] == tone && dat[4] == note && getDistanceSq(dat[0] + 0.5, dat[1] + 0.5, dat[2] + 0.5) <= 4096.0) {
-                        EnumFacing facing2 = BlockStateUtils.getFacing(getBlockMetadata()).getOpposite();
-                        triggerNote(world, pos, true);
-                        TileEntity tileentity2 = world.getTileEntity(pos);
-                        IBlockState state2 = world.getBlockState(pos);
-                        if (getBlockType() instanceof BlockArcaneEarToggle) {
-                            world.setBlockState(pos, state2.withProperty((IProperty)IBlockEnabled.ENABLED, (Comparable)!BlockStateUtils.isEnabled(state2)), 3);
-                        }
-                        else {
-                            redstoneSignal = 10;
-                            world.setBlockState(pos, state2.withProperty((IProperty)IBlockEnabled.ENABLED, (Comparable)true), 3);
-                        }
-                        if (tileentity2 != null) {
-                            tileentity2.validate();
-                            world.setTileEntity(pos, tileentity2);
-                        }
-                        world.notifyNeighborsOfStateChange(pos, getBlockType(), true);
-                        world.notifyNeighborsOfStateChange(pos.offset(facing2), getBlockType(), true);
-                        IBlockState state3 = world.getBlockState(pos);
-                        world.markAndNotifyBlock(pos, world.getChunkFromBlockCoords(pos), state3, state3, 3);
-                        break;
-                    }
-                }
-            }
-        }
-    }
-    
-    public void updateTone() {
-        try {
-            EnumFacing facing = BlockStateUtils.getFacing(getBlockMetadata()).getOpposite();
-            IBlockState iblockstate = world.getBlockState(pos.offset(facing));
-            Material material = iblockstate.getMaterial();
-            tone = 0;
-            if (material == Material.ROCK) {
-                tone = 1;
-            }
-            if (material == Material.SAND) {
-                tone = 2;
-            }
-            if (material == Material.GLASS) {
-                tone = 3;
-            }
-            if (material == Material.WOOD) {
-                tone = 4;
-            }
-            Block block = iblockstate.getBlock();
-            if (block == Blocks.CLAY) {
-                tone = 5;
-            }
-            if (block == Blocks.GOLD_BLOCK) {
-                tone = 6;
-            }
-            if (block == Blocks.WOOL) {
-                tone = 7;
-            }
-            if (block == Blocks.PACKED_ICE) {
-                tone = 8;
-            }
-            if (block == Blocks.BONE_BLOCK) {
-                tone = 9;
-            }
-            markDirty();
-        }
-        catch (Exception ex) {}
-    }
-    
-    public void changePitch() {
-        note = (byte)((note + 1) % 25);
-        markDirty();
-    }
-    
-    public void triggerNote(World world, BlockPos pos, boolean sound) {
-        byte i = -1;
-        if (sound) {
-            EnumFacing facing = BlockStateUtils.getFacing(getBlockMetadata()).getOpposite();
-            IBlockState iblockstate = world.getBlockState(pos.offset(facing));
-            Material material = iblockstate.getMaterial();
-            i = 0;
-            if (material == Material.ROCK) {
-                i = 1;
-            }
-            if (material == Material.SAND) {
-                i = 2;
-            }
-            if (material == Material.GLASS) {
-                i = 3;
-            }
-            if (material == Material.WOOD) {
-                i = 4;
-            }
-            Block block = iblockstate.getBlock();
-            if (block == Blocks.CLAY) {
-                i = 5;
-            }
-            if (block == Blocks.GOLD_BLOCK) {
-                i = 6;
-            }
-            if (block == Blocks.WOOL) {
-                i = 7;
-            }
-            if (block == Blocks.PACKED_ICE) {
-                i = 8;
-            }
-            if (block == Blocks.BONE_BLOCK) {
-                i = 9;
-            }
-        }
-        world.addBlockEvent(pos, getBlockType(), i, note);
-    }
-    
-    static {
-        TileArcaneEar.noteBlockEvents = new WeakHashMap<Integer, ArrayList<Integer[]>>();
-    }
+/**
+ * Replaces the old (1.12.2) {@code TileArcaneEar} - a note-block-like device with two roles: right-clicking
+ * cycles through 25 pitches and plays the resulting note back as audio feedback; separately, it listens for
+ * ANY note block anywhere in the same dimension playing that exact pitch on a matching "tone" (instrument),
+ * within 64 blocks, and reacts by pulsing redstone for 10 ticks - or, for the {@code arcane_ear_toggle}
+ * variant (see {@link BlockArcaneEar#isToggle()}), toggling permanently instead.
+ *
+ * {@code net.neoforged.neoforge.event.level.NoteBlockEvent.Play} is another Forge-era event that survived
+ * into NeoForge 1.21.1 with the same shape - the whole cross-dimension listening mechanic ports over close
+ * to mechanically as a result. Two new {@code @SubscribeEvent} handlers on {@code Thaumcraft} itself
+ * populate {@link #NOTE_EVENTS} (a per-dimension list, mirroring the original's own static field) whenever a
+ * real note block plays anywhere, and clear it once per level per tick via {@code LevelTickEvent.Post} -
+ * the same "populate mid-tick, clear at tick end" window the original had via its own
+ * {@code WorldEvents}/{@code ServerEvents} pair.
+ *
+ * Real improvement over the original, not just a simplification: the "tone" (which instrument the ear reacts
+ * to) is now the actual support block's real {@code BlockState#instrument()} - the same per-block accessor
+ * vanilla's own {@link NoteBlock} placement logic uses - instead of the original's hand-picked 10-case
+ * material/block if-chain (stone/sand/glass/wood/clay/gold/wool/packed_ice/bone_block only). Every block with
+ * a real vanilla instrument mapping (which is most of them) works correctly now, not just those ten.
+ *
+ * Simplified vs the original: the note sound is played directly via {@code Level#playSound} (broadcasts to
+ * nearby players on its own when called server-side with a null player) instead of the original's
+ * block-event round trip ({@code addBlockEvent}/{@code eventReceived}) - that indirection existed to sync a
+ * client-side visual/audio trigger in 1.12.2's networking model and has no functional purpose here. No note
+ * particle (client FX, dropped like everywhere else this session).
+ */
+public class TileArcaneEar extends BlockEntity {
+
+	private static final Map<ResourceKey<Level>, List<NoteEvent>> NOTE_EVENTS = new HashMap<>();
+
+	private record NoteEvent(BlockPos pos, int instrumentOrdinal, int noteId) {
+	}
+
+	private int note;
+	private int redstoneSignal;
+
+	public TileArcaneEar(BlockPos pos, BlockState state) {
+		super(ThaumcraftBlockEntities.ARCANE_EAR.get(), pos, state);
+	}
+
+	/** Called from {@code Thaumcraft}'s {@code NoteBlockEvent.Play} handler whenever any real note block
+	 * plays anywhere - records it for every Arcane Ear in that dimension to check against this tick. */
+	public static void recordNoteEvent(Level level, BlockPos pos, NoteBlockInstrument instrument, int noteId) {
+		if (level.isClientSide) return;
+		NOTE_EVENTS.computeIfAbsent(level.dimension(), key -> new ArrayList<>())
+				.add(new NoteEvent(pos.immutable(), instrument.ordinal(), noteId));
+	}
+
+	/** Called from {@code Thaumcraft}'s {@code LevelTickEvent.Post} handler - clears this dimension's list
+	 * once every Arcane Ear tile has had a chance to check it this tick. */
+	public static void clearNoteEvents(Level level) {
+		List<NoteEvent> events = NOTE_EVENTS.get(level.dimension());
+		if (events != null) events.clear();
+	}
+
+	public static void tick(Level level, BlockPos pos, BlockState state, TileArcaneEar tile) {
+		if (level.isClientSide) return;
+		boolean toggle = ((BlockArcaneEar) state.getBlock()).isToggle();
+
+		if (!toggle && tile.redstoneSignal > 0) {
+			tile.redstoneSignal--;
+			if (tile.redstoneSignal == 0) {
+				level.setBlock(pos, level.getBlockState(pos).setValue(BlockStateProperties.ENABLED, false), 3);
+			}
+		}
+
+		List<NoteEvent> events = NOTE_EVENTS.get(level.dimension());
+		if (events == null || events.isEmpty()) return;
+
+		int tone = tile.instrumentAt(level, pos, level.getBlockState(pos)).ordinal();
+		for (NoteEvent event : events) {
+			if (event.instrumentOrdinal() == tone && event.noteId() == tile.note && event.pos().distSqr(pos) <= 4096.0) {
+				BlockState current = level.getBlockState(pos);
+				tile.playNote(level, pos, current);
+				if (toggle) {
+					level.setBlock(pos, current.cycle(BlockStateProperties.ENABLED), 3);
+				} else {
+					tile.redstoneSignal = 10;
+					level.setBlock(pos, current.setValue(BlockStateProperties.ENABLED, true), 3);
+				}
+				break;
+			}
+		}
+	}
+
+	/** Right-click handler: cycles to the next pitch (0-24) and plays it back as audio feedback - doesn't
+	 * trigger the redstone/toggle output itself, same as the original. */
+	public void changePitchAndPlay(Level level, BlockPos pos, BlockState state) {
+		note = (note + 1) % 25;
+		setChanged();
+		playNote(level, pos, state);
+	}
+
+	private void playNote(Level level, BlockPos pos, BlockState state) {
+		NoteBlockInstrument instrument = instrumentAt(level, pos, state);
+		float pitch = NoteBlock.getPitchFromNote(note);
+		level.playSound(null, pos, instrument.getSoundEvent().value(), SoundSource.RECORDS, 3.0f, pitch);
+	}
+
+	private NoteBlockInstrument instrumentAt(Level level, BlockPos pos, BlockState state) {
+		Direction facing = state.getValue(BlockStateProperties.FACING);
+		BlockPos supportPos = pos.relative(facing.getOpposite());
+		return level.getBlockState(supportPos).instrument();
+	}
+
+	@Override
+	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.saveAdditional(tag, registries);
+		tag.putInt("Note", note);
+	}
+
+	@Override
+	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.loadAdditional(tag, registries);
+		note = tag.getInt("Note");
+	}
 }

@@ -48,6 +48,9 @@ import thaumcraft.common.ThaumcraftInternalMethodHandler;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import thaumcraft.common.tiles.devices.TileRechargePedestal;
+import net.neoforged.neoforge.event.level.NoteBlockEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import thaumcraft.common.tiles.devices.TileArcaneEar;
 
 /**
  * NeoForge 1.21.1 entry point.
@@ -162,5 +165,22 @@ public class Thaumcraft {
         if (event.getLevel() instanceof ServerLevel level) {
             AuraHandler.loadForLevel(level);
         }
+    }
+
+    // Arcane Ear's cross-dimension note-listening mechanic - see TileArcaneEar's own doc comment. Play
+    // records every real note block's trigger; Post clears each dimension's list once every Arcane Ear in
+    // it has had a chance to check that tick's events.
+    @SubscribeEvent
+    public void onNoteBlockPlay(NoteBlockEvent.Play event) {
+        // BlockEvent#getLevel() is typed as the broader LevelAccessor, but a real note block's own
+        // triggerEvent (the only place this event fires from) always passes a real Level.
+        if (event.getLevel() instanceof net.minecraft.world.level.Level level) {
+            TileArcaneEar.recordNoteEvent(level, event.getPos(), event.getInstrument(), event.getVanillaNoteId());
+        }
+    }
+
+    @SubscribeEvent
+    public void onLevelTickPost(LevelTickEvent.Post event) {
+        TileArcaneEar.clearNoteEvents(event.getLevel());
     }
 }

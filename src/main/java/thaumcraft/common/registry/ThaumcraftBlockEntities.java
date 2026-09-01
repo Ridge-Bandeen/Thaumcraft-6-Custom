@@ -11,6 +11,7 @@ import thaumcraft.common.tiles.devices.TileRechargePedestal;
 import thaumcraft.common.tiles.devices.TileLampArcane;
 import thaumcraft.common.tiles.devices.TileVisGenerator;
 import thaumcraft.common.tiles.devices.TileWaterJug;
+import thaumcraft.common.tiles.devices.TileArcaneEar;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
 public final class ThaumcraftBlockEntities {
@@ -42,6 +43,11 @@ public final class ThaumcraftBlockEntities {
 	 * the existing, untouched 1.12.2 texture/model/blockstate assets. */
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileWaterJug>> WATER_JUG = BLOCK_ENTITIES.register("everfull_urn",
 			() -> BlockEntityType.Builder.of(TileWaterJug::new, BlocksTC.everfullUrn.get()).build(null));
+
+	/** Shared by both {@code arcane_ear} and {@code arcane_ear_toggle} - {@link BlockEntityType.Builder#of}
+	 * takes a varargs list of valid blocks for exactly this "same tile, two block variants" case. */
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileArcaneEar>> ARCANE_EAR = BLOCK_ENTITIES.register("arcane_ear",
+			() -> BlockEntityType.Builder.of(TileArcaneEar::new, BlocksTC.arcaneEar.get(), BlocksTC.arcaneEarToggle.get()).build(null));
 
 	private ThaumcraftBlockEntities() {
 	}

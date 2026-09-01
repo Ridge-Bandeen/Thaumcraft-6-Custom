@@ -196,6 +196,12 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> everfullUrn =
 			ITEMS.registerSimpleBlockItem("everfull_urn", BlocksTC.everfullUrn);
 
+	public static final DeferredItem<BlockItem> arcaneEar =
+			ITEMS.registerSimpleBlockItem("arcane_ear", BlocksTC.arcaneEar);
+
+	public static final DeferredItem<BlockItem> arcaneEarToggle =
+			ITEMS.registerSimpleBlockItem("arcane_ear_toggle", BlocksTC.arcaneEarToggle);
+
 	private ItemsTC() {
 	}
 }

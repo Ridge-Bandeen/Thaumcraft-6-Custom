@@ -126,5 +126,8 @@
   "block.thaumcraft.leaves_greatwood": "Greatwood Leaves",
   "block.thaumcraft.sapling_greatwood": "Greatwood Sapling",
   "block.thaumcraft.greatwood_stairs": "Greatwood Stairs",
-  "block.thaumcraft.greatwood_slab": "Greatwood Slab"
+  "block.thaumcraft.greatwood_slab": "Greatwood Slab",
+
+  "block.thaumcraft.arcane_ear": "Arcane Ear",
+  "block.thaumcraft.arcane_ear_toggle": "Arcane Ear (Toggle)"
 }

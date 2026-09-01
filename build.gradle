@@ -227,6 +227,9 @@ sourceSets {
             include 'thaumcraft/common/blocks/devices/BlockWaterJug.java'
             include 'thaumcraft/common/tiles/devices/TileWaterJug.java'
 
+            include 'thaumcraft/common/blocks/devices/BlockArcaneEar.java'
+            include 'thaumcraft/common/tiles/devices/TileArcaneEar.java'
+
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
     }
