@@ -980,4 +980,51 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(found, block + " should drop " + expectedItem + " when broken, found: "
 				+ dropped.stream().map(e -> e.getItem().toString()).toList());
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Silverwood tree - a real SaplingBlock/TreeGrower now, resolving against the new
+	// data/thaumcraft/worldgen/configured_feature/silverwood_tree.json at grow time (vanilla's own
+	// minecraft:tree feature, not a reproduction of the original's hand-rolled shape - see BlocksTC's own
+	// doc comment). Advances a stage-1 sapling directly via SaplingBlock#advanceTree (the same method both
+	// bonemeal and the natural random-tick growth call) rather than waiting out real random ticks. Uses a
+	// new, taller "tall" structure (data/thaumcraft/structure/tall.nbt, 12x32x12 all-air) instead of the
+	// shared "empty" one (8x5x8) - confirmed by direct diagnosis that GameTest's own containment barrier
+	// sits just above "empty"'s bounds, which silently made TreeGrower#growTree's internal placement checks
+	// fail (the sapling reverted to its own stage-1 state, no exception) well before the tree feature's own
+	// logic was ever really exercised. Not a production bug - the same "real projectile/growth-feature needs
+	// more room than the tiny shared structure gives it" lesson as the Fireball focus's aim-precision note.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
+	public static void silverwoodSaplingGrowsIntoARealTree(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(4, 1, 4);
+		BlockPos absolute = helper.absolutePos(relPos);
+		ServerLevel level = helper.getLevel();
+
+		// The tree feature needs real soil beneath it to grow into, same as any real sapling planted in
+		// the world - the shared "empty" structure is entirely air, so this test provides its own ground.
+		level.setBlock(helper.absolutePos(relPos.below()), Blocks.DIRT.defaultBlockState(), 3);
+		level.setBlock(absolute, BlocksTC.saplingSilverwood.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.SaplingBlock.STAGE, 1), 3);
+		net.minecraft.world.level.block.state.BlockState saplingState = level.getBlockState(absolute);
+		((net.minecraft.world.level.block.SaplingBlock) BlocksTC.saplingSilverwood.get())
+				.advanceTree(level, absolute, saplingState, level.getRandom());
+
+		AABB searchVolume = new AABB(absolute).inflate(10.0).expandTowards(0, 25.0, 0);
+		boolean foundLog = false;
+		boolean foundLeaves = false;
+		for (BlockPos p : net.minecraft.core.BlockPos.betweenClosed(
+				net.minecraft.core.BlockPos.containing(searchVolume.minX, searchVolume.minY, searchVolume.minZ),
+				net.minecraft.core.BlockPos.containing(searchVolume.maxX, searchVolume.maxY, searchVolume.maxZ))) {
+			if (level.getBlockState(p).is(BlocksTC.leavesSilverwood.get())) {
+				foundLeaves = true;
+			}
+			if (level.getBlockState(p).is(BlocksTC.logSilverwood.get())) {
+				foundLog = true;
+				break;
+			}
+		}
+		helper.assertTrue(foundLog, "advancing a stage-1 silverwood sapling should have grown a real tree with log_silverwood blocks somewhere nearby (leaves found: " + foundLeaves + ")");
+		helper.succeed();
+	}
 }

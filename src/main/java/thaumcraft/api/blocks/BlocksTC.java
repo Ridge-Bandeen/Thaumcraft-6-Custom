@@ -3,6 +3,7 @@ package thaumcraft.api.blocks;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
+import net.minecraft.world.level.block.SaplingBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.StairBlock;
@@ -13,6 +14,7 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.common.blocks.crafting.BlockArcaneWorkbench;
 import thaumcraft.common.blocks.crafting.BlockCrucible;
+import thaumcraft.common.registry.ThaumcraftTreeGrowers;
 
 /**
  * Registered block references, addon-facing the same way the old (1.12.2) {@code BlocksTC} was - fields
@@ -113,16 +115,19 @@ public final class BlocksTC {
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
 
 	/**
-	 * Start of the Silverwood wood set - the first step towards giving {@code Filter} (and everything else
-	 * that needs {@code plankSilverwood}) a reachable ingredient. This chunk registers the block/item/recipe
-	 * side only: log, planks, leaves, and a currently-inert sapling (vanilla's own {@link RotatedPillarBlock}/
-	 * plain {@link Block}/{@link LeavesBlock} - no custom subclasses needed for any of them). <b>Silverwood
-	 * log is NOT obtainable in survival yet</b> - the original's natural generation ({@code
-	 * WorldGenSilverwoodTrees}, a hand-rolled multi-trunk clustered-log shape with no equivalent in vanilla's
-	 * modern TrunkPlacer/FoliagePlacer tree framework) and the sapling's grow-into-a-tree behavior are both
-	 * deliberately deferred to a follow-up chunk, not silently dropped - see the port-tracking memory notes.
-	 * Until then this is real, working content that's reachable via creative/commands only, same honesty
-	 * precedent as the Recharge Pedestal being explicitly deferred rather than half-built and left unflagged.
+	 * The Silverwood wood set - gives {@code Filter} (and everything else that needs {@code plankSilverwood})
+	 * a reachable ingredient. Log/planks/leaves use vanilla base classes directly ({@link RotatedPillarBlock}/
+	 * plain {@link Block}/{@link LeavesBlock} - no custom subclasses needed). The sapling is a real
+	 * {@link SaplingBlock} now, using a mod-owned {@link net.minecraft.world.level.block.grower.TreeGrower}
+	 * (see {@link ThaumcraftTreeGrowers}) that resolves against
+	 * {@code data/thaumcraft/worldgen/configured_feature/silverwood_tree.json} at grow time - vanilla's own
+	 * {@code minecraft:tree} feature type with a fancy trunk+foliage placer combo, not a reproduction of the
+	 * original's hand-rolled multi-trunk clustered-log shape ({@code WorldGenSilverwoodTrees}, which has no
+	 * equivalent in vanilla's modern TrunkPlacer/FoliagePlacer framework and would need a real custom
+	 * TrunkPlacer to reproduce faithfully - out of scope here, same "use vanilla's own feature/placer
+	 * instead of the hand-rolled original" precedent as the ore world-gen). Natural placement is a rare
+	 * overworld scatter (see the placed_feature/biome_modifier next to the configured_feature) rather than
+	 * the original's "only near magical nodes" restriction, since the node system isn't ported.
 	 */
 	public static final DeferredBlock<RotatedPillarBlock> logSilverwood = BLOCKS.registerBlock("log_silverwood",
 			RotatedPillarBlock::new,
@@ -139,11 +144,9 @@ public final class BlocksTC {
 					.isSuffocating((state, level, pos) -> false).isViewBlocking((state, level, pos) -> false)
 					.ignitedByLava().pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
 
-	/** Placeholder, not yet a real {@link net.minecraft.world.level.block.SaplingBlock} - see this group's
-	 * doc comment above. A plain non-growing decorative block for now. */
-	public static final DeferredBlock<Block> saplingSilverwood = BLOCKS.registerBlock("sapling_silverwood",
-			props -> new Block(props),
-			BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().instabreak().sound(SoundType.GRASS)
+	public static final DeferredBlock<SaplingBlock> saplingSilverwood = BLOCKS.registerBlock("sapling_silverwood",
+			props -> new SaplingBlock(ThaumcraftTreeGrowers.SILVERWOOD, props),
+			BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().randomTicks().instabreak().sound(SoundType.GRASS)
 					.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
 
 	private BlocksTC() {
