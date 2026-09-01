@@ -292,6 +292,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> condenserLattice =
 			ITEMS.registerSimpleBlockItem("condenser_lattice", BlocksTC.condenserLattice);
 
+	public static final DeferredItem<BlockItem> pavingStoneTravel =
+			ITEMS.registerSimpleBlockItem("paving_stone_travel", BlocksTC.pavingStoneTravel);
+
 	public static final DeferredItem<Item> thaumiumHelm = ITEMS.registerItem("thaumium_helm",
 			props -> new ArmorItem(ThaumcraftArmorMaterials.THAUMIUM, ArmorItem.Type.HELMET,
 					props.durability(ArmorItem.Type.HELMET.getDurability(25))));

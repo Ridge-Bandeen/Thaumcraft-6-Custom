@@ -312,6 +312,13 @@ public final class BlocksTC {
 			props -> new thaumcraft.common.blocks.devices.BlockCondenserLattice(props, true),
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(0.5f).explosionResistance(5.0f).sound(SoundType.METAL).noOcclusion());
 
+	/** Only the "travel" variant of the original's shared {@code BlockPavingStone} - see
+	 * {@link thaumcraft.common.blocks.basic.BlockPavingStoneTravel}'s own doc comment for why the
+	 * "barrier" variant (the warding-network floor tile) is deferred separately. */
+	public static final DeferredBlock<thaumcraft.common.blocks.basic.BlockPavingStoneTravel> pavingStoneTravel = BLOCKS.registerBlock("paving_stone_travel",
+			thaumcraft.common.blocks.basic.BlockPavingStoneTravel::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.5f).sound(SoundType.STONE).noOcclusion());
+
 	private BlocksTC() {
 	}
 }

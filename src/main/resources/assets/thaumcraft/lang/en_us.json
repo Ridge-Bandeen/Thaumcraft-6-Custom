@@ -161,5 +161,7 @@
   "item.thaumcraft.filter": "Filter",
   "block.thaumcraft.condenser": "Flux Condenser",
   "block.thaumcraft.condenser_lattice": "Condenser Lattice",
-  "block.thaumcraft.condenser_lattice_dirty": "Condenser Lattice"
+  "block.thaumcraft.condenser_lattice_dirty": "Condenser Lattice",
+
+  "block.thaumcraft.paving_stone_travel": "Traveller's Paving Stone"
 }

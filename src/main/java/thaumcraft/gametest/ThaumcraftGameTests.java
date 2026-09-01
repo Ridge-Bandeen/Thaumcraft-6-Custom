@@ -23,6 +23,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import thaumcraft.Thaumcraft;
+import net.minecraft.world.effect.MobEffects;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.blocks.BlocksTC;
@@ -405,7 +406,8 @@ public class ThaumcraftGameTests {
 				"thaumium_pick", "thaumium_axe", "thaumium_shovel", "thaumium_hoe", "thaumium_sword",
 				"thaumium_helm", "thaumium_chest", "thaumium_legs", "thaumium_boots",
 				"vis_battery", "dioptra",
-				"filter", "condenser", "condenser_lattice"
+				"filter", "condenser", "condenser_lattice",
+				"paving_stone_travel"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -1864,6 +1866,22 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(tile.getFluxStored() > 0, "the condenser should have converted at least 1 point of Flux essentia by now, found: " + tile.getFluxStored());
 		helper.assertTrue(tile.getEssentia() >= 0 && source.amount < 50, "the condenser should have pulled essentia from the source, source now has: " + source.amount);
 		helper.assertTrue(AuraHandler.getFlux(helper.getLevel(), absolute) < worldFluxBefore, "converting should have drained real world flux");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void pavingStoneTravelGrantsSpeedAndJumpBoostOnStep(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.pavingStoneTravel.get());
+
+		ServerPlayer player = spawnCasterAt(helper, absolute.above());
+		helper.assertFalse(player.hasEffect(MobEffects.MOVEMENT_SPEED), "the player shouldn't have Speed before stepping on the paving stone");
+
+		BlocksTC.pavingStoneTravel.get().stepOn(helper.getLevel(), absolute, helper.getBlockState(pos), player);
+
+		helper.assertTrue(player.hasEffect(MobEffects.MOVEMENT_SPEED), "stepping on the paving stone should grant Speed");
+		helper.assertTrue(player.hasEffect(MobEffects.JUMP), "stepping on the paving stone should grant Jump Boost");
 		helper.succeed();
 	}
 
