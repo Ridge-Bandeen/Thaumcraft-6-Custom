@@ -382,6 +382,12 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.crafting.BlockInfusionMatrix::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0f).sound(SoundType.STONE).noOcclusion());
 
+	/** See {@link thaumcraft.common.blocks.devices.BlockStabilizer}'s own doc comment - no block entity,
+	 * the Flux Rift-pacifying "energy" mechanic is cut alongside the still-unported {@code EntityFluxRift}. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockStabilizer> stabilizer = BLOCKS.registerBlock("stabilizer",
+			thaumcraft.common.blocks.devices.BlockStabilizer::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE).noOcclusion().lightLevel(state -> 4));
+
 	private BlocksTC() {
 	}
 }

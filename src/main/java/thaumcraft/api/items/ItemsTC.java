@@ -378,6 +378,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> infusionMatrix =
 			ITEMS.registerSimpleBlockItem("infusion_matrix", BlocksTC.infusionMatrix);
 
+	public static final DeferredItem<BlockItem> stabilizer =
+			ITEMS.registerSimpleBlockItem("stabilizer", BlocksTC.stabilizer);
+
 	private ItemsTC() {
 	}
 }

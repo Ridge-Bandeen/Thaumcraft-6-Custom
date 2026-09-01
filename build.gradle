@@ -59,6 +59,7 @@ sourceSets {
             include 'thaumcraft/common/blocks/devices/BlockPedestal.java'
             include 'thaumcraft/common/tiles/crafting/TileInfusionMatrix.java'
             include 'thaumcraft/common/blocks/crafting/BlockInfusionMatrix.java'
+            include 'thaumcraft/common/blocks/devices/BlockStabilizer.java'
             include 'thaumcraft/api/damagesource/ThaumcraftDamageTypes.java'
             include 'thaumcraft/api/entities/IEldritchMob.java'
             include 'thaumcraft/api/entities/ITaintedMob.java'

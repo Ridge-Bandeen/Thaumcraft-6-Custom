@@ -2755,4 +2755,46 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(component.getItem().isEmpty(), "the component pedestal's redstone should have been consumed by the craft");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Infusion Stabilizer - a pure drop-in for TileInfusionMatrix#getSurroundings, which already checks
+	// any block generically via instanceof IInfusionStabiliser(Ext). No block entity, no changes needed
+	// to the matrix itself - see BlockStabilizer's own doc comment.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionMatrixPicksUpASymmetricalPairOfStabilizersAsARealBonus(GameTestHelper helper) {
+		BlockPos matrixPos = new BlockPos(4, 4, 4);
+		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		helper.setBlock(matrixPos.offset(3, -2, 0), BlocksTC.stabilizer.get());
+		helper.setBlock(matrixPos.offset(-3, -2, 0), BlocksTC.stabilizer.get());
+
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
+		// checkSurroundings starts true, so the very first tick() runs the scan.
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(helper.getLevel(), matrixAbs, matrixState, matrix);
+
+		helper.assertTrue(matrix.stabilityReplenish > 0,
+				"a matched symmetrical pair of stabilizers should be a net positive to stabilityReplenish, got " + matrix.stabilityReplenish);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionMatrixPenalizesALoneUnmatchedStabilizer(GameTestHelper helper) {
+		BlockPos matrixPos = new BlockPos(4, 4, 4);
+		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		helper.setBlock(matrixPos.offset(3, -2, 0), BlocksTC.stabilizer.get());
+		// Deliberately no mirrored partner at offset(-3, -2, 0) - the scan should see the mismatch (air on
+		// the other side) and penalize instead of reward, same as an unbalanced pedestal pairing.
+
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(helper.getLevel(), matrixAbs, matrixState, matrix);
+
+		helper.assertTrue(matrix.stabilityReplenish < 0,
+				"a lone, unmatched stabilizer should penalize stabilityReplenish, got " + matrix.stabilityReplenish);
+		helper.succeed();
+	}
 }
