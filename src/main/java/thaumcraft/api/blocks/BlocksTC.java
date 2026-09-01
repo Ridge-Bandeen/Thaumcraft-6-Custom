@@ -276,6 +276,17 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.essentia.BlockTube::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.5f).sound(SoundType.METAL).noOcclusion());
 
+	/** Aspect-locks a tube - see {@link thaumcraft.common.blocks.essentia.BlockTubeFilter}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockTubeFilter> tubeFilter = BLOCKS.registerBlock("tube_filter",
+			thaumcraft.common.blocks.essentia.BlockTubeFilter::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.5f).sound(SoundType.METAL).noOcclusion());
+
+	/** Halves a tube's own suction - see {@link thaumcraft.common.blocks.essentia.BlockTubeRestrict}'s own
+	 * doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockTubeRestrict> tubeRestrict = BLOCKS.registerBlock("tube_restrict",
+			thaumcraft.common.blocks.essentia.BlockTubeRestrict::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.5f).sound(SoundType.METAL).noOcclusion());
+
 	/** Storage block for Thaumium ingots - see {@link thaumcraft.api.items.ItemsTC#ingotThaumium}'s own doc
 	 * comment for the material's real, reachable crucible-based origin. Plain block, same shape as vanilla's
 	 * own metal blocks. */

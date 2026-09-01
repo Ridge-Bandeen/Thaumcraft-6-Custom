@@ -76,6 +76,16 @@ public class ThaumcraftClient {
             return block instanceof BlockCandle candle ? candle.dye.getTextureDiffuseColor() : -1;
         }, BlocksTC.candles.values().stream().map(net.neoforged.neoforge.registries.DeferredBlock::get)
                 .toArray(net.minecraft.world.level.block.Block[]::new));
+
+        // tube_filter_core.json's center node (tintIndex 1) is colored by the tube's own current filter
+        // aspect - neutral gray when unset, same "read the real block entity state" idea as the tint
+        // handlers above, just via the tile instead of item data.
+        event.register((state, level, pos, tintIndex) -> {
+            if (level == null || pos == null) return 0x808080;
+            if (!(level.getBlockEntity(pos) instanceof thaumcraft.common.tiles.essentia.TileTubeFilter tile)) return 0x808080;
+            thaumcraft.api.aspects.Aspect aspect = tile.getAspectFilter();
+            return aspect != null ? aspect.getColor() : 0x808080;
+        }, BlocksTC.tubeFilter.get());
     }
 
     @SubscribeEvent

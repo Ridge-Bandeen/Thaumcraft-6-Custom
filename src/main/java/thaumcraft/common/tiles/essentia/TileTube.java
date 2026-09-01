@@ -34,6 +34,14 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * dropped like everywhere else this session).</li>
  * </ul>
  *
+ * {@link TileTubeFilter} (aspect-locks a tube) and {@link TileTubeRestrict} (halves its effective suction)
+ * both extend this class, hooking into {@link #calculateSuction}/{@link #equalizeWithNeighbours} via a
+ * handful of protected extension points rather than overriding those methods wholesale - a plain
+ * {@code TileTube} exercises the exact same loop either way, just with every hook a no-op. The original's
+ * third variant, Tube One-way, isn't ported: it relies on a single wand-configured "facing" direction this
+ * simplified tube deliberately doesn't have (see the "no per-face toggling" note above) - a real, separate
+ * design gap, not an oversight shared with Filter/Restrict.
+ *
  * The connecting-pipe blockstate ({@code data/thaumcraft/blockstates/tube.json}) already used vanilla's own
  * {@code multipart}/{@code when}/{@code apply} format unchanged since 1.12 - migrated with only a model-path
  * prefix fix, no format rewrite needed. {@code BlockTube} recomputes the connection booleans
@@ -44,13 +52,20 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
 public class TileTube extends BlockEntity implements IEssentiaTransport {
 
 	private int count;
-	private Aspect essentiaType;
-	private int essentiaAmount;
-	private Aspect suctionType;
-	private int suction;
+	protected Aspect essentiaType;
+	protected int essentiaAmount;
+	protected Aspect suctionType;
+	protected int suction;
 
 	public TileTube(BlockPos pos, BlockState state) {
-		super(ThaumcraftBlockEntities.TUBE.get(), pos, state);
+		this(ThaumcraftBlockEntities.TUBE.get(), pos, state);
+	}
+
+	/** For {@link TileTubeFilter}/{@link TileTubeRestrict}, which each need their own real
+	 * {@code BlockEntityType} (not this class's {@code TUBE} type) so {@code BlockEntityTicker} dispatch and
+	 * {@code GameTestHelper#getBlockEntity} casts both resolve correctly. */
+	protected TileTube(net.minecraft.world.level.block.entity.BlockEntityType<?> type, BlockPos pos, BlockState state) {
+		super(type, pos, state);
 	}
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TileTube tile) {
@@ -67,21 +82,26 @@ public class TileTube extends BlockEntity implements IEssentiaTransport {
 		}
 	}
 
-	private void calculateSuction(Level level, BlockPos pos) {
+	/** Recomputes {@link #suction}/{@link #suctionType} from the strongest of the 6 neighbors' own demand.
+	 * {@link TileTubeFilter}/{@link TileTubeRestrict} hook in via {@link #acceptsNeighborSuctionType},
+	 * {@link #adjustSuction}, and {@link #forcedSuctionType} rather than overriding this loop itself. */
+	protected void calculateSuction(Level level, BlockPos pos) {
 		suction = 0;
 		suctionType = null;
 		for (Direction dir : Direction.values()) {
 			if (!(level.getBlockEntity(pos.relative(dir)) instanceof IEssentiaTransport neighbor)) continue;
 			if (!neighbor.isConnectable(dir.getOpposite())) continue;
-			int suck = neighbor.getSuctionAmount(dir.getOpposite());
+			Aspect neighborType = neighbor.getSuctionType(dir.getOpposite());
+			if (!acceptsNeighborSuctionType(neighborType)) continue;
+			int suck = adjustSuction(neighbor.getSuctionAmount(dir.getOpposite()));
 			if (suck > 0 && suck > suction + 1) {
 				suction = suck;
-				suctionType = neighbor.getSuctionType(dir.getOpposite());
+				suctionType = neighborType != null ? neighborType : forcedSuctionType();
 			}
 		}
 	}
 
-	private void equalizeWithNeighbours(Level level, BlockPos pos) {
+	protected void equalizeWithNeighbours(Level level, BlockPos pos) {
 		if (essentiaAmount > 0) return;
 		for (Direction dir : Direction.values()) {
 			if (!(level.getBlockEntity(pos.relative(dir)) instanceof IEssentiaTransport neighbor)) continue;
@@ -90,8 +110,10 @@ public class TileTube extends BlockEntity implements IEssentiaTransport {
 			Aspect want = suctionType;
 			Aspect theirType = neighbor.getEssentiaType(dir.getOpposite());
 			if (want == null) want = theirType;
+			if (want == null) want = forcedSuctionType();
 			if (want == null) continue;
 			if (theirType != null && want != theirType) continue;
+			if (!acceptsNeighborSuctionType(theirType)) continue;
 			if (suction <= neighbor.getSuctionAmount(dir.getOpposite())) continue;
 			if (suction < neighbor.getMinimumSuction()) continue;
 
@@ -100,6 +122,24 @@ public class TileTube extends BlockEntity implements IEssentiaTransport {
 				return;
 			}
 		}
+	}
+
+	/** {@link TileTubeFilter} rejects any neighbor demanding a different aspect than its own filter. Plain
+	 * tubes (and Restrict) accept anything. */
+	protected boolean acceptsNeighborSuctionType(Aspect neighborType) {
+		return true;
+	}
+
+	/** {@link TileTubeRestrict} halves the suction value it reports/uses, throttling its effective flow
+	 * rate and priority against other demand on the network. */
+	protected int adjustSuction(int suck) {
+		return suck;
+	}
+
+	/** {@link TileTubeFilter} forces this tube's own declared demand to its filter aspect even when no
+	 * neighbor currently states a type of its own. */
+	protected Aspect forcedSuctionType() {
+		return null;
 	}
 
 	@Override

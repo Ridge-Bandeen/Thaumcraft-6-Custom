@@ -226,6 +226,12 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> tube =
 			ITEMS.registerSimpleBlockItem("tube", BlocksTC.tube);
 
+	public static final DeferredItem<BlockItem> tubeFilter =
+			ITEMS.registerSimpleBlockItem("tube_filter", BlocksTC.tubeFilter);
+
+	public static final DeferredItem<BlockItem> tubeRestrict =
+			ITEMS.registerSimpleBlockItem("tube_restrict", BlocksTC.tubeRestrict);
+
 	/** Thaumium - the mod's own base metal tier, obtained by dissolving an iron ingot in a Crucible with
 	 * magic+earth aspects (already fully reachable: the Crucible and all 37 Crystal Essence aspects have
 	 * been real since earlier this session). See {@code data/thaumcraft/recipe/ingot_thaumium.json}. Just

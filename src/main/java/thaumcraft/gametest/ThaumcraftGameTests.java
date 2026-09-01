@@ -414,7 +414,7 @@ public class ThaumcraftGameTests {
 				"candle_orange", "candle_pink", "candle_purple", "candle_red", "candle_silver", "candle_yellow",
 				"phial", "label",
 				"flesh_block", "rotten_flesh_from_block", "sanity_soap",
-				"arcane_workbench_charger"
+				"arcane_workbench_charger", "tube_filter", "tube_restrict"
 		};
 		// loot_bag_common/uncommon/rare have no crafting recipe (mob-drop only, matching the original) so
 		// they aren't in expectedIds above - their loot tables are exercised directly instead, see
@@ -2577,6 +2577,94 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(helper.getBlockState(tubePos).getValue(net.minecraft.world.level.block.PipeBlock.DOWN),
 				"placing a real IEssentiaTransport tile (a jar) below the tube should update its DOWN connection property");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Tube Filter/Restrict - both extend TileTube via a handful of protected hooks rather than duplicating
+	// its suction/relay loop (see TileTube's own doc comment). Tube One-way isn't ported - it needs a
+	// wand-configured "facing" direction this simplified tube deliberately doesn't have.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeFilterCanBeSetAndClearedByRightClicking(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.tubeFilter.get());
+		BlockPos absolute = helper.absolutePos(pos);
+		thaumcraft.common.tiles.essentia.TileTubeFilter tile = helper.getBlockEntity(pos);
+
+		ServerPlayer player = spawnCasterAt(helper, absolute.above());
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absolute), net.minecraft.core.Direction.UP, absolute, false);
+
+		ItemStack phial = ItemPhial.makeFilledPhial(Aspect.AIR);
+		player.setItemInHand(hand, phial);
+		helper.getBlockState(pos).useItemOn(phial, helper.getLevel(), player, hand, hit);
+		helper.assertTrue(tile.getAspectFilter() == Aspect.AIR, "right-clicking with a filled phial should set the filter to its aspect, found: " + tile.getAspectFilter());
+
+		player.setItemInHand(hand, ItemStack.EMPTY);
+		player.setShiftKeyDown(true);
+		helper.getBlockState(pos).useItemOn(ItemStack.EMPTY, helper.getLevel(), player, hand, hit);
+		helper.assertTrue(tile.getAspectFilter() == null, "sneak+empty-hand right-clicking should clear the filter, found: " + tile.getAspectFilter());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeFilterOnlyRelaysItsSetAspect(GameTestHelper helper) {
+		BlockPos sourcePos = new BlockPos(4, 3, 4);
+		BlockPos tubePos = sourcePos.below();
+		BlockPos jarPos = tubePos.below();
+
+		helper.setBlock(sourcePos, TEST_ESSENTIA_SOURCE_BLOCK.get());
+		helper.setBlock(tubePos, BlocksTC.tubeFilter.get());
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		BlockPos tubeAbs = helper.absolutePos(tubePos);
+		BlockPos jarAbs = helper.absolutePos(jarPos);
+
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(sourcePos);
+		source.aspect = Aspect.EARTH;
+		source.amount = 999;
+
+		thaumcraft.common.tiles.essentia.TileTubeFilter tube = helper.getBlockEntity(tubePos);
+		tube.setAspectFilter(Aspect.WATER);
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(jarPos);
+
+		for (int i = 0; i < 200; i++) {
+			thaumcraft.common.tiles.essentia.TileTube.tick(helper.getLevel(), tubeAbs, helper.getBlockState(tubePos), tube);
+			thaumcraft.common.tiles.essentia.TileJarFillable.tick(helper.getLevel(), jarAbs, helper.getBlockState(jarPos), jar);
+		}
+		helper.assertTrue(jar.getAspects().size() == 0, "a tube filtered to Water should never relay a Water-demanding source's Earth essentia, jar got " + jar.getAspects());
+
+		tube.setAspectFilter(Aspect.EARTH);
+		for (int i = 0; i < 200; i++) {
+			thaumcraft.common.tiles.essentia.TileTube.tick(helper.getLevel(), tubeAbs, helper.getBlockState(tubePos), tube);
+			thaumcraft.common.tiles.essentia.TileJarFillable.tick(helper.getLevel(), jarAbs, helper.getBlockState(jarPos), jar);
+		}
+		helper.assertTrue(jar.getAspects().getAmount(Aspect.EARTH) > 0, "once filtered to Earth, the tube should relay the source's real Earth essentia, jar got " + jar.getAspects());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeRestrictHalvesItsOwnSuction(GameTestHelper helper) {
+		// A jar only ever connects on its own UP face (see TileJarFillable's own doc comment - the same
+		// reason two plain jars can never stack-connect), so the jar must sit below the tube, not above,
+		// for the tube to see its suction demand at all.
+		BlockPos tubePos = new BlockPos(4, 3, 4);
+		BlockPos jarPos = tubePos.below();
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		helper.setBlock(tubePos, BlocksTC.tubeRestrict.get());
+		BlockPos tubeAbs = helper.absolutePos(tubePos);
+
+		thaumcraft.common.tiles.essentia.TileTubeRestrict tube = helper.getBlockEntity(tubePos);
+		// tick() only recomputes suction every other call (count % 2 == 0) - call it twice to guarantee
+		// that lands, same as every other multi-tick test in this file.
+		thaumcraft.common.tiles.essentia.TileTube.tick(helper.getLevel(), tubeAbs, helper.getBlockState(tubePos), tube);
+		thaumcraft.common.tiles.essentia.TileTube.tick(helper.getLevel(), tubeAbs, helper.getBlockState(tubePos), tube);
+
+		// A plain jar's own suction is 32 (see TileJarFillable); a restrict tube should report half that.
+		helper.assertTrue(tube.getSuctionAmount(net.minecraft.core.Direction.DOWN) == 16,
+				"a restrict tube facing a plain jar's 32 suction should report half (16), found: " + tube.getSuctionAmount(net.minecraft.core.Direction.DOWN));
 		helper.succeed();
 	}
 }
