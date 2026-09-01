@@ -353,6 +353,12 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.misc.BlockFlesh::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(0.25f, 2.0f).sound(SoundType.SLIME_BLOCK));
 
+	/** Widens an Arcane Workbench's vis draw to a 3x3 chunk block - see
+	 * {@link thaumcraft.common.blocks.crafting.BlockArcaneWorkbenchCharger}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.crafting.BlockArcaneWorkbenchCharger> arcaneWorkbenchCharger = BLOCKS.registerBlock("arcane_workbench_charger",
+			thaumcraft.common.blocks.crafting.BlockArcaneWorkbenchCharger::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(1.25f, 10.0f).sound(SoundType.WOOD).noOcclusion());
+
 	private BlocksTC() {
 	}
 }

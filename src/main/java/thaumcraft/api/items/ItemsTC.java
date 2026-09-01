@@ -313,6 +313,9 @@ public final class ItemsTC {
 
 	/** A random vanilla Zombie kill has a chance to drop one - see
 	 * {@link thaumcraft.common.items.consumables.ItemZombieBrain}'s own doc comment for the warp risk/reward. */
+	public static final DeferredItem<BlockItem> arcaneWorkbenchCharger =
+			ITEMS.registerSimpleBlockItem("arcane_workbench_charger", BlocksTC.arcaneWorkbenchCharger);
+
 	public static final DeferredItem<BlockItem> fleshBlock =
 			ITEMS.registerSimpleBlockItem("flesh_block", BlocksTC.fleshBlock);
 

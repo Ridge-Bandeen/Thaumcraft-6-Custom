@@ -413,7 +413,8 @@ public class ThaumcraftGameTests {
 				"candle_gray", "candle_green", "candle_lightblue", "candle_lime", "candle_magenta",
 				"candle_orange", "candle_pink", "candle_purple", "candle_red", "candle_silver", "candle_yellow",
 				"phial", "label",
-				"flesh_block", "rotten_flesh_from_block", "sanity_soap"
+				"flesh_block", "rotten_flesh_from_block", "sanity_soap",
+				"arcane_workbench_charger"
 		};
 		// loot_bag_common/uncommon/rare have no crafting recipe (mob-drop only, matching the original) so
 		// they aren't in expectedIds above - their loot tables are exercised directly instead, see
@@ -953,6 +954,25 @@ public class ThaumcraftGameTests {
 		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
 
 		helper.assertTrue(menu.slots.get(0).getItem().isEmpty(), "matching ingredients and enough vis with no known research should not have produced a result");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void workbenchChargerDrawsVisFromNeighbouringChunksToo(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		// Drain the workbench's own chunk below focus_1's 15-vis cost, same setup as the insufficient-vis
+		// test above, but seed a real neighbouring chunk (16 blocks over) with plenty instead.
+		AuraHandler.drainVis(helper.getLevel(), origin, AuraHandler.getVis(helper.getLevel(), origin), false);
+		AuraHandler.addVis(helper.getLevel(), origin, 5.0f);
+		AuraHandler.addVis(helper.getLevel(), origin.offset(16, 0, 0), 500.0f);
+
+		helper.setBlock(BlockPos.ZERO.above(), BlocksTC.arcaneWorkbenchCharger.get());
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+
+		ItemStack result = menu.slots.get(0).getItem();
+		helper.assertTrue(result.is(ItemsTC.focus1.get()),
+				"a charger above the workbench should draw vis from neighbouring chunks too, even though the workbench's own chunk alone doesn't have enough, got " + result);
 		helper.succeed();
 	}
 

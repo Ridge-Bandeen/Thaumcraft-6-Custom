@@ -1,77 +1,76 @@
 package thaumcraft.common.blocks.crafting;
-import net.minecraft.block.Block;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.state.BlockFaceShape;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import thaumcraft.Thaumcraft;
+
+import com.mojang.serialization.MapCodec;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import thaumcraft.api.blocks.BlocksTC;
-import thaumcraft.common.blocks.BlockTC;
 import thaumcraft.common.tiles.crafting.TileArcaneWorkbench;
-import thaumcraft.common.tiles.crafting.TileFocalManipulator;
 
+/**
+ * Replaces the old (1.12.2) {@code BlockArcaneWorkbenchCharger} - a no-tile topper block that must sit
+ * directly on an Arcane Workbench, widening the workbench's vis draw from its own chunk to the full 3x3
+ * chunk block around it (see {@link thaumcraft.common.container.ArcaneWorkbenchMenu}'s own doc comment and
+ * {@code AuraHandler#getWideVis}/{@code #drainWideVis} for the actual wider-area logic this unlocks - both
+ * shipped alongside this block). Right-clicking it opens the same workbench menu as clicking the workbench
+ * itself, matching the original's own "either block opens the same GUI" design.
+ *
+ * Simplified vs the original: only sits on the real Arcane Workbench, not the original's second target
+ * ({@code wandWorkbench}, an unported device with its own separate crafting GUI).
+ */
+public class BlockArcaneWorkbenchCharger extends Block {
 
-public class BlockArcaneWorkbenchCharger extends BlockTC
-{
-    public BlockArcaneWorkbenchCharger() {
-        super(Material.WOOD, "arcane_workbench_charger");
-        setSoundType(SoundType.WOOD);
-        setHardness(1.25f);
-        setResistance(10.0f);
-    }
-    
-    public boolean isOpaqueCube(IBlockState state) {
-        return false;
-    }
-    
-    public boolean isFullCube(IBlockState state) {
-        return false;
-    }
-    
-    public boolean canPlaceBlockAt(World worldIn, BlockPos pos) {
-        return super.canPlaceBlockAt(worldIn, pos) && (worldIn.getBlockState(pos.down()).getBlock() == BlocksTC.arcaneWorkbench || worldIn.getBlockState(pos.down()).getBlock() == BlocksTC.wandWorkbench);
-    }
-    
-    public BlockFaceShape getBlockFaceShape(IBlockAccess worldIn, IBlockState state, BlockPos pos, EnumFacing face) {
-        return BlockFaceShape.UNDEFINED;
-    }
-    
-    public IBlockState getStateForPlacement(World worldIn, BlockPos pos, EnumFacing facing, float hitX, float hitY, float hitZ, int meta, EntityLivingBase placer) {
-        TileEntity te = worldIn.getTileEntity(pos.down());
-        if (te != null && te instanceof TileArcaneWorkbench) {
-            ((TileArcaneWorkbench)te).syncTile(true);
-        }
-        if (te != null && te instanceof TileFocalManipulator) {
-            ((TileFocalManipulator)te).syncTile(true);
-        }
-        return super.getStateForPlacement(worldIn, pos, facing, hitX, hitY, hitZ, meta, placer);
-    }
-    
-    public void neighborChanged(IBlockState state, World worldIn, BlockPos pos, Block blockIn, BlockPos pos2) {
-        if (worldIn.getBlockState(pos.down()).getBlock() != BlocksTC.arcaneWorkbench && worldIn.getBlockState(pos.down()).getBlock() != BlocksTC.wandWorkbench) {
-            dropBlockAsItem(worldIn, pos, state, 0);
-            worldIn.setBlockToAir(pos);
-        }
-    }
-    
-    public boolean onBlockActivated(World world, BlockPos pos, IBlockState state, EntityPlayer player, EnumHand hand, EnumFacing side, float hitX, float hitY, float hitZ) {
-        if (world.isRemote) {
-            return true;
-        }
-        if (world.getBlockState(pos.down()).getBlock() == BlocksTC.arcaneWorkbench) {
-            player.openGui(Thaumcraft.instance, 13, world, pos.getX(), pos.down().getY(), pos.getZ());
-        }
-        if (world.getBlockState(pos.down()).getBlock() == BlocksTC.wandWorkbench) {
-            player.openGui(Thaumcraft.instance, 7, world, pos.getX(), pos.down().getY(), pos.getZ());
-        }
-        return true;
-    }
+	public static final MapCodec<BlockArcaneWorkbenchCharger> CODEC = simpleCodec(BlockArcaneWorkbenchCharger::new);
+
+	private static final VoxelShape SHAPE = Shapes.box(0.0, 0.0, 0.0, 1.0, 0.375, 1.0);
+
+	public BlockArcaneWorkbenchCharger(BlockBehaviour.Properties properties) {
+		super(properties);
+	}
+
+	@Override
+	protected MapCodec<? extends Block> codec() {
+		return CODEC;
+	}
+
+	@Override
+	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		return SHAPE;
+	}
+
+	@Override
+	protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
+		return level.getBlockState(pos.below()).is(BlocksTC.arcaneWorkbench.get());
+	}
+
+	@Override
+	protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+		if (direction == Direction.DOWN && !canSurvive(state, level, pos)) {
+			return Blocks.AIR.defaultBlockState();
+		}
+		return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+	}
+
+	@Override
+	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+		if (level.isClientSide) return InteractionResult.SUCCESS;
+		if (level.getBlockEntity(pos.below()) instanceof TileArcaneWorkbench workbench) {
+			player.openMenu(workbench);
+		}
+		return InteractionResult.CONSUME;
+	}
 }

@@ -1,0 +1,20 @@
+{
+  "textures": {
+    "particle": "thaumcraft:blocks/arcane_workbench_charger",
+    "all": "thaumcraft:blocks/arcane_workbench_charger"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 6, 16],
+      "faces": {
+        "down":  { "texture": "#all", "cullface": "down" },
+        "up":    { "texture": "#all" },
+        "north": { "texture": "#all" },
+        "south": { "texture": "#all" },
+        "west":  { "texture": "#all" },
+        "east":  { "texture": "#all" }
+      }
+    }
+  ]
+}

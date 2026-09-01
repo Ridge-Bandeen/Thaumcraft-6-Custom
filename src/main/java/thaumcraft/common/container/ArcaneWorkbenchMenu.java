@@ -18,6 +18,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
+import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.api.crafting.ArcaneCraftingInput;
 import thaumcraft.api.crafting.ArcaneRecipe;
 import thaumcraft.api.crafting.ThaumcraftRecipeTypes;
@@ -29,9 +30,10 @@ import thaumcraft.common.world.aura.AuraHandler;
  * Replaces the old (1.12.2) {@code ContainerArcaneWorkbench}. Slot layout is unchanged: 0 = result,
  * 1-9 = 3x3 grid, 10-15 = crystal ring, 16-42 = player inventory, 43-51 = hotbar.
  *
- * Now checks and spends real vis (via AuraHandler, drawn from the workbench's own chunk - the original
- * also supported drawing from a wider area when an Arcane Workbench Charger is placed above it; that
- * block isn't ported, so this always uses the single-chunk draw).
+ * Now checks and spends real vis (via AuraHandler). Draws from the workbench's own chunk normally, or the
+ * full 3x3 chunk block around it if an Arcane Workbench Charger sits directly above (see
+ * {@code BlockArcaneWorkbenchCharger} and {@code AuraHandler#getWideVis}/{@code #drainWideVis}), matching
+ * the original's own wider-area draw exactly.
  *
  * Simplifications still remaining versus the original for this pass (see TileArcaneWorkbench):
  * - No fallback to plain vanilla 3x3 crafting-table recipes if no arcane recipe matches.
@@ -126,12 +128,17 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 	private void updateResult(Level level, net.minecraft.core.BlockPos pos) {
 		ArcaneCraftingInput input = buildInput();
 		currentRecipe = level.getRecipeManager().getRecipeFor(ThaumcraftRecipeTypes.ARCANE_TYPE.get(), input, level).orElse(null);
-		boolean hasVis = currentRecipe == null || AuraHandler.getVis(level, pos) >= currentRecipe.value().getVis();
+		float availableVis = hasCharger(level, pos) ? AuraHandler.getWideVis(level, pos) : AuraHandler.getVis(level, pos);
+		boolean hasVis = currentRecipe == null || availableVis >= currentRecipe.value().getVis();
 		boolean known = currentRecipe == null || thaumcraft.api.capabilities.ThaumcraftCapabilities.knowsResearchStrict(player, currentRecipe.value().getResearch());
 		ItemStack result = currentRecipe != null && hasVis && known ? currentRecipe.value().assemble(input, level.registryAccess()) : ItemStack.EMPTY;
 		resultContainer.setItem(0, result);
 		setRemoteSlot(RESULT_SLOT, result);
 		broadcastChanges();
+	}
+
+	private static boolean hasCharger(Level level, net.minecraft.core.BlockPos pos) {
+		return level.getBlockState(pos.above()).is(BlocksTC.arcaneWorkbenchCharger.get());
 	}
 
 	private ArcaneCraftingInput buildInput() {
@@ -150,7 +157,13 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 			if (!container.getItem(i).isEmpty()) container.removeItem(i, 1);
 		}
 		if (currentRecipe != null) {
-			access.execute((level, pos) -> AuraHandler.drainVis(level, pos, currentRecipe.value().getVis(), false));
+			access.execute((level, pos) -> {
+				if (hasCharger(level, pos)) {
+					AuraHandler.drainWideVis(level, pos, currentRecipe.value().getVis());
+				} else {
+					AuraHandler.drainVis(level, pos, currentRecipe.value().getVis(), false);
+				}
+			});
 			AspectList crystals = currentRecipe.value().getCrystals();
 			if (crystals != null) {
 				for (Aspect aspect : crystals.getAspects()) {

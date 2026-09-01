@@ -155,6 +155,40 @@ public class AuraHandler
         return amount;
     }
 
+    /** Total vis across the 3x3 chunk block centered on {@code pos} - what an Arcane Workbench Charger
+     * (see {@code BlockArcaneWorkbenchCharger}) widens a workbench's vis draw to, in place of just its own
+     * chunk. */
+    public static float getWideVis(Level level, BlockPos pos) {
+        float t = 0.0f;
+        int sx = pos.getX() >> 4;
+        int sz = pos.getZ() >> 4;
+        for (int xx = -1; xx <= 1; xx++) {
+            for (int zz = -1; zz <= 1; zz++) {
+                AuraChunk ac = getAuraChunk(level.dimension(), sx + xx, sz + zz);
+                if (ac != null) t += ac.getVis();
+            }
+        }
+        return t;
+    }
+
+    /** Drains {@code amount} vis spread across the same 3x3 chunk block as {@link #getWideVis} - roughly a
+     * ninth from each chunk per pass, cycling until satisfied or a chunk actually has nothing left,
+     * matching the original's own round-robin drain loop (capped at 1000 attempts, same safety valve). */
+    public static void drainWideVis(Level level, BlockPos pos, float amount) {
+        float perChunk = Math.max(1.0f, amount / 9.0f);
+        int attempts = 0;
+        while (amount > 0.0f && attempts < 1000) {
+            attempts++;
+            for (int xx = -1; xx <= 1; xx++) {
+                for (int zz = -1; zz <= 1; zz++) {
+                    float take = Math.min(perChunk, amount);
+                    amount -= drainVis(level, pos.offset(xx * 16, 0, zz * 16), take, false);
+                    if (amount <= 0.0f) return;
+                }
+            }
+        }
+    }
+
     /** Cheap - just flips a boolean on the (already in-memory) AuraWorld, safe to call from any thread. */
     static void markDirty(ResourceKey<Level> dim) {
         AuraWorld world = auras.get(dim);
