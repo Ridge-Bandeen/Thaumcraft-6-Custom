@@ -44,6 +44,10 @@ public class ThaumcraftClient {
         // caster_basic's "focus" predicate above.
         event.enqueueWork(() -> ItemProperties.register(ItemsTC.phial.get(), ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "filled"),
                 (stack, level, entity, seed) -> stack.has(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get()) ? 1.0f : 0.0f));
+
+        // label.json's model switches on the same predicate, same reasoning as phial.
+        event.enqueueWork(() -> ItemProperties.register(ItemsTC.label.get(), ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "filled"),
+                (stack, level, entity, seed) -> stack.has(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get()) ? 1.0f : 0.0f));
     }
 
     @SubscribeEvent
@@ -85,10 +89,12 @@ public class ThaumcraftClient {
         // phial_filled.json's layer1 (the liquid) is tinted per-instance off the phial's own held aspect,
         // same "one shared texture, tinted by data" idea as the candles above. layer0 (the glass) stays
         // untinted (tintIndex != 1 falls through to -1, i.e. no tint).
-        event.register((stack, tintIndex) -> {
+        net.minecraft.client.color.item.ItemColor aspectTint = (stack, tintIndex) -> {
             if (tintIndex != 1) return -1;
             thaumcraft.api.aspects.AspectList aspects = stack.get(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get());
             return aspects != null && aspects.size() > 0 ? aspects.getAspects()[0].getColor() : -1;
-        }, ItemsTC.phial.get());
+        };
+        event.register(aspectTint, ItemsTC.phial.get());
+        event.register(aspectTint, ItemsTC.label.get());
     }
 }

@@ -5,6 +5,7 @@ import javax.annotation.Nullable;
 import com.mojang.serialization.MapCodec;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -24,8 +25,10 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.aspects.IEssentiaContainerItem;
+import thaumcraft.api.blocks.ILabelable;
 import thaumcraft.common.registry.ThaumcraftBlockEntities;
 import thaumcraft.common.tiles.essentia.TileJarFillable;
 
@@ -40,8 +43,11 @@ import thaumcraft.common.tiles.essentia.TileJarFillable;
  * implementing {@link IEssentiaContainerItem}, e.g. Crystal Essence) - the same "read the held item's real
  * aspects and consume it" pattern {@code BlockCrucible} already established, reused here since Crystal
  * Essence already gives this a real, reachable fill path in survival right now.
+ *
+ * Implements {@link ILabelable} (same as the original) so {@code ItemLabel} can lock this jar to one
+ * aspect - see {@link #applyLabel} and {@link TileJarFillable}'s own doc comment.
  */
-public class BlockJar extends Block implements EntityBlock {
+public class BlockJar extends Block implements EntityBlock, ILabelable {
 
 	public static final MapCodec<BlockJar> CODEC = simpleCodec(BlockJar::new);
 
@@ -92,6 +98,24 @@ public class BlockJar extends Block implements EntityBlock {
 		}
 
 		return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+	}
+
+	/** {@code ItemLabel} calls this - locks the jar to one aspect via {@link TileJarFillable#applyLabel},
+	 * raising its suction so it can out-pull an unlabelled jar/tube for that aspect specifically. Matches
+	 * the original's own {@code BlockJar#applyLabel} exactly (delegates straight to the tile). */
+	@Override
+	public boolean applyLabel(Player player, BlockPos pos, Direction side, ItemStack labelStack) {
+		if (!(player.level().getBlockEntity(pos) instanceof TileJarFillable tile)) return false;
+		Aspect labelAspect = null;
+		if (labelStack.getItem() instanceof IEssentiaContainerItem container) {
+			AspectList held = container.getAspects(labelStack);
+			if (held != null && held.size() > 0) {
+				labelAspect = held.getAspectsSortedByAmount()[0];
+			}
+		}
+		if (!tile.applyLabel(labelAspect)) return false;
+		player.level().playSound(null, pos, SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 0.4f, 1.0f);
+		return true;
 	}
 
 	@Nullable

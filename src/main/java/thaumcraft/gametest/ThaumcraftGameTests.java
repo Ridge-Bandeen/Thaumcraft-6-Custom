@@ -412,7 +412,7 @@ public class ThaumcraftGameTests {
 				"tallow", "candle_white", "candle_black", "candle_blue", "candle_brown", "candle_cyan",
 				"candle_gray", "candle_green", "candle_lightblue", "candle_lime", "candle_magenta",
 				"candle_orange", "candle_pink", "candle_purple", "candle_red", "candle_silver", "candle_yellow",
-				"phial"
+				"phial", "label"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -1984,6 +1984,64 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(!fireName.equals(plainName), "a crystal essence holding an aspect should show a different name than an unaspected one, both were: " + fireName);
 		helper.assertTrue(fireName.contains("Fire"), "a Fire crystal essence's display name should mention Fire, found: " + fireName);
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Label - locks a Warded Jar to one aspect via ILabelable, raising its suction from 32 to 64 (see
+	// TileJarFillable's own doc comment for why that's what makes its strict suction comparison meaningful).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void aspectedLabelLocksAnEmptyJarAndRaisesItsSuction(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.jarNormal.get());
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(pos);
+
+		helper.assertTrue(jar.getSuctionAmount(net.minecraft.core.Direction.UP) == 32, "an unlabelled jar should have 32 suction, found: " + jar.getSuctionAmount(net.minecraft.core.Direction.UP));
+
+		ItemStack fireLabel = new ItemStack(ItemsTC.label.get());
+		ItemsTC.label.get().setAspects(fireLabel, new AspectList().add(Aspect.FIRE, 1));
+
+		ServerPlayer player = spawnCasterAt(helper, absolute.above());
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, fireLabel);
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absolute), net.minecraft.core.Direction.UP, absolute, false);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(player, hand, hit);
+		net.minecraft.world.InteractionResult result = player.getItemInHand(hand).getItem().onItemUseFirst(player.getItemInHand(hand), context);
+
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.CONSUME, "labelling an empty, unlabelled jar should consume the label, got: " + result);
+		helper.assertTrue(jar.getAspectFilter() == Aspect.FIRE, "the jar should now be filtered to Fire, found: " + jar.getAspectFilter());
+		helper.assertTrue(jar.getSuctionAmount(net.minecraft.core.Direction.UP) == 64, "a labelled jar should have raised suction of 64, found: " + jar.getSuctionAmount(net.minecraft.core.Direction.UP));
+
+		// A second label should fail - a jar can only ever be labelled once.
+		ItemStack waterLabel = new ItemStack(ItemsTC.label.get());
+		ItemsTC.label.get().setAspects(waterLabel, new AspectList().add(Aspect.WATER, 1));
+		player.setItemInHand(hand, waterLabel);
+		context = new net.minecraft.world.item.context.UseOnContext(player, hand, hit);
+		result = player.getItemInHand(hand).getItem().onItemUseFirst(player.getItemInHand(hand), context);
+		helper.assertTrue(jar.getAspectFilter() == Aspect.FIRE, "a second label should not be able to override an already-labelled jar's filter, found: " + jar.getAspectFilter());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void blankLabelCannotLockAnEmptyJar(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.jarNormal.get());
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(pos);
+
+		ServerPlayer player = spawnCasterAt(helper, absolute.above());
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, new ItemStack(ItemsTC.label.get()));
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absolute), net.minecraft.core.Direction.UP, absolute, false);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(player, hand, hit);
+		player.getItemInHand(hand).getItem().onItemUseFirst(player.getItemInHand(hand), context);
+
+		helper.assertTrue(jar.getAspectFilter() == null, "a blank label on an empty jar (nothing to lock onto) should not set a filter, found: " + jar.getAspectFilter());
 		helper.succeed();
 	}
 

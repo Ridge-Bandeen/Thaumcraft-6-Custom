@@ -28,14 +28,12 @@ import thaumcraft.common.world.aura.AuraHandler;
  *
  * Simplified vs the original:
  * <ul>
- * <li>No aspect filter, jar brace ("blocked"), or label mechanics - all three need items this port hasn't
- * built ({@code ItemsTC.jarBrace}/{@code ItemsTC.label}) or an interface ({@code ILabelable}) with no other
- * consumer yet. One real consequence, found while writing this device's own GameTest: the original only
- * self-fills when the target's suction is <em>strictly greater</em> than the source's, and real gameplay
- * differentiation came from the aspectFilter mechanic (64 suction, beating a plain jar's default 32) - since
- * that isn't ported, two plain jars always tie at 32 suction. {@link #tick} allows ties (uses {@code <=}
- * instead of the original's strict {@code <}) so jar-to-jar self-filling stays reachable in the common case
- * instead of becoming silently dead code.</li>
+ * <li>No jar brace ("blocked") mechanic - needs an item this port hasn't built ({@code ItemsTC.jarBrace}).
+ * Aspect filter/label support <b>is</b> ported (see {@link #aspectFilter}/{@link #applyLabel} and
+ * {@link thaumcraft.common.blocks.essentia.BlockJar#applyLabel}) - a labelled jar's raised 64 suction can
+ * out-pull a plain jar/tube's 32 outright. {@link #tick} still allows ties ({@code <=}, not the original's
+ * strict {@code <}) though: a plain Tube's own suction matches whatever a plain jar below it demands, so
+ * Tube-to-jar relaying (a real, tested path) ties at 32 on both sides - see {@link #tick}'s own comment.</li>
  * <li>No fill-level model swapping - the original rendered this via a client-only
  * {@code TileEntitySpecialRenderer} picking between 5 baked models (0/25/50/75/100%) at draw time, entirely
  * outside the blockstate system; same "drop the animation, keep the function" precedent as every other
@@ -49,6 +47,10 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 	private static final int CAPACITY = 250;
 
 	private Aspect aspect;
+	/** Set by applying a label (see {@link thaumcraft.common.blocks.essentia.BlockJar#applyLabel}) - locks
+	 * the jar to one aspect and raises its suction from 32 to 64, letting it out-pull a plain jar or tube
+	 * for that aspect specifically. {@code null} on a plain, unlabelled jar. */
+	private Aspect aspectFilter;
 	private int amount;
 
 	public TileJarFillable(BlockPos pos, BlockState state) {
@@ -61,14 +63,22 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 		if (!(level.getBlockEntity(pos.above()) instanceof IEssentiaTransport source)) return;
 		if (!source.isConnectable(Direction.DOWN) || !source.canOutputTo(Direction.DOWN)) return;
 
-		Aspect want = tile.aspect != null ? tile.aspect : source.getEssentiaType(Direction.DOWN);
+		Aspect want;
+		if (tile.aspectFilter != null) {
+			want = tile.aspectFilter;
+		} else if (tile.aspect != null && tile.amount > 0) {
+			want = tile.aspect;
+		} else {
+			want = source.getEssentiaType(Direction.DOWN);
+		}
 		if (want == null || source.getEssentiaAmount(Direction.DOWN) <= 0) return;
-		// The original requires the target's suction to be strictly greater than the source's
-		// (getSuctionAmount(DOWN) < getSuctionAmount(UP)) - real gameplay differentiation came from the
-		// aspectFilter mechanic (64 suction) beating a plain jar's default (32), which isn't ported here (see
-		// this class's own doc comment). Without it, two plain jars always tie at 32 and a strict "<" would
-		// make jar-to-jar self-filling permanently unreachable in the common case - allowing ties (using
-		// "<=") keeps the feature meaningful instead of silently dead.
+		// The original requires the target's suction to be strictly greater than the source's. Reverting to
+		// that strict comparison here breaks a real, common, already-tested case though: a plain Tube's own
+		// computed suction matches whatever its strongest neighbor demands, so a Tube relaying into a plain
+		// jar below ties at 32 suction on both sides (tubeRelaysEssentiaFromASourceToAJarBelow, caught by
+		// this exact regression during the Label chunk) - so ties are still allowed here ("<=", not "<").
+		// aspectFilter still differentiates meaningfully even so: a labelled jar's 64 genuinely beats a plain
+		// jar/tube's 32 outright, it just isn't the *only* way two jars can exchange essentia any more.
 		if (source.getSuctionAmount(Direction.DOWN) > tile.getSuctionAmount(Direction.UP)) return;
 
 		int taken = source.takeEssentia(want, 1, Direction.DOWN);
@@ -107,6 +117,7 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 
 	@Override
 	public boolean doesContainerAccept(Aspect tag) {
+		if (aspectFilter != null) return tag == aspectFilter;
 		return aspect == null || tag == aspect;
 	}
 
@@ -182,17 +193,41 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 
 	@Override
 	public Aspect getSuctionType(Direction face) {
-		return aspect;
+		return aspectFilter != null ? aspectFilter : aspect;
 	}
 
 	@Override
 	public int getSuctionAmount(Direction face) {
-		return amount >= CAPACITY ? 0 : 32;
+		if (amount >= CAPACITY) return 0;
+		return aspectFilter != null ? 64 : 32;
 	}
 
 	@Override
 	public int getMinimumSuction() {
-		return 32;
+		return aspectFilter != null ? 64 : 32;
+	}
+
+	public Aspect getAspectFilter() {
+		return aspectFilter;
+	}
+
+	/** Applies a label - locks this jar to one aspect (raising its suction) if it's currently empty, or to
+	 * whatever it already holds otherwise. Mirrors {@code BlockJar#applyLabel} in the original exactly: a
+	 * jar that already has a filter can't be re-labelled, and labelling an empty jar with a plain (blank)
+	 * label fails since there's no aspect to lock onto yet.
+	 *
+	 * @param labelAspect the aspect a filled label carries, or {@code null} for a blank one
+	 * @return true if the label was consumed (the jar was actually locked)
+	 */
+	public boolean applyLabel(Aspect labelAspect) {
+		if (aspectFilter != null) return false;
+		if (amount == 0 && labelAspect == null) return false;
+		if (amount == 0) {
+			aspect = labelAspect;
+		}
+		aspectFilter = aspect;
+		setChanged();
+		return true;
 	}
 
 	@Override
@@ -221,6 +256,9 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 		if (aspect != null) {
 			tag.putString("Aspect", aspect.getTag());
 		}
+		if (aspectFilter != null) {
+			tag.putString("AspectFilter", aspectFilter.getTag());
+		}
 		tag.putInt("Amount", amount);
 	}
 
@@ -228,6 +266,7 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
 		super.loadAdditional(tag, registries);
 		aspect = tag.contains("Aspect") ? Aspect.getAspect(tag.getString("Aspect")) : null;
+		aspectFilter = tag.contains("AspectFilter") ? Aspect.getAspect(tag.getString("AspectFilter")) : null;
 		amount = tag.getInt("Amount");
 	}
 }

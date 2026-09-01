@@ -1,72 +1,83 @@
 package thaumcraft.common.items.consumables;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumActionResult;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import thaumcraft.api.aspects.AspectList;
+import thaumcraft.api.aspects.IEssentiaContainerItem;
 import thaumcraft.api.blocks.ILabelable;
-import thaumcraft.common.config.ConfigItems;
-import thaumcraft.common.items.ItemTCEssentiaContainer;
+import thaumcraft.api.items.ThaumcraftDataComponents;
 
+/**
+ * Replaces the old (1.12.2) {@code ItemLabel} - applies to anything implementing {@link ILabelable} (in this
+ * port, just {@code BlockJar} - see its own {@code applyLabel}) to lock it to one aspect. Same single-item,
+ * component-presence-is-state shape as {@link ItemPhial}: a blank label carries no {@code ASPECTS} component,
+ * a "filled" (aspected) one does.
+ *
+ * Deliberately not a subclass of {@link thaumcraft.api.items.ItemGenericEssentiaContainer} for the exact same
+ * reason as {@link ItemPhial} - that base class's auto-random-aspect behavior would fight a label's actual
+ * design (blank until deliberately dyed with a specific aspect via a filled Phial, see the recipe side).
+ *
+ * Uses the same {@code onItemUseFirst} hook as {@link ItemPhial} to intercept the click before the target
+ * block's own right-click handling runs.
+ *
+ * Simplified vs the original: only the blank label has a real crafting recipe. The original dyed a blank
+ * label with a specific aspect using a filled Phial as an ingredient, matched by its NBT contents
+ * ({@code IngredientNBTTC}, a custom 1.12.2 ingredient type - vanilla shapeless recipes couldn't match NBT
+ * either, then or now). Reproducing that needs a real custom {@code Ingredient} type matching a specific
+ * {@code ASPECTS} component value, which is new recipe-system work this pass didn't build - a genuine,
+ * flagged scope cut, not a hidden gap. The core mechanic (applying an aspected label to lock a jar) is fully
+ * implemented and tested regardless of how a filled label is obtained (creative mode, {@link ItemLabel}'s
+ * own {@code setAspects}, etc.).
+ */
+public class ItemLabel extends Item implements IEssentiaContainerItem {
 
-public class ItemLabel extends ItemTCEssentiaContainer
-{
-    public ItemLabel() {
-        super("label", 1, "blank", "filled");
-    }
-    
-    public String getUnlocalizedName(ItemStack stack) {
-        return super.getUnlocalizedName() + "." + getVariantNames()[stack.getItemDamage()];
-    }
-    
-    @Override
-    public void getSubItems(CreativeTabs tab, NonNullList<ItemStack> items) {
-        if (tab == ConfigItems.TABTC || tab == CreativeTabs.SEARCH) {
-            items.add(new ItemStack(this, 1, 0));
-        }
-    }
-    
-    public EnumActionResult onItemUseFirst(EntityPlayer player, World world, BlockPos pos, EnumFacing side, float hitX, float hitY, float hitZ, EnumHand hand) {
-        if (world.isRemote) {
-            return EnumActionResult.PASS;
-        }
-        IBlockState bs = world.getBlockState(pos);
-        if (bs.getBlock() instanceof ILabelable) {
-            if (((ILabelable)bs.getBlock()).applyLabel(player, pos, side, player.getHeldItem(hand))) {
-                player.getHeldItem(hand).shrink(1);
-                player.inventoryContainer.detectAndSendChanges();
-            }
-            return EnumActionResult.SUCCESS;
-        }
-        TileEntity te = world.getTileEntity(pos);
-        if (te instanceof ILabelable) {
-            if (((ILabelable)te).applyLabel(player, pos, side, player.getHeldItem(hand))) {
-                player.getHeldItem(hand).shrink(1);
-                player.inventoryContainer.detectAndSendChanges();
-            }
-            return EnumActionResult.SUCCESS;
-        }
-        return super.onItemUseFirst(player, world, pos, side, hitX, hitY, hitZ, hand);
-    }
-    
-    @Override
-    public void onUpdate(ItemStack stack, World world, Entity entity, int par4, boolean par5) {
-    }
-    
-    @Override
-    public void onCreated(ItemStack stack, World world, EntityPlayer player) {
-    }
-    
-    @Override
-    public boolean ignoreContainedAspects() {
-        return true;
-    }
+	public ItemLabel(Properties properties) {
+		super(properties);
+	}
+
+	@Override
+	public AspectList getAspects(ItemStack itemstack) {
+		AspectList aspects = itemstack.get(ThaumcraftDataComponents.ASPECTS.get());
+		return aspects != null && aspects.size() > 0 ? aspects : null;
+	}
+
+	@Override
+	public void setAspects(ItemStack itemstack, AspectList aspects) {
+		itemstack.set(ThaumcraftDataComponents.ASPECTS.get(), aspects);
+	}
+
+	@Override
+	public boolean ignoreContainedAspects() {
+		return true;
+	}
+
+	@Override
+	public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+		Level level = context.getLevel();
+		Player player = context.getPlayer();
+		if (player == null || level.isClientSide) return InteractionResult.PASS;
+		BlockPos pos = context.getClickedPos();
+		BlockState bs = level.getBlockState(pos);
+
+		ILabelable target = null;
+		if (bs.getBlock() instanceof ILabelable labelable) {
+			target = labelable;
+		} else if (level.getBlockEntity(pos) instanceof BlockEntity be && be instanceof ILabelable labelable) {
+			target = labelable;
+		}
+		if (target == null) return InteractionResult.PASS;
+
+		if (target.applyLabel(player, pos, context.getClickedFace(), stack)) {
+			stack.shrink(1);
+			return InteractionResult.CONSUME;
+		}
+		return InteractionResult.SUCCESS;
+	}
 }

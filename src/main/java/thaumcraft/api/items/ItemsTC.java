@@ -302,8 +302,13 @@ public final class ItemsTC {
 	/** A small essentia bottle, filled/emptied at a Warded Jar - see
 	 * {@link thaumcraft.common.items.consumables.ItemPhial}'s own doc comment for what's simplified
 	 * (no Alembic fill path yet). */
-	public static final DeferredItem<Item> phial = ITEMS.registerItem("phial",
+	public static final DeferredItem<thaumcraft.common.items.consumables.ItemPhial> phial = ITEMS.registerItem("phial",
 			props -> new thaumcraft.common.items.consumables.ItemPhial(props.stacksTo(64)));
+
+	/** Applies to a Warded Jar to lock it to one aspect - see
+	 * {@link thaumcraft.common.items.consumables.ItemLabel}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.consumables.ItemLabel> label = ITEMS.registerItem("label",
+			props -> new thaumcraft.common.items.consumables.ItemLabel(props.stacksTo(64)));
 
 	public static final java.util.Map<net.minecraft.world.item.DyeColor, DeferredItem<BlockItem>> candles = new java.util.EnumMap<>(net.minecraft.world.item.DyeColor.class);
 	static {
