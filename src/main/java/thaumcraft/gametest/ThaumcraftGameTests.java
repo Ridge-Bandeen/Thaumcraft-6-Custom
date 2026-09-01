@@ -2884,4 +2884,39 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(result == net.minecraft.world.InteractionResult.FAIL, "the resonator should fail against a block with no IEssentiaTransport tile, got " + result);
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// ThaumcraftObjectTags - the real item-to-aspect database backing AspectHelper#getObjectAspects, first
+	// consumed by (an eventual) Smelter/Alembic. Exercised through the real public entry point,
+	// AspectHelper.getObjectAspects, not the internal class directly.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void objectTagsReturnsRealAspectsForATaggedVanillaItem(GameTestHelper helper) {
+		AspectList tags = thaumcraft.api.aspects.AspectHelper.getObjectAspects(new ItemStack(Items.IRON_INGOT));
+		helper.assertTrue(tags != null && tags.getAmount(Aspect.METAL) > 0, "an iron ingot should carry a real Metal aspect, got " + tags);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void objectTagsAppliesArmorDefenseBonus(GameTestHelper helper) {
+		AspectList tags = thaumcraft.api.aspects.AspectHelper.getObjectAspects(new ItemStack(Items.DIAMOND_CHESTPLATE));
+		helper.assertTrue(tags != null && tags.getAmount(Aspect.PROTECT) > 0, "a diamond chestplate should carry a Protect bonus from its armor defense, got " + tags);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void objectTagsReturnsEmptyForAnUntaggedItem(GameTestHelper helper) {
+		AspectList tags = thaumcraft.api.aspects.AspectHelper.getObjectAspects(new ItemStack(Items.DIRT));
+		helper.assertTrue(tags != null && tags.size() == 0, "an item with no explicit tag or bonus-tag match should come back empty, got " + tags);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void objectTagsPrefersAFilledEssentiaContainersRealContents(GameTestHelper helper) {
+		ItemStack phial = ItemPhial.makeFilledPhial(Aspect.FIRE);
+		AspectList tags = thaumcraft.api.aspects.AspectHelper.getObjectAspects(phial);
+		helper.assertTrue(tags != null && tags.getAmount(Aspect.FIRE) > 0, "a filled phial's object tags should reflect its real held aspect, got " + tags);
+		helper.succeed();
+	}
 }

@@ -32,10 +32,10 @@ import thaumcraft.common.world.aura.AuraHandler;
  * registry (not ported - see the port-tracking memory notes on the research/Thaumonomicon UI still being
  * blocked) - always returns {@code true} (permissive), matching this project's "don't block content behind
  * an unbuilt subsystem" precedent (e.g. the FIRSTSTEPS@2 default knowledge).</li>
- * <li>{@code getObjectAspects}/{@code generateTags} (the global item-to-aspect database) and the seal/golem
- * registry methods (no seals/golems ported yet) stay no-ops, same as the original's own
- * {@code DummyInternalMethodHandler} for those specific methods - see this class's own methods for why
- * each one specifically isn't real yet.</li>
+ * <li>{@code getObjectAspects}/{@code generateTags} now wire through to
+ * {@link thaumcraft.common.lib.crafting.ThaumcraftObjectTags} - see that class's own doc comment for what's
+ * simplified in the object-tag database it replaces. The seal/golem registry methods stay no-ops (no
+ * seals/golems ported yet), same as the original's own {@code DummyInternalMethodHandler}.</li>
  * </ul>
  */
 public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
@@ -79,15 +79,16 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 
 	@Override
 	public AspectList getObjectAspects(ItemStack is) {
-		// The global item-to-aspect database (the original's AspectHelper/ThaumcraftCraftingManager) is a
-		// project-sized subsystem of its own, out of scope for this pass - see the port-tracking memory
-		// notes. Only IEssentiaContainerItem items (Crystal Essence etc.) carry real aspects right now.
-		return null;
+		return thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(is);
 	}
 
 	@Override
 	public AspectList generateTags(ItemStack is) {
-		return null;
+		// The original's version of this also registered the derived result for future lookups (its
+		// recipe-tracing fallback is real work worth doing once, not every call) - not needed here since
+		// ThaumcraftObjectTags#getObjectTags has no tracing step to cache the output of; it's already a
+		// flat, cheap map+tag lookup every time.
+		return thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(is);
 	}
 
 	@Override

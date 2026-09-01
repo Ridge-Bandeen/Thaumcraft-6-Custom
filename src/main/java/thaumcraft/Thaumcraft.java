@@ -93,6 +93,11 @@ public class Thaumcraft {
         // mainly). Done here (constructor) rather than commonSetup since AuraHelper could plausibly be
         // called very early.
         ThaumcraftApi.internalMethods = new ThaumcraftInternalMethodHandler();
+
+        // The real item-to-aspect object-tag table - see ThaumcraftObjectTags's own doc comment. Safe here
+        // (constructor, not commonSetup): every entry references vanilla Items/Tags.Items constants, none
+        // of which need a registration event to have fired first.
+        thaumcraft.common.lib.crafting.ThaumcraftObjectTags.init();
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
