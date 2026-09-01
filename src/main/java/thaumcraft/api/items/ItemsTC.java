@@ -274,6 +274,9 @@ public final class ItemsTC {
 	 * armor registration uses (e.g. {@code DIAMOND_HELMET} passes 33). No custom Item subclass needed -
 	 * {@code ArmorItem} auto-derives its ARMOR/ARMOR_TOUGHNESS/KNOCKBACK_RESISTANCE attributes and
 	 * repair-ingredient check straight from the material. */
+	public static final DeferredItem<BlockItem> visBattery =
+			ITEMS.registerSimpleBlockItem("vis_battery", BlocksTC.visBattery);
+
 	public static final DeferredItem<Item> thaumiumHelm = ITEMS.registerItem("thaumium_helm",
 			props -> new ArmorItem(ThaumcraftArmorMaterials.THAUMIUM, ArmorItem.Type.HELMET,
 					props.durability(ArmorItem.Type.HELMET.getDurability(25))));

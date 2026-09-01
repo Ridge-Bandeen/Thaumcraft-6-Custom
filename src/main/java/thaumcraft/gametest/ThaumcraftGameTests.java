@@ -399,7 +399,8 @@ public class ThaumcraftGameTests {
 				"ingot_thaumium", "nugget_thaumium", "ingot_thaumium_from_nuggets",
 				"metal_block_thaumium", "ingot_thaumium_from_block", "plate_thaumium",
 				"thaumium_pick", "thaumium_axe", "thaumium_shovel", "thaumium_hoe", "thaumium_sword",
-				"thaumium_helm", "thaumium_chest", "thaumium_legs", "thaumium_boots"
+				"thaumium_helm", "thaumium_chest", "thaumium_legs", "thaumium_boots",
+				"vis_battery"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -1706,6 +1707,50 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.tiles.devices.TileVisGenerator.tick(helper.getLevel(), genAbs, disabled, tile);
 
 		helper.assertTrue(tile.getEnergyStored() == 0, "a disabled vis generator shouldn't recharge from the aura, got " + tile.getEnergyStored());
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Vis Battery - unlike every device above, has no tile entity at all: all state lives directly in the
+	// CHARGE blockstate property. Calls BlockVisBattery.tickVisBattery(...) directly rather than waiting out
+	// the real random-tick-then-scheduled-tick chain, same "test the real entry point" precedent as the Vis
+	// Generator tests just above.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void visBatteryChargesFromASurplusAuraWhenUnpowered(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.visBattery.get());
+		AuraHandler.addVis(helper.getLevel(), absolute, 500.0f);
+
+		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(pos);
+		helper.assertTrue(state.getValue(thaumcraft.common.blocks.devices.BlockVisBattery.CHARGE) == 0, "a freshly placed vis battery should start at charge 0");
+
+		thaumcraft.common.blocks.devices.BlockVisBattery.tickVisBattery((net.minecraft.server.level.ServerLevel) helper.getLevel(), absolute, state, helper.getLevel().getRandom());
+
+		int charge = helper.getBlockState(pos).getValue(thaumcraft.common.blocks.devices.BlockVisBattery.CHARGE);
+		helper.assertTrue(charge == 1, "with plenty of surplus aura and no redstone signal, one tick should raise charge to 1, found: " + charge);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void visBatteryReleasesAChargeIntoTheAuraWhenRedstonePowered(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.visBattery.get().defaultBlockState().setValue(thaumcraft.common.blocks.devices.BlockVisBattery.CHARGE, 5));
+		AuraHandler.drainVis(helper.getLevel(), absolute, AuraHandler.getVis(helper.getLevel(), absolute), false);
+		float visBefore = AuraHandler.getVis(helper.getLevel(), absolute);
+
+		helper.setBlock(pos.below(), Blocks.REDSTONE_BLOCK);
+		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(pos);
+		helper.assertTrue(helper.getLevel().hasNeighborSignal(absolute), "the battery should see the redstone block's signal");
+
+		thaumcraft.common.blocks.devices.BlockVisBattery.tickVisBattery((net.minecraft.server.level.ServerLevel) helper.getLevel(), absolute, state, helper.getLevel().getRandom());
+
+		int charge = helper.getBlockState(pos).getValue(thaumcraft.common.blocks.devices.BlockVisBattery.CHARGE);
+		helper.assertTrue(charge == 4, "a powered battery should discharge one charge per tick, found: " + charge);
+		helper.assertTrue(AuraHandler.getVis(helper.getLevel(), absolute) > visBefore, "discharging should have raised the local aura's vis");
 		helper.succeed();
 	}
 

@@ -279,6 +279,14 @@ public final class BlocksTC {
 			Block::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE).strength(5.0f, 6.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
+	/** A redstone-triggered vis store, no tile entity - see {@link thaumcraft.common.blocks.devices.BlockVisBattery}'s
+	 * own doc comment for the full scheduled-tick cycle. Light level tracks its CHARGE property directly, same
+	 * as the original computed it from meta. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockVisBattery> visBattery = BLOCKS.registerBlock("vis_battery",
+			thaumcraft.common.blocks.devices.BlockVisBattery::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(0.5f).sound(SoundType.STONE)
+					.lightLevel(state -> state.getValue(thaumcraft.common.blocks.devices.BlockVisBattery.CHARGE)));
+
 	private BlocksTC() {
 	}
 }
