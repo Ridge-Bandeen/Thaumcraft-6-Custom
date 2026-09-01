@@ -24,6 +24,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import thaumcraft.Thaumcraft;
 import net.minecraft.world.effect.MobEffects;
+import thaumcraft.common.items.consumables.ItemPhial;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.blocks.BlocksTC;
@@ -410,7 +411,8 @@ public class ThaumcraftGameTests {
 				"paving_stone_travel",
 				"tallow", "candle_white", "candle_black", "candle_blue", "candle_brown", "candle_cyan",
 				"candle_gray", "candle_green", "candle_lightblue", "candle_lime", "candle_magenta",
-				"candle_orange", "candle_pink", "candle_purple", "candle_red", "candle_silver", "candle_yellow"
+				"candle_orange", "candle_pink", "candle_purple", "candle_red", "candle_silver", "candle_yellow",
+				"phial"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -1920,6 +1922,54 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos.below(), Blocks.AIR);
 
 		helper.assertTrue(helper.getBlockState(pos).isAir(), "removing a candle's support should make it fall off (turn to air)");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Phial - fills/empties at a Warded Jar via onItemUseFirst (a NeoForge IItemExtension hook, called
+	// before the jar's own right-click handling). Calls it directly with a real UseOnContext rather than
+	// simulating a full player interaction event.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void phialFillsFromAndEmptiesIntoAWardedJar(GameTestHelper helper) {
+		BlockPos jarPos = BlockPos.ZERO;
+		BlockPos jarAbs = helper.absolutePos(jarPos);
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(jarPos);
+		jar.setAspects(new AspectList().add(Aspect.AIR, 50));
+
+		ServerPlayer player = spawnCasterAt(helper, jarAbs.above());
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(jarAbs), net.minecraft.core.Direction.UP, jarAbs, false);
+
+		ItemStack emptyPhial = new ItemStack(ItemsTC.phial.get());
+		player.setItemInHand(hand, emptyPhial);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(player, hand, hit);
+		net.minecraft.world.InteractionResult result = player.getItemInHand(hand).getItem().onItemUseFirst(player.getItemInHand(hand), context);
+
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.CONSUME, "filling from a jar with enough essentia should succeed, got: " + result);
+		helper.assertTrue(jar.getAspects().getAmount(Aspect.AIR) == 40, "the jar should have given up 10 essentia, found: " + jar.getAspects().getAmount(Aspect.AIR));
+
+		boolean foundFilled = false;
+		for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+			ItemStack stack = player.getInventory().getItem(i);
+			if (stack.getItem() == ItemsTC.phial.get() && stack.has(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get())) {
+				foundFilled = true;
+				break;
+			}
+		}
+		helper.assertTrue(foundFilled, "the player should now hold a filled phial");
+
+		// Empty the filled phial back into the jar.
+		ItemStack filledPhial = ItemPhial.makeFilledPhial(Aspect.AIR);
+		player.setItemInHand(hand, filledPhial);
+		context = new net.minecraft.world.item.context.UseOnContext(player, hand, hit);
+		result = player.getItemInHand(hand).getItem().onItemUseFirst(player.getItemInHand(hand), context);
+
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.CONSUME, "emptying a filled phial into an accepting jar should succeed, got: " + result);
+		helper.assertTrue(jar.getAspects().getAmount(Aspect.AIR) == 50, "the jar should be back to 50 essentia, found: " + jar.getAspects().getAmount(Aspect.AIR));
 		helper.succeed();
 	}
 

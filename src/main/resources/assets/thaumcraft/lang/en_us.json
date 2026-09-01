@@ -181,5 +181,7 @@
   "block.thaumcraft.candle_red": "Red Candle",
   "block.thaumcraft.candle_silver": "Light Gray Candle",
   "block.thaumcraft.candle_white": "White Candle",
-  "block.thaumcraft.candle_yellow": "Yellow Candle"
+  "block.thaumcraft.candle_yellow": "Yellow Candle",
+
+  "item.thaumcraft.phial": "Phial"
 }

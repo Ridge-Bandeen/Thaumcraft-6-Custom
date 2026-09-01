@@ -1,152 +1,116 @@
 package thaumcraft.common.items.consumables;
-import java.util.Iterator;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.EnumActionResult;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.aspects.IEssentiaContainerItem;
 import thaumcraft.api.blocks.BlocksTC;
-import thaumcraft.api.items.ItemsTC;
-import thaumcraft.common.config.ConfigItems;
-import thaumcraft.common.items.ItemTCEssentiaContainer;
-import thaumcraft.common.tiles.essentia.TileAlembic;
+import thaumcraft.api.items.ThaumcraftDataComponents;
 import thaumcraft.common.tiles.essentia.TileJarFillable;
 
+/**
+ * Replaces the old (1.12.2) {@code ItemPhial} - a small essentia bottle, filled/emptied from a Warded Jar
+ * (10 essentia per fill, matching the original's own {@code base}). Deliberately not a subclass of
+ * {@link thaumcraft.api.items.ItemGenericEssentiaContainer} despite sharing its {@code IEssentiaContainerItem}
+ * plumbing - that base class auto-assigns a random aspect on craft/tick (right for Crystal Essence's
+ * "shimmering gem" flavor, wrong here: a phial needs to stay genuinely empty until manually filled).
+ *
+ * A single item, not the original's separate empty/filled damage-value variants - "filled" is just whether
+ * the {@code ASPECTS} data component is present, matching every other essentia-container item this session
+ * (Crystal Essence). The item model switches its icon on the same presence check, registered as an
+ * {@code ItemProperties} predicate in {@code ThaumcraftClient} (the "focus" predicate on {@code caster_basic}
+ * is the same technique, reused here as "filled").
+ *
+ * Simplified vs the original: no Alembic fill path (the Alembic itself isn't ported yet - deferred like every
+ * other Alembic-dependent feature this session) - only the Jar fill/empty interactions are ported. Uses
+ * NeoForge's {@code onItemUseFirst} (still present on {@code IItemExtension}, unchanged in spirit from the
+ * original's own use of the same hook) to intercept the click before the jar's own right-click handling runs.
+ */
+public class ItemPhial extends Item implements IEssentiaContainerItem {
 
-public class ItemPhial extends ItemTCEssentiaContainer
-{
-    public ItemPhial() {
-        super("phial", 10, "empty", "filled");
-    }
-    
-    public static ItemStack makePhial(Aspect aspect, int amt) {
-        ItemStack i = new ItemStack(ItemsTC.phial, 1, 1);
-        ((IEssentiaContainerItem)i.getItem()).setAspects(i, new AspectList().add(aspect, amt));
-        return i;
-    }
-    
-    public static ItemStack makeFilledPhial(Aspect aspect) {
-        return makePhial(aspect, 10);
-    }
-    
-    @Override
-    public void getSubItems(CreativeTabs tab, NonNullList<ItemStack> items) {
-        if (tab == ConfigItems.TABTC || tab == CreativeTabs.SEARCH) {
-            items.add(new ItemStack(this, 1, 0));
-            for (Aspect tag : Aspect.aspects.values()) {
-                ItemStack i = new ItemStack(this, 1, 1);
-                setAspects(i, new AspectList().add(tag, base));
-                items.add(i);
-            }
-        }
-    }
-    
-    public String getItemStackDisplayName(ItemStack stack) {
-        return (getAspects(stack) != null && !getAspects(stack).aspects.isEmpty()) ? String.format(super.getItemStackDisplayName(stack), getAspects(stack).getAspects()[0].getName()) : super.getItemStackDisplayName(stack);
-    }
-    
-    public String getUnlocalizedName(ItemStack stack) {
-        return super.getUnlocalizedName() + "." + getVariantNames()[stack.getItemDamage()];
-    }
-    
-    @Override
-    public void onUpdate(ItemStack stack, World world, Entity entity, int par4, boolean par5) {
-        if (!world.isRemote && !stack.hasTagCompound() && stack.getItemDamage() == 1) {
-            stack.setItemDamage(0);
-        }
-    }
-    
-    @Override
-    public void onCreated(ItemStack stack, World world, EntityPlayer player) {
-        if (!world.isRemote && !stack.hasTagCompound() && stack.getItemDamage() == 1) {
-            stack.setItemDamage(0);
-        }
-    }
-    
-    public boolean doesSneakBypassUse(ItemStack stack, IBlockAccess world, BlockPos pos, EntityPlayer player) {
-        return true;
-    }
-    
-    public EnumActionResult onItemUseFirst(EntityPlayer player, World world, BlockPos pos, EnumFacing side, float f1, float f2, float f3, EnumHand hand) {
-        IBlockState bi = world.getBlockState(pos);
-        if (player.getHeldItem(hand).getItemDamage() == 0 && bi.getBlock() == BlocksTC.alembic) {
-            TileAlembic tile = (TileAlembic)world.getTileEntity(pos);
-            if (tile.amount >= base) {
-                if (world.isRemote) {
-                    player.swingArm(hand);
-                    return EnumActionResult.PASS;
-                }
-                ItemStack phial = new ItemStack(this, 1, 1);
-                setAspects(phial, new AspectList().add(tile.aspect, base));
-                if (tile.takeFromContainer(tile.aspect, base)) {
-                    player.getHeldItem(hand).shrink(1);
-                    if (!player.inventory.addItemStackToInventory(phial)) {
-                        world.spawnEntity(new EntityItem(world, player.posX, player.posY, player.posZ, phial));
-                    }
-                    player.playSound(SoundEvents.ITEM_BOTTLE_FILL, 0.25f, 1.0f);
-                    player.inventoryContainer.detectAndSendChanges();
-                    return EnumActionResult.SUCCESS;
-                }
-            }
-        }
-        if (player.getHeldItem(hand).getItemDamage() == 0 && (bi.getBlock() == BlocksTC.jarNormal || bi.getBlock() == BlocksTC.jarVoid)) {
-            TileJarFillable tile2 = (TileJarFillable)world.getTileEntity(pos);
-            if (tile2.amount >= base) {
-                if (world.isRemote) {
-                    player.swingArm(hand);
-                    return EnumActionResult.PASS;
-                }
-                Aspect asp = Aspect.getAspect(tile2.aspect.getTag());
-                if (tile2.takeFromContainer(asp, base)) {
-                    player.getHeldItem(hand).shrink(1);
-                    ItemStack phial2 = new ItemStack(this, 1, 1);
-                    setAspects(phial2, new AspectList().add(asp, base));
-                    if (!player.inventory.addItemStackToInventory(phial2)) {
-                        world.spawnEntity(new EntityItem(world, pos.getX() + 0.5f, pos.getY() + 0.5f, pos.getZ() + 0.5f, phial2));
-                    }
-                    player.playSound(SoundEvents.ITEM_BOTTLE_FILL, 0.25f, 1.0f);
-                    player.inventoryContainer.detectAndSendChanges();
-                    return EnumActionResult.SUCCESS;
-                }
-            }
-        }
-        AspectList al = getAspects(player.getHeldItem(hand));
-        if (al != null && al.size() == 1) {
-            Aspect aspect = al.getAspects()[0];
-            if (player.getHeldItem(hand).getItemDamage() != 0 && (bi.getBlock() == BlocksTC.jarNormal || bi.getBlock() == BlocksTC.jarVoid)) {
-                TileJarFillable tile3 = (TileJarFillable)world.getTileEntity(pos);
-                if (tile3.amount <= 250 - base && tile3.doesContainerAccept(aspect)) {
-                    if (world.isRemote) {
-                        player.swingArm(hand);
-                        return EnumActionResult.PASS;
-                    }
-                    if (tile3.addToContainer(aspect, base) == 0) {
-                        world.markAndNotifyBlock(pos, world.getChunkFromBlockCoords(pos), bi, bi, 3);
-                        tile3.markDirty();
-                        player.getHeldItem(hand).shrink(1);
-                        if (!player.inventory.addItemStackToInventory(new ItemStack(this, 1, 0))) {
-                            world.spawnEntity(new EntityItem(world, pos.getX() + 0.5f, pos.getY() + 0.5f, pos.getZ() + 0.5f, new ItemStack(this, 1, 0)));
-                        }
-                        player.playSound(SoundEvents.ITEM_BOTTLE_FILL, 0.25f, 1.0f);
-                        player.inventoryContainer.detectAndSendChanges();
-                        return EnumActionResult.SUCCESS;
-                    }
-                }
-            }
-        }
-        return EnumActionResult.PASS;
-    }
+	public static final int BASE = 10;
+
+	public ItemPhial(Properties properties) {
+		super(properties);
+	}
+
+	public static ItemStack makeFilledPhial(Aspect aspect) {
+		ItemStack stack = new ItemStack(thaumcraft.api.items.ItemsTC.phial.get());
+		stack.set(ThaumcraftDataComponents.ASPECTS.get(), new AspectList().add(aspect, BASE));
+		return stack;
+	}
+
+	@Override
+	public AspectList getAspects(ItemStack itemstack) {
+		AspectList aspects = itemstack.get(ThaumcraftDataComponents.ASPECTS.get());
+		return aspects != null && aspects.size() > 0 ? aspects : null;
+	}
+
+	@Override
+	public void setAspects(ItemStack itemstack, AspectList aspects) {
+		itemstack.set(ThaumcraftDataComponents.ASPECTS.get(), aspects);
+	}
+
+	@Override
+	public boolean ignoreContainedAspects() {
+		return false;
+	}
+
+	@Override
+	public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+		Level level = context.getLevel();
+		Player player = context.getPlayer();
+		if (player == null) return InteractionResult.PASS;
+		BlockPos pos = context.getClickedPos();
+		BlockState bs = level.getBlockState(pos);
+		if (bs.getBlock() != BlocksTC.jarNormal.get()) return InteractionResult.PASS;
+		if (!(level.getBlockEntity(pos) instanceof TileJarFillable tile)) return InteractionResult.PASS;
+
+		AspectList held = getAspects(stack);
+		if (held == null) {
+			// Empty phial: fill from the jar.
+			AspectList jarContents = tile.getAspects();
+			if (jarContents.size() != 1) return InteractionResult.PASS;
+			Aspect aspect = jarContents.getAspects()[0];
+			if (jarContents.getAmount(aspect) < BASE) return InteractionResult.PASS;
+			if (level.isClientSide) return InteractionResult.SUCCESS;
+			if (!tile.takeFromContainer(aspect, BASE)) return InteractionResult.PASS;
+
+			ItemStack filled = new ItemStack(this);
+			setAspects(filled, new AspectList().add(aspect, BASE));
+			giveOrDrop(player, stack, filled);
+			level.playSound(null, pos, SoundEvents.BOTTLE_FILL, SoundSource.PLAYERS, 0.25f, 1.0f);
+			return InteractionResult.CONSUME;
+		} else if (held.size() == 1) {
+			// Filled phial: empty into the jar.
+			Aspect aspect = held.getAspects()[0];
+			if (!tile.doesContainerAccept(aspect)) return InteractionResult.PASS;
+			if (level.isClientSide) return InteractionResult.SUCCESS;
+			if (tile.addToContainer(aspect, BASE) != 0) return InteractionResult.PASS;
+
+			ItemStack empty = new ItemStack(this);
+			giveOrDrop(player, stack, empty);
+			level.playSound(null, pos, SoundEvents.BOTTLE_FILL, SoundSource.PLAYERS, 0.25f, 1.0f);
+			return InteractionResult.CONSUME;
+		}
+		return InteractionResult.PASS;
+	}
+
+	/** Shrinks the held stack by 1 and either stacks the result into the player's inventory or drops it -
+	 * same "consume one, hand back the transformed item" shape as vanilla's own bottle-filling. */
+	private static void giveOrDrop(Player player, ItemStack held, ItemStack result) {
+		held.shrink(1);
+		if (!player.getInventory().add(result)) {
+			player.drop(result, false);
+		}
+	}
 }
