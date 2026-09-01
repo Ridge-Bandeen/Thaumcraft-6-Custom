@@ -2820,4 +2820,24 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(matrix.active, "the matrix should have activated through the caster's onItemUseFirst dispatch");
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionMatrixPicksUpASymmetricalPairOfInlaysAsARealBonus(GameTestHelper helper) {
+		BlockPos matrixPos = new BlockPos(4, 4, 4);
+		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		// BlockInlay needs a sturdy block below it to survive (canSurvive), unlike the Stabilizer.
+		helper.setBlock(matrixPos.offset(3, -3, 0), Blocks.STONE);
+		helper.setBlock(matrixPos.offset(-3, -3, 0), Blocks.STONE);
+		helper.setBlock(matrixPos.offset(3, -2, 0), BlocksTC.inlay.get());
+		helper.setBlock(matrixPos.offset(-3, -2, 0), BlocksTC.inlay.get());
+
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(helper.getLevel(), matrixAbs, matrixState, matrix);
+
+		helper.assertTrue(matrix.stabilityReplenish > 0,
+				"a matched symmetrical pair of inlays should be a net positive to stabilityReplenish, got " + matrix.stabilityReplenish);
+		helper.succeed();
+	}
 }

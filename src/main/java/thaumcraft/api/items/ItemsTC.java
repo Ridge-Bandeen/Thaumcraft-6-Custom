@@ -381,6 +381,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> stabilizer =
 			ITEMS.registerSimpleBlockItem("stabilizer", BlocksTC.stabilizer);
 
+	public static final DeferredItem<BlockItem> inlay =
+			ITEMS.registerSimpleBlockItem("inlay", BlocksTC.inlay);
+
 	private ItemsTC() {
 	}
 }

@@ -388,6 +388,12 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.devices.BlockStabilizer::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE).noOcclusion().lightLevel(state -> 4));
 
+	/** See {@link thaumcraft.common.blocks.devices.BlockInlay}'s own doc comment - a cheaper cousin of
+	 * {@link #stabilizer}, its wire-connection visuals cut for the same reason. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockInlay> inlay = BLOCKS.registerBlock("inlay",
+			thaumcraft.common.blocks.devices.BlockInlay::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(0.5f).sound(SoundType.METAL).noOcclusion().noCollission().lightLevel(state -> 1));
+
 	private BlocksTC() {
 	}
 }
