@@ -1,6 +1,7 @@
 package thaumcraft.api.items;
 
 import net.minecraft.tags.BlockTags;
+import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.HoeItem;
@@ -13,6 +14,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.neoforge.common.SimpleTier;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import thaumcraft.api.ThaumcraftArmorMaterials;
 import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.common.items.casters.ItemCaster;
 import thaumcraft.common.items.consumables.ItemAlumentum;
@@ -265,6 +267,28 @@ public final class ItemsTC {
 
 	public static final DeferredItem<Item> thaumiumSword = ITEMS.registerItem("thaumium_sword",
 			props -> new SwordItem(TIER_THAUMIUM, props.attributes(SwordItem.createAttributes(TIER_THAUMIUM, 3, -2.4F))));
+
+	/** {@code ThaumcraftMaterials.ARMORMAT_THAUMIUM}, via {@link ThaumcraftArmorMaterials#THAUMIUM} - see that
+	 * class for why armor needs a real registry entry instead of a plain {@code Tier}-style object. Durability
+	 * is {@code Type.getDurability(25)} (the original's durability multiplier), same convention vanilla's own
+	 * armor registration uses (e.g. {@code DIAMOND_HELMET} passes 33). No custom Item subclass needed -
+	 * {@code ArmorItem} auto-derives its ARMOR/ARMOR_TOUGHNESS/KNOCKBACK_RESISTANCE attributes and
+	 * repair-ingredient check straight from the material. */
+	public static final DeferredItem<Item> thaumiumHelm = ITEMS.registerItem("thaumium_helm",
+			props -> new ArmorItem(ThaumcraftArmorMaterials.THAUMIUM, ArmorItem.Type.HELMET,
+					props.durability(ArmorItem.Type.HELMET.getDurability(25))));
+
+	public static final DeferredItem<Item> thaumiumChest = ITEMS.registerItem("thaumium_chest",
+			props -> new ArmorItem(ThaumcraftArmorMaterials.THAUMIUM, ArmorItem.Type.CHESTPLATE,
+					props.durability(ArmorItem.Type.CHESTPLATE.getDurability(25))));
+
+	public static final DeferredItem<Item> thaumiumLegs = ITEMS.registerItem("thaumium_legs",
+			props -> new ArmorItem(ThaumcraftArmorMaterials.THAUMIUM, ArmorItem.Type.LEGGINGS,
+					props.durability(ArmorItem.Type.LEGGINGS.getDurability(25))));
+
+	public static final DeferredItem<Item> thaumiumBoots = ITEMS.registerItem("thaumium_boots",
+			props -> new ArmorItem(ThaumcraftArmorMaterials.THAUMIUM, ArmorItem.Type.BOOTS,
+					props.durability(ArmorItem.Type.BOOTS.getDurability(25))));
 
 	private ItemsTC() {
 	}

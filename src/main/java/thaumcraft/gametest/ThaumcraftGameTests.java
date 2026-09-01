@@ -398,7 +398,8 @@ public class ThaumcraftGameTests {
 				"tube",
 				"ingot_thaumium", "nugget_thaumium", "ingot_thaumium_from_nuggets",
 				"metal_block_thaumium", "ingot_thaumium_from_block", "plate_thaumium",
-				"thaumium_pick", "thaumium_axe", "thaumium_shovel", "thaumium_hoe", "thaumium_sword"
+				"thaumium_pick", "thaumium_axe", "thaumium_shovel", "thaumium_hoe", "thaumium_sword",
+				"thaumium_helm", "thaumium_chest", "thaumium_legs", "thaumium_boots"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -778,6 +779,30 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(pick.getItem().isValidRepairItem(pick, new ItemStack(ItemsTC.ingotThaumium.get())), "thaumium_pick should be repairable with a Thaumium ingot");
 		helper.assertFalse(pick.getItem().isValidRepairItem(pick, new ItemStack(Items.IRON_INGOT)), "thaumium_pick should not be repairable with a plain iron ingot");
+
+		helper.succeed();
+	}
+
+	/**
+	 * Thaumium armor uses a real {@code BuiltInRegistries.ARMOR_MATERIAL} entry ({@code ThaumcraftArmorMaterials.THAUMIUM})
+	 * reproducing {@code ARMORMAT_THAUMIUM}: protection {@code [2,5,6,2]} (boots/legs/chest/helm), durability
+	 * multiplier 25, toughness 1.0, repairable with a Thaumium ingot. Checked on the chestplate (protection 6,
+	 * the array's chest slot) since it's the least likely of the four to be copy-pasted correctly by accident.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumiumChestplateHasCorrectMaterialBehaviour(GameTestHelper helper) {
+		ItemStack chest = new ItemStack(ItemsTC.thaumiumChest.get());
+
+		helper.assertTrue(chest.getItem() instanceof net.minecraft.world.item.ArmorItem, "thaumium_chest should be a real ArmorItem");
+		net.minecraft.world.item.ArmorItem armor = (net.minecraft.world.item.ArmorItem) chest.getItem();
+
+		helper.assertTrue(armor.getDefense() == 6, "thaumium_chest's protection should be 6, found: " + armor.getDefense());
+		helper.assertTrue(armor.getToughness() == 1.0F, "thaumium_chest's toughness should be 1.0, found: " + armor.getToughness());
+		helper.assertTrue(chest.getMaxDamage() == 16 * 25,
+				"thaumium_chest's durability should be CHESTPLATE.getDurability(25) == 400, found: " + chest.getMaxDamage());
+
+		helper.assertTrue(armor.isValidRepairItem(chest, new ItemStack(ItemsTC.ingotThaumium.get())), "thaumium_chest should be repairable with a Thaumium ingot");
+		helper.assertFalse(armor.isValidRepairItem(chest, new ItemStack(Items.IRON_INGOT)), "thaumium_chest should not be repairable with a plain iron ingot");
 
 		helper.succeed();
 	}

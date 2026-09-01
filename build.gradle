@@ -33,6 +33,7 @@ sourceSets {
 
             // thaumcraft.api
             include 'thaumcraft/api/ThaumcraftAttributes.java'
+            include 'thaumcraft/api/ThaumcraftArmorMaterials.java'
             include 'thaumcraft/api/damagesource/ThaumcraftDamageTypes.java'
             include 'thaumcraft/api/entities/IEldritchMob.java'
             include 'thaumcraft/api/entities/ITaintedMob.java'

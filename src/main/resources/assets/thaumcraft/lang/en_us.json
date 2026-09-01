@@ -148,5 +148,10 @@
   "item.thaumcraft.thaumium_axe": "Thaumium Axe",
   "item.thaumcraft.thaumium_shovel": "Thaumium Shovel",
   "item.thaumcraft.thaumium_hoe": "Thaumium Hoe",
-  "item.thaumcraft.thaumium_sword": "Thaumium Sword"
+  "item.thaumcraft.thaumium_sword": "Thaumium Sword",
+
+  "item.thaumcraft.thaumium_helm": "Thaumium Helmet",
+  "item.thaumcraft.thaumium_chest": "Thaumium Chestplate",
+  "item.thaumcraft.thaumium_legs": "Thaumium Leggings",
+  "item.thaumcraft.thaumium_boots": "Thaumium Boots"
 }

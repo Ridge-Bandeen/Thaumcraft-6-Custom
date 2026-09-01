@@ -19,6 +19,7 @@ import thaumcraft.gametest.ThaumcraftGameTests;
 import thaumcraft.common.world.aura.AuraHandler;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
 import thaumcraft.api.ThaumcraftAttributes;
+import thaumcraft.api.ThaumcraftArmorMaterials;
 import thaumcraft.api.crafting.ThaumcraftRecipeTypes;
 import thaumcraft.api.items.ThaumcraftDataComponents;
 import thaumcraft.api.blocks.BlocksTC;
@@ -75,6 +76,7 @@ public class Thaumcraft {
         NeoForge.EVENT_BUS.register(this);
 
         ThaumcraftAttributes.ATTRIBUTES.register(modEventBus);
+        ThaumcraftArmorMaterials.ARMOR_MATERIALS.register(modEventBus);
         ThaumcraftRecipeTypes.RECIPE_TYPES.register(modEventBus);
         ThaumcraftRecipeTypes.RECIPE_SERIALIZERS.register(modEventBus);
         ThaumcraftDataComponents.DATA_COMPONENTS.register(modEventBus);
