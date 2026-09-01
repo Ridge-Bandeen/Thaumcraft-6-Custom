@@ -202,6 +202,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> arcaneEarToggle =
 			ITEMS.registerSimpleBlockItem("arcane_ear_toggle", BlocksTC.arcaneEarToggle);
 
+	public static final DeferredItem<BlockItem> jarNormal =
+			ITEMS.registerSimpleBlockItem("jar_normal", BlocksTC.jarNormal);
+
 	private ItemsTC() {
 	}
 }

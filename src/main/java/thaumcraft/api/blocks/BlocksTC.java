@@ -245,6 +245,13 @@ public final class BlocksTC {
 			props -> new thaumcraft.common.blocks.devices.BlockArcaneEar(props, true),
 			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
 
+	/** The first real {@link thaumcraft.api.aspects.IAspectSource}/{@link thaumcraft.api.aspects.IEssentiaTransport}
+	 * device this port has built - see {@link thaumcraft.common.tiles.essentia.TileJarFillable}'s own doc
+	 * comment for why no physical tube network was needed to make it functional. */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockJar> jarNormal = BLOCKS.registerBlock("jar_normal",
+			thaumcraft.common.blocks.essentia.BlockJar::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY).strength(0.3f).sound(SoundType.GLASS).noOcclusion());
+
 	private BlocksTC() {
 	}
 }

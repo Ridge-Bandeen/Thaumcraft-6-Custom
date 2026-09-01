@@ -103,6 +103,25 @@ public class ThaumcraftGameTests {
 			TEST_BLOCK_ENTITIES.register("test_energy_sink",
 					() -> net.minecraft.world.level.block.entity.BlockEntityType.Builder.of(TestEnergySinkBlockEntity::new, TEST_ENERGY_SINK_BLOCK.get()).build(null));
 
+	/**
+	 * A minimal, real registered {@code IEssentiaTransport}-implementing block+tile, test-only - lets
+	 * {@code jarSelfFillsFromARealEssentiaSourceAbove} exercise {@code TileJarFillable}'s real self-fill
+	 * tick logic against a realistic emitter. Found while writing that test: a real jar's own
+	 * {@code isConnectable}/{@code canOutputTo} only ever return true for its own {@code UP} face (matching
+	 * the original design exactly) - meaning two plain jars stacked on each other can never actually connect
+	 * (both only expose their top), the same way the original always needed a tube as a relay for this case.
+	 * This test double exposes {@code DOWN} instead, standing in for "some real device or tube outputting
+	 * downward", which is what {@link thaumcraft.common.tiles.essentia.TileJarFillable#tick} is actually
+	 * designed to receive from.
+	 */
+	private static final net.neoforged.neoforge.registries.DeferredBlock<TestEssentiaSourceBlock> TEST_ESSENTIA_SOURCE_BLOCK =
+			TEST_BLOCKS.registerBlock("test_essentia_source", TestEssentiaSourceBlock::new,
+					net.minecraft.world.level.block.state.BlockBehaviour.Properties.of());
+
+	private static final net.neoforged.neoforge.registries.DeferredHolder<net.minecraft.world.level.block.entity.BlockEntityType<?>, net.minecraft.world.level.block.entity.BlockEntityType<TestEssentiaSourceBlockEntity>> TEST_ESSENTIA_SOURCE_BE =
+			TEST_BLOCK_ENTITIES.register("test_essentia_source",
+					() -> net.minecraft.world.level.block.entity.BlockEntityType.Builder.of(TestEssentiaSourceBlockEntity::new, TEST_ESSENTIA_SOURCE_BLOCK.get()).build(null));
+
 	public static void register(net.neoforged.bus.api.IEventBus modEventBus) {
 		TEST_ITEMS.register(modEventBus);
 		TEST_BLOCKS.register(modEventBus);
@@ -173,6 +192,90 @@ public class ThaumcraftGameTests {
 		@Override
 		public boolean canReceive() {
 			return true;
+		}
+	}
+
+	private static final class TestEssentiaSourceBlock extends net.minecraft.world.level.block.Block implements net.minecraft.world.level.block.EntityBlock {
+		private static final com.mojang.serialization.MapCodec<TestEssentiaSourceBlock> CODEC = simpleCodec(TestEssentiaSourceBlock::new);
+
+		TestEssentiaSourceBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties properties) {
+			super(properties);
+		}
+
+		@Override
+		protected com.mojang.serialization.MapCodec<? extends net.minecraft.world.level.block.Block> codec() {
+			return CODEC;
+		}
+
+		@javax.annotation.Nullable
+		@Override
+		public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
+			return new TestEssentiaSourceBlockEntity(pos, state);
+		}
+	}
+
+	private static final class TestEssentiaSourceBlockEntity extends net.minecraft.world.level.block.entity.BlockEntity implements thaumcraft.api.aspects.IEssentiaTransport {
+		Aspect aspect;
+		int amount;
+
+		TestEssentiaSourceBlockEntity(BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
+			super(TEST_ESSENTIA_SOURCE_BE.get(), pos, state);
+		}
+
+		@Override
+		public boolean isConnectable(net.minecraft.core.Direction face) {
+			return face == net.minecraft.core.Direction.DOWN;
+		}
+
+		@Override
+		public boolean canInputFrom(net.minecraft.core.Direction face) {
+			return false;
+		}
+
+		@Override
+		public boolean canOutputTo(net.minecraft.core.Direction face) {
+			return face == net.minecraft.core.Direction.DOWN;
+		}
+
+		@Override
+		public void setSuction(Aspect aspect, int amount) {
+		}
+
+		@Override
+		public Aspect getSuctionType(net.minecraft.core.Direction face) {
+			return null;
+		}
+
+		@Override
+		public int getSuctionAmount(net.minecraft.core.Direction face) {
+			return 0;
+		}
+
+		@Override
+		public int takeEssentia(Aspect tag, int toTake, net.minecraft.core.Direction face) {
+			if (!canOutputTo(face) || tag != aspect || amount < toTake) return 0;
+			amount -= toTake;
+			return toTake;
+		}
+
+		@Override
+		public int addEssentia(Aspect tag, int toAdd, net.minecraft.core.Direction face) {
+			return 0;
+		}
+
+		@Override
+		public Aspect getEssentiaType(net.minecraft.core.Direction face) {
+			return aspect;
+		}
+
+		@Override
+		public int getEssentiaAmount(net.minecraft.core.Direction face) {
+			return amount;
+		}
+
+		@Override
+		public int getMinimumSuction() {
+			return 0;
 		}
 	}
 
@@ -289,7 +392,8 @@ public class ThaumcraftGameTests {
 				"stone_arcane_brick", "stone_arcane_brick_stairs", "stone_arcane_brick_slab",
 				"plank_silverwood", "silverwood_stairs", "silverwood_slab",
 				"plank_greatwood", "greatwood_stairs", "greatwood_slab",
-				"arcane_ear", "arcane_ear_toggle"
+				"arcane_ear", "arcane_ear_toggle",
+				"jar_normal"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -1724,6 +1828,82 @@ public class ThaumcraftGameTests {
 		helper.setBlock(earPos.below(), Blocks.AIR);
 
 		helper.assertTrue(helper.getBlockState(earPos).isAir(), "removing the block an arcane ear rests against should make the ear itself pop off");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Warded Jar (TileJarFillable) - the first real IAspectSource/IEssentiaTransport device this port has
+	// built. See TileJarFillable's own doc comment for why no physical tube network was needed.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void jarFillsFromAnEssentiaContainerItemRightClick(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		helper.setBlock(pos, BlocksTC.jarNormal.get());
+		BlockPos absolute = helper.absolutePos(pos);
+		thaumcraft.common.tiles.essentia.TileJarFillable tile = helper.getBlockEntity(pos);
+
+		ItemStack crystal = new ItemStack(ItemsTC.crystalEssence.get(), 1);
+		((ItemGenericEssentiaContainer) crystal.getItem()).setAspects(crystal, new AspectList().add(Aspect.FIRE, 1));
+
+		ServerPlayer player = spawnCasterAt(helper, absolute);
+		player.getAbilities().instabuild = false;
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, crystal);
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absolute), net.minecraft.core.Direction.UP, absolute, false);
+		helper.getBlockState(pos).useItemOn(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND), helper.getLevel(), player,
+				net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+
+		helper.assertTrue(tile.getAspects().getAmount(Aspect.FIRE) == 1,
+				"right-clicking the jar with a Crystal Essence carrying 1 fire should add exactly 1 fire to the jar, got " + tile.getAspects().getAmount(Aspect.FIRE));
+		helper.assertTrue(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).isEmpty(),
+				"the crystal essence should have been consumed");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void jarEmptiesIntoTheAuraOnSneakRightClick(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		helper.setBlock(pos, BlocksTC.jarNormal.get());
+		BlockPos absolute = helper.absolutePos(pos);
+		thaumcraft.common.tiles.essentia.TileJarFillable tile = helper.getBlockEntity(pos);
+		tile.setAspects(new AspectList().add(Aspect.WATER, 50));
+
+		float visBefore = AuraHandler.getVis(helper.getLevel(), absolute);
+
+		ServerPlayer player = spawnCasterAt(helper, absolute);
+		player.setShiftKeyDown(true);
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absolute), net.minecraft.core.Direction.UP, absolute, false);
+		helper.getBlockState(pos).useItemOn(ItemStack.EMPTY, helper.getLevel(), player, net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+
+		helper.assertTrue(tile.getAspects().size() == 0, "emptying the jar should leave it with no aspects, got " + tile.getAspects());
+		helper.assertTrue(AuraHandler.getVis(helper.getLevel(), absolute) > visBefore,
+				"emptying a jar into the aura should have raised the local vis, was " + visBefore + " now " + AuraHandler.getVis(helper.getLevel(), absolute));
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void jarSelfFillsFromARealEssentiaSourceAbove(GameTestHelper helper) {
+		BlockPos bottomPos = new BlockPos(2, 1, 2);
+		BlockPos sourcePos = bottomPos.above();
+		helper.setBlock(bottomPos, BlocksTC.jarNormal.get());
+		helper.setBlock(sourcePos, TEST_ESSENTIA_SOURCE_BLOCK.get());
+		BlockPos bottomAbs = helper.absolutePos(bottomPos);
+
+		thaumcraft.common.tiles.essentia.TileJarFillable bottom = helper.getBlockEntity(bottomPos);
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(sourcePos);
+		source.aspect = Aspect.EARTH;
+		source.amount = 40;
+
+		for (int i = 0; i < 40; i++) {
+			thaumcraft.common.tiles.essentia.TileJarFillable.tick(helper.getLevel(), bottomAbs, helper.getBlockState(bottomPos), bottom);
+		}
+
+		helper.assertTrue(bottom.getAspects().getAmount(Aspect.EARTH) > 0,
+				"a jar should pull essentia from a real IEssentiaTransport tile placed directly above it, got " + bottom.getAspects());
+		helper.assertTrue(source.amount < 40,
+				"the source above should have been drained by the same amount the jar below gained, still at " + source.amount);
 		helper.succeed();
 	}
 }

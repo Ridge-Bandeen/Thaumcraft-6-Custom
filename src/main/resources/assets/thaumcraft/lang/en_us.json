@@ -129,5 +129,7 @@
   "block.thaumcraft.greatwood_slab": "Greatwood Slab",
 
   "block.thaumcraft.arcane_ear": "Arcane Ear",
-  "block.thaumcraft.arcane_ear_toggle": "Arcane Ear (Toggle)"
+  "block.thaumcraft.arcane_ear_toggle": "Arcane Ear (Toggle)",
+
+  "block.thaumcraft.jar_normal": "Warded Jar"
 }

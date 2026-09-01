@@ -12,6 +12,7 @@ import thaumcraft.common.tiles.devices.TileLampArcane;
 import thaumcraft.common.tiles.devices.TileVisGenerator;
 import thaumcraft.common.tiles.devices.TileWaterJug;
 import thaumcraft.common.tiles.devices.TileArcaneEar;
+import thaumcraft.common.tiles.essentia.TileJarFillable;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
 public final class ThaumcraftBlockEntities {
@@ -48,6 +49,9 @@ public final class ThaumcraftBlockEntities {
 	 * takes a varargs list of valid blocks for exactly this "same tile, two block variants" case. */
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileArcaneEar>> ARCANE_EAR = BLOCK_ENTITIES.register("arcane_ear",
 			() -> BlockEntityType.Builder.of(TileArcaneEar::new, BlocksTC.arcaneEar.get(), BlocksTC.arcaneEarToggle.get()).build(null));
+
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileJarFillable>> JAR = BLOCK_ENTITIES.register("jar_normal",
+			() -> BlockEntityType.Builder.of(TileJarFillable::new, BlocksTC.jarNormal.get()).build(null));
 
 	private ThaumcraftBlockEntities() {
 	}

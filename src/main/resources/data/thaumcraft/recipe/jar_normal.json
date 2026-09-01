@@ -1,0 +1,14 @@
+{
+  "type": "thaumcraft:arcane_shaped",
+  "vis": 5,
+  "pattern": [
+    "GWG",
+    "G G",
+    "GGG"
+  ],
+  "key": {
+    "W": { "tag": "minecraft:wooden_slabs" },
+    "G": { "item": "minecraft:glass_pane" }
+  },
+  "result": { "id": "thaumcraft:jar_normal" }
+}
