@@ -175,6 +175,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> visGenerator =
 			ITEMS.registerSimpleBlockItem("vis_generator", BlocksTC.visGenerator);
 
+	public static final DeferredItem<BlockItem> everfullUrn =
+			ITEMS.registerSimpleBlockItem("everfull_urn", BlocksTC.everfullUrn);
+
 	private ItemsTC() {
 	}
 }

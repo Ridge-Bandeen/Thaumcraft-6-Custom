@@ -131,6 +131,10 @@ public class Thaumcraft {
         event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, ThaumcraftBlockEntities.VIS_GENERATOR.get(),
                 (tile, side) -> side == tile.getFacing() ? tile : null);
 
+        // Only exposed on the top face, matching the original - see TileWaterJug's own doc comment.
+        event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ThaumcraftBlockEntities.WATER_JUG.get(),
+                (tile, side) -> side == net.minecraft.core.Direction.UP ? tile.tank : null);
+
         thaumcraft.gametest.ThaumcraftGameTests.registerTestCapabilities(event);
     }
 

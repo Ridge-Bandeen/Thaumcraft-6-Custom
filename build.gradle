@@ -224,6 +224,9 @@ sourceSets {
             include 'thaumcraft/common/blocks/devices/BlockVisGenerator.java'
             include 'thaumcraft/common/tiles/devices/TileVisGenerator.java'
 
+            include 'thaumcraft/common/blocks/devices/BlockWaterJug.java'
+            include 'thaumcraft/common/tiles/devices/TileWaterJug.java'
+
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
     }

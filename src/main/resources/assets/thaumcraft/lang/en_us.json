@@ -117,5 +117,7 @@
 
   "block.thaumcraft.lamp_arcane": "Arcane Lamp",
 
-  "block.thaumcraft.vis_generator": "Vis Generator"
+  "block.thaumcraft.vis_generator": "Vis Generator",
+
+  "block.thaumcraft.everfull_urn": "Everfull Urn"
 }

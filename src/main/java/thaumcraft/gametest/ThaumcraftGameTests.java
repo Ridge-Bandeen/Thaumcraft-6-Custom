@@ -280,7 +280,8 @@ public class ThaumcraftGameTests {
 				"crystal_essence_alkimia", "crystal_essence_vitium", "crystal_essence_tenebrae",
 				"crystal_essence_alienis", "crystal_essence_volatus", "crystal_essence_herba",
 				"crystal_essence_instrumentum", "crystal_essence_machina", "crystal_essence_spiritus",
-				"vis_generator",
+				"crystal_essence_fabrico",
+				"vis_generator", "everfull_urn",
 				"stone_arcane", "stone_arcane_stairs", "stone_arcane_slab",
 				"stone_arcane_brick", "stone_arcane_brick_stairs", "stone_arcane_brick_slab",
 				"plank_silverwood", "silverwood_stairs", "silverwood_slab"
@@ -1476,6 +1477,65 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.tiles.devices.TileVisGenerator.tick(helper.getLevel(), genAbs, disabled, tile);
 
 		helper.assertTrue(tile.getEnergyStored() == 0, "a disabled vis generator shouldn't recharge from the aura, got " + tile.getEnergyStored());
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Everfull Urn (TileWaterJug) - see TileWaterJug's own doc comment for what's simplified (the
+	// original's 5x5x3 neighbor auto-fill scanning is dropped; this keeps the core "infinite water source"
+	// identity). Bucket/bottle interaction uses the real BlockState#useItemOn public dispatch, same pattern
+	// as crucibleFillsAndEmptiesWithABucketOfWater above.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void everfullUrnFillsABucketAndABottleFromStoredWater(GameTestHelper helper) {
+		BlockPos relPos = BlockPos.ZERO;
+		helper.setBlock(relPos, BlocksTC.everfullUrn.get());
+		BlockPos absolute = helper.absolutePos(relPos);
+		thaumcraft.common.tiles.devices.TileWaterJug tile = helper.getBlockEntity(relPos);
+		tile.tank.fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000),
+				net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+
+		ServerPlayer player = spawnCasterAt(helper, absolute);
+		player.getAbilities().instabuild = false;
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absolute), net.minecraft.core.Direction.UP, absolute, false);
+
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(Items.BUCKET));
+		helper.getBlockState(relPos).useItemOn(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND), helper.getLevel(), player,
+				net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+
+		helper.assertTrue(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).is(Items.WATER_BUCKET),
+				"an empty bucket right-clicked on a full urn should come back full of water");
+		helper.assertTrue(tile.tank.getFluidAmount() == 0, "filling a bucket should have drained the urn's tank, got " + tile.tank.getFluidAmount());
+
+		tile.tank.fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000),
+				net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(Items.GLASS_BOTTLE));
+		helper.getBlockState(relPos).useItemOn(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND), helper.getLevel(), player,
+				net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+
+		ItemStack held = player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(held.is(Items.POTION), "an empty glass bottle right-clicked on the urn should come back as a water potion, got " + held);
+		helper.assertTrue(tile.tank.getFluidAmount() == 667, "bottling should have drained exactly 333 from the urn's tank, got " + tile.tank.getFluidAmount());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void everfullUrnRegeneratesFromAura(GameTestHelper helper) {
+		BlockPos relPos = BlockPos.ZERO;
+		helper.setBlock(relPos, BlocksTC.everfullUrn.get());
+		BlockPos absolute = helper.absolutePos(relPos);
+		thaumcraft.common.tiles.devices.TileWaterJug tile = helper.getBlockEntity(relPos);
+
+		AuraHandler.addVis(helper.getLevel(), absolute, 500.0f);
+		helper.assertTrue(tile.tank.getFluidAmount() == 0, "a freshly placed urn should start empty");
+
+		for (int i = 0; i < 20; i++) {
+			thaumcraft.common.tiles.devices.TileWaterJug.tick(helper.getLevel(), absolute, helper.getBlockState(relPos), tile);
+		}
+
+		helper.assertTrue(tile.tank.getFluidAmount() > 0, "ticking an empty urn with vis available should have regenerated some water, got " + tile.tank.getFluidAmount());
 		helper.succeed();
 	}
 }

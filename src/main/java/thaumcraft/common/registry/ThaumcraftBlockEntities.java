@@ -10,6 +10,7 @@ import thaumcraft.common.tiles.crafting.TileCrucible;
 import thaumcraft.common.tiles.devices.TileRechargePedestal;
 import thaumcraft.common.tiles.devices.TileLampArcane;
 import thaumcraft.common.tiles.devices.TileVisGenerator;
+import thaumcraft.common.tiles.devices.TileWaterJug;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
 public final class ThaumcraftBlockEntities {
@@ -36,6 +37,11 @@ public final class ThaumcraftBlockEntities {
 
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileVisGenerator>> VIS_GENERATOR = BLOCK_ENTITIES.register("vis_generator",
 			() -> BlockEntityType.Builder.of(TileVisGenerator::new, BlocksTC.visGenerator.get()).build(null));
+
+	/** Registry id kept as "everfull_urn" (not "water_jug") to match the original's own in-game name and
+	 * the existing, untouched 1.12.2 texture/model/blockstate assets. */
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileWaterJug>> WATER_JUG = BLOCK_ENTITIES.register("everfull_urn",
+			() -> BlockEntityType.Builder.of(TileWaterJug::new, BlocksTC.everfullUrn.get()).build(null));
 
 	private ThaumcraftBlockEntities() {
 	}

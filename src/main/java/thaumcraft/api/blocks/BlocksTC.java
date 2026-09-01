@@ -187,6 +187,12 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.devices.BlockVisGenerator::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0f).sound(SoundType.WOOD).noOcclusion());
 
+	/** "Everfull Urn" - see {@link thaumcraft.common.tiles.devices.TileWaterJug}'s own doc comment for what's
+	 * simplified. Registry id kept as the original's own "everfull_urn", not "water_jug". */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockWaterJug> everfullUrn = BLOCKS.registerBlock("everfull_urn",
+			thaumcraft.common.blocks.devices.BlockWaterJug::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(1.5f).sound(SoundType.STONE).noOcclusion());
+
 	private BlocksTC() {
 	}
 }
