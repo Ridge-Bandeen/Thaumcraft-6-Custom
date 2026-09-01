@@ -1,0 +1,15 @@
+{
+  "type": "thaumcraft:arcane_shapeless",
+  "research": "FIRSTSTEPS",
+  "vis": 5,
+  "ingredients": [
+    { "item": "minecraft:quartz" },
+    { "item": "minecraft:clock" }
+  ],
+  "result": {
+    "id": "thaumcraft:crystal_essence",
+    "components": {
+      "thaumcraft:aspects": { "ordo": 1 }
+    }
+  }
+}
