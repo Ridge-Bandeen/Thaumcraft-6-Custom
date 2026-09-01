@@ -1,7 +1,9 @@
 package thaumcraft.api.blocks;
 
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.TransparentBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
@@ -80,6 +82,18 @@ public final class BlocksTC {
 	 * tag instead (see {@code data/minecraft/tags/block/beacon_base_blocks.json}). */
 	public static final DeferredBlock<Block> stoneArcane = BLOCKS.registerBlock("stone_arcane",
 			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
+
+	/** Vanilla's own {@link StairBlock}/{@link SlabBlock} - no custom subclass needed. Note modern slabs
+	 * are a single block (a {@code type} blockstate property covers bottom/top/double), unlike 1.12.2's
+	 * separate half/double-slab block pair - {@code BlocksTC.slabArcaneStone}'s old "double slab" sibling
+	 * isn't needed here. */
+	public static final DeferredBlock<StairBlock> stoneArcaneStairs = BLOCKS.registerBlock("stone_arcane_stairs",
+			props -> new StairBlock(stoneArcane.get().defaultBlockState(), props),
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
+
+	public static final DeferredBlock<SlabBlock> stoneArcaneSlab = BLOCKS.registerBlock("stone_arcane_slab",
+			SlabBlock::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
 
 	private BlocksTC() {

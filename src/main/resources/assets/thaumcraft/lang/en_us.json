@@ -93,5 +93,7 @@
   "block.thaumcraft.amber_block": "Amber Block",
   "block.thaumcraft.amber_brick": "Amber Brick",
 
-  "block.thaumcraft.stone_arcane": "Arcane Stone"
+  "block.thaumcraft.stone_arcane": "Arcane Stone",
+  "block.thaumcraft.stone_arcane_stairs": "Arcane Stone Stairs",
+  "block.thaumcraft.stone_arcane_slab": "Arcane Stone Slab"
 }

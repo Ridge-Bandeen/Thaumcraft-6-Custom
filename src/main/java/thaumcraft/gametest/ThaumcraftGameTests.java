@@ -149,7 +149,7 @@ public class ThaumcraftGameTests {
 				"crystal_essence_aer", "crystal_essence_aqua", "crystal_essence_ignis",
 				"crystal_essence_terra", "crystal_essence_ordo", "crystal_essence_perditio",
 				"crystal_essence_auram", "crystal_essence_praecantatio", "crystal_essence_vitreus",
-				"stone_arcane"
+				"stone_arcane", "stone_arcane_stairs", "stone_arcane_slab"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
