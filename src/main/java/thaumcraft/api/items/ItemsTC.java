@@ -295,6 +295,15 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> pavingStoneTravel =
 			ITEMS.registerSimpleBlockItem("paving_stone_travel", BlocksTC.pavingStoneTravel);
 
+	/** A Crucible byproduct (rotten flesh + 1 fire) - the precursor for {@link BlocksTC#candles}. */
+	public static final DeferredItem<Item> tallow =
+			ITEMS.registerSimpleItem("tallow");
+
+	public static final java.util.Map<net.minecraft.world.item.DyeColor, DeferredItem<BlockItem>> candles = new java.util.EnumMap<>(net.minecraft.world.item.DyeColor.class);
+	static {
+		BlocksTC.candles.forEach((dye, block) -> candles.put(dye, ITEMS.registerSimpleBlockItem("candle_" + BlocksTC.candleDyeName(dye), block)));
+	}
+
 	public static final DeferredItem<Item> thaumiumHelm = ITEMS.registerItem("thaumium_helm",
 			props -> new ArmorItem(ThaumcraftArmorMaterials.THAUMIUM, ArmorItem.Type.HELMET,
 					props.durability(ArmorItem.Type.HELMET.getDurability(25))));

@@ -407,7 +407,10 @@ public class ThaumcraftGameTests {
 				"thaumium_helm", "thaumium_chest", "thaumium_legs", "thaumium_boots",
 				"vis_battery", "dioptra",
 				"filter", "condenser", "condenser_lattice",
-				"paving_stone_travel"
+				"paving_stone_travel",
+				"tallow", "candle_white", "candle_black", "candle_blue", "candle_brown", "candle_cyan",
+				"candle_gray", "candle_green", "candle_lightblue", "candle_lime", "candle_magenta",
+				"candle_orange", "candle_pink", "candle_purple", "candle_red", "candle_silver", "candle_yellow"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -1882,6 +1885,41 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(player.hasEffect(MobEffects.MOVEMENT_SPEED), "stepping on the paving stone should grant Speed");
 		helper.assertTrue(player.hasEffect(MobEffects.JUMP), "stepping on the paving stone should grant Jump Boost");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Candles - one small block per DyeColor, all sharing BlockCandle. The color-handler tint itself is
+	// client-only and not GameTest-observable; these check the functional side instead (light level,
+	// falling off when unsupported).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void candleEmitsFullLightAndCarriesItsOwnDye(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos.below(), Blocks.STONE);
+		helper.setBlock(pos, BlocksTC.candles.get(net.minecraft.world.item.DyeColor.RED).get());
+		BlockPos absolute = helper.absolutePos(pos);
+
+		int light = helper.getBlockState(pos).getLightEmission(helper.getLevel(), absolute);
+		helper.assertTrue(light == 15, "a lit candle should emit full light, found: " + light);
+
+		net.minecraft.world.level.block.Block candleBlock = helper.getBlockState(pos).getBlock();
+		helper.assertTrue(candleBlock instanceof thaumcraft.common.blocks.basic.BlockCandle red && red.dye == net.minecraft.world.item.DyeColor.RED,
+				"the red candle block should carry DyeColor.RED");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void candleFallsOffWhenItsSupportIsRemoved(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos.below(), Blocks.STONE);
+		helper.setBlock(pos, BlocksTC.candles.get(net.minecraft.world.item.DyeColor.WHITE).get());
+
+		helper.assertTrue(!helper.getBlockState(pos).isAir(), "the candle should be placed before its support is removed");
+		helper.setBlock(pos.below(), Blocks.AIR);
+
+		helper.assertTrue(helper.getBlockState(pos).isAir(), "removing a candle's support should make it fall off (turn to air)");
 		helper.succeed();
 	}
 

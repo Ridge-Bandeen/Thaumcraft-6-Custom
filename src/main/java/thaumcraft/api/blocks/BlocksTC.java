@@ -1,5 +1,9 @@
 package thaumcraft.api.blocks;
 
+import java.util.EnumMap;
+import java.util.Map;
+
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
@@ -318,6 +322,30 @@ public final class BlocksTC {
 	public static final DeferredBlock<thaumcraft.common.blocks.basic.BlockPavingStoneTravel> pavingStoneTravel = BLOCKS.registerBlock("paving_stone_travel",
 			thaumcraft.common.blocks.basic.BlockPavingStoneTravel::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.5f).sound(SoundType.STONE).noOcclusion());
+
+	/** One small candle per {@link DyeColor} - see {@link thaumcraft.common.blocks.basic.BlockCandle}'s
+	 * own doc comment for the color-handler tinting this needs. Registry ids match
+	 * the original's own 1.12.2 dye names exactly ({@code candle_silver} for {@code LIGHT_GRAY}, etc.),
+	 * matching the already-existing blockstate assets. */
+	public static final Map<DyeColor, DeferredBlock<thaumcraft.common.blocks.basic.BlockCandle>> candles = new EnumMap<>(DyeColor.class);
+	static {
+		for (DyeColor dye : DyeColor.values()) {
+			String id = "candle_" + candleDyeName(dye);
+			DeferredBlock<thaumcraft.common.blocks.basic.BlockCandle> block = BLOCKS.registerBlock(id,
+					props -> new thaumcraft.common.blocks.basic.BlockCandle(props, dye),
+					BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GRAY).strength(0.1f).sound(SoundType.WOOL).noOcclusion().noCollission().lightLevel(state -> 15));
+			candles.put(dye, block);
+		}
+	}
+
+	/** The original's 1.12.2 dye naming ({@code EnumDyeColor.getUnlocalizedName()}) differs from modern
+	 * {@link DyeColor}'s in exactly two spots: {@code LIGHT_BLUE} was "lightblue" (no underscore) and
+	 * {@code LIGHT_GRAY} was "silver" - both preserved here to match the existing asset filenames. */
+	public static String candleDyeName(DyeColor dye) {
+		if (dye == DyeColor.LIGHT_BLUE) return "lightblue";
+		if (dye == DyeColor.LIGHT_GRAY) return "silver";
+		return dye.getSerializedName();
+	}
 
 	private BlocksTC() {
 	}

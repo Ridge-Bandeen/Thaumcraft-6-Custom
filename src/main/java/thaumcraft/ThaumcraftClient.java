@@ -7,11 +7,14 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.resources.ResourceLocation;
+import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.api.items.ItemsTC;
+import thaumcraft.common.blocks.basic.BlockCandle;
 import thaumcraft.client.gui.GuiArcaneWorkbench;
 import thaumcraft.client.render.RenderFocusProjectile;
 import thaumcraft.common.registry.ThaumcraftEntities;
@@ -51,5 +54,27 @@ public class ThaumcraftClient {
         // Alumentum renders as a real spinning item icon (vanilla's own snowball/egg renderer), unlike
         // the invisible focus-carrier entities above.
         event.registerEntityRenderer(ThaumcraftEntities.ALUMENTUM.get(), ThrownItemRenderer::new);
+    }
+
+    /** Candles share one grayscale texture across all 16 colors (no per-color art exists, unlike vanilla's
+     * own candles) - tinted per-instance here off each block's own {@code dye} field instead. Both the
+     * block and item handlers are needed: {@code BlockColors} only covers the in-world block, not the
+     * inventory/hand icon. */
+    @SubscribeEvent
+    static void onRegisterBlockColors(RegisterColorHandlersEvent.Block event) {
+        event.register((state, level, pos, tintIndex) -> {
+            net.minecraft.world.level.block.Block block = state.getBlock();
+            return block instanceof BlockCandle candle ? candle.dye.getTextureDiffuseColor() : -1;
+        }, BlocksTC.candles.values().stream().map(net.neoforged.neoforge.registries.DeferredBlock::get)
+                .toArray(net.minecraft.world.level.block.Block[]::new));
+    }
+
+    @SubscribeEvent
+    static void onRegisterItemColors(RegisterColorHandlersEvent.Item event) {
+        event.register((stack, tintIndex) -> {
+            net.minecraft.world.level.block.Block block = net.minecraft.world.level.block.Block.byItem(stack.getItem());
+            return block instanceof BlockCandle candle ? candle.dye.getTextureDiffuseColor() : -1;
+        }, ItemsTC.candles.values().stream().map(net.neoforged.neoforge.registries.DeferredItem::get)
+                .toArray(net.minecraft.world.item.Item[]::new));
     }
 }

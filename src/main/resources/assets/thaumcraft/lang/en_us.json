@@ -163,5 +163,23 @@
   "block.thaumcraft.condenser_lattice": "Condenser Lattice",
   "block.thaumcraft.condenser_lattice_dirty": "Condenser Lattice",
 
-  "block.thaumcraft.paving_stone_travel": "Traveller's Paving Stone"
+  "block.thaumcraft.paving_stone_travel": "Traveller's Paving Stone",
+
+  "item.thaumcraft.tallow": "Tallow",
+  "block.thaumcraft.candle_black": "Black Candle",
+  "block.thaumcraft.candle_blue": "Blue Candle",
+  "block.thaumcraft.candle_brown": "Brown Candle",
+  "block.thaumcraft.candle_cyan": "Cyan Candle",
+  "block.thaumcraft.candle_gray": "Gray Candle",
+  "block.thaumcraft.candle_green": "Green Candle",
+  "block.thaumcraft.candle_lightblue": "Light Blue Candle",
+  "block.thaumcraft.candle_lime": "Lime Candle",
+  "block.thaumcraft.candle_magenta": "Magenta Candle",
+  "block.thaumcraft.candle_orange": "Orange Candle",
+  "block.thaumcraft.candle_pink": "Pink Candle",
+  "block.thaumcraft.candle_purple": "Purple Candle",
+  "block.thaumcraft.candle_red": "Red Candle",
+  "block.thaumcraft.candle_silver": "Light Gray Candle",
+  "block.thaumcraft.candle_white": "White Candle",
+  "block.thaumcraft.candle_yellow": "Yellow Candle"
 }
