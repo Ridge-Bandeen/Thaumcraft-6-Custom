@@ -284,7 +284,8 @@ public class ThaumcraftGameTests {
 				"vis_generator", "everfull_urn",
 				"stone_arcane", "stone_arcane_stairs", "stone_arcane_slab",
 				"stone_arcane_brick", "stone_arcane_brick_stairs", "stone_arcane_brick_slab",
-				"plank_silverwood", "silverwood_stairs", "silverwood_slab"
+				"plank_silverwood", "silverwood_stairs", "silverwood_slab",
+				"plank_greatwood", "greatwood_stairs", "greatwood_slab"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -1137,6 +1138,9 @@ public class ThaumcraftGameTests {
 		assertSelfDrops(helper, new BlockPos(5, 1, 1), BlocksTC.logSilverwood.get(), ItemsTC.logSilverwood.get());
 		assertSelfDrops(helper, new BlockPos(1, 1, 3), BlocksTC.plankSilverwood.get(), ItemsTC.plankSilverwood.get());
 		assertSelfDrops(helper, new BlockPos(3, 1, 3), BlocksTC.silverwoodStairs.get(), ItemsTC.silverwoodStairs.get());
+		assertSelfDrops(helper, new BlockPos(5, 1, 3), BlocksTC.logGreatwood.get(), ItemsTC.logGreatwood.get());
+		assertSelfDrops(helper, new BlockPos(1, 1, 5), BlocksTC.plankGreatwood.get(), ItemsTC.plankGreatwood.get());
+		assertSelfDrops(helper, new BlockPos(3, 1, 5), BlocksTC.greatwoodStairs.get(), ItemsTC.greatwoodStairs.get());
 		helper.succeed();
 	}
 
@@ -1195,6 +1199,42 @@ public class ThaumcraftGameTests {
 			}
 		}
 		helper.assertTrue(foundLog, "advancing a stage-1 silverwood sapling should have grown a real tree with log_silverwood blocks somewhere nearby (leaves found: " + foundLeaves + ")");
+		helper.succeed();
+	}
+
+	/** Same shape as silverwoodSaplingGrowsIntoARealTree above - Greatwood's own configured_feature just
+	 * uses taller/wider fancy_trunk_placer/fancy_foliage_placer parameters for a visually bigger tree,
+	 * deliberately dropping the original's 2x2-sapling "giant" variant (see BlocksTC's own doc comment on
+	 * logGreatwood for why - vanilla's giant-sapling logic is hardcoded to specific vanilla saplings, not a
+	 * generic hook a modded one can opt into). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
+	public static void greatwoodSaplingGrowsIntoARealTree(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(4, 1, 4);
+		BlockPos absolute = helper.absolutePos(relPos);
+		ServerLevel level = helper.getLevel();
+
+		level.setBlock(helper.absolutePos(relPos.below()), Blocks.DIRT.defaultBlockState(), 3);
+		level.setBlock(absolute, BlocksTC.saplingGreatwood.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.SaplingBlock.STAGE, 1), 3);
+		net.minecraft.world.level.block.state.BlockState saplingState = level.getBlockState(absolute);
+		((net.minecraft.world.level.block.SaplingBlock) BlocksTC.saplingGreatwood.get())
+				.advanceTree(level, absolute, saplingState, level.getRandom());
+
+		AABB searchVolume = new AABB(absolute).inflate(10.0).expandTowards(0, 25.0, 0);
+		boolean foundLog = false;
+		boolean foundLeaves = false;
+		for (BlockPos p : net.minecraft.core.BlockPos.betweenClosed(
+				net.minecraft.core.BlockPos.containing(searchVolume.minX, searchVolume.minY, searchVolume.minZ),
+				net.minecraft.core.BlockPos.containing(searchVolume.maxX, searchVolume.maxY, searchVolume.maxZ))) {
+			if (level.getBlockState(p).is(BlocksTC.leavesGreatwood.get())) {
+				foundLeaves = true;
+			}
+			if (level.getBlockState(p).is(BlocksTC.logGreatwood.get())) {
+				foundLog = true;
+				break;
+			}
+		}
+		helper.assertTrue(foundLog, "advancing a stage-1 greatwood sapling should have grown a real tree with log_greatwood blocks somewhere nearby (leaves found: " + foundLeaves + ")");
 		helper.succeed();
 	}
 

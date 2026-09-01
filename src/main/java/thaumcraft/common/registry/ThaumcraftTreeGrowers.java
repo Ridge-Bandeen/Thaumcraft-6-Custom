@@ -25,6 +25,12 @@ public final class ThaumcraftTreeGrowers {
 	public static final TreeGrower SILVERWOOD = new TreeGrower(
 			"thaumcraft_silverwood", Optional.empty(), Optional.of(SILVERWOOD_TREE), Optional.empty());
 
+	public static final ResourceKey<ConfiguredFeature<?, ?>> GREATWOOD_TREE = ResourceKey.create(
+			Registries.CONFIGURED_FEATURE, ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "greatwood_tree"));
+
+	public static final TreeGrower GREATWOOD = new TreeGrower(
+			"thaumcraft_greatwood", Optional.empty(), Optional.of(GREATWOOD_TREE), Optional.empty());
+
 	private ThaumcraftTreeGrowers() {
 	}
 }

@@ -149,6 +149,24 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> silverwoodSlab =
 			ITEMS.registerSimpleBlockItem("silverwood_slab", BlocksTC.silverwoodSlab);
 
+	public static final DeferredItem<BlockItem> logGreatwood =
+			ITEMS.registerSimpleBlockItem("log_greatwood", BlocksTC.logGreatwood);
+
+	public static final DeferredItem<BlockItem> plankGreatwood =
+			ITEMS.registerSimpleBlockItem("plank_greatwood", BlocksTC.plankGreatwood);
+
+	public static final DeferredItem<BlockItem> leavesGreatwood =
+			ITEMS.registerSimpleBlockItem("leaves_greatwood", BlocksTC.leavesGreatwood);
+
+	public static final DeferredItem<BlockItem> saplingGreatwood =
+			ITEMS.registerSimpleBlockItem("sapling_greatwood", BlocksTC.saplingGreatwood);
+
+	public static final DeferredItem<BlockItem> greatwoodStairs =
+			ITEMS.registerSimpleBlockItem("greatwood_stairs", BlocksTC.greatwoodStairs);
+
+	public static final DeferredItem<BlockItem> greatwoodSlab =
+			ITEMS.registerSimpleBlockItem("greatwood_slab", BlocksTC.greatwoodSlab);
+
 	/** A common crafting component across several devices (Wand Workbench, Vis Battery, Recharge Pedestal,
 	 * etc. - all still unported). Its own recipe had been blocked all session on the Crucible not existing
 	 * yet; now that it does, this also lets caster_basic's recipe go back to its authentic pattern (see

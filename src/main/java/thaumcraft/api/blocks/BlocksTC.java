@@ -159,6 +159,47 @@ public final class BlocksTC {
 			SlabBlock::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0f).sound(SoundType.WOOD).ignitedByLava());
 
+	/**
+	 * Greatwood - the second magical wood set, same shape as Silverwood (see that block's own doc comment
+	 * above for the general pattern: vanilla base classes throughout, a mod-owned
+	 * {@link net.minecraft.world.level.block.grower.TreeGrower} instead of the original's hand-rolled
+	 * {@code WorldGenGreatwoodTrees}). One real difference from the original,
+	 * deliberately dropped: {@code WorldGenGreatwoodTrees}'s "giant" variant (a 2x2 sapling grid consumed to
+	 * grow an oversized tree, with cave spiders and loot spawned inside) - vanilla's own 2x2-sapling-to-giant-
+	 * tree logic is hardcoded to specific vanilla sapling blocks (dark oak/spruce) in {@code SaplingBlock}
+	 * itself, not a generic hook a modded sapling can opt into, and reproducing it custom would mean
+	 * rebuilding a real mechanic, not just porting data - out of scope here. A single Greatwood sapling still
+	 * grows into a real (if not giant) tree, using {@code minecraft:fancy_trunk_placer} with taller/wider
+	 * parameters than Silverwood's for a visually bigger canopy instead.
+	 */
+	public static final DeferredBlock<RotatedPillarBlock> logGreatwood = BLOCKS.registerBlock("log_greatwood",
+			RotatedPillarBlock::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0f, 5.0f).sound(SoundType.WOOD).ignitedByLava());
+
+	public static final DeferredBlock<Block> plankGreatwood = BLOCKS.registerBlock("plank_greatwood",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0f).sound(SoundType.WOOD).ignitedByLava());
+
+	public static final DeferredBlock<LeavesBlock> leavesGreatwood = BLOCKS.registerBlock("leaves_greatwood",
+			LeavesBlock::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).strength(0.2f).sound(SoundType.GRASS)
+					.randomTicks().noOcclusion().isValidSpawn((state, level, pos, type) -> false)
+					.isSuffocating((state, level, pos) -> false).isViewBlocking((state, level, pos) -> false)
+					.ignitedByLava().pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
+
+	public static final DeferredBlock<SaplingBlock> saplingGreatwood = BLOCKS.registerBlock("sapling_greatwood",
+			props -> new SaplingBlock(ThaumcraftTreeGrowers.GREATWOOD, props),
+			BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().randomTicks().instabreak().sound(SoundType.GRASS)
+					.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
+
+	public static final DeferredBlock<StairBlock> greatwoodStairs = BLOCKS.registerBlock("greatwood_stairs",
+			props -> new StairBlock(plankGreatwood.get().defaultBlockState(), props),
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0f).sound(SoundType.WOOD).ignitedByLava());
+
+	public static final DeferredBlock<SlabBlock> greatwoodSlab = BLOCKS.registerBlock("greatwood_slab",
+			SlabBlock::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0f).sound(SoundType.WOOD).ignitedByLava());
+
 	/** First device since the "shared inventory-tile base" was scoped and repeatedly deferred - see
 	 * {@link thaumcraft.common.tiles.devices.TileRechargePedestal}'s own doc comment for why this is a
 	 * purpose-built {@code BlockEntity} rather than a ported generic base. */

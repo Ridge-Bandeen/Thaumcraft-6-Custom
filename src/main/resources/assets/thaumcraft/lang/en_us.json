@@ -119,5 +119,12 @@
 
   "block.thaumcraft.vis_generator": "Vis Generator",
 
-  "block.thaumcraft.everfull_urn": "Everfull Urn"
+  "block.thaumcraft.everfull_urn": "Everfull Urn",
+
+  "block.thaumcraft.log_greatwood": "Greatwood Log",
+  "block.thaumcraft.plank_greatwood": "Greatwood Planks",
+  "block.thaumcraft.leaves_greatwood": "Greatwood Leaves",
+  "block.thaumcraft.sapling_greatwood": "Greatwood Sapling",
+  "block.thaumcraft.greatwood_stairs": "Greatwood Stairs",
+  "block.thaumcraft.greatwood_slab": "Greatwood Slab"
 }

@@ -1,5 +1,5 @@
 {
-    "parent": "block/stairs",
+    "parent": "minecraft:block/stairs",
     "textures": {
         "bottom": "thaumcraft:blocks/plank_greatwood",
         "top": "thaumcraft:blocks/plank_greatwood",
