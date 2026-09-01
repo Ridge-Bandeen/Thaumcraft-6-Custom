@@ -1,34 +1,23 @@
 package thaumcraft.common.tiles.devices;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.tileentity.TileEntityChest;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import thaumcraft.common.blocks.devices.BlockHungryChest;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 
-public class TileHungryChest extends TileEntityChest
-{
-    public void checkForAdjacentChests() {
-        if (!adjacentChestChecked) {
-            adjacentChestChecked = true;
-        }
-    }
-    
-    public boolean canRenderBreaking() {
-        return true;
-    }
-    
-    public void closeInventory(EntityPlayer player) {
-        if (!player.isSpectator() && getBlockType() instanceof BlockHungryChest) {
-            --numPlayersUsing;
-            world.addBlockEvent(pos, getBlockType(), 1, numPlayersUsing);
-            world.notifyNeighborsOfStateChange(pos, getBlockType(), true);
-            world.notifyNeighborsOfStateChange(pos.down(), getBlockType(), true);
-        }
-    }
-    
-    public boolean shouldRefresh(World world, BlockPos pos, IBlockState oldState, IBlockState newState) {
-        return oldState.getBlock() != newState.getBlock();
-    }
+/**
+ * A thin visibility shim over vanilla's {@link ChestBlockEntity} - see
+ * {@link thaumcraft.common.blocks.devices.BlockHungryChest}'s own doc comment for why no real custom tile
+ * class was originally planned here. {@code ChestBlockEntity}'s own 3-arg constructor (the one that lets a
+ * subclass bind a non-vanilla {@code BlockEntityType}) is {@code protected}, so a same-package caller can't
+ * reach it directly; its public 2-arg constructor unconditionally hardcodes vanilla's own
+ * {@code BlockEntityType.CHEST}, which fails NeoForge's block-entity-type validation once placed under a
+ * different block (found by actually running the GameTest, not by inspection - see the port-tracking
+ * memory notes). This class exists purely to make that 3-arg constructor callable with the real registered
+ * type; it adds no behavior of its own.
+ */
+public class TileHungryChest extends ChestBlockEntity {
+	public TileHungryChest(BlockPos pos, BlockState state) {
+		super(ThaumcraftBlockEntities.HUNGRY_CHEST.get(), pos, state);
+	}
 }

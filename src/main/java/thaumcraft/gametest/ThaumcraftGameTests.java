@@ -180,7 +180,7 @@ public class ThaumcraftGameTests {
 				"focus_trap", "focus_trap_crucible",
 				"focus_sanctuary", "focus_sanctuary_crucible",
 				"caster_basic", "thaumometer", "quicksilver_smelting", "mirrored_glass", "vis_resonator", "alumentum",
-				"recharge_pedestal",
+				"recharge_pedestal", "hungry_chest",
 				"amber_block", "amber_block_to_amber", "amber_brick", "amber_brick_to_block",
 				"crystal_essence_aer", "crystal_essence_aqua", "crystal_essence_ignis",
 				"crystal_essence_terra", "crystal_essence_ordo", "crystal_essence_perditio",
@@ -1157,6 +1157,61 @@ public class ThaumcraftGameTests {
 		ItemStack ejected = tile.getItem();
 		tile.setItem(ItemStack.EMPTY);
 		helper.assertTrue(ejected.getItem() == TEST_RECHARGABLE_ITEM.get(), "the ejected item should be the same recharged stack");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Hungry Chest - a real vanilla ChestBlock subclass (see BlockHungryChest's own doc comment). No new
+	// tile class was needed at all, so these tests focus on the two things this port actually adds:
+	// auto-eating dropped items on collision, and never linking into a double chest (even with itself).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void hungryChestAutoConsumesADroppedItem(GameTestHelper helper) {
+		BlockPos relPos = BlockPos.ZERO;
+		helper.setBlock(relPos, BlocksTC.hungryChest.get());
+		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(relPos);
+		BlockPos absolute = helper.absolutePos(relPos);
+
+		ItemEntity dropped = new ItemEntity(helper.getLevel(), absolute.getX() + 0.5, absolute.getY() + 0.5, absolute.getZ() + 0.5, new ItemStack(Items.STICK, 5));
+		helper.getLevel().addFreshEntity(dropped);
+
+		// entityInside is driven by the entity's own physics tick, same as the crucible's own auto-consume
+		// test - let vanilla call it naturally rather than invoking it directly. Uses succeedWhen (not a
+		// fixed-delay guess) since a freshly spawned entity's first physics tick - and so its first
+		// entityInside call - doesn't necessarily land within a couple of ticks of being added; confirmed
+		// by an interim diagnostic showing entityInside firing correctly, just later than a 3-tick guess
+		// allowed for - the same lesson as the Fireball focus test earlier this session.
+		helper.succeedWhen(() -> {
+			boolean foundSticks = false;
+			for (int i = 0; i < chest.getContainerSize(); i++) {
+				if (chest.getItem(i).is(Items.STICK)) {
+					foundSticks = true;
+				}
+			}
+			helper.assertTrue(foundSticks, "a dropped item resting on a hungry chest should have been auto-consumed into it by now");
+			helper.assertTrue(dropped.isRemoved(), "the fully-consumed item entity should have been removed");
+		});
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void hungryChestsNeverLinkIntoADoubleChest(GameTestHelper helper) {
+		BlockPos posA = new BlockPos(2, 1, 2);
+		BlockPos posB = new BlockPos(3, 1, 2);
+		helper.setBlock(posA, BlocksTC.hungryChest.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.ChestBlock.FACING, net.minecraft.core.Direction.NORTH));
+		helper.setBlock(posB, BlocksTC.hungryChest.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.ChestBlock.FACING, net.minecraft.core.Direction.NORTH));
+
+		// Neighbor-change notification (as if a player had just placed the second chest next to the first).
+		helper.getLevel().neighborChanged(helper.absolutePos(posA), BlocksTC.hungryChest.get(), helper.absolutePos(posB));
+
+		net.minecraft.world.level.block.state.properties.ChestType typeA =
+				helper.getBlockState(posA).getValue(net.minecraft.world.level.block.ChestBlock.TYPE);
+		net.minecraft.world.level.block.state.properties.ChestType typeB =
+				helper.getBlockState(posB).getValue(net.minecraft.world.level.block.ChestBlock.TYPE);
+		helper.assertTrue(typeA == net.minecraft.world.level.block.state.properties.ChestType.SINGLE, "two adjacent hungry chests should never link - chest A was " + typeA);
+		helper.assertTrue(typeB == net.minecraft.world.level.block.state.properties.ChestType.SINGLE, "two adjacent hungry chests should never link - chest B was " + typeB);
 		helper.succeed();
 	}
 }

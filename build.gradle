@@ -211,6 +211,9 @@ sourceSets {
             include 'thaumcraft/common/blocks/devices/BlockRechargePedestal.java'
             include 'thaumcraft/common/tiles/devices/TileRechargePedestal.java'
 
+            include 'thaumcraft/common/blocks/devices/BlockHungryChest.java'
+            include 'thaumcraft/common/tiles/devices/TileHungryChest.java'
+
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
     }

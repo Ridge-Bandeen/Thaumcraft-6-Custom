@@ -162,6 +162,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> rechargePedestal =
 			ITEMS.registerSimpleBlockItem("recharge_pedestal", BlocksTC.rechargePedestal);
 
+	public static final DeferredItem<BlockItem> hungryChest =
+			ITEMS.registerSimpleBlockItem("hungry_chest", BlocksTC.hungryChest);
+
 	private ItemsTC() {
 	}
 }

@@ -1,190 +1,124 @@
 package thaumcraft.common.blocks.devices;
-import com.google.common.base.Predicate;
-import com.google.common.collect.UnmodifiableIterator;
-import java.util.Random;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockContainer;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.properties.PropertyDirection;
-import net.minecraft.block.state.BlockFaceShape;
-import net.minecraft.block.state.BlockStateContainer;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.inventory.Container;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.InventoryHelper;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumBlockRenderType;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.Mirror;
-import net.minecraft.util.Rotation;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import thaumcraft.api.ThaumcraftInvHelper;
-import thaumcraft.common.config.ConfigItems;
-import thaumcraft.common.tiles.devices.TileHungryChest;
 
+import java.util.function.Supplier;
 
-public class BlockHungryChest extends BlockContainer
-{
-    public static PropertyDirection FACING;
-    private Random rand;
-    
-    public BlockHungryChest() {
-        super(Material.WOOD);
-        rand = new Random();
-        setUnlocalizedName("hungry_chest");
-        setRegistryName("thaumcraft", "hungry_chest");
-        setDefaultState(blockState.getBaseState().withProperty((IProperty)BlockHungryChest.FACING, (Comparable)EnumFacing.NORTH));
-        setHardness(2.5f);
-        setSoundType(SoundType.WOOD);
-        setCreativeTab(ConfigItems.TABTC);
-    }
-    
-    public BlockFaceShape getBlockFaceShape(IBlockAccess worldIn, IBlockState state, BlockPos pos, EnumFacing face) {
-        return BlockFaceShape.UNDEFINED;
-    }
-    
-    public boolean canHarvestBlock(IBlockAccess world, BlockPos pos, EntityPlayer player) {
-        return true;
-    }
-    
-    public EnumBlockRenderType getRenderType(IBlockState state) {
-        return EnumBlockRenderType.INVISIBLE;
-    }
-    
-    public boolean isOpaqueCube(IBlockState state) {
-        return false;
-    }
-    
-    public boolean isFullCube(IBlockState state) {
-        return false;
-    }
-    
-    public AxisAlignedBB getBoundingBox(IBlockState state, IBlockAccess source, BlockPos pos) {
-        return new AxisAlignedBB(0.0625, 0.0, 0.0625, 0.9375, 0.875, 0.9375);
-    }
-    
-    public AxisAlignedBB getCollisionBoundingBox(IBlockState state, IBlockAccess worldIn, BlockPos pos) {
-        return new AxisAlignedBB(0.0625, 0.0, 0.0625, 0.9375, 0.875, 0.9375);
-    }
-    
-    public IBlockState getStateForPlacement(World worldIn, BlockPos pos, EnumFacing facing, float hitX, float hitY, float hitZ, int meta, EntityLivingBase placer) {
-        return getDefaultState().withProperty((IProperty)BlockHungryChest.FACING, (Comparable)placer.getHorizontalFacing());
-    }
-    
-    public void onBlockPlacedBy(World worldIn, BlockPos pos, IBlockState state, EntityLivingBase placer, ItemStack stack) {
-        EnumFacing enumfacing = EnumFacing.getHorizontal(MathHelper.floor(placer.rotationYaw * 4.0f / 360.0f + 0.5) & 0x3).getOpposite();
-        state = state.withProperty((IProperty)BlockHungryChest.FACING, (Comparable)enumfacing);
-        worldIn.setBlockState(pos, state, 3);
-    }
-    
-    public void breakBlock(World worldIn, BlockPos pos, IBlockState state) {
-        TileEntity tileentity = worldIn.getTileEntity(pos);
-        if (tileentity instanceof IInventory) {
-            InventoryHelper.dropInventoryItems(worldIn, pos, (IInventory)tileentity);
-            worldIn.updateComparatorOutputLevel(pos, this);
-        }
-        super.breakBlock(worldIn, pos, state);
-    }
-    
-    public boolean onBlockActivated(World world, BlockPos pos, IBlockState state, EntityPlayer player, EnumHand hand, EnumFacing side, float hitX, float hitY, float hitZ) {
-        if (world.isRemote) {
-            return true;
-        }
-        TileEntity tileentity = world.getTileEntity(pos);
-        if (tileentity instanceof IInventory) {
-            player.displayGUIChest((IInventory)tileentity);
-        }
-        return true;
-    }
-    
-    public void onEntityCollidedWithBlock(World world, BlockPos pos, IBlockState state, Entity entity) {
-        Object var10 = world.getTileEntity(pos);
-        if (var10 == null) {
-            return;
-        }
-        if (world.isRemote) {
-            return;
-        }
-        if (entity instanceof EntityItem && !entity.isDead) {
-            ItemStack leftovers = ThaumcraftInvHelper.insertStackAt(world, pos, EnumFacing.UP, ((EntityItem)entity).getItem(), false);
-            if (leftovers == null || leftovers.isEmpty() || leftovers.getCount() != ((EntityItem)entity).getItem().getCount()) {
-                entity.playSound(SoundEvents.ENTITY_GENERIC_EAT, 0.25f, (world.rand.nextFloat() - world.rand.nextFloat()) * 0.2f + 1.0f);
-            }
-            if (leftovers != null && !leftovers.isEmpty()) {
-                ((EntityItem)entity).setItem(leftovers);
-            }
-            else {
-                entity.setDead();
-            }
-            ((TileHungryChest)var10).markDirty();
-        }
-    }
-    
-    public boolean hasComparatorInputOverride(IBlockState state) {
-        return true;
-    }
-    
-    public int getComparatorInputOverride(IBlockState state, World worldIn, BlockPos pos) {
-        Object var10 = worldIn.getTileEntity(pos);
-        if (var10 instanceof TileHungryChest) {
-            return Container.calcRedstoneFromInventory((IInventory)var10);
-        }
-        return 0;
-    }
-    
-    public boolean rotateBlock(World world, BlockPos pos, EnumFacing axis) {
-        IBlockState state = world.getBlockState(pos);
-        for (IProperty<?> prop : state.getProperties().keySet()) {
-            if (prop.getName().equals("facing")) {
-                world.setBlockState(pos, state.cycleProperty((IProperty)prop));
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    public IBlockState getStateFromMeta(int meta) {
-        EnumFacing enumfacing = EnumFacing.getFront(meta);
-        if (enumfacing.getAxis() == EnumFacing.Axis.Y) {
-            enumfacing = EnumFacing.NORTH;
-        }
-        return getDefaultState().withProperty((IProperty)BlockHungryChest.FACING, (Comparable)enumfacing);
-    }
-    
-    public int getMetaFromState(IBlockState state) {
-        return ((EnumFacing)state.getValue((IProperty)BlockHungryChest.FACING)).getIndex();
-    }
-    
-    protected BlockStateContainer createBlockState() {
-        return new BlockStateContainer(this, BlockHungryChest.FACING);
-    }
-    
-    public TileEntity createNewTileEntity(World par1World, int m) {
-        return new TileHungryChest();
-    }
-    
-    public IBlockState withRotation(IBlockState state, Rotation rot) {
-        return state.withProperty((IProperty)BlockHungryChest.FACING, (Comparable)rot.rotate((EnumFacing)state.getValue((IProperty)BlockHungryChest.FACING)));
-    }
-    
-    public IBlockState withMirror(IBlockState state, Mirror mirrorIn) {
-        return state.withRotation(mirrorIn.toRotation((EnumFacing)state.getValue((IProperty)BlockHungryChest.FACING)));
-    }
-    
-    static {
-        FACING = PropertyDirection.create("facing", EnumFacing.Plane.HORIZONTAL);
-    }
+import com.mojang.serialization.MapCodec;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.ChestType;
+
+/**
+ * Replaces the old (1.12.2) {@code BlockHungryChest} - a chest that never links into a double chest and
+ * auto-consumes dropped items walking over it, otherwise a completely normal chest. Extends vanilla's own
+ * {@link ChestBlock} directly rather than reimplementing a chest from scratch (reusing its real GUI,
+ * lid-open animation, comparator output, and contents-drop-on-break for free) - registered under its own
+ * {@link BlockEntityType} ({@code thaumcraft.common.tiles.devices.TileHungryChest}, a thin visibility shim
+ * over vanilla's own {@link ChestBlockEntity} adding no real behavior - see that class's own doc comment)
+ * rather than vanilla's {@code BlockEntityType.CHEST}, both so the two never visually/logically merge and
+ * to keep this project's "every block/tile pair gets its own registry entry" convention. Note that
+ * {@link ChestBlock#newBlockEntity} itself is hardcoded to build a plain {@code ChestBlockEntity(pos,
+ * state)} - it never actually consults its own injected {@code blockEntityType} supplier at construction
+ * time (that field is only read by {@code getTicker}/{@code combine}/{@code blockEntityType()}) - found by
+ * actually running the GameTest and getting "Invalid block entity minecraft:chest" despite the supplier
+ * being wired correctly, not by inspection. {@link #newBlockEntity} is overridden here for that reason.
+ *
+ * The original suppressed merging by overriding {@code TileEntityChest#checkForAdjacentChests} to always
+ * report "already checked" without actually scanning - the direct modern equivalent is overriding the two
+ * places {@link ChestBlock} itself decides to merge ({@link #getStateForPlacement}/{@link #updateShape}) to
+ * never produce anything but {@link ChestType#SINGLE}, rather than relying on being a distinct registered
+ * Block instance (which alone would still let two Hungry Chests merge with each other).
+ *
+ * Simplified vs the original: no lid-open animation - the block model is a plain static populated model
+ * (the original's own resting-pose asset, {@code models/block/chest.json}) rendered normally instead of
+ * through vanilla's chest-specific {@code BlockEntityRenderer}, same "drop the animation, keep the
+ * function" precedent as the Bellows/most other devices this session. Item insertion on collision is a
+ * simple manual merge-then-empty-slot loop, not a faithful port of {@code ThaumcraftInvHelper.insertStackAt}
+ * (itself part of the now-superseded {@code InventoryUtils} grab-bag).
+ */
+public class BlockHungryChest extends ChestBlock {
+
+	public static final MapCodec<BlockHungryChest> CODEC = simpleCodec(
+			props -> new BlockHungryChest(props, () -> thaumcraft.common.registry.ThaumcraftBlockEntities.HUNGRY_CHEST.get()));
+
+	public BlockHungryChest(BlockBehaviour.Properties properties, Supplier<BlockEntityType<? extends ChestBlockEntity>> blockEntityType) {
+		super(properties, blockEntityType);
+	}
+
+	@Override
+	public MapCodec<? extends ChestBlock> codec() {
+		return CODEC;
+	}
+
+	@Override
+	public BlockState getStateForPlacement(BlockPlaceContext context) {
+		Direction facing = context.getHorizontalDirection().getOpposite();
+		return defaultBlockState().setValue(FACING, facing).setValue(TYPE, ChestType.SINGLE)
+				.setValue(WATERLOGGED, context.getLevel().getFluidState(context.getClickedPos()).getType() == net.minecraft.world.level.material.Fluids.WATER);
+	}
+
+	@Override
+	public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+		return new thaumcraft.common.tiles.devices.TileHungryChest(pos, state);
+	}
+
+	@Override
+	protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+		// Deliberately does not call super - never re-evaluates into a double chest after placement either.
+		return state;
+	}
+
+	@Override
+	protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
+		if (!level.isClientSide && entity instanceof ItemEntity itemEntity && itemEntity.isAlive()
+				&& level.getBlockEntity(pos) instanceof ChestBlockEntity chest) {
+			ItemStack leftover = insertIntoChest(chest, itemEntity.getItem().copy());
+			boolean atePart = leftover.getCount() != itemEntity.getItem().getCount();
+			if (leftover.isEmpty()) {
+				itemEntity.discard();
+			} else {
+				itemEntity.setItem(leftover);
+			}
+			if (atePart) {
+				level.playSound(null, pos, SoundEvents.GENERIC_EAT, net.minecraft.sounds.SoundSource.BLOCKS, 0.25f,
+						(level.getRandom().nextFloat() - level.getRandom().nextFloat()) * 0.2f + 1.0f);
+				chest.setChanged();
+			}
+		}
+	}
+
+	private static ItemStack insertIntoChest(ChestBlockEntity chest, ItemStack stack) {
+		for (int i = 0; i < chest.getContainerSize() && !stack.isEmpty(); i++) {
+			ItemStack slot = chest.getItem(i);
+			if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, stack)) {
+				int room = slot.getMaxStackSize() - slot.getCount();
+				if (room > 0) {
+					int moved = Math.min(room, stack.getCount());
+					slot.grow(moved);
+					stack.shrink(moved);
+				}
+			}
+		}
+		for (int i = 0; i < chest.getContainerSize() && !stack.isEmpty(); i++) {
+			if (chest.getItem(i).isEmpty()) {
+				int moved = Math.min(stack.getMaxStackSize(), stack.getCount());
+				chest.setItem(i, stack.copyWithCount(moved));
+				stack.shrink(moved);
+			}
+		}
+		return stack;
+	}
 }

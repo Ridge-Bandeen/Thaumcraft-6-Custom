@@ -1,20 +1,12 @@
 {
-    "forge_marker": 1,
-    "defaults": {
-        "model": "thaumcraft:chest",
-        "transform": "forge:default-block",
-        "textures": {
-          "particle": "thaumcraft:models/chesthungry",
-          "texture": "thaumcraft:models/chesthungry"
-        }
-    },
-    "variants": {
-        "inventory":[{}],
-        "facing=up":    { "model": "thaumcraft:chest"},        
-        "facing=down":    { "model": "thaumcraft:chest"},        
-        "facing=west":    { "model": "thaumcraft:chest"},        
-        "facing=south":    { "model": "thaumcraft:chest"},        
-        "facing=north":    { "model": "thaumcraft:chest"},        
-        "facing=east":    { "model": "thaumcraft:chest"}        
-    }
+  "variants": {
+    "facing=north,type=single,waterlogged=false": { "model": "thaumcraft:block/chest" },
+    "facing=north,type=single,waterlogged=true":  { "model": "thaumcraft:block/chest" },
+    "facing=south,type=single,waterlogged=false": { "model": "thaumcraft:block/chest", "y": 180 },
+    "facing=south,type=single,waterlogged=true":  { "model": "thaumcraft:block/chest", "y": 180 },
+    "facing=west,type=single,waterlogged=false":  { "model": "thaumcraft:block/chest", "y": 270 },
+    "facing=west,type=single,waterlogged=true":   { "model": "thaumcraft:block/chest", "y": 270 },
+    "facing=east,type=single,waterlogged=false":  { "model": "thaumcraft:block/chest", "y": 90 },
+    "facing=east,type=single,waterlogged=true":   { "model": "thaumcraft:block/chest", "y": 90 }
+  }
 }

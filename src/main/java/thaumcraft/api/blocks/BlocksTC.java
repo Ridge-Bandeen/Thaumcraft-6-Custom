@@ -166,6 +166,13 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.devices.BlockRechargePedestal::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(1.5f, 2.0f).sound(SoundType.STONE).noOcclusion());
 
+	/** A chest that never links into a double chest and eats dropped items walking over it - see
+	 * {@link thaumcraft.common.blocks.devices.BlockHungryChest}'s own doc comment for why it extends
+	 * vanilla's {@link net.minecraft.world.level.block.ChestBlock} directly. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockHungryChest> hungryChest = BLOCKS.registerBlock("hungry_chest",
+			props -> new thaumcraft.common.blocks.devices.BlockHungryChest(props, () -> thaumcraft.common.registry.ThaumcraftBlockEntities.HUNGRY_CHEST.get()),
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD).noOcclusion());
+
 	private BlocksTC() {
 	}
 }
