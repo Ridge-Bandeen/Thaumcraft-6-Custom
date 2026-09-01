@@ -218,6 +218,9 @@ sourceSets {
             include 'thaumcraft/common/items/resources/ItemMagicDust.java'
             include 'thaumcraft/common/registry/ThaumcraftDustTriggers.java'
 
+            include 'thaumcraft/common/blocks/devices/BlockLampArcane.java'
+            include 'thaumcraft/common/tiles/devices/TileLampArcane.java'
+
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
     }

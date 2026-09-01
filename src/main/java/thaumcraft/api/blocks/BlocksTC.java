@@ -173,6 +173,13 @@ public final class BlocksTC {
 			props -> new thaumcraft.common.blocks.devices.BlockHungryChest(props, () -> thaumcraft.common.registry.ThaumcraftBlockEntities.HUNGRY_CHEST.get()),
 			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD).noOcclusion());
 
+	/** Scatters real light sources around itself while lit - see
+	 * {@link thaumcraft.common.tiles.devices.TileLampArcane}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockLampArcane> lampArcane = BLOCKS.registerBlock("lamp_arcane",
+			thaumcraft.common.blocks.devices.BlockLampArcane::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.METAL).noOcclusion()
+					.lightLevel(state -> state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED) ? 15 : 0));
+
 	private BlocksTC() {
 	}
 }

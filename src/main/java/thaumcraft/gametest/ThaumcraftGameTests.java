@@ -180,7 +180,7 @@ public class ThaumcraftGameTests {
 				"focus_trap", "focus_trap_crucible",
 				"focus_sanctuary", "focus_sanctuary_crucible",
 				"caster_basic", "thaumometer", "quicksilver_smelting", "mirrored_glass", "vis_resonator", "alumentum",
-				"recharge_pedestal", "hungry_chest", "salis_mundus",
+				"recharge_pedestal", "hungry_chest", "salis_mundus", "lamp_arcane",
 				"amber_block", "amber_block_to_amber", "amber_brick", "amber_brick_to_block",
 				"crystal_essence_aer", "crystal_essence_aqua", "crystal_essence_ignis",
 				"crystal_essence_terra", "crystal_essence_ordo", "crystal_essence_perditio",
@@ -1271,6 +1271,57 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(helper.getBlockState(relPos).is(Blocks.DIRT), "an unrelated block should be untouched");
 		helper.assertFalse(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).isEmpty(), "the dust should not have been consumed when no trigger matched");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Arcane Lamp (BlockLampArcane/TileLampArcane) - scatters real vanilla light blocks around itself. The
+	// tile's own tick() only fires on real-world-time multiples of 5, so this lets GameTest advance real
+	// ticks naturally (succeedWhen) rather than fighting that gate with direct calls.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void arcaneLampScattersLightBlocksNearby(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(4, 2, 4);
+		helper.setBlock(relPos, BlocksTC.lampArcane.get());
+		BlockPos absolute = helper.absolutePos(relPos);
+		thaumcraft.common.tiles.devices.TileLampArcane tile = helper.getBlockEntity(relPos);
+
+		// Calls scatterAttempt directly, many times, rather than waiting on real ticks - most of a ±15
+		// scatter radius falls outside the shared "empty" structure's tiny bounds, into GameTest's own
+		// containment barrier (solid, so isEmptyBlock rejects it every time), the same class of issue the
+		// Silverwood tree test hit earlier this session. Enough direct attempts makes the odds of at least
+		// one landing inside the structure's own open interior overwhelming, without needing a bigger
+		// dedicated structure just for this one test.
+		for (int i = 0; i < 300; i++) {
+			tile.scatterAttempt(helper.getLevel(), absolute);
+		}
+
+		AABB searchVolume = new AABB(absolute).inflate(15.0);
+		boolean foundLight = false;
+		for (BlockPos p : net.minecraft.core.BlockPos.betweenClosed(
+				net.minecraft.core.BlockPos.containing(searchVolume.minX, searchVolume.minY, searchVolume.minZ),
+				net.minecraft.core.BlockPos.containing(searchVolume.maxX, searchVolume.maxY, searchVolume.maxZ))) {
+			if (helper.getLevel().getBlockState(p).is(net.minecraft.world.level.block.Blocks.LIGHT)) {
+				foundLight = true;
+				break;
+			}
+		}
+		helper.assertTrue(foundLight, "an enabled arcane lamp should have scattered at least one light block nearby after 300 attempts");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void arcaneLampIsLitUnlessRedstonePowered(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(4, 2, 4);
+		helper.setBlock(relPos, BlocksTC.lampArcane.get());
+
+		helper.assertTrue(helper.getBlockState(relPos).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED),
+				"a freshly placed, unpowered arcane lamp should be enabled");
+
+		helper.setBlock(relPos.below(), Blocks.REDSTONE_BLOCK);
+		helper.assertTrue(!helper.getBlockState(relPos).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED),
+				"a powered arcane lamp should turn off");
 		helper.succeed();
 	}
 }

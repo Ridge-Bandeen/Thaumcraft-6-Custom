@@ -113,5 +113,7 @@
   "block.thaumcraft.recharge_pedestal": "Recharge Pedestal",
   "block.thaumcraft.hungry_chest": "Hungry Chest",
 
-  "item.thaumcraft.salis_mundus": "Salis Mundus"
+  "item.thaumcraft.salis_mundus": "Salis Mundus",
+
+  "block.thaumcraft.lamp_arcane": "Arcane Lamp"
 }

@@ -8,6 +8,7 @@ import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.common.tiles.crafting.TileArcaneWorkbench;
 import thaumcraft.common.tiles.crafting.TileCrucible;
 import thaumcraft.common.tiles.devices.TileRechargePedestal;
+import thaumcraft.common.tiles.devices.TileLampArcane;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
 public final class ThaumcraftBlockEntities {
@@ -28,6 +29,9 @@ public final class ThaumcraftBlockEntities {
 	 * behavior of its own. */
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.devices.TileHungryChest>> HUNGRY_CHEST = BLOCK_ENTITIES.register("hungry_chest",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.devices.TileHungryChest::new, BlocksTC.hungryChest.get()).build(null));
+
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileLampArcane>> LAMP_ARCANE = BLOCK_ENTITIES.register("lamp_arcane",
+			() -> BlockEntityType.Builder.of(TileLampArcane::new, BlocksTC.lampArcane.get()).build(null));
 
 	private ThaumcraftBlockEntities() {
 	}

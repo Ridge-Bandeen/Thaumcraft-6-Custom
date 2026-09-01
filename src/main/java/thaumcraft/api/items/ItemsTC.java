@@ -169,6 +169,9 @@ public final class ItemsTC {
 	public static final DeferredItem<ItemMagicDust> salisMundus =
 			ITEMS.registerItem("salis_mundus", ItemMagicDust::new);
 
+	public static final DeferredItem<BlockItem> lampArcane =
+			ITEMS.registerSimpleBlockItem("lamp_arcane", BlocksTC.lampArcane);
+
 	private ItemsTC() {
 	}
 }
