@@ -394,7 +394,7 @@ public class ThaumcraftGameTests {
 				"plank_greatwood", "greatwood_stairs", "greatwood_slab",
 				"arcane_ear", "arcane_ear_toggle",
 				"jar_normal",
-				"lamp_growth"
+				"lamp_growth", "lamp_fertility"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -1956,6 +1956,48 @@ public class ThaumcraftGameTests {
 		helper.setBlock(lampPos.above(), Blocks.AIR);
 
 		helper.assertTrue(helper.getBlockState(lampPos).isAir(), "removing the block a growth lamp draws essentia from should make the lamp itself pop off");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Fertility Lamp (TileLampFertility) - same charge/essentia shell as the Growth Lamp, see its own doc
+	// comment for the breeding mechanic.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void fertilityLampBreedsTwoAdjacentAdultAnimals(GameTestHelper helper) {
+		BlockPos lampPos = new BlockPos(2, 2, 2);
+		helper.setBlock(lampPos.below(), Blocks.DIRT);
+		helper.setBlock(lampPos, BlocksTC.lampFertility.get());
+		BlockPos lampAbs = helper.absolutePos(lampPos);
+		thaumcraft.common.tiles.devices.TileLampFertility lamp = helper.getBlockEntity(lampPos);
+		lamp.setChargesForTest(10);
+
+		ServerLevel level = helper.getLevel();
+		Pig pig1 = EntityType.PIG.create(level);
+		Pig pig2 = EntityType.PIG.create(level);
+		pig1.moveTo(lampAbs.getX() + 0.5, lampAbs.getY() + 1.0, lampAbs.getZ() + 0.5, 0, 0);
+		pig2.moveTo(lampAbs.getX() + 1.5, lampAbs.getY() + 1.0, lampAbs.getZ() + 0.5, 0, 0);
+		level.addFreshEntity(pig1);
+		level.addFreshEntity(pig2);
+
+		lamp.tryBreedAnimalsForTest(level, lampAbs);
+
+		helper.assertTrue(pig1.isInLove() && pig2.isInLove(), "the fertility lamp should have put both adjacent adult pigs in love");
+		helper.assertTrue(lamp.getCharges() == 5, "breeding should have cost 5 charges, got " + lamp.getCharges());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void fertilityLampDropsWhenItsSupportIsRemoved(GameTestHelper helper) {
+		BlockPos lampPos = new BlockPos(2, 2, 2);
+		helper.setBlock(lampPos.below(), Blocks.DIRT);
+		helper.setBlock(lampPos, BlocksTC.lampFertility.get());
+		helper.assertTrue(helper.getBlockState(lampPos).is(BlocksTC.lampFertility.get()), "sanity check: the lamp should be placed");
+
+		helper.setBlock(lampPos.below(), Blocks.AIR);
+
+		helper.assertTrue(helper.getBlockState(lampPos).isAir(), "removing the block a fertility lamp draws essentia from should make the lamp itself pop off");
 		helper.succeed();
 	}
 }

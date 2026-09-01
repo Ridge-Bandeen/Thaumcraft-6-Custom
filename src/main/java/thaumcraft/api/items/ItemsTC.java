@@ -208,6 +208,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> lampGrowth =
 			ITEMS.registerSimpleBlockItem("lamp_growth", BlocksTC.lampGrowth);
 
+	public static final DeferredItem<BlockItem> lampFertility =
+			ITEMS.registerSimpleBlockItem("lamp_fertility", BlocksTC.lampFertility);
+
 	private ItemsTC() {
 	}
 }

@@ -259,6 +259,13 @@ public final class BlocksTC {
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.METAL).noOcclusion()
 					.lightLevel(state -> state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED) ? 15 : 0));
 
+	/** Same charge/essentia shell as {@link #lampGrowth} - see
+	 * {@link thaumcraft.common.tiles.devices.TileLampFertility}'s own doc comment for the breeding mechanic. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockLampFertility> lampFertility = BLOCKS.registerBlock("lamp_fertility",
+			thaumcraft.common.blocks.devices.BlockLampFertility::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.METAL).noOcclusion()
+					.lightLevel(state -> state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED) ? 15 : 0));
+
 	private BlocksTC() {
 	}
 }

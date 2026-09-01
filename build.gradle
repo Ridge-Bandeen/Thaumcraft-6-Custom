@@ -236,6 +236,9 @@ sourceSets {
             include 'thaumcraft/common/blocks/devices/BlockLampGrowth.java'
             include 'thaumcraft/common/tiles/devices/TileLampGrowth.java'
 
+            include 'thaumcraft/common/blocks/devices/BlockLampFertility.java'
+            include 'thaumcraft/common/tiles/devices/TileLampFertility.java'
+
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
     }

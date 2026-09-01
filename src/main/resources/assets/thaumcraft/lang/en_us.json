@@ -133,5 +133,7 @@
 
   "block.thaumcraft.jar_normal": "Warded Jar",
 
-  "block.thaumcraft.lamp_growth": "Growth Lamp"
+  "block.thaumcraft.lamp_growth": "Growth Lamp",
+
+  "block.thaumcraft.lamp_fertility": "Fertility Lamp"
 }

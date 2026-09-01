@@ -13,6 +13,7 @@ import thaumcraft.common.tiles.devices.TileVisGenerator;
 import thaumcraft.common.tiles.devices.TileWaterJug;
 import thaumcraft.common.tiles.devices.TileArcaneEar;
 import thaumcraft.common.tiles.devices.TileLampGrowth;
+import thaumcraft.common.tiles.devices.TileLampFertility;
 import thaumcraft.common.tiles.essentia.TileJarFillable;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
@@ -56,6 +57,9 @@ public final class ThaumcraftBlockEntities {
 
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileLampGrowth>> LAMP_GROWTH = BLOCK_ENTITIES.register("lamp_growth",
 			() -> BlockEntityType.Builder.of(TileLampGrowth::new, BlocksTC.lampGrowth.get()).build(null));
+
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileLampFertility>> LAMP_FERTILITY = BLOCK_ENTITIES.register("lamp_fertility",
+			() -> BlockEntityType.Builder.of(TileLampFertility::new, BlocksTC.lampFertility.get()).build(null));
 
 	private ThaumcraftBlockEntities() {
 	}
