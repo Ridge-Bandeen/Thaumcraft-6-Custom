@@ -1,98 +1,80 @@
 package thaumcraft.common.tiles.crafting;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockAccess;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.client.fx.FXDispatcher;
-import thaumcraft.common.blocks.devices.BlockInlay;
-import thaumcraft.common.tiles.TileThaumcraftInventory;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 
-public class TilePedestal extends TileThaumcraftInventory
-{
-    public TilePedestal() {
-        super(1);
-        syncedSlots = new int[] { 0 };
-    }
-    
-    @Override
-    public int getInventoryStackLimit() {
-        return 1;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public AxisAlignedBB getRenderBoundingBox() {
-        return new AxisAlignedBB(getPos().getX(), getPos().getY(), getPos().getZ(), getPos().getX() + 1, getPos().getY() + 2, getPos().getZ() + 1);
-    }
-    
-    @Override
-    public boolean isItemValidForSlot(int par1, ItemStack stack2) {
-        return stack2.isEmpty() || getStackInSlot(par1).isEmpty();
-    }
-    
-    public void setInventorySlotContentsFromInfusion(int par1, ItemStack stack2) {
-        setInventorySlotContents(par1, stack2);
-        markDirty();
-        if (!world.isRemote) {
-            syncTile(false);
-        }
-    }
-    
-    public BlockPos findInstabilityMitigator() {
-        if (getBlockMetadata() > 0) {
-            BlockPos pp = seekSourceRecursive(pos, getBlockMetadata());
-            if (pp != null) {
-                return pp;
-            }
-        }
-        return null;
-    }
-    
-    private BlockPos seekSourceRecursive(BlockPos pos, int lastCharge) {
-        for (EnumFacing face : EnumFacing.HORIZONTALS) {
-            BlockPos pp = pos.offset(face);
-            int ss = BlockInlay.getSourceStrengthAt(world, pp);
-            if (ss >= 5) {
-                return pp;
-            }
-            IBlockState bs = world.getBlockState(pp);
-            if (bs.getProperties().containsKey(BlockInlay.CHARGE)) {
-                int charge = (int)bs.getValue((IProperty)BlockInlay.CHARGE);
-                if (charge > lastCharge) {
-                    BlockPos ob = seekSourceRecursive(pp, charge);
-                    if (ob != null) {
-                        return ob;
-                    }
-                }
-            }
-        }
-        return null;
-    }
-    
-    public boolean receiveClientEvent(int i, int j) {
-        if (i == 11) {
-            if (world.isRemote) {
-                FXDispatcher.INSTANCE.drawBamf(pos.up(), 0.75f, 0.0f, 0.5f, true, true, null);
-            }
-            return true;
-        }
-        if (i == 12) {
-            if (world.isRemote) {
-                FXDispatcher.INSTANCE.drawBamf(pos.up(), true, true, null);
-            }
-            return true;
-        }
-        if (i == 5) {
-            if (world.isRemote) {
-                FXDispatcher.INSTANCE.drawPedestalShield(pos);
-            }
-            return true;
-        }
-        return super.receiveClientEvent(i, j);
-    }
+/**
+ * Replaces the old (1.12.2) {@code TilePedestal}. Holds a single item, placed/removed by right-clicking the
+ * block above it - see {@link thaumcraft.common.blocks.devices.BlockPedestal}. The infusion altar
+ * ({@link TileInfusionMatrix}) reads and writes this slot directly during crafting.
+ *
+ * Simplified for this pass (all real features, just not built yet):
+ * <ul>
+ * <li>No floating-item {@code BlockEntityRenderer} - the original showed the held item hovering/spinning
+ * above the pedestal via a TESR. No custom renderer has been ported this whole session (see the port-tracking
+ * memory notes); the held item is only visible via the item's own drop when the pedestal breaks, or by
+ * right-clicking it back out.</li>
+ * <li>No hopper/container capability - a single plain {@code ItemStack} field, not a real {@code Container}.
+ * Automation would need to interact through a wand/player right-click, same as the original's "pedestals
+ * aren't hoppers" design.</li>
+ * <li>No "instability mitigator" charge network ({@code BlockInlay}/{@code TileStabilizer} chain) - that
+ * whole subsystem isn't ported; see {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix}'s doc
+ * comment for what else got cut alongside it.</li>
+ * </ul>
+ */
+public class TilePedestal extends BlockEntity {
+
+	private ItemStack item = ItemStack.EMPTY;
+
+	public TilePedestal(BlockPos pos, BlockState state) {
+		super(ThaumcraftBlockEntities.PEDESTAL.get(), pos, state);
+	}
+
+	public ItemStack getItem() {
+		return item;
+	}
+
+	public void setItem(ItemStack stack) {
+		this.item = stack;
+		setChanged();
+	}
+
+	/** Drops the held item at this position and clears the slot - used when the pedestal itself breaks. */
+	public void dropContents(Level level) {
+		if (item.isEmpty()) return;
+		ItemEntity out = new ItemEntity(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1.0, worldPosition.getZ() + 0.5, item);
+		level.addFreshEntity(out);
+		item = ItemStack.EMPTY;
+	}
+
+	@Override
+	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.loadAdditional(tag, registries);
+		item = tag.contains("Item") ? ItemStack.parseOptional(registries, tag.getCompound("Item")) : ItemStack.EMPTY;
+	}
+
+	@Override
+	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.saveAdditional(tag, registries);
+		if (!item.isEmpty()) {
+			tag.put("Item", item.save(registries, new CompoundTag()));
+		}
+	}
+
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
 }

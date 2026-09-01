@@ -2667,4 +2667,92 @@ public class ThaumcraftGameTests {
 				"a restrict tube facing a plain jar's 32 suction should report half (16), found: " + tube.getSuctionAmount(net.minecraft.core.Direction.DOWN));
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Infusion Altar (Runic Matrix + Arcane Pedestal) - see TileInfusionMatrix's own doc comment for what's
+	// simplified this pass. No wand/caster item is ported yet, so activation goes through
+	// TileInfusionMatrix#activate directly rather than a real right-click item-use round-trip.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void pedestalStoresAndReturnsAnItemOnRightClick(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.pedestal.get());
+		BlockPos absolute = helper.absolutePos(pos);
+		thaumcraft.common.tiles.crafting.TilePedestal tile = helper.getBlockEntity(pos);
+
+		ServerPlayer player = spawnCasterAt(helper, absolute.above());
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absolute), net.minecraft.core.Direction.UP, absolute, false);
+
+		ItemStack held = new ItemStack(Items.IRON_INGOT);
+		player.setItemInHand(hand, held);
+		helper.getBlockState(pos).useItemOn(held, helper.getLevel(), player, hand, hit);
+		helper.assertTrue(tile.getItem().is(Items.IRON_INGOT), "right-clicking with an item should place one on the pedestal, found: " + tile.getItem());
+		helper.assertTrue(player.getItemInHand(hand).isEmpty(), "the placed item should have been taken from the player's hand");
+
+		helper.getBlockState(pos).useWithoutItem(helper.getLevel(), player, hit);
+		helper.assertTrue(tile.getItem().isEmpty(), "empty-hand right-clicking a full pedestal should take the item back out, found: " + tile.getItem());
+		helper.assertTrue(player.getInventory().contains(new ItemStack(Items.IRON_INGOT)), "the returned item should have gone back into the player's inventory");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionMatrixWontActivateWithoutACentralPedestal(GameTestHelper helper) {
+		BlockPos matrixPos = new BlockPos(4, 4, 4);
+		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+
+		ServerPlayer player = spawnCasterAt(helper, matrixAbs);
+		boolean activated = matrix.activate(helper.getLevel(), player);
+
+		helper.assertTrue(!activated && !matrix.active, "an infusion matrix with no pedestal two blocks below it should refuse to activate");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionMatrixCraftsADemoInfusionRecipeEndToEnd(GameTestHelper helper) {
+		BlockPos matrixPos = new BlockPos(4, 4, 4);
+		BlockPos centralPos = matrixPos.below(2);
+		BlockPos componentPos = centralPos.east(2);
+		BlockPos jarOrdoPos = matrixPos.north(2);
+		BlockPos jarIgnisPos = matrixPos.south(2);
+
+		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		helper.setBlock(centralPos, BlocksTC.pedestal.get());
+		helper.setBlock(componentPos, BlocksTC.pedestal.get());
+		helper.setBlock(jarOrdoPos, BlocksTC.jarNormal.get());
+		helper.setBlock(jarIgnisPos, BlocksTC.jarNormal.get());
+
+		thaumcraft.common.tiles.crafting.TilePedestal central = helper.getBlockEntity(centralPos);
+		central.setItem(new ItemStack(Items.GLOWSTONE_DUST));
+		thaumcraft.common.tiles.crafting.TilePedestal component = helper.getBlockEntity(componentPos);
+		component.setItem(new ItemStack(Items.REDSTONE));
+
+		thaumcraft.common.tiles.essentia.TileJarFillable jarOrdo = helper.getBlockEntity(jarOrdoPos);
+		jarOrdo.addToContainer(Aspect.ORDER, 10);
+		thaumcraft.common.tiles.essentia.TileJarFillable jarIgnis = helper.getBlockEntity(jarIgnisPos);
+		jarIgnis.addToContainer(Aspect.FIRE, 10);
+
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+		ServerPlayer player = spawnCasterAt(helper, matrixAbs);
+
+		helper.assertTrue(matrix.activate(helper.getLevel(), player), "activation should succeed with a central pedestal in place");
+		helper.assertTrue(matrix.active, "the matrix should be active after the first activation");
+		helper.assertTrue(matrix.activate(helper.getLevel(), player), "the second activation (with a valid recipe on the pedestals) should start crafting");
+		helper.assertTrue(matrix.crafting, "the matrix should be mid-craft after a successful craftingStart");
+
+		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
+		for (int i = 0; i < 400 && matrix.crafting; i++) {
+			thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(helper.getLevel(), matrixAbs, matrixState, matrix);
+		}
+
+		helper.assertTrue(!matrix.crafting, "the craft should have completed (or definitively failed) within 400 ticks");
+		helper.assertTrue(central.getItem().is(Items.GLOWSTONE), "the central pedestal should hold the demo recipe's result (glowstone), found: " + central.getItem());
+		helper.assertTrue(component.getItem().isEmpty(), "the component pedestal's redstone should have been consumed by the craft");
+		helper.succeed();
+	}
 }

@@ -372,6 +372,12 @@ public final class ItemsTC {
 			props -> new ArmorItem(ThaumcraftArmorMaterials.THAUMIUM, ArmorItem.Type.BOOTS,
 					props.durability(ArmorItem.Type.BOOTS.getDurability(25))));
 
+	public static final DeferredItem<BlockItem> pedestal =
+			ITEMS.registerSimpleBlockItem("pedestal", BlocksTC.pedestal);
+
+	public static final DeferredItem<BlockItem> infusionMatrix =
+			ITEMS.registerSimpleBlockItem("infusion_matrix", BlocksTC.infusionMatrix);
+
 	private ItemsTC() {
 	}
 }

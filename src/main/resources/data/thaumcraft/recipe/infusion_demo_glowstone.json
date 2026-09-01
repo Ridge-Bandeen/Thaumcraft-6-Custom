@@ -1,0 +1,14 @@
+{
+  "type": "thaumcraft:infusion",
+  "research": "",
+  "instability": 1,
+  "aspects": {
+    "ordo": 3,
+    "ignis": 3
+  },
+  "central": { "item": "minecraft:glowstone_dust" },
+  "components": [
+    { "item": "minecraft:redstone" }
+  ],
+  "result": { "id": "minecraft:glowstone" }
+}

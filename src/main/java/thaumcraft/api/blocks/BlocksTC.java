@@ -370,6 +370,18 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.crafting.BlockArcaneWorkbenchCharger::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(1.25f, 10.0f).sound(SoundType.WOOD).noOcclusion());
 
+	/** See {@link thaumcraft.common.blocks.devices.BlockPedestal}'s own doc comment - only the base
+	 * ("Arcane Pedestal") tier is ported, not the Ancient/Eldritch variants. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockPedestal> pedestal = BLOCKS.registerBlock("pedestal",
+			thaumcraft.common.blocks.devices.BlockPedestal::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE).noOcclusion());
+
+	/** See {@link thaumcraft.common.blocks.crafting.BlockInfusionMatrix}'s own doc comment for what's
+	 * simplified about this device this pass. */
+	public static final DeferredBlock<thaumcraft.common.blocks.crafting.BlockInfusionMatrix> infusionMatrix = BLOCKS.registerBlock("infusion_matrix",
+			thaumcraft.common.blocks.crafting.BlockInfusionMatrix::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0f).sound(SoundType.STONE).noOcclusion());
+
 	private BlocksTC() {
 	}
 }
