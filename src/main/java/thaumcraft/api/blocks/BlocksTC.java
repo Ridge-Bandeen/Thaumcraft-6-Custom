@@ -1,6 +1,8 @@
 package thaumcraft.api.blocks;
 
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.StairBlock;
@@ -109,6 +111,40 @@ public final class BlocksTC {
 	public static final DeferredBlock<SlabBlock> stoneArcaneBrickSlab = BLOCKS.registerBlock("stone_arcane_brick_slab",
 			SlabBlock::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
+
+	/**
+	 * Start of the Silverwood wood set - the first step towards giving {@code Filter} (and everything else
+	 * that needs {@code plankSilverwood}) a reachable ingredient. This chunk registers the block/item/recipe
+	 * side only: log, planks, leaves, and a currently-inert sapling (vanilla's own {@link RotatedPillarBlock}/
+	 * plain {@link Block}/{@link LeavesBlock} - no custom subclasses needed for any of them). <b>Silverwood
+	 * log is NOT obtainable in survival yet</b> - the original's natural generation ({@code
+	 * WorldGenSilverwoodTrees}, a hand-rolled multi-trunk clustered-log shape with no equivalent in vanilla's
+	 * modern TrunkPlacer/FoliagePlacer tree framework) and the sapling's grow-into-a-tree behavior are both
+	 * deliberately deferred to a follow-up chunk, not silently dropped - see the port-tracking memory notes.
+	 * Until then this is real, working content that's reachable via creative/commands only, same honesty
+	 * precedent as the Recharge Pedestal being explicitly deferred rather than half-built and left unflagged.
+	 */
+	public static final DeferredBlock<RotatedPillarBlock> logSilverwood = BLOCKS.registerBlock("log_silverwood",
+			RotatedPillarBlock::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0f, 5.0f).sound(SoundType.WOOD).lightLevel(state -> 5).ignitedByLava());
+
+	public static final DeferredBlock<Block> plankSilverwood = BLOCKS.registerBlock("plank_silverwood",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0f).sound(SoundType.WOOD).ignitedByLava());
+
+	public static final DeferredBlock<LeavesBlock> leavesSilverwood = BLOCKS.registerBlock("leaves_silverwood",
+			LeavesBlock::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).strength(0.2f).sound(SoundType.GRASS)
+					.randomTicks().noOcclusion().isValidSpawn((state, level, pos, type) -> false)
+					.isSuffocating((state, level, pos) -> false).isViewBlocking((state, level, pos) -> false)
+					.ignitedByLava().pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
+
+	/** Placeholder, not yet a real {@link net.minecraft.world.level.block.SaplingBlock} - see this group's
+	 * doc comment above. A plain non-growing decorative block for now. */
+	public static final DeferredBlock<Block> saplingSilverwood = BLOCKS.registerBlock("sapling_silverwood",
+			props -> new Block(props),
+			BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().instabreak().sound(SoundType.GRASS)
+					.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
 
 	private BlocksTC() {
 	}

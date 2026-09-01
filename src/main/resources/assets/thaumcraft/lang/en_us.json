@@ -98,5 +98,10 @@
   "block.thaumcraft.stone_arcane_slab": "Arcane Stone Slab",
   "block.thaumcraft.stone_arcane_brick": "Arcane Stone Brick",
   "block.thaumcraft.stone_arcane_brick_stairs": "Arcane Stone Brick Stairs",
-  "block.thaumcraft.stone_arcane_brick_slab": "Arcane Stone Brick Slab"
+  "block.thaumcraft.stone_arcane_brick_slab": "Arcane Stone Brick Slab",
+
+  "block.thaumcraft.log_silverwood": "Silverwood Log",
+  "block.thaumcraft.plank_silverwood": "Silverwood Planks",
+  "block.thaumcraft.leaves_silverwood": "Silverwood Leaves",
+  "block.thaumcraft.sapling_silverwood": "Silverwood Sapling"
 }

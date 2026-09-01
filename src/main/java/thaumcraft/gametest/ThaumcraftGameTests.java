@@ -150,7 +150,8 @@ public class ThaumcraftGameTests {
 				"crystal_essence_terra", "crystal_essence_ordo", "crystal_essence_perditio",
 				"crystal_essence_auram", "crystal_essence_praecantatio", "crystal_essence_vitreus",
 				"stone_arcane", "stone_arcane_stairs", "stone_arcane_slab",
-				"stone_arcane_brick", "stone_arcane_brick_stairs", "stone_arcane_brick_slab"
+				"stone_arcane_brick", "stone_arcane_brick_stairs", "stone_arcane_brick_slab",
+				"plank_silverwood"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -924,5 +925,59 @@ public class ThaumcraftGameTests {
 			total += knowledge.getKnowledgeRaw(IPlayerKnowledge.EnumKnowledgeType.THEORY, cat);
 		}
 		return total;
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Loot table coverage - found while adding Silverwood that amber_block/amber_brick and the whole
+	// stone_arcane family had never gotten a loot table at all (they compiled and passed every prior test,
+	// but would have dropped nothing at all when broken - a real, silent survival gap, same class of bug as
+	// the earlier-session "crystal essence has no recipe" one). These break a real placed block via
+	// Block#dropResources (the same real-loot mechanism FocusEffectBreak uses) and assert an actual drop
+	// appears, closing the gap for real rather than just asserting the loot table JSON parses.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void amberBlockOnlyDropsWithSilkTouch(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(2, 1, 2);
+		BlockPos absolute = helper.absolutePos(relPos);
+		helper.setBlock(relPos, BlocksTC.amberBlock.get());
+		net.minecraft.world.level.block.state.BlockState state = helper.getLevel().getBlockState(absolute);
+
+		// Without silk touch: matches vanilla glass's own convention (glass-material blocks only drop with
+		// silk touch) - breaking it plain should yield no drops at all.
+		net.minecraft.world.level.block.Block.dropResources(state, helper.getLevel(), absolute, null, null, ItemStack.EMPTY);
+		List<ItemEntity> droppedPlain = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0));
+		helper.assertTrue(droppedPlain.isEmpty(), "amber_block should not drop anything without silk touch, found: "
+				+ droppedPlain.stream().map(e -> e.getItem().toString()).toList());
+
+		ItemStack silkTouchTool = new ItemStack(Items.NETHERITE_PICKAXE);
+		silkTouchTool.enchant(helper.getLevel().registryAccess()
+				.lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+				.getOrThrow(net.minecraft.world.item.enchantment.Enchantments.SILK_TOUCH), 1);
+		net.minecraft.world.level.block.Block.dropResources(state, helper.getLevel(), absolute, null, null, silkTouchTool);
+		List<ItemEntity> droppedSilk = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0));
+		boolean foundAmberBlock = droppedSilk.stream().anyMatch(e -> e.getItem().is(ItemsTC.amberBlock.get().asItem()));
+		helper.assertTrue(foundAmberBlock, "amber_block should drop itself with silk touch, found: "
+				+ droppedSilk.stream().map(e -> e.getItem().toString()).toList());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void stoneArcaneFamilyDropsRealLoot(GameTestHelper helper) {
+		assertSelfDrops(helper, new BlockPos(1, 1, 1), BlocksTC.stoneArcane.get(), ItemsTC.stoneArcane.get());
+		assertSelfDrops(helper, new BlockPos(3, 1, 1), BlocksTC.stoneArcaneBrick.get(), ItemsTC.stoneArcaneBrick.get());
+		assertSelfDrops(helper, new BlockPos(5, 1, 1), BlocksTC.logSilverwood.get(), ItemsTC.logSilverwood.get());
+		helper.succeed();
+	}
+
+	private static void assertSelfDrops(GameTestHelper helper, BlockPos relPos, net.minecraft.world.level.block.Block block, net.minecraft.world.item.Item expectedItem) {
+		BlockPos absolute = helper.absolutePos(relPos);
+		helper.setBlock(relPos, block);
+		net.minecraft.world.level.block.state.BlockState state = helper.getLevel().getBlockState(absolute);
+		net.minecraft.world.level.block.Block.dropResources(state, helper.getLevel(), absolute, null, null, ItemStack.EMPTY);
+		List<ItemEntity> dropped = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0));
+		boolean found = dropped.stream().anyMatch(e -> e.getItem().is(expectedItem));
+		helper.assertTrue(found, block + " should drop " + expectedItem + " when broken, found: "
+				+ dropped.stream().map(e -> e.getItem().toString()).toList());
 	}
 }
