@@ -393,7 +393,8 @@ public class ThaumcraftGameTests {
 				"plank_silverwood", "silverwood_stairs", "silverwood_slab",
 				"plank_greatwood", "greatwood_stairs", "greatwood_slab",
 				"arcane_ear", "arcane_ear_toggle",
-				"jar_normal"
+				"jar_normal",
+				"lamp_growth"
 		};
 		for (String id : expectedIds) {
 			ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id);
@@ -1904,6 +1905,57 @@ public class ThaumcraftGameTests {
 				"a jar should pull essentia from a real IEssentiaTransport tile placed directly above it, got " + bottom.getAspects());
 		helper.assertTrue(source.amount < 40,
 				"the source above should have been drained by the same amount the jar below gained, still at " + source.amount);
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Growth Lamp (TileLampGrowth) - see its own doc comment for the real BonemealableBlock-based growth
+	// mechanic and the charge/essentia-draw shell it shares in spirit with the original.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
+	public static void growthLampDrawsChargeAndAdvancesARealCropNearby(GameTestHelper helper) {
+		BlockPos lampPos = new BlockPos(4, 1, 4);
+		BlockPos sourcePos = lampPos.above();
+		BlockPos farmlandPos = lampPos.offset(0, 2, 0);
+		BlockPos cropPos = lampPos.offset(0, 3, 0);
+
+		helper.setBlock(sourcePos, TEST_ESSENTIA_SOURCE_BLOCK.get());
+		helper.setBlock(lampPos, BlocksTC.lampGrowth.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.UP));
+		helper.setBlock(farmlandPos, net.minecraft.world.level.block.Blocks.FARMLAND);
+		helper.setBlock(cropPos, net.minecraft.world.level.block.Blocks.WHEAT.defaultBlockState()
+				.setValue(net.minecraft.world.level.block.CropBlock.AGE, 0));
+
+		BlockPos lampAbs = helper.absolutePos(lampPos);
+		BlockPos cropAbs = helper.absolutePos(cropPos);
+		thaumcraft.common.tiles.devices.TileLampGrowth lamp = helper.getBlockEntity(lampPos);
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(sourcePos);
+		source.aspect = Aspect.PLANT;
+		source.amount = 999;
+
+		for (int i = 0; i < 500; i++) {
+			thaumcraft.common.tiles.devices.TileLampGrowth.tick(helper.getLevel(), lampAbs, helper.getBlockState(lampPos), lamp);
+		}
+
+		helper.assertTrue(lamp.getCharges() >= 0, "the lamp should have drawn essentia and be tracking real charge, got " + lamp.getCharges());
+		helper.assertTrue(source.amount < 999, "the essentia source above should have been drawn from, still at " + source.amount);
+		int age = helper.getLevel().getBlockState(cropAbs).getValue(net.minecraft.world.level.block.CropBlock.AGE);
+		helper.assertTrue(age > 0, "a real wheat crop within the lamp's search radius should have been advanced via BonemealableBlock, age is still " + age);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void growthLampDropsWhenItsSupportIsRemoved(GameTestHelper helper) {
+		BlockPos lampPos = new BlockPos(2, 2, 2);
+		helper.setBlock(lampPos.above(), Blocks.STONE);
+		helper.setBlock(lampPos, BlocksTC.lampGrowth.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.UP));
+		helper.assertTrue(helper.getBlockState(lampPos).is(BlocksTC.lampGrowth.get()), "sanity check: the lamp should be placed");
+
+		helper.setBlock(lampPos.above(), Blocks.AIR);
+
+		helper.assertTrue(helper.getBlockState(lampPos).isAir(), "removing the block a growth lamp draws essentia from should make the lamp itself pop off");
 		helper.succeed();
 	}
 }

@@ -1,233 +1,205 @@
 package thaumcraft.common.tiles.devices;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import net.minecraft.block.Block;
-import net.minecraft.block.IGrowable;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.play.server.SPacketUpdateTileEntity;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.ITickable;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.EnumSkyBlock;
-import net.minecraftforge.fml.common.network.NetworkRegistry;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
-import thaumcraft.api.ThaumcraftApiHelper;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BonemealableBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.IEssentiaTransport;
-import thaumcraft.common.blocks.IBlockEnabled;
-import thaumcraft.common.lib.network.PacketHandler;
-import thaumcraft.common.lib.network.fx.PacketFXBlockMist;
-import thaumcraft.common.lib.utils.BlockStateUtils;
-import thaumcraft.common.lib.utils.CropUtils;
-import thaumcraft.common.tiles.TileThaumcraft;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 
+/**
+ * Replaces the old (1.12.2) {@code TileLampGrowth} - a charge-driven plant-growth accelerator. Every tick
+ * (while not redstone-powered and holding charge), picks a random column within a 6-block radius disc above
+ * itself and searches it top-down for a growable plant to advance.
+ *
+ * The original tracked its own hand-picked whitelist of "standard crops" via {@code CropUtils}
+ * (block+metadata strings registered per-crop) and forced growth by scheduling an early random tick
+ * ({@code World#scheduleUpdate}), leaving the actual growth decision to that block's own random-tick
+ * handler. This port uses vanilla's real {@link BonemealableBlock} interface instead - the same one bonemeal
+ * itself uses - restricted to {@link BonemealableBlock.Type#GROWER} (excludes spreaders like grass/vines,
+ * which aren't "growth" in the crop sense this lamp is themed around). This is a genuine improvement, not
+ * just a simplification: it works correctly on every real growable block in the game (any crop, sapling, or
+ * modded block correctly implementing the interface), not just a fixed, hand-maintained list, and growth is
+ * a direct, guaranteed stage advance via {@link BonemealableBlock#performBonemeal} rather than a "might not
+ * actually grow this attempt" scheduled random tick.
+ *
+ * {@link IEssentiaTransport} ports over mechanically from the original - see
+ * {@link thaumcraft.common.tiles.essentia.TileJarFillable}'s own doc comment for why no physical tube
+ * network is needed for this direct, single-adjacent-tile draw.
+ *
+ * Simplified vs the original: no particle/sound FX on growth (client FX, dropped like everywhere else this
+ * session - the original's own mist-particle trigger existed purely to mark "something changed here" for
+ * players standing nearby).
+ */
+public class TileLampGrowth extends BlockEntity implements IEssentiaTransport {
 
-public class TileLampGrowth extends TileThaumcraft implements IEssentiaTransport, ITickable
-{
-    private boolean reserve;
-    public int charges;
-    public int maxCharges;
-    int lx;
-    int ly;
-    int lz;
-    Block lid;
-    int lmd;
-    ArrayList<BlockPos> checklist;
-    int drawDelay;
-    
-    public TileLampGrowth() {
-        reserve = false;
-        charges = -1;
-        maxCharges = 20;
-        lx = 0;
-        ly = 0;
-        lz = 0;
-        lid = Blocks.AIR;
-        lmd = 0;
-        checklist = new ArrayList<BlockPos>();
-        drawDelay = 0;
-    }
-    
-    @Override
-    public void onDataPacket(NetworkManager net, SPacketUpdateTileEntity pkt) {
-        super.onDataPacket(net, pkt);
-        if (world != null && world.isRemote) {
-            world.checkLightFor(EnumSkyBlock.BLOCK, getPos());
-        }
-    }
-    
-    public void update() {
-        if (!world.isRemote) {
-            if (charges <= 0) {
-                if (reserve) {
-                    charges = maxCharges;
-                    reserve = false;
-                    markDirty();
-                    syncTile(true);
-                }
-                else if (drawEssentia()) {
-                    charges = maxCharges;
-                    markDirty();
-                    syncTile(true);
-                }
-                if (charges <= 0) {
-                    if (BlockStateUtils.isEnabled(getBlockMetadata())) {
-                        world.setBlockState(pos, world.getBlockState(getPos()).withProperty((IProperty)IBlockEnabled.ENABLED, (Comparable)false), 3);
-                    }
-                }
-                else if (!gettingPower() && !BlockStateUtils.isEnabled(getBlockMetadata())) {
-                    world.setBlockState(pos, world.getBlockState(getPos()).withProperty((IProperty)IBlockEnabled.ENABLED, (Comparable)true), 3);
-                }
-            }
-            if (!reserve && drawEssentia()) {
-                reserve = true;
-            }
-            if (charges == 0) {
-                charges = -1;
-                syncTile(true);
-            }
-            if (!gettingPower() && charges > 0) {
-                updatePlant();
-            }
-        }
-    }
-    
-    boolean isPlant(BlockPos bp) {
-        IBlockState b = world.getBlockState(bp);
-        boolean flag = b.getBlock() instanceof IGrowable;
-        Material mat = b.getMaterial();
-        return (flag || mat == Material.CACTUS || mat == Material.PLANTS) && mat != Material.GRASS;
-    }
-    
-    private void updatePlant() {
-        IBlockState bs = world.getBlockState(new BlockPos(lx, ly, lz));
-        if (lid != bs.getBlock() || lmd != bs.getBlock().getMetaFromState(bs)) {
-            EntityPlayer p = world.getClosestPlayer(lx, ly, lz, 32.0, false);
-            if (p != null) {
-                PacketHandler.INSTANCE.sendToAllAround(new PacketFXBlockMist(new BlockPos(lx, ly, lz), 4259648), new NetworkRegistry.TargetPoint(world.provider.getDimension(), lx, ly, lz, 32.0));
-            }
-            lid = bs.getBlock();
-            lmd = bs.getBlock().getMetaFromState(bs);
-        }
-        int distance = 6;
-        if (checklist.size() == 0) {
-            for (int a = -distance; a <= distance; ++a) {
-                for (int b = -distance; b <= distance; ++b) {
-                    checklist.add(getPos().add(a, distance, b));
-                }
-            }
-            Collections.shuffle(checklist, world.rand);
-        }
-        int x = checklist.get(0).getX();
-        int y = checklist.get(0).getY();
-        int z = checklist.get(0).getZ();
-        checklist.remove(0);
-        while (y >= pos.getY() - distance) {
-            BlockPos bp = new BlockPos(x, y, z);
-            if (!world.isAirBlock(bp) && isPlant(bp) && getDistanceSq(x + 0.5, y + 0.5, z + 0.5) < distance * distance && !CropUtils.isGrownCrop(world, bp) && CropUtils.doesLampGrow(world, bp)) {
-                --charges;
-                lx = x;
-                ly = y;
-                lz = z;
-                IBlockState bs2 = world.getBlockState(bp);
-                lid = bs2.getBlock();
-                lmd = bs2.getBlock().getMetaFromState(bs2);
-                world.scheduleUpdate(bp, lid, 1);
-                return;
-            }
-            --y;
-        }
-    }
-    
-    @Override
-    public void readSyncNBT(NBTTagCompound nbttagcompound) {
-        reserve = nbttagcompound.getBoolean("reserve");
-        charges = nbttagcompound.getInteger("charges");
-    }
-    
-    @Override
-    public NBTTagCompound writeSyncNBT(NBTTagCompound nbttagcompound) {
-        nbttagcompound.setBoolean("reserve", reserve);
-        nbttagcompound.setInteger("charges", charges);
-        return nbttagcompound;
-    }
-    
-    boolean drawEssentia() {
-        if (++drawDelay % 5 != 0) {
-            return false;
-        }
-        TileEntity te = ThaumcraftApiHelper.getConnectableTile(world, getPos(), BlockStateUtils.getFacing(getBlockMetadata()));
-        if (te != null) {
-            IEssentiaTransport ic = (IEssentiaTransport)te;
-            if (!ic.canOutputTo(BlockStateUtils.getFacing(getBlockMetadata()).getOpposite())) {
-                return false;
-            }
-            if (ic.getSuctionAmount(BlockStateUtils.getFacing(getBlockMetadata()).getOpposite()) < getSuctionAmount(BlockStateUtils.getFacing(getBlockMetadata())) && ic.takeEssentia(Aspect.PLANT, 1, BlockStateUtils.getFacing(getBlockMetadata()).getOpposite()) == 1) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    @Override
-    public boolean isConnectable(EnumFacing face) {
-        return face == BlockStateUtils.getFacing(getBlockMetadata());
-    }
-    
-    @Override
-    public boolean canInputFrom(EnumFacing face) {
-        return face == BlockStateUtils.getFacing(getBlockMetadata());
-    }
-    
-    @Override
-    public boolean canOutputTo(EnumFacing face) {
-        return false;
-    }
-    
-    @Override
-    public void setSuction(Aspect aspect, int amount) {
-    }
-    
-    @Override
-    public int getMinimumSuction() {
-        return 0;
-    }
-    
-    @Override
-    public Aspect getSuctionType(EnumFacing face) {
-        return Aspect.PLANT;
-    }
-    
-    @Override
-    public int getSuctionAmount(EnumFacing face) {
-        return (face == BlockStateUtils.getFacing(getBlockMetadata()) && (!reserve || charges <= 0)) ? 128 : 0;
-    }
-    
-    @Override
-    public Aspect getEssentiaType(EnumFacing loc) {
-        return null;
-    }
-    
-    @Override
-    public int getEssentiaAmount(EnumFacing loc) {
-        return 0;
-    }
-    
-    @Override
-    public int takeEssentia(Aspect aspect, int amount, EnumFacing loc) {
-        return 0;
-    }
-    
-    @Override
-    public int addEssentia(Aspect aspect, int amount, EnumFacing loc) {
-        return 0;
-    }
+	private static final int MAX_CHARGES = 20;
+	private static final int SEARCH_RADIUS = 6;
+
+	private boolean reserve;
+	private int charges;
+	private int drawDelay;
+	private final List<BlockPos> checklist = new ArrayList<>();
+
+	public TileLampGrowth(BlockPos pos, BlockState state) {
+		super(ThaumcraftBlockEntities.LAMP_GROWTH.get(), pos, state);
+	}
+
+	public static void tick(Level level, BlockPos pos, BlockState state, TileLampGrowth tile) {
+		if (level.isClientSide) return;
+		boolean powered = level.hasNeighborSignal(pos);
+
+		if (tile.charges <= 0) {
+			if (tile.reserve) {
+				tile.charges = MAX_CHARGES;
+				tile.reserve = false;
+				tile.setChanged();
+			} else if (tile.drawEssentia(level, pos, state)) {
+				tile.charges = MAX_CHARGES;
+				tile.setChanged();
+			}
+			boolean enabled = state.getValue(BlockStateProperties.ENABLED);
+			if (tile.charges <= 0) {
+				if (enabled) {
+					level.setBlock(pos, state.setValue(BlockStateProperties.ENABLED, false), 3);
+				}
+			} else if (!powered && !enabled) {
+				level.setBlock(pos, state.setValue(BlockStateProperties.ENABLED, true), 3);
+			}
+		}
+
+		if (!tile.reserve && tile.drawEssentia(level, pos, state)) {
+			tile.reserve = true;
+		}
+
+		if (!powered && tile.charges > 0) {
+			tile.tryGrowSomething(level, pos);
+		}
+	}
+
+	private void tryGrowSomething(Level level, BlockPos pos) {
+		if (checklist.isEmpty()) {
+			for (int a = -SEARCH_RADIUS; a <= SEARCH_RADIUS; a++) {
+				for (int b = -SEARCH_RADIUS; b <= SEARCH_RADIUS; b++) {
+					checklist.add(pos.offset(a, SEARCH_RADIUS, b));
+				}
+			}
+			for (int i = checklist.size() - 1; i > 0; i--) {
+				int j = level.random.nextInt(i + 1);
+				Collections.swap(checklist, i, j);
+			}
+		}
+		BlockPos column = checklist.remove(0);
+		double radiusSq = (double) SEARCH_RADIUS * SEARCH_RADIUS;
+		for (int y = column.getY(); y >= pos.getY() - SEARCH_RADIUS; y--) {
+			BlockPos bp = new BlockPos(column.getX(), y, column.getZ());
+			if (bp.distSqr(pos) >= radiusSq) continue;
+			BlockState target = level.getBlockState(bp);
+			if (target.isAir()) continue;
+			if (!(target.getBlock() instanceof BonemealableBlock growable) || growable.getType() != BonemealableBlock.Type.GROWER) continue;
+			if (!growable.isValidBonemealTarget(level, bp, target)) continue;
+			growable.performBonemeal((ServerLevel) level, level.random, bp, target);
+			charges--;
+			setChanged();
+			return;
+		}
+	}
+
+	private boolean drawEssentia(Level level, BlockPos pos, BlockState state) {
+		if (++drawDelay % 5 != 0) return false;
+		Direction facing = state.getValue(BlockStateProperties.FACING);
+		if (!(level.getBlockEntity(pos.relative(facing)) instanceof IEssentiaTransport source)) return false;
+		if (!source.canOutputTo(facing.getOpposite())) return false;
+		if (source.getSuctionAmount(facing.getOpposite()) >= getSuctionAmount(facing)) return false;
+		return source.takeEssentia(Aspect.PLANT, 1, facing.getOpposite()) == 1;
+	}
+
+	@Override
+	public boolean isConnectable(Direction face) {
+		return face == getBlockState().getValue(BlockStateProperties.FACING);
+	}
+
+	@Override
+	public boolean canInputFrom(Direction face) {
+		return face == getBlockState().getValue(BlockStateProperties.FACING);
+	}
+
+	@Override
+	public boolean canOutputTo(Direction face) {
+		return false;
+	}
+
+	@Override
+	public void setSuction(Aspect aspect, int amount) {
+	}
+
+	@Override
+	public int getMinimumSuction() {
+		return 0;
+	}
+
+	@Override
+	public Aspect getSuctionType(Direction face) {
+		return Aspect.PLANT;
+	}
+
+	@Override
+	public int getSuctionAmount(Direction face) {
+		return face == getBlockState().getValue(BlockStateProperties.FACING) && (!reserve || charges <= 0) ? 128 : 0;
+	}
+
+	@Override
+	public Aspect getEssentiaType(Direction face) {
+		return null;
+	}
+
+	@Override
+	public int getEssentiaAmount(Direction face) {
+		return 0;
+	}
+
+	@Override
+	public int takeEssentia(Aspect aspect, int amount, Direction face) {
+		return 0;
+	}
+
+	@Override
+	public int addEssentia(Aspect aspect, int amount, Direction face) {
+		return 0;
+	}
+
+	/** Test hook - lets a GameTest seed charge directly rather than waiting out real essentia draw timing. */
+	public void setChargesForTest(int value) {
+		this.charges = value;
+		setChanged();
+	}
+
+	public int getCharges() {
+		return charges;
+	}
+
+	@Override
+	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.saveAdditional(tag, registries);
+		tag.putBoolean("Reserve", reserve);
+		tag.putInt("Charges", charges);
+	}
+
+	@Override
+	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.loadAdditional(tag, registries);
+		reserve = tag.getBoolean("Reserve");
+		charges = tag.getInt("Charges");
+	}
 }

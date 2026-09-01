@@ -1,27 +1,16 @@
 {
-    "forge_marker": 1,
-    "defaults": {
-        "textures": {
-            "particle": "thaumcraft:blocks/lamp_grow_off", 
-            "side": "thaumcraft:blocks/lamp_grow_off"
-           },
-        "model": "thaumcraft:lamp",
-        "transform": "forge:default-block"
-    },
-    "variants": {
-        "inventory": [{}], "normal": [{}],        
-        "facing": {
-            "up":       {"submodel": "thaumcraft:lamp_stand","textures": {"side": "thaumcraft:blocks/base_metal"}, "x": 180},
-            "down":     {"submodel": "thaumcraft:lamp_stand","textures": {"side": "thaumcraft:blocks/base_metal"} },
-            "north":    {"submodel": "thaumcraft:lamp_stand","textures": {"side": "thaumcraft:blocks/base_metal"}, "y": 180, "x": 90},
-            "south":    {"submodel": "thaumcraft:lamp_stand","textures": {"side": "thaumcraft:blocks/base_metal"}, "x": 90},
-            "east":     {"submodel": "thaumcraft:lamp_stand","textures": {"side": "thaumcraft:blocks/base_metal"}, "y": 270, "x": 90},
-            "west":     {"submodel": "thaumcraft:lamp_stand","textures": {"side": "thaumcraft:blocks/base_metal"}, "y": 90, "x": 90}
-        },
-        "enabled": {
-            "true":     {"textures": {"side": "thaumcraft:blocks/lamp_grow_on"}},
-            "false":    {"textures": {"side": "thaumcraft:blocks/lamp_grow_off"}}
-        }
-    }    
+  "variants": {
+    "enabled=false,facing=down":  { "model": "thaumcraft:block/lamp_arcane_off", "x": 180 },
+    "enabled=false,facing=up":    { "model": "thaumcraft:block/lamp_arcane_off" },
+    "enabled=false,facing=east":  { "model": "thaumcraft:block/lamp_arcane_off", "x": 90, "y": 90 },
+    "enabled=false,facing=west":  { "model": "thaumcraft:block/lamp_arcane_off", "x": 90, "y": 270 },
+    "enabled=false,facing=north": { "model": "thaumcraft:block/lamp_arcane_off", "x": 90 },
+    "enabled=false,facing=south": { "model": "thaumcraft:block/lamp_arcane_off", "x": 90, "y": 180 },
+    "enabled=true,facing=down":   { "model": "thaumcraft:block/lamp_arcane_on", "x": 180 },
+    "enabled=true,facing=up":     { "model": "thaumcraft:block/lamp_arcane_on" },
+    "enabled=true,facing=east":   { "model": "thaumcraft:block/lamp_arcane_on", "x": 90, "y": 90 },
+    "enabled=true,facing=west":   { "model": "thaumcraft:block/lamp_arcane_on", "x": 90, "y": 270 },
+    "enabled=true,facing=north":  { "model": "thaumcraft:block/lamp_arcane_on", "x": 90 },
+    "enabled=true,facing=south":  { "model": "thaumcraft:block/lamp_arcane_on", "x": 90, "y": 180 }
+  }
 }
-

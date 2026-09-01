@@ -252,6 +252,13 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.essentia.BlockJar::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY).strength(0.3f).sound(SoundType.GLASS).noOcclusion());
 
+	/** First real consumer of the {@code IEssentiaTransport} draw mechanic {@link #jarNormal} proved out -
+	 * see {@link thaumcraft.common.tiles.devices.TileLampGrowth}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockLampGrowth> lampGrowth = BLOCKS.registerBlock("lamp_growth",
+			thaumcraft.common.blocks.devices.BlockLampGrowth::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.METAL).noOcclusion()
+					.lightLevel(state -> state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED) ? 15 : 0));
+
 	private BlocksTC() {
 	}
 }

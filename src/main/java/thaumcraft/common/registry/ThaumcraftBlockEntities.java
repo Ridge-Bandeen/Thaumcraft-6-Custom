@@ -12,6 +12,7 @@ import thaumcraft.common.tiles.devices.TileLampArcane;
 import thaumcraft.common.tiles.devices.TileVisGenerator;
 import thaumcraft.common.tiles.devices.TileWaterJug;
 import thaumcraft.common.tiles.devices.TileArcaneEar;
+import thaumcraft.common.tiles.devices.TileLampGrowth;
 import thaumcraft.common.tiles.essentia.TileJarFillable;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
@@ -52,6 +53,9 @@ public final class ThaumcraftBlockEntities {
 
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileJarFillable>> JAR = BLOCK_ENTITIES.register("jar_normal",
 			() -> BlockEntityType.Builder.of(TileJarFillable::new, BlocksTC.jarNormal.get()).build(null));
+
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileLampGrowth>> LAMP_GROWTH = BLOCK_ENTITIES.register("lamp_growth",
+			() -> BlockEntityType.Builder.of(TileLampGrowth::new, BlocksTC.lampGrowth.get()).build(null));
 
 	private ThaumcraftBlockEntities() {
 	}
