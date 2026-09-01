@@ -1,0 +1,14 @@
+{
+  "type": "thaumcraft:crucible",
+  "research": "FIRSTSTEPS",
+  "catalyst": [
+    { "item": "minecraft:coal" },
+    { "item": "minecraft:charcoal" }
+  ],
+  "aspects": {
+    "potentia": 10,
+    "ignis": 10,
+    "perditio": 5
+  },
+  "result": { "id": "thaumcraft:alumentum" }
+}

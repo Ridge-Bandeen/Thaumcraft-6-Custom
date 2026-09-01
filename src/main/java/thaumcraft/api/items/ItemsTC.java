@@ -6,6 +6,7 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.common.items.casters.ItemCaster;
+import thaumcraft.common.items.consumables.ItemAlumentum;
 import thaumcraft.common.items.casters.ItemFocusAir;
 import thaumcraft.common.items.casters.ItemFocusBreak;
 import thaumcraft.common.items.casters.ItemFocusCurse;
@@ -154,6 +155,9 @@ public final class ItemsTC {
 	 * first built. */
 	public static final DeferredItem<Item> visResonator =
 			ITEMS.registerSimpleItem("vis_resonator");
+
+	public static final DeferredItem<ItemAlumentum> alumentum =
+			ITEMS.registerItem("alumentum", ItemAlumentum::new);
 
 	private ItemsTC() {
 	}

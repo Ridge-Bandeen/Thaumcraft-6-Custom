@@ -144,7 +144,7 @@ public class ThaumcraftGameTests {
 				"focus_air", "focus_air_crucible",
 				"focus_trap", "focus_trap_crucible",
 				"focus_sanctuary", "focus_sanctuary_crucible",
-				"caster_basic", "thaumometer", "quicksilver_smelting", "mirrored_glass", "vis_resonator",
+				"caster_basic", "thaumometer", "quicksilver_smelting", "mirrored_glass", "vis_resonator", "alumentum",
 				"amber_block", "amber_block_to_amber", "amber_brick", "amber_brick_to_block",
 				"crystal_essence_aer", "crystal_essence_aqua", "crystal_essence_ignis",
 				"crystal_essence_terra", "crystal_essence_ordo", "crystal_essence_perditio",
@@ -962,6 +962,41 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real bug found while adding Alumentum (unrelated chunk) and diagnosing an unrelated boot warning:
+	 * ore_amber's loot table nested a weighted {@code minecraft:item} pair (curio weight 1, amber weight
+	 * 14) inside a {@code minecraft:alternatives} entry - but {@code alternatives} picks the first child
+	 * whose conditions pass, it does not do weighted-random selection (that's a plain pool entries list's
+	 * job). Since neither child had a condition, the first one (curio) always matched and amber was
+	 * genuinely unreachable - the vanilla loot table validator even flags this at datapack-reload time
+	 * ("Unreachable entry!"), which is how this got noticed. Ore Amber had dropped a Curio on literally
+	 * every single break since the day it was added, never real Amber from this pool. Fixed by giving curio
+	 * its own {@code random_chance} condition and letting amber be the unconditional (guaranteed) fallback
+	 * - correct {@code alternatives} usage. This test breaks the ore many times and asserts both outcomes
+	 * actually occur, which the old (broken) loot table would have failed by never producing amber.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void oreAmberDropsBothCurioAndAmberAcrossManyBreaks(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(2, 1, 2);
+		BlockPos absolute = helper.absolutePos(relPos);
+		boolean foundCurio = false;
+		boolean foundAmber = false;
+		for (int i = 0; i < 200 && !(foundCurio && foundAmber); i++) {
+			helper.setBlock(relPos, BlocksTC.oreAmber.get());
+			net.minecraft.world.level.block.state.BlockState state = helper.getLevel().getBlockState(absolute);
+			net.minecraft.world.level.block.Block.dropResources(state, helper.getLevel(), absolute, null, null, ItemStack.EMPTY);
+			List<ItemEntity> dropped = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0));
+			for (ItemEntity e : dropped) {
+				if (e.getItem().is(ItemsTC.curio.get())) foundCurio = true;
+				if (e.getItem().is(ItemsTC.amber.get())) foundAmber = true;
+				e.discard();
+			}
+		}
+		helper.assertTrue(foundAmber, "ore_amber should drop real Amber most of the time across 200 breaks - the fixed bug made this never happen");
+		helper.assertTrue(foundCurio, "ore_amber should still drop a Curio sometimes (~6.6% of breaks) across 200 breaks");
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void stoneArcaneFamilyDropsRealLoot(GameTestHelper helper) {
 		assertSelfDrops(helper, new BlockPos(1, 1, 1), BlocksTC.stoneArcane.get(), ItemsTC.stoneArcane.get());
@@ -1028,5 +1063,27 @@ public class ThaumcraftGameTests {
 		}
 		helper.assertTrue(foundLog, "advancing a stage-1 silverwood sapling should have grown a real tree with log_silverwood blocks somewhere nearby (leaves found: " + foundLeaves + ")");
 		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Alumentum - a real throwable fire bomb (thaumcraft.common.items.consumables.ItemAlumentum +
+	// thaumcraft.common.entities.projectile.EntityAlumentum), not a wand focus. Right-clicking throws it
+	// like a real vanilla snowball/egg; same succeedWhen pattern as the Fireball focus test since the
+	// projectile needs real flight time before its explosion can land.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void throwingAlumentumExplodesAndDamagesANearbyTarget(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Pig pig = spawnPigFacedBy(helper, caster, origin, 2.5);
+		caster.lookAt(EntityAnchorArgument.Anchor.EYES, pig.getBoundingBox().getCenter());
+		float startingHealth = pig.getHealth();
+
+		caster.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ItemsTC.alumentum.get()));
+		ItemsTC.alumentum.get().use(helper.getLevel(), caster, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+		helper.succeedWhen(() -> helper.assertTrue(pig.getHealth() < startingHealth,
+				"the thrown alumentum should have exploded near the pig and damaged it by now, health=" + pig.getHealth() + " (was " + startingHealth + ")"));
 	}
 }

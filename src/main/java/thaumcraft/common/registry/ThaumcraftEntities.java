@@ -5,6 +5,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import thaumcraft.common.entities.projectile.EntityAlumentum;
 import thaumcraft.common.entities.projectile.EntityFocusCloud;
 import thaumcraft.common.entities.projectile.EntityFocusMine;
 import thaumcraft.common.entities.projectile.EntityFocusProjectile;
@@ -37,6 +38,15 @@ public final class ThaumcraftEntities {
 					.updateInterval(10)
 					.noSave()
 					.build("focus_cloud"));
+
+	/** A real, visible thrown item (unlike the invisible focus-carrier entities above) - allowed to save/
+	 * persist across chunk reloads mid-flight, matching vanilla's own snowball/egg convention. */
+	public static final DeferredHolder<EntityType<?>, EntityType<EntityAlumentum>> ALUMENTUM = ENTITY_TYPES.register("alumentum",
+			() -> EntityType.Builder.<EntityAlumentum>of(EntityAlumentum::new, MobCategory.MISC)
+					.sized(0.25f, 0.25f)
+					.clientTrackingRange(64)
+					.updateInterval(10)
+					.build("alumentum"));
 
 	private ThaumcraftEntities() {
 	}

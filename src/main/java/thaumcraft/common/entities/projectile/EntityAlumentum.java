@@ -1,45 +1,49 @@
 package thaumcraft.common.entities.projectile;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.projectile.EntityThrowable;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.world.World;
-import thaumcraft.client.fx.FXDispatcher;
 
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
+import net.minecraft.world.phys.HitResult;
+import thaumcraft.api.items.ItemsTC;
+import thaumcraft.common.registry.ThaumcraftEntities;
 
-public class EntityAlumentum extends EntityThrowable
-{
-    public EntityAlumentum(World par1World) {
-        super(par1World);
-    }
-    
-    public EntityAlumentum(World par1World, EntityLivingBase par2EntityLiving) {
-        super(par1World, par2EntityLiving);
-    }
-    
-    public EntityAlumentum(World par1World, double par2, double par4, double par6) {
-        super(par1World, par2, par4, par6);
-    }
-    
-    public void shoot(double x, double y, double z, float velocity, float inaccuracy) {
-        super.shoot(x, y, z, 0.75f, inaccuracy);
-    }
-    
-    public void onUpdate() {
-        super.onUpdate();
-        if (world.isRemote) {
-            for (double i = 0.0; i < 3.0; ++i) {
-                double coeff = i / 3.0;
-                FXDispatcher.INSTANCE.drawAlumentum((float)(prevPosX + (posX - prevPosX) * coeff), (float)(prevPosY + (posY - prevPosY) * coeff) + height / 2.0f, (float)(prevPosZ + (posZ - prevPosZ) * coeff), 0.0125f * (rand.nextFloat() - 0.5f), 0.0125f * (rand.nextFloat() - 0.5f), 0.0125f * (rand.nextFloat() - 0.5f), rand.nextFloat() * 0.2f, rand.nextFloat() * 0.1f, rand.nextFloat() * 0.1f, 0.5f, 4.0f);
-                FXDispatcher.INSTANCE.drawGenericParticles(posX + world.rand.nextGaussian() * 0.20000000298023224, posY + world.rand.nextGaussian() * 0.20000000298023224, posZ + world.rand.nextGaussian() * 0.20000000298023224, 0.0, 0.0, 0.0, 1.0f, 1.0f, 1.0f, 0.7f, false, 448, 8, 1, 8, 0, 0.3f, 0.0f, 1);
-            }
-        }
-    }
-    
-    protected void onImpact(RayTraceResult par1RayTraceResult) {
-        if (!world.isRemote) {
-            world.createExplosion(this, posX, posY, posZ, 1.1f, true);
-            setDead();
-        }
-    }
+/**
+ * Replaces the old (1.12.2) {@code EntityAlumentum} - the thrown-fire-bomb projectile behind
+ * {@link thaumcraft.common.items.consumables.ItemAlumentum}. Extends vanilla's
+ * {@link ThrowableItemProjectile} (the same base {@code Snowball}/{@code ThrownEgg} use - a thrown item
+ * that renders as a spinning icon of whatever {@code getItem()} returns) rather than the generic
+ * {@link net.minecraft.world.entity.projectile.ThrowableProjectile} this port's other projectiles use,
+ * since Alumentum (unlike a wand focus) is a real, visible held item being thrown.
+ *
+ * Simplified from the original: the explosion uses {@code Level.ExplosionInteraction.MOB} (damages
+ * entities and sets fire, doesn't destroy blocks) instead of the original's block-destroying explosion -
+ * consistent with this project's general preference for damage-only magic effects over terrain griefing,
+ * and it keeps the GameTest coverage predictable (no block-state cleanup to account for). No particle
+ * trail/impact FX, same as every other projectile in this project.
+ */
+public class EntityAlumentum extends ThrowableItemProjectile {
+
+	public EntityAlumentum(EntityType<? extends EntityAlumentum> type, Level level) {
+		super(type, level);
+	}
+
+	public EntityAlumentum(LivingEntity thrower, Level level) {
+		super(ThaumcraftEntities.ALUMENTUM.get(), thrower, level);
+	}
+
+	@Override
+	protected Item getDefaultItem() {
+		return ItemsTC.alumentum.get();
+	}
+
+	@Override
+	protected void onHit(HitResult result) {
+		super.onHit(result);
+		if (!level().isClientSide) {
+			level().explode(this, getX(), getY(), getZ(), 1.1f, true, Level.ExplosionInteraction.MOB);
+			discard();
+		}
+	}
 }
