@@ -9,6 +9,7 @@ import thaumcraft.common.tiles.crafting.TileArcaneWorkbench;
 import thaumcraft.common.tiles.crafting.TileCrucible;
 import thaumcraft.common.tiles.devices.TileRechargePedestal;
 import thaumcraft.common.tiles.devices.TileLampArcane;
+import thaumcraft.common.tiles.devices.TileVisGenerator;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
 public final class ThaumcraftBlockEntities {
@@ -32,6 +33,9 @@ public final class ThaumcraftBlockEntities {
 
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileLampArcane>> LAMP_ARCANE = BLOCK_ENTITIES.register("lamp_arcane",
 			() -> BlockEntityType.Builder.of(TileLampArcane::new, BlocksTC.lampArcane.get()).build(null));
+
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileVisGenerator>> VIS_GENERATOR = BLOCK_ENTITIES.register("vis_generator",
+			() -> BlockEntityType.Builder.of(TileVisGenerator::new, BlocksTC.visGenerator.get()).build(null));
 
 	private ThaumcraftBlockEntities() {
 	}

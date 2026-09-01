@@ -1,107 +1,128 @@
 package thaumcraft.common.tiles.devices;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import net.minecraft.block.Block;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.ITickable;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.energy.CapabilityEnergy;
-import net.minecraftforge.energy.IEnergyStorage;
-import thaumcraft.common.lib.utils.BlockStateUtils;
-import thaumcraft.common.tiles.TileThaumcraft;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.energy.IEnergyStorage;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 import thaumcraft.common.world.aura.AuraHandler;
 
+/**
+ * Replaces the old (1.12.2) {@code TileVisGenerator} - drains 1 vis per recharge cycle from the local aura
+ * and converts it 1:1000 into stored energy, then actively pushes it (up to {@link #MAX_PUSH} per tick) into
+ * whatever {@link IEnergyStorage} sits at its output face. {@code IEnergyStorage} is one of the few Forge-era
+ * capability interfaces that survived into NeoForge 1.21.1 essentially unchanged (same method set, now
+ * reached via {@link Capabilities.EnergyStorage#BLOCK} instead of a {@code CapabilityInject} field) - this
+ * device ports over almost mechanically as a result, unlike most of this session's other devices.
+ *
+ * Same "push-only" design as the original: {@link #receiveEnergy}/{@link #extractEnergy} (the passive,
+ * externally-triggered paths a hopper/cable would use) both always return 0 - the only way energy actually
+ * moves is this tile's own active {@link #pushEnergy} call during its tick, matching {@code canReceive()
+ * == false}. The capability is still exposed (see {@code Thaumcraft#registerCapabilities}) purely so an
+ * external machine can read {@link #getEnergyStored()}/{@link #getMaxEnergyStored()} - again matching the
+ * original.
+ *
+ * Simplified vs the original: no spark particle FX on push (client FX dispatcher not ported, same "no client
+ * FX" precedent as every other device this session).
+ */
+public class TileVisGenerator extends BlockEntity implements IEnergyStorage {
 
-public class TileVisGenerator extends TileThaumcraft implements ITickable, IEnergyStorage
-{
-    protected int energy;
-    protected int capacity = 1000;
-    protected int maxExtract = 20;
-    
-    public void update() {
-        if (!world.isRemote && BlockStateUtils.isEnabled(getBlockMetadata())) {
-            recharge();
-            EnumFacing face = BlockStateUtils.getFacing(getBlockMetadata());
-            IBlockState state = getWorld().getBlockState(getPos().offset(face));
-            Block block = state.getBlock();
-            if (block.hasTileEntity(state)) {
-                TileEntity tileentity = getWorld().getTileEntity(getPos().offset(face));
-                if (tileentity != null && tileentity.hasCapability(CapabilityEnergy.ENERGY, face.getOpposite())) {
-                    IEnergyStorage capability = tileentity.getCapability(CapabilityEnergy.ENERGY, face.getOpposite());
-                    if (capability.canReceive()) {
-                        int energyExtracted = Math.min(energy, 20);
-                        energyExtracted = capability.receiveEnergy(energyExtracted, false);
-                        if (energyExtracted > 0) {
-                            energy -= energyExtracted;
-                            markDirty();
-                            if (energy == 0) {
-                                syncTile(false);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    private void recharge() {
-        if (energy == 0) {
-            float vis = AuraHandler.drainVis(getWorld(), getPos(), 1.0f, false);
-            energy = (int)(vis * 1000.0f);
-            markDirty();
-            syncTile(false);
-        }
-    }
-    
-    @Override
-    public void readSyncNBT(NBTTagCompound nbt) {
-        energy = nbt.getInteger("energy");
-    }
-    
-    @Override
-    public NBTTagCompound writeSyncNBT(NBTTagCompound nbt) {
-        nbt.setInteger("energy", energy);
-        return nbt;
-    }
-    
-    public boolean hasCapability(@Nonnull Capability<?> capability, @Nullable EnumFacing facing) {
-        EnumFacing face = BlockStateUtils.getFacing(getBlockMetadata());
-        return (face == facing && capability == CapabilityEnergy.ENERGY) || super.hasCapability(capability, facing);
-    }
-    
-    @Nullable
-    public <T> T getCapability(@Nonnull Capability<T> capability, @Nullable EnumFacing facing) {
-        EnumFacing face = BlockStateUtils.getFacing(getBlockMetadata());
-        if (face == facing && capability == CapabilityEnergy.ENERGY) {
-            return (T)this;
-        }
-        return (T)super.getCapability((Capability)capability, facing);
-    }
-    
-    public int receiveEnergy(int maxReceive, boolean simulate) {
-        return 0;
-    }
-    
-    public int extractEnergy(int maxExtract, boolean simulate) {
-        return 0;
-    }
-    
-    public int getEnergyStored() {
-        return energy;
-    }
-    
-    public int getMaxEnergyStored() {
-        return 1000;
-    }
-    
-    public boolean canExtract() {
-        return true;
-    }
-    
-    public boolean canReceive() {
-        return false;
-    }
+	private static final int CAPACITY = 1000;
+	private static final int MAX_PUSH = 20;
+
+	private int energy;
+
+	public TileVisGenerator(BlockPos pos, BlockState state) {
+		super(ThaumcraftBlockEntities.VIS_GENERATOR.get(), pos, state);
+	}
+
+	public static void tick(Level level, BlockPos pos, BlockState state, TileVisGenerator tile) {
+		if (level.isClientSide) return;
+		if (!state.getValue(BlockStateProperties.ENABLED)) return;
+		tile.recharge(level, pos);
+		tile.pushEnergy(level, pos, state);
+	}
+
+	private void recharge(Level level, BlockPos pos) {
+		if (energy == 0) {
+			float vis = AuraHandler.drainVis(level, pos, 1.0f, false);
+			if (vis > 0.0f) {
+				energy = (int) (vis * 1000.0f);
+				setChanged();
+			}
+		}
+	}
+
+	private void pushEnergy(Level level, BlockPos pos, BlockState state) {
+		if (energy <= 0) return;
+		Direction facing = state.getValue(BlockStateProperties.FACING);
+		BlockPos targetPos = pos.relative(facing);
+		IEnergyStorage target = level.getCapability(Capabilities.EnergyStorage.BLOCK, targetPos, facing.getOpposite());
+		if (target == null || !target.canReceive()) return;
+		int toSend = Math.min(energy, MAX_PUSH);
+		int accepted = target.receiveEnergy(toSend, false);
+		if (accepted > 0) {
+			energy -= accepted;
+			setChanged();
+		}
+	}
+
+	@Override
+	public int receiveEnergy(int toReceive, boolean simulate) {
+		return 0;
+	}
+
+	@Override
+	public int extractEnergy(int toExtract, boolean simulate) {
+		return 0;
+	}
+
+	@Override
+	public int getEnergyStored() {
+		return energy;
+	}
+
+	@Override
+	public int getMaxEnergyStored() {
+		return CAPACITY;
+	}
+
+	@Override
+	public boolean canExtract() {
+		return true;
+	}
+
+	@Override
+	public boolean canReceive() {
+		return false;
+	}
+
+	public Direction getFacing() {
+		return getBlockState().getValue(BlockStateProperties.FACING);
+	}
+
+	/** Test/diagnostic hook - lets a GameTest set stored energy directly rather than waiting out real aura
+	 * drain ticks. */
+	public void setEnergyForTest(int value) {
+		this.energy = value;
+		setChanged();
+	}
+
+	@Override
+	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.saveAdditional(tag, registries);
+		tag.putInt("Energy", energy);
+	}
+
+	@Override
+	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.loadAdditional(tag, registries);
+		energy = tag.getInt("Energy");
+	}
 }

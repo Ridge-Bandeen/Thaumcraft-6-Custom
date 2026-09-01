@@ -180,6 +180,13 @@ public final class BlocksTC {
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.METAL).noOcclusion()
 					.lightLevel(state -> state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED) ? 15 : 0));
 
+	/** Drains vis from the local aura and pushes it out as real RF/FE energy - see
+	 * {@link thaumcraft.common.tiles.devices.TileVisGenerator}'s own doc comment for why
+	 * {@code IEnergyStorage} ports over almost mechanically here, unlike most devices this session. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockVisGenerator> visGenerator = BLOCKS.registerBlock("vis_generator",
+			thaumcraft.common.blocks.devices.BlockVisGenerator::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0f).sound(SoundType.WOOD).noOcclusion());
+
 	private BlocksTC() {
 	}
 }

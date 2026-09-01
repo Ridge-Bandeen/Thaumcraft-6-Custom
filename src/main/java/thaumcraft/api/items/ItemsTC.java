@@ -172,6 +172,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> lampArcane =
 			ITEMS.registerSimpleBlockItem("lamp_arcane", BlocksTC.lampArcane);
 
+	public static final DeferredItem<BlockItem> visGenerator =
+			ITEMS.registerSimpleBlockItem("vis_generator", BlocksTC.visGenerator);
+
 	private ItemsTC() {
 	}
 }

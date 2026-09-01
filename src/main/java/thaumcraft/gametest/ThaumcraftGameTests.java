@@ -83,8 +83,97 @@ public class ThaumcraftGameTests {
 	public static final net.neoforged.neoforge.registries.DeferredItem<TestRechargableItem> TEST_RECHARGABLE_ITEM =
 			TEST_ITEMS.registerItem("test_rechargable_item", TestRechargableItem::new);
 
+	/**
+	 * A minimal, real registered {@code IEnergyStorage}-exposing block+tile, test-only - lets
+	 * {@code visGeneratorRechargesFromAuraAndPushesEnergyToANeighbor} exercise a real cross-block capability
+	 * push (the actual mechanism {@code TileVisGenerator} uses in production) without needing a real
+	 * production energy-consuming machine, none of which are registered yet.
+	 */
+	private static final net.neoforged.neoforge.registries.DeferredRegister.Blocks TEST_BLOCKS =
+			net.neoforged.neoforge.registries.DeferredRegister.createBlocks(Thaumcraft.MODID);
+
+	private static final net.neoforged.neoforge.registries.DeferredRegister<net.minecraft.world.level.block.entity.BlockEntityType<?>> TEST_BLOCK_ENTITIES =
+			net.neoforged.neoforge.registries.DeferredRegister.create(net.minecraft.core.registries.Registries.BLOCK_ENTITY_TYPE, Thaumcraft.MODID);
+
+	public static final net.neoforged.neoforge.registries.DeferredBlock<TestEnergySinkBlock> TEST_ENERGY_SINK_BLOCK =
+			TEST_BLOCKS.registerBlock("test_energy_sink", TestEnergySinkBlock::new,
+					net.minecraft.world.level.block.state.BlockBehaviour.Properties.of());
+
+	public static final net.neoforged.neoforge.registries.DeferredHolder<net.minecraft.world.level.block.entity.BlockEntityType<?>, net.minecraft.world.level.block.entity.BlockEntityType<TestEnergySinkBlockEntity>> TEST_ENERGY_SINK_BE =
+			TEST_BLOCK_ENTITIES.register("test_energy_sink",
+					() -> net.minecraft.world.level.block.entity.BlockEntityType.Builder.of(TestEnergySinkBlockEntity::new, TEST_ENERGY_SINK_BLOCK.get()).build(null));
+
 	public static void register(net.neoforged.bus.api.IEventBus modEventBus) {
 		TEST_ITEMS.register(modEventBus);
+		TEST_BLOCKS.register(modEventBus);
+		TEST_BLOCK_ENTITIES.register(modEventBus);
+	}
+
+	/** See {@link #registerTestCapabilities} - called from {@code Thaumcraft#registerCapabilities} alongside
+	 * the real production capability wiring. */
+	public static void registerTestCapabilities(net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event) {
+		event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, TEST_ENERGY_SINK_BE.get(),
+				(tile, side) -> tile);
+	}
+
+	private static final class TestEnergySinkBlock extends net.minecraft.world.level.block.Block implements net.minecraft.world.level.block.EntityBlock {
+		private static final com.mojang.serialization.MapCodec<TestEnergySinkBlock> CODEC = simpleCodec(TestEnergySinkBlock::new);
+
+		TestEnergySinkBlock(net.minecraft.world.level.block.state.BlockBehaviour.Properties properties) {
+			super(properties);
+		}
+
+		@Override
+		protected com.mojang.serialization.MapCodec<? extends net.minecraft.world.level.block.Block> codec() {
+			return CODEC;
+		}
+
+		@javax.annotation.Nullable
+		@Override
+		public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
+			return new TestEnergySinkBlockEntity(pos, state);
+		}
+	}
+
+	private static final class TestEnergySinkBlockEntity extends net.minecraft.world.level.block.entity.BlockEntity implements net.neoforged.neoforge.energy.IEnergyStorage {
+		private int energy;
+
+		TestEnergySinkBlockEntity(BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
+			super(TEST_ENERGY_SINK_BE.get(), pos, state);
+		}
+
+		@Override
+		public int receiveEnergy(int toReceive, boolean simulate) {
+			if (!simulate) {
+				energy += toReceive;
+			}
+			return toReceive;
+		}
+
+		@Override
+		public int extractEnergy(int toExtract, boolean simulate) {
+			return 0;
+		}
+
+		@Override
+		public int getEnergyStored() {
+			return energy;
+		}
+
+		@Override
+		public int getMaxEnergyStored() {
+			return Integer.MAX_VALUE;
+		}
+
+		@Override
+		public boolean canExtract() {
+			return false;
+		}
+
+		@Override
+		public boolean canReceive() {
+			return true;
+		}
 	}
 
 	private static final class TestRechargableItem extends net.minecraft.world.item.Item implements thaumcraft.api.items.IRechargable {
@@ -188,6 +277,7 @@ public class ThaumcraftGameTests {
 				"crystal_essence_vacuos", "crystal_essence_lux", "crystal_essence_motus",
 				"crystal_essence_gelum", "crystal_essence_metallum", "crystal_essence_victus",
 				"crystal_essence_mortuus", "crystal_essence_potentia", "crystal_essence_permutatio",
+				"vis_generator",
 				"stone_arcane", "stone_arcane_stairs", "stone_arcane_slab",
 				"stone_arcane_brick", "stone_arcane_brick_stairs", "stone_arcane_brick_slab",
 				"plank_silverwood", "silverwood_stairs", "silverwood_slab"
@@ -1312,7 +1402,7 @@ public class ThaumcraftGameTests {
 				break;
 			}
 		}
-		helper.assertTrue(foundLight, "an enabled arcane lamp should have scattered at least one light block nearby after 300 attempts");
+		helper.assertTrue(foundLight, "an enabled arcane lamp should have scattered at least one light block nearby after 3000 attempts");
 		helper.succeed();
 	}
 
@@ -1327,6 +1417,62 @@ public class ThaumcraftGameTests {
 		helper.setBlock(relPos.below(), Blocks.REDSTONE_BLOCK);
 		helper.assertTrue(!helper.getBlockState(relPos).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED),
 				"a powered arcane lamp should turn off");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Vis Generator - one of the few devices this session where the original's capability (IEnergyStorage)
+	// survived into NeoForge 1.21.1 almost unchanged, so it ports over close to mechanically. See
+	// TileVisGenerator's own doc comment for the "push-only" design. Uses AuraHandler.addVis + calling
+	// TileVisGenerator.tick(...) directly (same pattern as rechargePedestalAcceptsRechargesAndEjectsAnItem)
+	// rather than waiting out real aura-generation/tick timing.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void visGeneratorRechargesFromAuraAndPushesEnergyToANeighbor(GameTestHelper helper) {
+		BlockPos genPos = new BlockPos(2, 1, 2);
+		BlockPos sinkPos = genPos.above();
+		BlockPos genAbs = helper.absolutePos(genPos);
+
+		helper.setBlock(genPos, BlocksTC.visGenerator.get());
+		helper.setBlock(sinkPos, TEST_ENERGY_SINK_BLOCK.get());
+
+		// Force facing towards the sink directly rather than relying on the placement-time neighbor scan
+		// (BlockVisGenerator#getStateForPlacement) - helper.setBlock doesn't go through a real
+		// BlockPlaceContext, and this test targets the tile's recharge/push tick logic specifically.
+		net.minecraft.world.level.block.state.BlockState genState = helper.getBlockState(genPos)
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.UP);
+		helper.setBlock(genPos, genState);
+
+		AuraHandler.addVis(helper.getLevel(), genAbs, 500.0f);
+
+		thaumcraft.common.tiles.devices.TileVisGenerator tile = helper.getBlockEntity(genPos);
+		TestEnergySinkBlockEntity sink = helper.getBlockEntity(sinkPos);
+		helper.assertTrue(sink.getEnergyStored() == 0, "the sink shouldn't have any energy before the generator ticks");
+
+		thaumcraft.common.tiles.devices.TileVisGenerator.tick(helper.getLevel(), genAbs, genState, tile);
+
+		helper.assertTrue(sink.getEnergyStored() > 0,
+				"the sink adjacent to an enabled vis generator's output face should have received energy after one tick, got " + sink.getEnergyStored());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void visGeneratorDoesNothingWhileDisabledByRedstone(GameTestHelper helper) {
+		BlockPos genPos = new BlockPos(2, 1, 2);
+		BlockPos genAbs = helper.absolutePos(genPos);
+		helper.setBlock(genPos, BlocksTC.visGenerator.get());
+
+		net.minecraft.world.level.block.state.BlockState disabled = helper.getBlockState(genPos)
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED, false);
+		helper.setBlock(genPos, disabled);
+
+		AuraHandler.addVis(helper.getLevel(), genAbs, 500.0f);
+		thaumcraft.common.tiles.devices.TileVisGenerator tile = helper.getBlockEntity(genPos);
+
+		thaumcraft.common.tiles.devices.TileVisGenerator.tick(helper.getLevel(), genAbs, disabled, tile);
+
+		helper.assertTrue(tile.getEnergyStored() == 0, "a disabled vis generator shouldn't recharge from the aura, got " + tile.getEnergyStored());
 		helper.succeed();
 	}
 }

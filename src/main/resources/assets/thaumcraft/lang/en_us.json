@@ -115,5 +115,7 @@
 
   "item.thaumcraft.salis_mundus": "Salis Mundus",
 
-  "block.thaumcraft.lamp_arcane": "Arcane Lamp"
+  "block.thaumcraft.lamp_arcane": "Arcane Lamp",
+
+  "block.thaumcraft.vis_generator": "Vis Generator"
 }

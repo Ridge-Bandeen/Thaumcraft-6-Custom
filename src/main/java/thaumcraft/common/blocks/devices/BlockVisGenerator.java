@@ -1,93 +1,110 @@
 package thaumcraft.common.blocks.devices;
-import java.util.Random;
-import net.minecraft.block.Block;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.state.BlockFaceShape;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import net.minecraftforge.energy.CapabilityEnergy;
-import net.minecraftforge.energy.IEnergyStorage;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.client.fx.FXDispatcher;
-import thaumcraft.common.blocks.BlockTCDevice;
-import thaumcraft.common.blocks.IBlockEnabled;
-import thaumcraft.common.blocks.IBlockFacing;
-import thaumcraft.common.lib.utils.BlockStateUtils;
-import thaumcraft.common.lib.utils.Utils;
+
+import javax.annotation.Nullable;
+
+import com.mojang.serialization.MapCodec;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.energy.IEnergyStorage;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 import thaumcraft.common.tiles.devices.TileVisGenerator;
 
+/**
+ * Replaces the old (1.12.2) {@code BlockVisGenerator} - a device that drains vis from the local aura and
+ * pushes it out as real energy to whatever's adjacent to its output face (see {@link TileVisGenerator}'s own
+ * doc comment for why {@code IEnergyStorage} ports over almost mechanically here, unlike most devices this
+ * session).
+ *
+ * On placement, scans all 6 neighbors for one that can receive energy and orients {@code FACING} towards it
+ * - same behavior as the original. Falls back to {@link Direction#UP} if none found (the original fell
+ * through to a generic facing-from-click default via the unported {@code BlockTCDevice}; a fixed fallback
+ * here is an intentional simplification, not a functional loss - a generator with nothing to push into just
+ * idles either way, and the facing can't be changed after placement in either version).
+ *
+ * {@code ENABLED} is a plain redstone-inverted toggle, same convention as every other {@code IBlockEnabled}
+ * device this session (e.g. {@link BlockLampArcane}) - active unless powered.
+ */
+public class BlockVisGenerator extends Block implements EntityBlock {
 
-public class BlockVisGenerator extends BlockTCDevice implements IBlockFacing, IBlockEnabled
-{
-    public BlockVisGenerator() {
-        super(Material.WOOD, TileVisGenerator.class, "vis_generator");
-        setSoundType(SoundType.WOOD);
-    }
-    
-    public boolean isOpaqueCube(IBlockState state) {
-        return false;
-    }
-    
-    public boolean isFullCube(IBlockState state) {
-        return false;
-    }
-    
-    @Override
-    public int damageDropped(IBlockState state) {
-        return 0;
-    }
-    
-    public BlockFaceShape getBlockFaceShape(IBlockAccess worldIn, IBlockState state, BlockPos pos, EnumFacing face) {
-        return BlockFaceShape.UNDEFINED;
-    }
-    
-    @Override
-    public IBlockState getStateForPlacement(World worldIn, BlockPos pos, EnumFacing facing, float hitX, float hitY, float hitZ, int meta, EntityLivingBase placer) {
-        for (EnumFacing face : EnumFacing.VALUES) {
-            TileEntity tileentity = worldIn.getTileEntity(pos.offset(face));
-            if (tileentity != null && tileentity.hasCapability(CapabilityEnergy.ENERGY, face.getOpposite())) {
-                IEnergyStorage capability = tileentity.getCapability(CapabilityEnergy.ENERGY, face.getOpposite());
-                if (capability.canReceive()) {
-                    IBlockState bs = getDefaultState();
-                    bs = bs.withProperty((IProperty)IBlockFacing.FACING, (Comparable)face);
-                    bs = bs.withProperty((IProperty)IBlockEnabled.ENABLED, (Comparable)true);
-                    return bs;
-                }
-            }
-        }
-        return super.getStateForPlacement(worldIn, pos, facing, hitX, hitY, hitZ, meta, placer);
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void randomDisplayTick(IBlockState state, World world, BlockPos pos, Random rand) {
-        Block block = state.getBlock();
-        if (block.hasTileEntity(state)) {
-            TileEntity tileentity = world.getTileEntity(pos);
-            if (tileentity != null) {
-                EnumFacing face = BlockStateUtils.getFacing(state);
-                if (tileentity.hasCapability(CapabilityEnergy.ENERGY, face)) {
-                    IEnergyStorage capability = tileentity.getCapability(CapabilityEnergy.ENERGY, face);
-                    if (capability.getEnergyStored() > 0) {
-                        double x = (face.getFrontOffsetX() == 0) ? (rand.nextGaussian() * 0.1) : (face.getFrontOffsetX() * 0.1);
-                        double y = (face.getFrontOffsetY() == 0) ? (rand.nextGaussian() * 0.1) : (face.getFrontOffsetY() * 0.1);
-                        double z = (face.getFrontOffsetZ() == 0) ? (rand.nextGaussian() * 0.1) : (face.getFrontOffsetZ() * 0.1);
-                        FXDispatcher.INSTANCE.spark(pos.getX() + 0.5 + x, pos.getY() + 0.5 + y, pos.getZ() + 0.5 + z, 0.66f + rand.nextFloat(), 0.65f + rand.nextFloat() * 0.1f, 1.0f, 1.0f, 0.8f);
-                    }
-                }
-            }
-        }
-    }
-    
-    public AxisAlignedBB getBoundingBox(IBlockState state, IBlockAccess source, BlockPos pos) {
-        return Utils.rotateBlockAABB(new AxisAlignedBB(0.25, 0.0, 0.25, 0.75, 0.875, 0.75), BlockStateUtils.getFacing(getMetaFromState(state)));
-    }
+	public static final MapCodec<BlockVisGenerator> CODEC = simpleCodec(BlockVisGenerator::new);
+
+	private static final VoxelShape SHAPE = Shapes.box(0.1875, 0.0, 0.1875, 0.8125, 1.0, 0.8125);
+
+	public BlockVisGenerator(BlockBehaviour.Properties properties) {
+		super(properties);
+		registerDefaultState(getStateDefinition().any()
+				.setValue(BlockStateProperties.FACING, Direction.UP)
+				.setValue(BlockStateProperties.ENABLED, true));
+	}
+
+	@Override
+	protected MapCodec<? extends Block> codec() {
+		return CODEC;
+	}
+
+	@Override
+	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+		builder.add(BlockStateProperties.FACING, BlockStateProperties.ENABLED);
+	}
+
+	@Override
+	public BlockState getStateForPlacement(BlockPlaceContext context) {
+		Level level = context.getLevel();
+		BlockPos pos = context.getClickedPos();
+		Direction facing = Direction.UP;
+		for (Direction face : Direction.values()) {
+			IEnergyStorage neighbor = level.getCapability(Capabilities.EnergyStorage.BLOCK, pos.relative(face), face.getOpposite());
+			if (neighbor != null && neighbor.canReceive()) {
+				facing = face;
+				break;
+			}
+		}
+		return defaultBlockState().setValue(BlockStateProperties.FACING, facing)
+				.setValue(BlockStateProperties.ENABLED, !level.hasNeighborSignal(pos));
+	}
+
+	@Override
+	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		return SHAPE;
+	}
+
+	@Override
+	protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock, BlockPos neighborPos, boolean movedByPiston) {
+		boolean shouldBeEnabled = !level.hasNeighborSignal(pos);
+		if (shouldBeEnabled != state.getValue(BlockStateProperties.ENABLED)) {
+			level.setBlock(pos, state.setValue(BlockStateProperties.ENABLED, shouldBeEnabled), 3);
+		}
+		super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);
+	}
+
+	@Nullable
+	@Override
+	public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+		return new TileVisGenerator(pos, state);
+	}
+
+	@Nullable
+	@Override
+	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+		return type == ThaumcraftBlockEntities.VIS_GENERATOR.get()
+				? (lvl, pos, st, be) -> TileVisGenerator.tick(lvl, pos, st, (TileVisGenerator) be)
+				: null;
+	}
 }

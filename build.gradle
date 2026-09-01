@@ -221,6 +221,9 @@ sourceSets {
             include 'thaumcraft/common/blocks/devices/BlockLampArcane.java'
             include 'thaumcraft/common/tiles/devices/TileLampArcane.java'
 
+            include 'thaumcraft/common/blocks/devices/BlockVisGenerator.java'
+            include 'thaumcraft/common/tiles/devices/TileVisGenerator.java'
+
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
     }
