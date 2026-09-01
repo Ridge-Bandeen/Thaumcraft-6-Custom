@@ -96,6 +96,20 @@ public final class BlocksTC {
 			SlabBlock::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
 
+	/** Brick-cut variant of Arcane Stone, plus its own stairs/slab pair - same shape as the plain stone's
+	 * three blocks above, one texture set swapped in. */
+	public static final DeferredBlock<Block> stoneArcaneBrick = BLOCKS.registerBlock("stone_arcane_brick",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
+
+	public static final DeferredBlock<StairBlock> stoneArcaneBrickStairs = BLOCKS.registerBlock("stone_arcane_brick_stairs",
+			props -> new StairBlock(stoneArcaneBrick.get().defaultBlockState(), props),
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
+
+	public static final DeferredBlock<SlabBlock> stoneArcaneBrickSlab = BLOCKS.registerBlock("stone_arcane_brick_slab",
+			SlabBlock::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
+
 	private BlocksTC() {
 	}
 }

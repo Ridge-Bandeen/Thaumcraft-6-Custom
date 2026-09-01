@@ -120,6 +120,15 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> stoneArcaneSlab =
 			ITEMS.registerSimpleBlockItem("stone_arcane_slab", BlocksTC.stoneArcaneSlab);
 
+	public static final DeferredItem<BlockItem> stoneArcaneBrick =
+			ITEMS.registerSimpleBlockItem("stone_arcane_brick", BlocksTC.stoneArcaneBrick);
+
+	public static final DeferredItem<BlockItem> stoneArcaneBrickStairs =
+			ITEMS.registerSimpleBlockItem("stone_arcane_brick_stairs", BlocksTC.stoneArcaneBrickStairs);
+
+	public static final DeferredItem<BlockItem> stoneArcaneBrickSlab =
+			ITEMS.registerSimpleBlockItem("stone_arcane_brick_slab", BlocksTC.stoneArcaneBrickSlab);
+
 	private ItemsTC() {
 	}
 }
