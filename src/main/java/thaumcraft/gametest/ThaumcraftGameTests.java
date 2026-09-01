@@ -1973,6 +1973,20 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crystalEssenceShowsTheAspectItHoldsInItsDisplayName(GameTestHelper helper) {
+		ItemStack unaspected = new ItemStack(ItemsTC.crystalEssence.get());
+		String plainName = unaspected.getHoverName().getString();
+
+		ItemStack fire = new ItemStack(ItemsTC.crystalEssence.get());
+		ItemsTC.crystalEssence.get().setAspects(fire, new AspectList().add(Aspect.FIRE, 1));
+		String fireName = fire.getHoverName().getString();
+
+		helper.assertTrue(!fireName.equals(plainName), "a crystal essence holding an aspect should show a different name than an unaspected one, both were: " + fireName);
+		helper.assertTrue(fireName.contains("Fire"), "a Fire crystal essence's display name should mention Fire, found: " + fireName);
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Everfull Urn (TileWaterJug) - see TileWaterJug's own doc comment for what's simplified (the
 	// original's 5x5x3 neighbor auto-fill scanning is dropped; this keeps the core "infinite water source"

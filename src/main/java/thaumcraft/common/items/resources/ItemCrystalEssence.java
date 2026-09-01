@@ -1,33 +1,36 @@
 package thaumcraft.common.items.resources;
-import java.util.Iterator;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.NonNullList;
+
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
-import thaumcraft.common.config.ConfigItems;
-import thaumcraft.common.items.ItemTCEssentiaContainer;
+import thaumcraft.api.items.ItemGenericEssentiaContainer;
 
+/**
+ * Replaces the old (1.12.2) {@code ItemCrystalEssence} - a thin subclass of the already-shipped
+ * {@link ItemGenericEssentiaContainer} (which {@code ItemsTC.crystalEssence} used directly, unnamed, until
+ * now) adding only the original's one real piece of extra behaviour: a display name naming the aspect it
+ * holds ("Crystal Essence (Fire)") instead of the plain generic name every crystal essence stack showed
+ * before. The base class's own random-aspect-on-craft/tick behavior and creative-tab variant listing already
+ * covered everything else the original class did.
+ *
+ * {@code getLocalizedDescription()} on {@link Aspect} needed real {@code tc.aspect.*} lang keys to resolve
+ * against - those existed only in the old (dead - 1.21.1 never loads {@code .lang} files) {@code en_us.lang},
+ * so the 37 real aspect names + 3 category headers were converted into {@code en_us.json} alongside this
+ * class. The rest of {@code en_us.lang} still needs the same conversion (a separate, much larger task).
+ */
+public class ItemCrystalEssence extends ItemGenericEssentiaContainer {
 
-public class ItemCrystalEssence extends ItemTCEssentiaContainer
-{
-    public ItemCrystalEssence() {
-        super("crystal_essence", 1);
-    }
-    
-    @Override
-    public void getSubItems(CreativeTabs tab, NonNullList<ItemStack> items) {
-        if (tab == ConfigItems.TABTC || tab == CreativeTabs.SEARCH) {
-            for (Aspect tag : Aspect.aspects.values()) {
-                ItemStack i = new ItemStack(this);
-                setAspects(i, new AspectList().add(tag, base));
-                items.add(i);
-            }
-        }
-    }
-    
-    public String getItemStackDisplayName(ItemStack stack) {
-        return (getAspects(stack) != null && !getAspects(stack).aspects.isEmpty()) ? String.format(super.getItemStackDisplayName(stack), getAspects(stack).getAspects()[0].getName()) : super.getItemStackDisplayName(stack);
-    }
+	public ItemCrystalEssence(Properties properties) {
+		super(properties, 1);
+	}
+
+	@Override
+	public Component getName(ItemStack stack) {
+		AspectList aspects = getAspects(stack);
+		if (aspects != null && aspects.size() > 0) {
+			return Component.translatable("item.thaumcraft.crystal_essence.named", aspects.getAspects()[0].getLocalizedDescription());
+		}
+		return super.getName(stack);
+	}
 }

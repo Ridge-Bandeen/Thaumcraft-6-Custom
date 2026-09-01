@@ -66,8 +66,8 @@ public final class ItemsTC {
 	public static final DeferredItem<Item> quicksilver =
 			ITEMS.registerSimpleItem("quicksilver");
 
-	public static final DeferredItem<ItemGenericEssentiaContainer> crystalEssence =
-			ITEMS.registerItem("crystal_essence", props -> new ItemGenericEssentiaContainer(props, 1));
+	public static final DeferredItem<thaumcraft.common.items.resources.ItemCrystalEssence> crystalEssence =
+			ITEMS.registerItem("crystal_essence", thaumcraft.common.items.resources.ItemCrystalEssence::new);
 
 	public static final DeferredItem<ItemFocusFrost> focusFrost =
 			ITEMS.registerItem("focus_frost", ItemFocusFrost::new);
