@@ -73,6 +73,15 @@ public final class BlocksTC {
 			TransparentBlock::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_ORANGE).strength(0.5f).sound(SoundType.GLASS).noOcclusion());
 
+	/** Decorative crafted from stone + Crystal Essence ({@code data/thaumcraft/recipe/stone_arcane.json}) -
+	 * used as the base material for several not-yet-ported structures/devices (stairs, slabs, the Wand
+	 * Workbench), ported alone for now. No custom Block subclass needed - the original ({@code BlockStoneTC})
+	 * only special-cased "is a valid beacon base", reproduced with the {@code minecraft:beacon_base_blocks}
+	 * tag instead (see {@code data/minecraft/tags/block/beacon_base_blocks.json}). */
+	public static final DeferredBlock<Block> stoneArcane = BLOCKS.registerBlock("stone_arcane",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
+
 	private BlocksTC() {
 	}
 }

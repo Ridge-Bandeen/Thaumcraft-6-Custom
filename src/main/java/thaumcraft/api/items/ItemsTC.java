@@ -111,6 +111,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> amberBrick =
 			ITEMS.registerSimpleBlockItem("amber_brick", BlocksTC.amberBrick);
 
+	public static final DeferredItem<BlockItem> stoneArcane =
+			ITEMS.registerSimpleBlockItem("stone_arcane", BlocksTC.stoneArcane);
+
 	private ItemsTC() {
 	}
 }
