@@ -147,6 +147,14 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> silverwoodSlab =
 			ITEMS.registerSimpleBlockItem("silverwood_slab", BlocksTC.silverwoodSlab);
 
+	/** A common crafting component across several devices (Wand Workbench, Vis Battery, Recharge Pedestal,
+	 * etc. - all still unported). Its own recipe had been blocked all session on the Crucible not existing
+	 * yet; now that it does, this also lets caster_basic's recipe go back to its authentic pattern (see
+	 * data/thaumcraft/recipe/caster_basic.json) instead of the invented substitute used since the wand was
+	 * first built. */
+	public static final DeferredItem<Item> visResonator =
+			ITEMS.registerSimpleItem("vis_resonator");
+
 	private ItemsTC() {
 	}
 }

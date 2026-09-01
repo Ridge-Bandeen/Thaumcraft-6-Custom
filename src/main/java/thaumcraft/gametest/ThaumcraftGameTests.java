@@ -144,7 +144,7 @@ public class ThaumcraftGameTests {
 				"focus_air", "focus_air_crucible",
 				"focus_trap", "focus_trap_crucible",
 				"focus_sanctuary", "focus_sanctuary_crucible",
-				"caster_basic", "thaumometer", "quicksilver_smelting", "mirrored_glass",
+				"caster_basic", "thaumometer", "quicksilver_smelting", "mirrored_glass", "vis_resonator",
 				"amber_block", "amber_block_to_amber", "amber_brick", "amber_brick_to_block",
 				"crystal_essence_aer", "crystal_essence_aqua", "crystal_essence_ignis",
 				"crystal_essence_terra", "crystal_essence_ordo", "crystal_essence_perditio",

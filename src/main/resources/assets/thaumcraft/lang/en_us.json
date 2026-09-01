@@ -105,5 +105,7 @@
   "block.thaumcraft.leaves_silverwood": "Silverwood Leaves",
   "block.thaumcraft.sapling_silverwood": "Silverwood Sapling",
   "block.thaumcraft.silverwood_stairs": "Silverwood Stairs",
-  "block.thaumcraft.silverwood_slab": "Silverwood Slab"
+  "block.thaumcraft.silverwood_slab": "Silverwood Slab",
+
+  "item.thaumcraft.vis_resonator": "Vis Resonator"
 }

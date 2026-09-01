@@ -1,15 +1,17 @@
 {
   "type": "thaumcraft:arcane_shaped",
   "research": "FIRSTSTEPS",
-  "vis": 20,
+  "vis": 100,
   "pattern": [
-    " I ",
-    "ISI",
-    " I "
+    "III",
+    "LRL",
+    "LTL"
   ],
   "key": {
     "I": { "item": "minecraft:iron_ingot" },
-    "S": { "item": "minecraft:stick" }
+    "L": { "item": "minecraft:leather" },
+    "R": { "item": "thaumcraft:vis_resonator" },
+    "T": { "item": "thaumcraft:thaumometer" }
   },
   "result": { "id": "thaumcraft:caster_basic" }
 }

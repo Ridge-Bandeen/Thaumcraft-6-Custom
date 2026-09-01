@@ -1,0 +1,10 @@
+{
+  "type": "thaumcraft:arcane_shapeless",
+  "research": "FIRSTSTEPS",
+  "vis": 50,
+  "ingredients": [
+    { "item": "minecraft:iron_ingot" },
+    { "item": "minecraft:quartz" }
+  ],
+  "result": { "id": "thaumcraft:vis_resonator" }
+}
