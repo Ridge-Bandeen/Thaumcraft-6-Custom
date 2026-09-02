@@ -67,6 +67,11 @@ public final class ItemsTC {
 	public static final DeferredItem<Item> quicksilver =
 			ITEMS.registerSimpleItem("quicksilver");
 
+	/** Ore purification alt-path via the already-shipped Crucible - smelts into 2 iron ingots instead of
+	 * the usual 1. Only the iron variant is ported this pass; see {@code data/thaumcraft/recipe/cluster_iron.json}. */
+	public static final DeferredItem<Item> clusterIron =
+			ITEMS.registerSimpleItem("cluster_iron");
+
 	public static final DeferredItem<thaumcraft.common.items.resources.ItemCrystalEssence> crystalEssence =
 			ITEMS.registerItem("crystal_essence", thaumcraft.common.items.resources.ItemCrystalEssence::new);
 

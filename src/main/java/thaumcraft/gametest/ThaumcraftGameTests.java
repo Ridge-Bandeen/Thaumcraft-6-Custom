@@ -3145,4 +3145,41 @@ public class ThaumcraftGameTests {
 				"a single cinderpearl should craft into blaze powder");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Native Iron Cluster - an ore-purification alt-path through the already-shipped Crucible (Metal +
+	// Order essentia dissolves an iron ore into a cluster), which then smelts into 2 iron ingots instead
+	// of the usual 1 via a plain vanilla furnace recipe.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleCompletesAClusterIronRecipe(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		TileCrucible crucible = placeActiveCrucible(helper, pos);
+		crucible.setAspects(new AspectList().add(Aspect.METAL, 5).add(Aspect.ORDER, 5));
+
+		ItemStack catalyst = new ItemStack(Items.IRON_ORE);
+		ItemStack remainder = crucible.attemptSmelt(catalyst, helper.getLevel());
+
+		helper.assertTrue(remainder.getCount() == 0, "the iron ore catalyst should have been fully consumed");
+		helper.assertTrue(crucible.getAspects().getAmount(Aspect.METAL) == 0, "a completed recipe should remove exactly the aspects it consumed");
+
+		BlockPos absolute = helper.absolutePos(pos);
+		List<ItemEntity> ejected = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0));
+		boolean foundCluster = ejected.stream().anyMatch(e -> e.getItem().is(ItemsTC.clusterIron.get()));
+		helper.assertTrue(foundCluster, "completing cluster_iron should have ejected a thaumcraft:cluster_iron item near the crucible, found: "
+				+ ejected.stream().map(e -> e.getItem().toString()).toList());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void clusterIronSmeltsIntoTwoIronIngots(GameTestHelper helper) {
+		var smeltingInput = new net.minecraft.world.item.crafting.SingleRecipeInput(new ItemStack(ItemsTC.clusterIron.get()));
+		var match = helper.getLevel().getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.SMELTING, smeltingInput, helper.getLevel());
+
+		helper.assertTrue(match.isPresent(), "the cluster_iron smelting recipe should exist");
+		ItemStack result = match.get().value().getResultItem(helper.getLevel().registryAccess());
+		helper.assertTrue(result.is(Items.IRON_INGOT) && result.getCount() == 2, "a native iron cluster should smelt into 2 iron ingots, got " + result);
+		helper.succeed();
+	}
 }
