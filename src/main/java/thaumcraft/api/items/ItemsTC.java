@@ -77,6 +77,13 @@ public final class ItemsTC {
 	public static final DeferredItem<Item> clusterCinnabar =
 			ITEMS.registerSimpleItem("cluster_cinnabar");
 
+	/** Same shape as {@link #clusterIron} - smelts into 2 gold ingots instead of the usual 1. See
+	 * {@code data/thaumcraft/recipe/cluster_gold.json}. (Quartz, the original's 4th complete-loop cluster,
+	 * has no Crucible recipe in the original at all - only reachable there via the not-yet-built
+	 * pickaxe-infusion-enchantment path - so it's skipped rather than shipped half-reachable.) */
+	public static final DeferredItem<Item> clusterGold =
+			ITEMS.registerSimpleItem("cluster_gold");
+
 	public static final DeferredItem<thaumcraft.common.items.resources.ItemCrystalEssence> crystalEssence =
 			ITEMS.registerItem("crystal_essence", thaumcraft.common.items.resources.ItemCrystalEssence::new);
 
