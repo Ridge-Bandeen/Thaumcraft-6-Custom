@@ -142,6 +142,8 @@
   "block.thaumcraft.alembic": "Arcane Alembic",
   "block.thaumcraft.smelter": "Essentia Smeltery",
   "block.thaumcraft.bellows": "Arcane Bellows",
+  "block.thaumcraft.mirror": "Node Transducer",
+  "item.thaumcraft.mirror.already_linked": "That mirror is already linked to a valid destination.",
   "item.thaumcraft.resonator": "Essentia Resonator",
   "item.thaumcraft.filter": "Filter",
   "block.thaumcraft.condenser": "Flux Condenser",

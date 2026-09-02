@@ -3,13 +3,17 @@ package thaumcraft.api.items;
 import java.util.Map;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.api.aspects.AspectList;
@@ -89,6 +93,31 @@ public final class ThaumcraftDataComponents {
 					.persistent(INFUSION_ENCHANTMENTS_CODEC)
 					.networkSynchronized(ByteBufCodecs.fromCodec(INFUSION_ENCHANTMENTS_CODEC))
 					.build());
+
+	/**
+	 * A "pre-charged" Node Transducer's link target - was 4 raw NBT ints ({@code linkX}/{@code linkY}/
+	 * {@code linkZ}/{@code linkDim}, the last a raw dimension id) on the original's dropped-and-relinked
+	 * {@code BlockMirrorItem} stack. {@code linkDim} becomes a real {@link ResourceKey} here (dimensions
+	 * aren't raw ints anymore - same fix {@code GolemHelper} already needed), and the 3 position ints become
+	 * one real {@link BlockPos}, both already-{@code Codec}-equipped vanilla types.
+	 */
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<MirrorLink>> MIRROR_LINK = DATA_COMPONENTS.register("mirror_link",
+			() -> DataComponentType.<MirrorLink>builder()
+					.persistent(MirrorLink.CODEC)
+					.networkSynchronized(MirrorLink.STREAM_CODEC)
+					.build());
+
+	public record MirrorLink(ResourceKey<Level> dimension, BlockPos pos) {
+		public static final Codec<MirrorLink> CODEC = RecordCodecBuilder.create(inst -> inst.group(
+				ResourceKey.codec(Registries.DIMENSION).fieldOf("dimension").forGetter(MirrorLink::dimension),
+				BlockPos.CODEC.fieldOf("pos").forGetter(MirrorLink::pos)
+			).apply(inst, MirrorLink::new));
+
+		public static final StreamCodec<RegistryFriendlyByteBuf, MirrorLink> STREAM_CODEC = StreamCodec.composite(
+				ResourceKey.streamCodec(Registries.DIMENSION), MirrorLink::dimension,
+				BlockPos.STREAM_CODEC, MirrorLink::pos,
+				MirrorLink::new);
+	}
 
 	private ThaumcraftDataComponents() {
 	}

@@ -141,8 +141,10 @@ public final class ItemsTC {
 	public static final DeferredItem<ItemPechWand> pechWand =
 			ITEMS.registerItem("pech_wand", ItemPechWand::new);
 
-	/** Quicksilver's first real use - a reflective glass pane. Inert beyond that for now (the original's
-	 * hand mirror/scrying mirror/golem sight devices that consume it aren't ported). */
+	/** Quicksilver's first real use - a reflective glass pane. Real consumer now: the central item of
+	 * {@code mirror.json}'s infusion recipe - see {@link thaumcraft.common.blocks.devices.BlockMirror}'s own
+	 * doc comment. The original's other consumers (hand mirror/scrying mirror/golem sight devices) still
+	 * aren't ported. */
 	public static final DeferredItem<Item> mirroredGlass =
 			ITEMS.registerSimpleItem("mirrored_glass");
 
@@ -430,6 +432,12 @@ public final class ItemsTC {
 
 	public static final DeferredItem<BlockItem> bellows =
 			ITEMS.registerSimpleBlockItem("bellows", BlocksTC.bellows);
+
+	/** See {@link thaumcraft.common.blocks.devices.BlockMirrorItem}'s own doc comment - a custom
+	 * {@code BlockItem} rather than {@code registerSimpleBlockItem}, since it doubles as its own linking
+	 * tool. */
+	public static final DeferredItem<thaumcraft.common.blocks.devices.BlockMirrorItem> mirror =
+			ITEMS.registerItem("mirror", props -> new thaumcraft.common.blocks.devices.BlockMirrorItem(BlocksTC.mirror.get(), props));
 
 	public static final DeferredItem<Item> fabric =
 			ITEMS.registerSimpleItem("fabric");

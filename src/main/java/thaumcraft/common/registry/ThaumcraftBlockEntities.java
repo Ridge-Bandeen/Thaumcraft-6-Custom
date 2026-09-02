@@ -95,6 +95,9 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.devices.TileBellows>> BELLOWS = BLOCK_ENTITIES.register("bellows",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.devices.TileBellows::new, BlocksTC.bellows.get()).build(null));
 
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.devices.TileMirror>> MIRROR = BLOCK_ENTITIES.register("mirror",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.devices.TileMirror::new, BlocksTC.mirror.get()).build(null));
+
 	private ThaumcraftBlockEntities() {
 	}
 }

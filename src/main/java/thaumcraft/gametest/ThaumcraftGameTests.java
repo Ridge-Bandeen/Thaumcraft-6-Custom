@@ -3852,4 +3852,66 @@ public class ThaumcraftGameTests {
 						+ startY + " now " + player.getDeltaMovement().y);
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Node Transducer (Mirror) - see BlockMirror/BlockMirrorItem/TileMirror's own doc comments for what's
+	// deferred (TileMirrorEssentia, ItemHandMirror) and the link-preservation-on-break cut.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void mirrorItemChargesALinkFromAnUnlinkedMirror(GameTestHelper helper) {
+		BlockPos mirrorPos = new BlockPos(3, 2, 3);
+		helper.setBlock(mirrorPos, thaumcraft.api.blocks.BlocksTC.mirror.get());
+		BlockPos absMirror = helper.absolutePos(mirrorPos);
+
+		ServerPlayer player = spawnCasterAt(helper, absMirror.above());
+		ItemStack mirrorItem = new ItemStack(ItemsTC.mirror.get());
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, mirrorItem);
+
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absMirror), net.minecraft.core.Direction.UP, absMirror, false);
+		net.minecraft.world.item.context.UseOnContext context =
+				new net.minecraft.world.item.context.UseOnContext(helper.getLevel(), player, hand, mirrorItem, hit);
+		mirrorItem.getItem().useOn(context);
+
+		boolean found = false;
+		for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+			if (player.getInventory().getItem(i).has(thaumcraft.api.items.ThaumcraftDataComponents.MIRROR_LINK.get())) {
+				found = true;
+			}
+		}
+		helper.assertTrue(found, "right-clicking an unlinked mirror with a mirror item should charge a copy with a real MIRROR_LINK component");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void linkedMirrorsTransportAnItemToTheOtherSide(GameTestHelper helper) {
+		BlockPos posA = new BlockPos(3, 2, 3);
+		BlockPos posB = new BlockPos(3, 2, 10);
+		helper.setBlock(posA, thaumcraft.api.blocks.BlocksTC.mirror.get());
+		helper.setBlock(posB, thaumcraft.api.blocks.BlocksTC.mirror.get());
+		BlockPos absA = helper.absolutePos(posA);
+		BlockPos absB = helper.absolutePos(posB);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.tiles.devices.TileMirror tileA = helper.getBlockEntity(posA);
+		thaumcraft.common.tiles.devices.TileMirror tileB = helper.getBlockEntity(posB);
+		tileA.applyLink(new thaumcraft.api.items.ThaumcraftDataComponents.MirrorLink(level.dimension(), absB));
+
+		helper.assertTrue(tileA.isLinkValid() && tileB.isLinkValid(), "applying a link should establish a real mutual pairing on both tiles");
+
+		ItemEntity dropped = new ItemEntity(level, absA.getX() + 0.5, absA.getY() + 0.5, absA.getZ() + 0.5, new ItemStack(Items.STICK, 3));
+		boolean accepted = tileA.transport(dropped);
+		helper.assertTrue(accepted && dropped.isRemoved(), "touching a linked mirror should transport the item and remove the original entity");
+
+		net.minecraft.world.level.block.state.BlockState stateB = helper.getBlockState(posB);
+		for (int i = 0; i < 5; i++) {
+			thaumcraft.common.tiles.devices.TileMirror.tick(level, absB, stateB, tileB);
+		}
+
+		List<ItemEntity> nearB = level.getEntitiesOfClass(ItemEntity.class, new AABB(absB).inflate(2));
+		helper.assertTrue(!nearB.isEmpty(), "the transported item should eventually eject out of the linked mirror on the other side");
+		helper.succeed();
+	}
 }

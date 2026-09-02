@@ -1,140 +1,73 @@
 package thaumcraft.common.blocks.devices;
-import java.util.List;
-import net.minecraft.block.Block;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.EnumRarity;
-import net.minecraft.item.ItemBlock;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTBase;
-import net.minecraft.nbt.NBTTagInt;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumActionResult;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentTranslation;
-import net.minecraft.world.World;
-import net.minecraftforge.common.DimensionManager;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.api.blocks.BlocksTC;
-import thaumcraft.common.lib.SoundsTC;
+
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import thaumcraft.api.items.ThaumcraftDataComponents;
+import thaumcraft.api.items.ThaumcraftDataComponents.MirrorLink;
 import thaumcraft.common.tiles.devices.TileMirror;
-import thaumcraft.common.tiles.devices.TileMirrorEssentia;
 
+/**
+ * Replaces the old (1.12.2) {@code BlockMirrorItem} - the Node Transducer's own {@code BlockItem} doubles as
+ * its own linking tool, exactly like the original: right-clicking an existing, not-yet-linked mirror
+ * ({@link #useOn}) consumes one from the stack and hands back a "pre-charged" copy carrying that mirror's
+ * coordinates ({@link ThaumcraftDataComponents#MIRROR_LINK}, replacing the original's own raw
+ * {@code linkX}/{@code linkY}/{@code linkZ}/{@code linkDim} NBT). Placing that charged copy elsewhere
+ * ({@link #place}) applies the link to the newly-placed tile, which then confirms the mutual pairing with
+ * the mirror it was charged from - see {@link TileMirror#applyLink}. No separate "linking wand" item needed,
+ * same as the original.
+ */
+public class BlockMirrorItem extends BlockItem {
 
-public class BlockMirrorItem extends ItemBlock
-{
-    public BlockMirrorItem(Block par1) {
-        super(par1);
-    }
-    
-    public EnumActionResult onItemUseFirst(EntityPlayer player, World world, BlockPos pos, EnumFacing side, float hitX, float hitY, float hitZ, EnumHand hand) {
-        if (world.getBlockState(pos).getBlock() instanceof BlockMirror) {
-            if (world.isRemote) {
-                player.swingArm(hand);
-                return super.onItemUseFirst(player, world, pos, side, hitX, hitY, hitZ, hand);
-            }
-            if (block == BlocksTC.mirror) {
-                TileEntity tm = world.getTileEntity(pos);
-                if (tm != null && tm instanceof TileMirror && !((TileMirror)tm).isLinkValid()) {
-                    ItemStack st = player.getHeldItem(hand).copy();
-                    st.setCount(1);
-                    st.setItemDamage(1);
-                    st.setTagInfo("linkX", new NBTTagInt(tm.getPos().getX()));
-                    st.setTagInfo("linkY", new NBTTagInt(tm.getPos().getY()));
-                    st.setTagInfo("linkZ", new NBTTagInt(tm.getPos().getZ()));
-                    st.setTagInfo("linkDim", new NBTTagInt(world.provider.getDimension()));
-                    world.playSound(null, pos, SoundsTC.jar, SoundCategory.BLOCKS, 1.0f, 2.0f);
-                    if (!player.inventory.addItemStackToInventory(st) && !world.isRemote) {
-                        world.spawnEntity(new EntityItem(world, player.posX, player.posY, player.posZ, st));
-                    }
-                    if (!player.capabilities.isCreativeMode) {
-                        player.getHeldItem(hand).shrink(1);
-                    }
-                    player.inventoryContainer.detectAndSendChanges();
-                }
-                else if (tm != null && tm instanceof TileMirror) {
-                    player.sendMessage(new TextComponentTranslation("§5§oThat mirror is already linked to a valid destination."));
-                }
-            }
-            else {
-                TileEntity tm = world.getTileEntity(pos);
-                if (tm != null && tm instanceof TileMirrorEssentia && !((TileMirrorEssentia)tm).isLinkValid()) {
-                    ItemStack st = player.getHeldItem(hand).copy();
-                    st.setCount(1);
-                    st.setItemDamage(1);
-                    st.setTagInfo("linkX", new NBTTagInt(tm.getPos().getX()));
-                    st.setTagInfo("linkY", new NBTTagInt(tm.getPos().getY()));
-                    st.setTagInfo("linkZ", new NBTTagInt(tm.getPos().getZ()));
-                    st.setTagInfo("linkDim", new NBTTagInt(world.provider.getDimension()));
-                    world.playSound(null, pos, SoundsTC.jar, SoundCategory.BLOCKS, 1.0f, 2.0f);
-                    if (!player.inventory.addItemStackToInventory(st) && !world.isRemote) {
-                        world.spawnEntity(new EntityItem(world, player.posX, player.posY, player.posZ, st));
-                    }
-                    if (!player.capabilities.isCreativeMode) {
-                        player.getHeldItem(hand).shrink(1);
-                    }
-                    player.inventoryContainer.detectAndSendChanges();
-                }
-                else if (tm != null && tm instanceof TileMirrorEssentia) {
-                    player.sendMessage(new TextComponentTranslation("§5§oThat mirror is already linked to a valid destination."));
-                }
-            }
-        }
-        return super.onItemUseFirst(player, world, pos, side, hitX, hitY, hitZ, hand);
-    }
-    
-    public boolean placeBlockAt(ItemStack stack, EntityPlayer player, World world, BlockPos pos, EnumFacing side, float hitX, float hitY, float hitZ, IBlockState newState) {
-        boolean ret = super.placeBlockAt(stack, player, world, pos, side, hitX, hitY, hitZ, newState);
-        if (ret && !world.isRemote) {
-            if (block == BlocksTC.mirror) {
-                TileEntity te = world.getTileEntity(pos);
-                if (te != null && te instanceof TileMirror && stack.hasTagCompound()) {
-                    ((TileMirror)te).linkX = stack.getTagCompound().getInteger("linkX");
-                    ((TileMirror)te).linkY = stack.getTagCompound().getInteger("linkY");
-                    ((TileMirror)te).linkZ = stack.getTagCompound().getInteger("linkZ");
-                    ((TileMirror)te).linkDim = stack.getTagCompound().getInteger("linkDim");
-                    ((TileMirror)te).restoreLink();
-                }
-            }
-            else {
-                TileEntity te = world.getTileEntity(pos);
-                if (te != null && te instanceof TileMirrorEssentia && stack.hasTagCompound()) {
-                    ((TileMirrorEssentia)te).linkX = stack.getTagCompound().getInteger("linkX");
-                    ((TileMirrorEssentia)te).linkY = stack.getTagCompound().getInteger("linkY");
-                    ((TileMirrorEssentia)te).linkZ = stack.getTagCompound().getInteger("linkZ");
-                    ((TileMirrorEssentia)te).linkDim = stack.getTagCompound().getInteger("linkDim");
-                    ((TileMirrorEssentia)te).restoreLink();
-                }
-            }
-        }
-        return ret;
-    }
-    
-    public EnumRarity getRarity(ItemStack itemstack) {
-        return EnumRarity.UNCOMMON;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void addInformation(ItemStack item, World worldIn, List<String> list, ITooltipFlag flagIn) {
-        if (item.hasTagCompound()) {
-            int lx = item.getTagCompound().getInteger("linkX");
-            int ly = item.getTagCompound().getInteger("linkY");
-            int lz = item.getTagCompound().getInteger("linkZ");
-            int ldim = item.getTagCompound().getInteger("linkDim");
-            String desc = "" + ldim;
-            World world = DimensionManager.getWorld(ldim);
-            if (world != null) {
-                desc = world.provider.getDimensionType().getName();
-            }
-            list.add("Linked to " + lx + "," + ly + "," + lz + " in " + desc);
-        }
-    }
+	public BlockMirrorItem(Block block, Properties properties) {
+		super(block, properties);
+	}
+
+	@Override
+	public InteractionResult useOn(UseOnContext context) {
+		Level level = context.getLevel();
+		if (!(level.getBlockState(context.getClickedPos()).getBlock() instanceof BlockMirror) || context.getPlayer() == null) {
+			return super.useOn(context);
+		}
+		if (level.isClientSide) {
+			return InteractionResult.SUCCESS;
+		}
+		Player player = context.getPlayer();
+		if (!(level.getBlockEntity(context.getClickedPos()) instanceof TileMirror target) || target.isLinkValid()) {
+			player.displayClientMessage(Component.translatable("item.thaumcraft.mirror.already_linked").withStyle(ChatFormatting.DARK_PURPLE), true);
+			return InteractionResult.FAIL;
+		}
+
+		ItemStack held = context.getItemInHand();
+		ItemStack charged = held.copyWithCount(1);
+		charged.set(ThaumcraftDataComponents.MIRROR_LINK.get(), new MirrorLink(level.dimension(), context.getClickedPos().immutable()));
+		level.playSound(null, context.getClickedPos(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0f, 2.0f);
+		if (!player.getInventory().add(charged)) {
+			player.drop(charged, false);
+		}
+		if (!player.getAbilities().instabuild) {
+			held.shrink(1);
+		}
+		return InteractionResult.CONSUME;
+	}
+
+	@Override
+	public InteractionResult place(BlockPlaceContext context) {
+		MirrorLink link = context.getItemInHand().get(ThaumcraftDataComponents.MIRROR_LINK.get());
+		InteractionResult result = super.place(context);
+		if (link != null && result.consumesAction() && !context.getLevel().isClientSide
+				&& context.getLevel().getBlockEntity(context.getClickedPos()) instanceof TileMirror tile) {
+			tile.applyLink(link);
+		}
+		return result;
+	}
 }
