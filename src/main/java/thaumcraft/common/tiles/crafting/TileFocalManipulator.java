@@ -12,7 +12,10 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -28,6 +31,7 @@ import thaumcraft.api.casters.FocusPackage;
 import thaumcraft.api.items.ItemGenericEssentiaContainer;
 import thaumcraft.api.items.ItemsTC;
 import thaumcraft.api.items.ThaumcraftDataComponents;
+import thaumcraft.common.container.FocalManipulatorMenu;
 import thaumcraft.common.items.casters.ItemFocus;
 import thaumcraft.common.registry.ThaumcraftBlockEntities;
 import thaumcraft.common.world.aura.AuraHandler;
@@ -53,7 +57,7 @@ import thaumcraft.common.world.aura.AuraHandler;
  * {@link #hasCrystals}/{@link #consumeCrystals} below do the same "does the player carry N crystals of
  * aspect X" check directly against vanilla's own {@link net.minecraft.world.entity.player.Inventory#clearOrCountMatchingItems}.
  */
-public class TileFocalManipulator extends BlockEntity {
+public class TileFocalManipulator extends BlockEntity implements MenuProvider {
 
 	private final ItemStackHandler items = new ItemStackHandler(1) {
 		@Override
@@ -93,6 +97,16 @@ public class TileFocalManipulator extends BlockEntity {
 
 	public net.neoforged.neoforge.items.IItemHandler getItemHandler() {
 		return items;
+	}
+
+	@Override
+	public Component getDisplayName() {
+		return Component.translatable("block.thaumcraft.focal_manipulator");
+	}
+
+	@Override
+	public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
+		return new FocalManipulatorMenu(containerId, inventory, this);
 	}
 
 	/** Draws vis from the local aura, or (if an Arcane Workbench Charger sits directly above) spreads the

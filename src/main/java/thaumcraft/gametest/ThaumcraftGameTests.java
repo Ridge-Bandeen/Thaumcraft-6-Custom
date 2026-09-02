@@ -4106,6 +4106,27 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focalManipulatorMenuAcceptsAFocusAndReflectsTheTilesSlot(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(3, 2, 3);
+		BlockPos absPos = helper.absolutePos(pos);
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.focalManipulator.get());
+		thaumcraft.common.tiles.crafting.TileFocalManipulator tile = helper.getBlockEntity(pos);
+		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+
+		thaumcraft.common.container.FocalManipulatorMenu menu = new thaumcraft.common.container.FocalManipulatorMenu(0, player.getInventory(), tile);
+
+		helper.assertTrue(menu.stillValid(player), "the menu should remain valid while the player is near the real placed tile");
+		helper.assertTrue(menu.slots.get(0).mayPlace(new ItemStack(ItemsTC.focusBlank1.get())), "slot 0 should accept a real ItemFocus");
+		helper.assertTrue(!menu.slots.get(0).mayPlace(new ItemStack(Items.STICK)), "slot 0 should reject a non-focus item");
+
+		ItemStack blank = new ItemStack(ItemsTC.focusBlank1.get());
+		tile.setFocus(blank);
+		helper.assertTrue(menu.slots.get(0).getItem().is(ItemsTC.focusBlank1.get()),
+				"the menu's own slot 0 should reflect a focus set directly on the tile, found " + menu.slots.get(0).getItem());
+		helper.succeed();
+	}
+
 	private static ItemStack makeAspectCrystal(Aspect aspect) {
 		ItemStack stack = new ItemStack(ItemsTC.crystalEssence.get());
 		((ItemGenericEssentiaContainer) stack.getItem()).setAspects(stack, new AspectList().add(aspect, 1));

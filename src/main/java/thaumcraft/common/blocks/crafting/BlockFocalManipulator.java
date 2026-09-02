@@ -5,8 +5,6 @@ import javax.annotation.Nullable;
 import com.mojang.serialization.MapCodec;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -32,10 +30,10 @@ import thaumcraft.common.tiles.crafting.TileFocalManipulator;
  * same "pick the right vanilla base directly" precedent {@link thaumcraft.common.blocks.devices.BlockRechargePedestal}
  * already established - no facing/redstone state needed here either.
  *
- * No GUI yet (see {@code TileFocalManipulator}'s doc comment for the rest of the arc this feeds into) -
- * right-click for now just deposits/withdraws the held focus item, same convenience
- * {@code BlockRechargePedestal} already offers, so the block is genuinely useful the moment it's placed
- * even before the node-graph screen exists. The original's own non-directional, non-full-cube shape (no
+ * Right-click opens the real {@link thaumcraft.common.container.FocalManipulatorMenu} now (same
+ * {@code player.openMenu(tile)} pattern {@code BlockArcaneWorkbench} already uses) - still no node-graph
+ * screen (see {@code TileFocalManipulator}'s doc comment for the rest of the arc), so the menu only shows
+ * the focus slot and player inventory for now. The original's own non-directional, non-full-cube shape (no
  * custom voxel data of its own beyond opacity flags) is approximated with a flat pedestal box.
  */
 public class BlockFocalManipulator extends Block implements EntityBlock {
@@ -79,15 +77,13 @@ public class BlockFocalManipulator extends Block implements EntityBlock {
 
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-		return interact(level, pos, player, ItemStack.EMPTY);
-	}
-
-	@Override
-	protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
-			net.minecraft.world.InteractionHand hand, BlockHitResult hitResult) {
-		InteractionResult result = interact(level, pos, player, stack);
-		return result == InteractionResult.SUCCESS ? net.minecraft.world.ItemInteractionResult.SUCCESS
-				: net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+		if (level.isClientSide) {
+			return InteractionResult.SUCCESS;
+		}
+		if (level.getBlockEntity(pos) instanceof TileFocalManipulator tile) {
+			player.openMenu(tile);
+		}
+		return InteractionResult.CONSUME;
 	}
 
 	@Override
@@ -99,28 +95,5 @@ public class BlockFocalManipulator extends Block implements EntityBlock {
 			}
 		}
 		super.onRemove(state, level, pos, newState, movedByPiston);
-	}
-
-	private InteractionResult interact(Level level, BlockPos pos, Player player, ItemStack held) {
-		if (level.isClientSide) return InteractionResult.SUCCESS;
-		if (!(level.getBlockEntity(pos) instanceof TileFocalManipulator tile)) return InteractionResult.PASS;
-
-		if (tile.getFocus().isEmpty() && !held.isEmpty() && tile.getItemHandler().isItemValid(0, held)) {
-			ItemStack single = held.copyWithCount(1);
-			tile.setFocus(single);
-			held.shrink(1);
-			level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.2f, 1.6f);
-			return InteractionResult.SUCCESS;
-		}
-		if (!tile.getFocus().isEmpty()) {
-			ItemStack returned = tile.getFocus();
-			tile.setFocus(ItemStack.EMPTY);
-			if (!player.getInventory().add(returned)) {
-				player.drop(returned, false);
-			}
-			level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.2f, 1.5f);
-			return InteractionResult.SUCCESS;
-		}
-		return InteractionResult.PASS;
 	}
 }
