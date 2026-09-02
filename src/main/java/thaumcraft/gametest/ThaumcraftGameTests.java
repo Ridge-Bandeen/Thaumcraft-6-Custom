@@ -3714,4 +3714,65 @@ public class ThaumcraftGameTests {
 				"scanning a real Zombie should also grant the real ScanAspect research key for its real UNDEAD aspect (from ThaumcraftEntityTags)");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Arcane Bellows - see TileBellows' own doc comment for the furnace-speedup mechanic and the access
+	// transformer it needed (src/main/resources/META-INF/accesstransformer.cfg).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void bellowsNudgesAnAdjacentCookingFurnaceForward(GameTestHelper helper) {
+		BlockPos bellowsPos = new BlockPos(3, 2, 3);
+		BlockPos furnacePos = bellowsPos.south();
+		helper.setBlock(furnacePos, Blocks.FURNACE);
+		helper.setBlock(bellowsPos, thaumcraft.api.blocks.BlocksTC.bellows.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.SOUTH)
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED, true));
+
+		ServerLevel level = helper.getLevel();
+		BlockPos absBellows = helper.absolutePos(bellowsPos);
+
+		net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity furnace =
+				(net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity) helper.getBlockEntity(furnacePos);
+		furnace.cookingTotalTime = 200;
+		furnace.cookingProgress = 50;
+
+		thaumcraft.common.tiles.devices.TileBellows tile = helper.getBlockEntity(bellowsPos);
+		net.minecraft.world.level.block.state.BlockState bellowsState = helper.getBlockState(bellowsPos);
+		// The tile only acts every 2nd tick - two direct calls to trigger one real nudge, same isolation-test
+		// idiom this file uses throughout rather than waiting on a real tick loop.
+		thaumcraft.common.tiles.devices.TileBellows.tick(level, absBellows, bellowsState, tile);
+		thaumcraft.common.tiles.devices.TileBellows.tick(level, absBellows, bellowsState, tile);
+
+		helper.assertTrue(furnace.cookingProgress == 51,
+				"the Bellows should nudge an adjacent cooking furnace's progress forward by 1 every 2 ticks, found " + furnace.cookingProgress);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void bellowsLeavesAFinishedOrIdleFurnaceAlone(GameTestHelper helper) {
+		BlockPos bellowsPos = new BlockPos(3, 2, 3);
+		BlockPos furnacePos = bellowsPos.south();
+		helper.setBlock(furnacePos, Blocks.FURNACE);
+		helper.setBlock(bellowsPos, thaumcraft.api.blocks.BlocksTC.bellows.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.SOUTH)
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED, true));
+
+		ServerLevel level = helper.getLevel();
+		BlockPos absBellows = helper.absolutePos(bellowsPos);
+
+		net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity furnace =
+				(net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity) helper.getBlockEntity(furnacePos);
+		furnace.cookingTotalTime = 200;
+		furnace.cookingProgress = 0; // idle - nothing cooking yet
+
+		thaumcraft.common.tiles.devices.TileBellows tile = helper.getBlockEntity(bellowsPos);
+		net.minecraft.world.level.block.state.BlockState bellowsState = helper.getBlockState(bellowsPos);
+		thaumcraft.common.tiles.devices.TileBellows.tick(level, absBellows, bellowsState, tile);
+		thaumcraft.common.tiles.devices.TileBellows.tick(level, absBellows, bellowsState, tile);
+
+		helper.assertTrue(furnace.cookingProgress == 0,
+				"the Bellows shouldn't touch an idle (not actually cooking) furnace, found progress " + furnace.cookingProgress);
+		helper.succeed();
+	}
 }

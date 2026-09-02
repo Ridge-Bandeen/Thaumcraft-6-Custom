@@ -415,6 +415,12 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.essentia.BlockSmelter::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(3.5f).sound(SoundType.METAL));
 
+	/** See {@link thaumcraft.common.blocks.devices.BlockBellows}'s own doc comment - the first device this
+	 * port has needed an access transformer for. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockBellows> bellows = BLOCKS.registerBlock("bellows",
+			thaumcraft.common.blocks.devices.BlockBellows::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
+
 	private BlocksTC() {
 	}
 }

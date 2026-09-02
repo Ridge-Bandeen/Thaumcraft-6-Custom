@@ -420,6 +420,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> smelter =
 			ITEMS.registerSimpleBlockItem("smelter", BlocksTC.smelter);
 
+	public static final DeferredItem<BlockItem> bellows =
+			ITEMS.registerSimpleBlockItem("bellows", BlocksTC.bellows);
+
 	public static final DeferredItem<Item> fabric =
 			ITEMS.registerSimpleItem("fabric");
 

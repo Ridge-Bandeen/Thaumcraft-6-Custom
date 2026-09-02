@@ -92,6 +92,9 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.essentia.TileSmelter>> SMELTER = BLOCK_ENTITIES.register("smelter",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.essentia.TileSmelter::new, BlocksTC.smelter.get()).build(null));
 
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.devices.TileBellows>> BELLOWS = BLOCK_ENTITIES.register("bellows",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.devices.TileBellows::new, BlocksTC.bellows.get()).build(null));
+
 	private ThaumcraftBlockEntities() {
 	}
 }
