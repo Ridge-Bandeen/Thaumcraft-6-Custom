@@ -41,6 +41,11 @@ public final class BlocksTC {
 			BlockCrucible::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(3.0f).sound(SoundType.METAL).noOcclusion());
 
+	/** See {@code TileFocalManipulator}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.crafting.BlockFocalManipulator> focalManipulator = BLOCKS.registerBlock("focal_manipulator",
+			thaumcraft.common.blocks.crafting.BlockFocalManipulator::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0f).sound(SoundType.STONE).noOcclusion());
+
 	/**
 	 * First step into world generation - the original's overworld quartz ore variant. No custom Block
 	 * subclass needed (unlike {@code BlockOreTC}, which only special-cased amber's bonus curio drop and

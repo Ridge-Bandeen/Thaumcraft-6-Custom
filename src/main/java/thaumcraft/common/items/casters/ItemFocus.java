@@ -12,12 +12,16 @@ import thaumcraft.api.casters.FocusNode;
 import thaumcraft.api.casters.FocusPackage;
 import thaumcraft.api.casters.IFocusElement;
 import thaumcraft.api.casters.NodeSetting;
+import thaumcraft.api.items.ThaumcraftDataComponents;
 
 /**
  * Replaces the old (1.12.2) {@code ItemFocus}. The original stored an arbitrary, player-assembled node
- * list (built at a Focal Manipulator, not ported) in NBT; this simplified version hardcodes a fixed node
- * list per subclass instead - see {@link ItemFocusFire} - since there's no focus-assembly UI yet. The
- * settings-driven complexity/vis-cost math is unchanged from the original.
+ * list in NBT, built at a Focal Manipulator - now real again (see {@code TileFocalManipulator}'s own doc
+ * comment), stored in {@link thaumcraft.api.items.ThaumcraftDataComponents#ASSEMBLED_FOCUS}. Subclasses
+ * with a fixed {@link #createNodes} chain (see {@link ItemFocusFire} and its siblings) still work exactly
+ * as before - those were a real, deliberate simplification standing in for the missing Manipulator, and
+ * keeping them alongside the real assemblable {@link ItemFocusBlank} tiers gives players both a set of
+ * ready-made foci and the original's own build-your-own option, rather than replacing one with the other.
  */
 public abstract class ItemFocus extends Item {
 
@@ -25,10 +29,23 @@ public abstract class ItemFocus extends Item {
 		super(properties.stacksTo(1));
 	}
 
-	/** The fixed medium+effect node chain this focus casts. Order matters (medium(s) first, then effect(s)). */
+	/** The fixed medium+effect node chain this focus casts when no {@code ASSEMBLED_FOCUS} component is
+	 * present. {@link ItemFocusBlank} (the only subclass a real player-assembled graph can attach to)
+	 * returns an empty chain here - see its own doc comment. */
 	protected abstract List<IFocusElement> createNodes();
 
+	/** The total node complexity a Focal Manipulator will accept for this item - see
+	 * {@code TileFocalManipulator#startCraft}. Only meaningful for {@link ItemFocusBlank} tiers (the only
+	 * subclass ever placed in a Manipulator); the default here is irrelevant for every fixed-chain focus. */
+	public int getMaxComplexity() {
+		return Integer.MAX_VALUE;
+	}
+
 	public FocusPackage getPackage(ItemStack stack) {
+		ThaumcraftDataComponents.AssembledFocus assembled = stack.get(ThaumcraftDataComponents.ASSEMBLED_FOCUS.get());
+		if (assembled != null) {
+			return assembled.focusPackage();
+		}
 		FocusPackage p = new FocusPackage();
 		for (IFocusElement node : createNodes()) {
 			p.addNode(node);
@@ -37,6 +54,10 @@ public abstract class ItemFocus extends Item {
 	}
 
 	public int getComplexity(ItemStack stack) {
+		ThaumcraftDataComponents.AssembledFocus assembled = stack.get(ThaumcraftDataComponents.ASSEMBLED_FOCUS.get());
+		if (assembled != null) {
+			return assembled.focusPackage().getComplexity();
+		}
 		int total = 0;
 		for (IFocusElement node : createNodes()) {
 			if (node instanceof FocusNode focusNode) total += focusNode.getComplexity();
@@ -56,7 +77,7 @@ public abstract class ItemFocus extends Item {
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
 		tooltip.add(Component.translatable("item.thaumcraft.focus.cost", String.format("%.1f", getVisCost(stack))));
-		for (IFocusElement node : createNodes()) {
+		for (IFocusElement node : getPackage(stack).nodes) {
 			if (node instanceof FocusNode focusNode) {
 				StringBuilder line = new StringBuilder(Component.translatable(focusNode.getUnlocalizedName()).getString());
 				if (!focusNode.getSettingList().isEmpty()) {

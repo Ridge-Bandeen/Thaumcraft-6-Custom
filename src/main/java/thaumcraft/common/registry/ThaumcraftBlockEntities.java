@@ -28,6 +28,9 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileCrucible>> CRUCIBLE = BLOCK_ENTITIES.register("crucible",
 			() -> BlockEntityType.Builder.of(TileCrucible::new, BlocksTC.crucible.get()).build(null));
 
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.crafting.TileFocalManipulator>> FOCAL_MANIPULATOR = BLOCK_ENTITIES.register("focal_manipulator",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TileFocalManipulator::new, BlocksTC.focalManipulator.get()).build(null));
+
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileRechargePedestal>> RECHARGE_PEDESTAL = BLOCK_ENTITIES.register("recharge_pedestal",
 			() -> BlockEntityType.Builder.of(TileRechargePedestal::new, BlocksTC.rechargePedestal.get()).build(null));
 

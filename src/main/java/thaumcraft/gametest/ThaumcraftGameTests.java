@@ -4052,4 +4052,63 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(foundVoidSeed, "completing a collapse should drop at least one void seed nearby");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// TileFocalManipulator - the first shippable chunk of the Focal Manipulator arc (headless data model +
+	// crafting logic only, see that class's own doc comment for the block/menu/screen commits still to
+	// come). Directly manipulates the tile's own live `nodes` graph the way a future GUI packet handler
+	// eventually will.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focalManipulatorAssemblesARealFocusFromANodeGraphAndCastsIt(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(3, 2, 3);
+		BlockPos absPos = helper.absolutePos(pos);
+		ServerLevel level = helper.getLevel();
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.focalManipulator.get());
+		thaumcraft.common.tiles.crafting.TileFocalManipulator tile = helper.getBlockEntity(pos);
+
+		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "BASEAUROMANCY");
+		player.getInventory().add(makeAspectCrystal(thaumcraft.api.aspects.Aspect.AVERSION));
+		player.getInventory().add(makeAspectCrystal(thaumcraft.api.aspects.Aspect.FIRE));
+
+		ItemStack blank = new ItemStack(ItemsTC.focusBlank1.get());
+		tile.setFocus(blank);
+
+		thaumcraft.common.tiles.crafting.FocusElementNode root = new thaumcraft.common.tiles.crafting.FocusElementNode();
+		root.id = 0;
+		root.node = (thaumcraft.api.casters.FocusNode) thaumcraft.api.casters.FocusEngine.getElement("thaumcraft.TOUCH");
+		root.children = new int[] { 1 };
+		tile.nodes.put(0, root);
+
+		thaumcraft.common.tiles.crafting.FocusElementNode effect = new thaumcraft.common.tiles.crafting.FocusElementNode();
+		effect.id = 1;
+		effect.node = (thaumcraft.api.casters.FocusNode) thaumcraft.api.casters.FocusEngine.getElement("thaumcraft.FIRE");
+		tile.nodes.put(1, effect);
+
+		boolean started = tile.startCraft(player);
+		helper.assertTrue(started, "startCraft should succeed once research/vis/crystals/xp are all satisfiable");
+		helper.assertTrue(tile.vis > 0.0f, "a successful startCraft should charge the tile with real vis to spend over time");
+
+		for (int i = 0; i < 400 && tile.vis > 0.0f; i++) {
+			thaumcraft.common.tiles.crafting.TileFocalManipulator.tick(level, absPos, level.getBlockState(absPos), tile);
+		}
+		helper.assertTrue(tile.vis <= 0.0f, "the tile should fully drain its charged vis within a bounded number of ticks");
+
+		ItemStack result = tile.getFocus();
+		thaumcraft.api.items.ThaumcraftDataComponents.AssembledFocus assembled = result.get(thaumcraft.api.items.ThaumcraftDataComponents.ASSEMBLED_FOCUS.get());
+		helper.assertTrue(assembled != null && assembled.focusPackage().nodes.size() == 2,
+				"the finished focus should carry a real 2-node assembled package, found " + (assembled == null ? "null" : assembled.focusPackage().nodes.size()));
+
+		thaumcraft.api.casters.FocusPackage rebuilt = ((thaumcraft.common.items.casters.ItemFocus) result.getItem()).getPackage(result);
+		helper.assertTrue(rebuilt.nodes.size() == 2, "ItemFocus#getPackage should read the same assembled graph back from the finished item");
+		helper.succeed();
+	}
+
+	private static ItemStack makeAspectCrystal(Aspect aspect) {
+		ItemStack stack = new ItemStack(ItemsTC.crystalEssence.get());
+		((ItemGenericEssentiaContainer) stack.getItem()).setAspects(stack, new AspectList().add(aspect, 1));
+		return stack;
+	}
 }

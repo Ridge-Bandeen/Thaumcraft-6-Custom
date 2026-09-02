@@ -59,6 +59,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> crucible =
 			ITEMS.registerSimpleBlockItem("crucible", BlocksTC.crucible);
 
+	public static final DeferredItem<BlockItem> focalManipulator =
+			ITEMS.registerSimpleBlockItem("focal_manipulator", BlocksTC.focalManipulator);
+
 	public static final DeferredItem<BlockItem> oreQuartz =
 			ITEMS.registerSimpleBlockItem("ore_quartz", BlocksTC.oreQuartz);
 
@@ -126,6 +129,17 @@ public final class ItemsTC {
 
 	public static final DeferredItem<ItemFocusSanctuary> focusSanctuary =
 			ITEMS.registerItem("focus_sanctuary", ItemFocusSanctuary::new);
+
+	/** The original's real, genuinely blank foci - see {@link thaumcraft.common.items.casters.ItemFocusBlank}'s
+	 * own doc comment for why these coexist with the 10 fixed-chain foci above instead of replacing them. */
+	public static final DeferredItem<thaumcraft.common.items.casters.ItemFocusBlank> focusBlank1 =
+			ITEMS.registerItem("focus_blank_1", props -> new thaumcraft.common.items.casters.ItemFocusBlank(props, 15));
+
+	public static final DeferredItem<thaumcraft.common.items.casters.ItemFocusBlank> focusBlank2 =
+			ITEMS.registerItem("focus_blank_2", props -> new thaumcraft.common.items.casters.ItemFocusBlank(props, 25));
+
+	public static final DeferredItem<thaumcraft.common.items.casters.ItemFocusBlank> focusBlank3 =
+			ITEMS.registerItem("focus_blank_3", props -> new thaumcraft.common.items.casters.ItemFocusBlank(props, 50));
 
 	public static final DeferredItem<BlockItem> oreAmber =
 			ITEMS.registerSimpleBlockItem("ore_amber", BlocksTC.oreAmber);

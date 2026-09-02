@@ -202,6 +202,10 @@ sourceSets {
 
             include 'thaumcraft/common/items/casters/ItemCaster.java'
             include 'thaumcraft/common/items/casters/ItemFocus.java'
+            include 'thaumcraft/common/items/casters/ItemFocusBlank.java'
+            include 'thaumcraft/common/tiles/crafting/FocusElementNode.java'
+            include 'thaumcraft/common/tiles/crafting/TileFocalManipulator.java'
+            include 'thaumcraft/common/blocks/crafting/BlockFocalManipulator.java'
             include 'thaumcraft/common/items/casters/ItemFocusFire.java'
             include 'thaumcraft/common/items/casters/foci/FocusMediumTouch.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectFire.java'

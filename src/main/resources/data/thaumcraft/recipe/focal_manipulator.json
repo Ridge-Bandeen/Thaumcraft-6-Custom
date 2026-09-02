@@ -1,0 +1,21 @@
+{
+  "type": "thaumcraft:arcane_shaped",
+  "research": "FIRSTSTEPS",
+  "vis": 100,
+  "crystals": {
+    "terra": 1,
+    "aqua": 1
+  },
+  "pattern": [
+    "IAI",
+    "ARA",
+    "GAG"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "A": { "item": "thaumcraft:stone_arcane" },
+    "R": { "item": "thaumcraft:vis_resonator" },
+    "G": { "item": "minecraft:gold_ingot" }
+  },
+  "result": { "id": "thaumcraft:focal_manipulator" }
+}

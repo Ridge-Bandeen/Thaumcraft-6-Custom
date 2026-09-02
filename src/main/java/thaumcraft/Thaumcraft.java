@@ -189,6 +189,10 @@ public class Thaumcraft {
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ThaumcraftBlockEntities.WATER_JUG.get(),
                 (tile, side) -> side == net.minecraft.core.Direction.UP ? tile.tank : null);
 
+        // Same "expose the single item slot to hoppers/pipes" precedent as TileRechargePedestal above.
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ThaumcraftBlockEntities.FOCAL_MANIPULATOR.get(),
+                (tile, side) -> ((thaumcraft.common.tiles.crafting.TileFocalManipulator) tile).getItemHandler());
+
         thaumcraft.gametest.ThaumcraftGameTests.registerTestCapabilities(event);
     }
 

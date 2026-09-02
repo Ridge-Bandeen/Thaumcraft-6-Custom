@@ -8,6 +8,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -17,6 +18,7 @@ import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.api.aspects.AspectList;
+import thaumcraft.api.casters.FocusPackage;
 
 /**
  * ItemStacks no longer carry freeform NBT (that's an escape hatch now, the {@code CUSTOM_DATA} component -
@@ -117,6 +119,42 @@ public final class ThaumcraftDataComponents {
 				ResourceKey.streamCodec(Registries.DIMENSION), MirrorLink::dimension,
 				BlockPos.STREAM_CODEC, MirrorLink::pos,
 				MirrorLink::new);
+	}
+
+	/**
+	 * A player-assembled focus package (built at the Focal Manipulator, see {@code TileFocalManipulator}'s
+	 * own doc comment) attached to an {@link thaumcraft.common.items.casters.ItemFocus} stack - was an
+	 * arbitrary NBT sub-compound on the original. {@link FocusPackage} already carries its own real
+	 * {@code serialize()}/{@code deserialize(CompoundTag, Level)} pair (built for a different reason -
+	 * copying a live in-flight cast, see that method's own doc comment on a bug it caught) - reused here
+	 * as-is rather than inventing a second, parallel node-graph {@code Codec}. {@code deserialize} is
+	 * always called with a {@code null} {@link Level} on this path: a stored package is a reusable
+	 * template, never a live cast (no caster/world attached yet) - {@code FocusEngine#castFocusPackage}'s
+	 * own {@code initialize(caster)} step (already called on every real cast) overwrites both fields
+	 * before the package is ever used, so the {@code null} is never actually read.
+	 *
+	 * Wrapped in {@link AssembledFocus} for the same reason {@link #WAND_FOCUS} wraps a bare
+	 * {@code ItemStack} - see that field's own doc comment. {@code FocusPackage} is a plain mutable class
+	 * with no {@code equals()}/{@code hashCode()} of its own (same dev-mode data-component validator this
+	 * session already hit twice), and unlike {@code AspectList} isn't a good candidate to give real value
+	 * semantics to (it's the live in-flight-cast object elsewhere in this same API) - the wrapper record's
+	 * own synthesized {@code equals()}/{@code hashCode()} satisfies the validator without touching it.
+	 */
+	private static final Codec<FocusPackage> FOCUS_PACKAGE_CODEC = CompoundTag.CODEC.xmap(tag -> {
+		FocusPackage p = new FocusPackage();
+		p.deserialize(tag, null);
+		return p;
+	}, FocusPackage::serialize);
+
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<AssembledFocus>> ASSEMBLED_FOCUS = DATA_COMPONENTS.register("assembled_focus",
+			() -> DataComponentType.<AssembledFocus>builder()
+					.persistent(AssembledFocus.CODEC)
+					.networkSynchronized(ByteBufCodecs.fromCodec(AssembledFocus.CODEC))
+					.build());
+
+	/** See {@link #ASSEMBLED_FOCUS}'s doc comment for why this wrapper exists. */
+	public record AssembledFocus(FocusPackage focusPackage) {
+		public static final Codec<AssembledFocus> CODEC = FOCUS_PACKAGE_CODEC.xmap(AssembledFocus::new, AssembledFocus::focusPackage);
 	}
 
 	private ThaumcraftDataComponents() {
