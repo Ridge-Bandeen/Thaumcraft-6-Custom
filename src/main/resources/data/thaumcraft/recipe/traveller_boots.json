@@ -1,0 +1,19 @@
+{
+  "type": "thaumcraft:infusion",
+  "research": "BOOTSTRAVELLER",
+  "instability": 1,
+  "aspects": {
+    "volatus": 100,
+    "motus": 100
+  },
+  "central": { "item": "minecraft:leather_boots" },
+  "components": [
+    { "item": "thaumcraft:crystal_essence" },
+    { "item": "thaumcraft:crystal_essence" },
+    { "item": "thaumcraft:fabric" },
+    { "item": "thaumcraft:fabric" },
+    { "item": "minecraft:feather" },
+    { "item": "minecraft:cod" }
+  ],
+  "result": { "id": "thaumcraft:traveller_boots" }
+}

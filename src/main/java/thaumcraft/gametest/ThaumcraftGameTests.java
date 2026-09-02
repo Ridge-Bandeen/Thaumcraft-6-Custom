@@ -3019,4 +3019,59 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(leftover == 5, "a void jar holding Earth should still reject a mismatched Water addition, got leftover " + leftover);
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Boots of the Traveller - the first real IRechargable item (previously only exercised via a synthetic
+	// test stand-in against TileRechargePedestal). Tests call the real Item#inventoryTick entry point
+	// directly, same "test the real entry point directly" shape used throughout this session.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void travellerBootsBoostSpeedWhenChargedAndMovingForward(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		ItemStack boots = new ItemStack(ItemsTC.travellerBoots.get());
+		thaumcraft.api.items.RechargeHelper.rechargeItemBlindly(boots, player, 240);
+		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, boots);
+		player.zza = 1.0f;
+
+		boots.getItem().inventoryTick(boots, helper.getLevel(), player, 0, false);
+
+		helper.assertTrue(player.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED),
+				"worn, charged traveller boots moving forward should grant a Speed boost");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void travellerBootsDoNothingWithoutCharge(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		ItemStack boots = new ItemStack(ItemsTC.travellerBoots.get());
+		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, boots);
+		player.zza = 1.0f;
+
+		boots.getItem().inventoryTick(boots, helper.getLevel(), player, 0, false);
+
+		helper.assertTrue(!player.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED),
+				"uncharged traveller boots shouldn't grant a Speed boost");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void travellerBootsRecipeMatchesItsRealComponents(GameTestHelper helper) {
+		thaumcraft.api.crafting.InfusionRecipeInput input = new thaumcraft.api.crafting.InfusionRecipeInput(
+				new ItemStack(Items.LEATHER_BOOTS),
+				java.util.List.of(
+						new ItemStack(ItemsTC.crystalEssence.get()),
+						new ItemStack(ItemsTC.crystalEssence.get()),
+						new ItemStack(ItemsTC.fabric.get()),
+						new ItemStack(ItemsTC.fabric.get()),
+						new ItemStack(Items.FEATHER),
+						new ItemStack(Items.COD)));
+
+		var match = helper.getLevel().getRecipeManager().getRecipeFor(thaumcraft.api.crafting.ThaumcraftRecipeTypes.INFUSION_TYPE.get(), input, helper.getLevel());
+
+		helper.assertTrue(match.isPresent(), "the traveller_boots infusion recipe should match its own real component list");
+		helper.assertTrue(match.get().value().getResultItem(helper.getLevel().registryAccess()).is(ItemsTC.travellerBoots.get()),
+				"the matched recipe should produce the traveller boots");
+		helper.succeed();
+	}
 }

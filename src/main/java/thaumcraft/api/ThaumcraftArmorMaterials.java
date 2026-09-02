@@ -10,6 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterial;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.api.items.ItemsTC;
@@ -45,6 +46,25 @@ public final class ThaumcraftArmorMaterials {
 					SoundEvents.ARMOR_EQUIP_IRON,
 					() -> Ingredient.of(ItemsTC.ingotThaumium),
 					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "thaumium"))),
+					1.0F,
+					0.0F));
+
+	/** Replaces the original's {@code ThaumcraftMaterials.ARMORMAT_SPECIAL} ({@code EnumHelper.addArmorMaterial(
+	 * "SPECIAL", "SPECIAL", 25, [1,2,3,1], 25, ITEM_ARMOR_EQUIP_LEATHER, 1.0F)}) - only ever used by
+	 * {@link thaumcraft.common.items.armor.ItemBootsTraveller}, so named for that rather than kept generic. */
+	public static final Holder<ArmorMaterial> TRAVELLER = ARMOR_MATERIALS.register("traveller",
+			() -> new ArmorMaterial(
+					Util.make(new EnumMap<>(ArmorItem.Type.class), m -> {
+						m.put(ArmorItem.Type.BOOTS, 1);
+						m.put(ArmorItem.Type.LEGGINGS, 2);
+						m.put(ArmorItem.Type.CHESTPLATE, 3);
+						m.put(ArmorItem.Type.HELMET, 1);
+						m.put(ArmorItem.Type.BODY, 3);
+					}),
+					25,
+					SoundEvents.ARMOR_EQUIP_LEATHER,
+					() -> Ingredient.of(Items.LEATHER),
+					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "traveller"))),
 					1.0F,
 					0.0F));
 

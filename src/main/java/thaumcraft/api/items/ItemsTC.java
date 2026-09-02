@@ -393,6 +393,14 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> smelter =
 			ITEMS.registerSimpleBlockItem("smelter", BlocksTC.smelter);
 
+	public static final DeferredItem<Item> fabric =
+			ITEMS.registerSimpleItem("fabric");
+
+	/** See {@link thaumcraft.common.items.armor.ItemBootsTraveller}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemBootsTraveller> travellerBoots =
+			ITEMS.registerItem("traveller_boots", props -> new thaumcraft.common.items.armor.ItemBootsTraveller(
+					props.durability(350).rarity(net.minecraft.world.item.Rarity.RARE)));
+
 	/** Diagnostic tool - see {@link thaumcraft.common.items.tools.ItemResonator}'s own doc comment. */
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemResonator> resonator =
 			ITEMS.registerItem("resonator", props -> new thaumcraft.common.items.tools.ItemResonator(props.rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
