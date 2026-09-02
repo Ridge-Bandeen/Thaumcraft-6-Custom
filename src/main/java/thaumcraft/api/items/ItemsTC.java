@@ -217,6 +217,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> jarNormal =
 			ITEMS.registerSimpleBlockItem("jar_normal", BlocksTC.jarNormal);
 
+	public static final DeferredItem<BlockItem> jarVoid =
+			ITEMS.registerSimpleBlockItem("jar_void", BlocksTC.jarVoid);
+
 	public static final DeferredItem<BlockItem> lampGrowth =
 			ITEMS.registerSimpleBlockItem("lamp_growth", BlocksTC.lampGrowth);
 

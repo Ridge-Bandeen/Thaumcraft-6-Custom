@@ -57,9 +57,23 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 		super(ThaumcraftBlockEntities.JAR.get(), pos, state);
 	}
 
+	/** For {@link TileJarFillableVoid} - the one-arg constructor above hardcodes the base JAR type, same
+	 * "each variant needs its own real {@code BlockEntityType}" reason {@code TileTube} needed this same
+	 * overload for its Filter/Restrict variants. */
+	protected TileJarFillable(net.minecraft.world.level.block.entity.BlockEntityType<?> type, BlockPos pos, BlockState state) {
+		super(type, pos, state);
+	}
+
+	/** Overridden by {@link TileJarFillableVoid} - a void jar never stops pulling, even once "full" (it just
+	 * discards the overflow - see that class's own doc comment). A tiny, purely additive hook: for a plain
+	 * jar this is exactly the {@code amount >= CAPACITY} check {@link #tick} always did inline. */
+	protected boolean isFull() {
+		return amount >= CAPACITY;
+	}
+
 	public static void tick(Level level, BlockPos pos, BlockState state, TileJarFillable tile) {
 		if (level.isClientSide) return;
-		if (tile.amount >= CAPACITY) return;
+		if (tile.isFull()) return;
 		if (!(level.getBlockEntity(pos.above()) instanceof IEssentiaTransport source)) return;
 		if (!source.isConnectable(Direction.DOWN) || !source.canOutputTo(Direction.DOWN)) return;
 

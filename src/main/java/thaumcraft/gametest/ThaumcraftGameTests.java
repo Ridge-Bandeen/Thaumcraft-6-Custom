@@ -2973,4 +2973,50 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(tile.getAspectFilter() == null, "clearing the label should remove the filter, found " + tile.getAspectFilter());
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Void Jar - a small, purely additive extension of TileJarFillable (a new protected isFull() hook,
+	// same "safe retrofit" shape as TileTube's own Filter/Restrict hooks). Never stops demanding essentia,
+	// discards overflow past capacity instead of rejecting it.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void voidJarNeverStopsDemandingSuctionEvenWhenFull(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.jarVoid.get());
+		thaumcraft.common.tiles.essentia.TileJarFillableVoid jar = helper.getBlockEntity(pos);
+		jar.addToContainer(Aspect.EARTH, 250);
+
+		helper.assertTrue(jar.getSuctionAmount(net.minecraft.core.Direction.UP) > 0,
+				"a void jar should keep demanding suction even once full, got " + jar.getSuctionAmount(net.minecraft.core.Direction.UP));
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void voidJarDiscardsOverflowInsteadOfRejectingIt(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.jarVoid.get());
+		thaumcraft.common.tiles.essentia.TileJarFillableVoid jar = helper.getBlockEntity(pos);
+		jar.addToContainer(Aspect.EARTH, 250);
+
+		int leftover = jar.addToContainer(Aspect.EARTH, 50);
+
+		helper.assertTrue(leftover == 0, "a void jar should silently discard overflow instead of returning it as leftover, got " + leftover);
+		helper.assertTrue(jar.getEssentiaAmount(net.minecraft.core.Direction.UP) == 250,
+				"amount should stay clamped at capacity, got " + jar.getEssentiaAmount(net.minecraft.core.Direction.UP));
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void voidJarStillRejectsAMismatchedAspect(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.jarVoid.get());
+		thaumcraft.common.tiles.essentia.TileJarFillableVoid jar = helper.getBlockEntity(pos);
+		jar.addToContainer(Aspect.EARTH, 10);
+
+		int leftover = jar.addToContainer(Aspect.WATER, 5);
+
+		helper.assertTrue(leftover == 5, "a void jar holding Earth should still reject a mismatched Water addition, got leftover " + leftover);
+		helper.succeed();
+	}
 }
