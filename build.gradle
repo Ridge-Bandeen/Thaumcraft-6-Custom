@@ -74,6 +74,7 @@ sourceSets {
             include 'thaumcraft/api/entities/ITaintedMob.java'
             include 'thaumcraft/api/potions/MobEffectFluxTaint.java'
             include 'thaumcraft/api/potions/MobEffectVisExhaust.java'
+            include 'thaumcraft/common/lib/potions/MobEffectInfectiousVisExhaust.java'
 
             include 'thaumcraft/api/aspects/Aspect.java'
             include 'thaumcraft/api/aspects/AspectList.java'

@@ -3633,6 +3633,29 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
+	// MobEffectInfectiousVisExhaust - another Flux Rift prerequisite (see EntityWisp's own doc comment for
+	// the running prerequisite list). Registered together with its already-ported-but-previously-unused
+	// sibling MobEffectVisExhaust, its real amplifier-0 hand-off target.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infectiousVisExhaustSpreadsToANearbyEntityAndDecaysToPlainVisExhaust(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerLevel level = helper.getLevel();
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Pig carrier = spawnPigFacedBy(helper, caster, origin, 2.5);
+		carrier.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+				thaumcraft.common.registry.ThaumcraftMobEffects.INFECTIOUS_VIS_EXHAUST, 6000, 0, false, true));
+
+		Pig nearby = EntityType.PIG.create(level);
+		nearby.setPos(carrier.getX() + 1.0, carrier.getY(), carrier.getZ());
+		level.addFreshEntity(nearby);
+
+		helper.succeedWhen(() -> helper.assertTrue(nearby.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.VIS_EXHAUST),
+				"an amplifier-0 infectious carrier should eventually hand a nearby entity plain vis_exhaust"));
+	}
+
+	// --------------------------------------------------------------------------------------------------
 	// ScanningManager + ItemThaumometer - a headless (no book UI) slice of the research system. Real
 	// consumer: TileInfusionMatrix#craftingStart already checks a recipe's research key against player
 	// knowledge, so granting BOOTSTRAVELLER for real closes a genuine existing gap (that recipe was
