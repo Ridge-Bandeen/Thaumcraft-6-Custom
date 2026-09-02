@@ -3798,4 +3798,58 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(player.getItemInHand(hand).isEmpty(), "a single Pech Wand should be fully consumed after one use");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Arcane Grappler - see ItemGrappleGun/EntityGrapple's own doc comments for the recipe simplification
+	// (the original's real recipe needs brass and an unported "simple mechanism" item) and the dropped
+	// floating-tick-count anti-cheat reset.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void grappleGunFiresAGrappleAndConsumesCharge(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		ItemStack gun = new ItemStack(ItemsTC.grappleGun.get());
+		gun.set(thaumcraft.api.items.ThaumcraftDataComponents.CHARGE.get(), 50);
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, gun);
+
+		gun.getItem().use(helper.getLevel(), player, hand);
+
+		helper.assertTrue(thaumcraft.api.items.RechargeHelper.getCharge(gun) == 49,
+				"firing the grapple gun should consume 1 charge, found " + thaumcraft.api.items.RechargeHelper.getCharge(gun));
+		List<thaumcraft.common.entities.projectile.EntityGrapple> grapples = helper.getLevel().getEntitiesOfClass(
+				thaumcraft.common.entities.projectile.EntityGrapple.class, player.getBoundingBox().inflate(16));
+		helper.assertTrue(grapples.size() == 1, "firing should spawn exactly one real EntityGrapple, found " + grapples.size());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void grappleGunPullsThePlayerOnceItLands(GameTestHelper helper) {
+		BlockPos wallPos = new BlockPos(3, 5, 6);
+		helper.setBlock(wallPos, Blocks.STONE);
+		BlockPos absWall = helper.absolutePos(wallPos);
+
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(3, 5, 3)));
+		player.setDeltaMovement(Vec3.ZERO);
+
+		thaumcraft.common.entities.projectile.EntityGrapple grapple =
+				new thaumcraft.common.entities.projectile.EntityGrapple(player, level);
+		grapple.setPos(absWall.getX() + 0.5, absWall.getY() + 0.5, absWall.getZ() - 1.5);
+		grapple.setDeltaMovement(0, 0, 1.0);
+		level.addFreshEntity(grapple);
+
+		for (int i = 0; i < 10 && !thaumcraft.common.entities.projectile.EntityGrapple.hasActive(player); i++) {
+			grapple.tick();
+		}
+		helper.assertTrue(thaumcraft.common.entities.projectile.EntityGrapple.hasActive(player),
+				"flying a grapple into a wall should land it and mark it active for the thrower");
+
+		double startY = player.getDeltaMovement().y;
+		grapple.tick();
+		helper.assertTrue(player.getDeltaMovement().y > startY,
+				"once landed, the grapple should start pulling the player toward it, y-velocity was "
+						+ startY + " now " + player.getDeltaMovement().y);
+		helper.succeed();
+	}
 }

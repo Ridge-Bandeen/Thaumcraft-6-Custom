@@ -1,229 +1,149 @@
 package thaumcraft.common.entities.projectile;
-import io.netty.buffer.ByteBuf;
+
 import java.util.HashMap;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.entity.projectile.EntityThrowable;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+import java.util.Map;
+import java.util.UUID;
 
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.ThrowableProjectile;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
+import thaumcraft.common.registry.ThaumcraftEntities;
 
-public class EntityGrapple extends EntityThrowable implements IEntityAdditionalSpawnData
-{
-    public EnumHand hand;
-    EntityLivingBase cthrower;
-    boolean p;
-    boolean boost;
-    int prevDist;
-    int count;
-    boolean added;
-    public float ampl;
-    public static HashMap<Integer, Integer> grapples;
-    
-    public EntityGrapple(World par1World) {
-        super(par1World);
-        hand = EnumHand.MAIN_HAND;
-        p = false;
-        prevDist = 0;
-        count = 0;
-        added = false;
-        ampl = 0.0f;
-        setSize(0.1f, 0.1f);
-    }
-    
-    public boolean isInRangeToRenderDist(double distance) {
-        return distance < 4096.0;
-    }
-    
-    public void shoot(double x, double y, double z, float velocity, float inaccuracy) {
-        super.shoot(x, y, z, velocity, 0.0f);
-    }
-    
-    public EntityGrapple(World par1World, EntityLivingBase par2EntityLiving, EnumHand hand) {
-        super(par1World, par2EntityLiving);
-        this.hand = EnumHand.MAIN_HAND;
-        p = false;
-        prevDist = 0;
-        count = 0;
-        added = false;
-        ampl = 0.0f;
-        setSize(0.1f, 0.1f);
-        this.hand = hand;
-    }
-    
-    public EntityGrapple(World par1World, double par2, double par4, double par6) {
-        super(par1World, par2, par4, par6);
-        hand = EnumHand.MAIN_HAND;
-        p = false;
-        prevDist = 0;
-        count = 0;
-        added = false;
-        ampl = 0.0f;
-        setSize(0.1f, 0.1f);
-    }
-    
-    public void writeSpawnData(ByteBuf data) {
-        int id = -1;
-        if (getThrower() != null) {
-            id = getThrower().getEntityId();
-        }
-        data.writeInt(id);
-        data.writeBoolean(hand == EnumHand.MAIN_HAND);
-    }
-    
-    public void readSpawnData(ByteBuf data) {
-        int id = data.readInt();
-        hand = (data.readBoolean() ? EnumHand.MAIN_HAND : EnumHand.OFF_HAND);
-        try {
-            if (id >= 0) {
-                cthrower = (EntityLivingBase) world.getEntityByID(id);
-            }
-        }
-        catch (Exception ex) {}
-    }
-    
-    public EntityLivingBase getThrower() {
-        if (cthrower != null) {
-            return cthrower;
-        }
-        return super.getThrower();
-    }
-    
-    protected float getGravityVelocity() {
-        return getPulling() ? 0.0f : 0.03f;
-    }
-    
-    public void entityInit() {
-        super.entityInit();
-    }
-    
-    public void setPulling() {
-        p = true;
-    }
-    
-    public boolean getPulling() {
-        return p;
-    }
-    
-    public void onUpdate() {
-        super.onUpdate();
-        if (!getPulling() && !isDead && (ticksExisted > 30 || getThrower() == null)) {
-            if (getThrower() != null) {
-                EntityGrapple.grapples.remove(getThrower().getEntityId());
-            }
-            setDead();
-        }
-        if (getThrower() != null) {
-            if (!world.isRemote && !isDead && !added) {
-                if (EntityGrapple.grapples.containsKey(getThrower().getEntityId())) {
-                    int ii = EntityGrapple.grapples.get(getThrower().getEntityId());
-                    if (ii != getEntityId()) {
-                        Entity e = world.getEntityByID(ii);
-                        if (e != null) {
-                            e.setDead();
-                        }
-                    }
-                }
-                EntityGrapple.grapples.put(getThrower().getEntityId(), getEntityId());
-                added = true;
-            }
-            try {
-                if (getThrower() != null && EntityGrapple.grapples.containsKey(getThrower().getEntityId()) && EntityGrapple.grapples.get(getThrower().getEntityId()) != getEntityId()) {
-                    setDead();
-                }
-            }
-            catch (Exception ex) {}
-            double dis = getThrower().getDistance(this);
-            if (getThrower() != null && getPulling() && !isDead) {
-                if (getThrower().isSneaking()) {
-                    EntityGrapple.grapples.remove(getThrower().getEntityId());
-                    setDead();
-                }
-                else {
-                    if (!world.isRemote && getThrower() instanceof EntityPlayerMP) {
-                        ((EntityPlayerMP) getThrower()).connection.floatingTickCount = 0;
-                    }
-                    getThrower().fallDistance = 0.0f;
-                    double mx = posX - getThrower().posX;
-                    double my = posY - getThrower().posY;
-                    double mz = posZ - getThrower().posZ;
-                    double dd = dis;
-                    if (dis < 8.0) {
-                        dd = dis * (8.0 - dis);
-                    }
-                    dd = Math.max(1.0E-9, dd);
-                    mx /= dd * 5.0;
-                    my /= dd * 5.0;
-                    mz /= dd * 5.0;
-                    Vec3d v2 = new Vec3d(mx, my, mz);
-                    if (v2.lengthVector() > 0.25) {
-                        v2 = v2.normalize();
-                        mx = v2.x / 4.0;
-                        my = v2.y / 4.0;
-                        mz = v2.z / 4.0;
-                    }
-                    EntityLivingBase thrower = getThrower();
-                    thrower.motionX += mx;
-                    EntityLivingBase thrower2 = getThrower();
-                    thrower2.motionY += my + 0.033;
-                    EntityLivingBase thrower3 = getThrower();
-                    thrower3.motionZ += mz;
-                    if (!boost) {
-                        EntityLivingBase thrower4 = getThrower();
-                        thrower4.motionY += 0.4000000059604645;
-                        boost = true;
-                    }
-                    int d = (int)(dis / 2.0);
-                    if (d == prevDist) {
-                        ++count;
-                    }
-                    else {
-                        count = 0;
-                    }
-                    prevDist = d;
-                }
-            }
-            if (world.isRemote) {
-                if (!getPulling()) {
-                    ampl += 0.02f;
-                }
-                else {
-                    ampl *= 0.66f;
-                }
-            }
-        }
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void handleStatusUpdate(byte id) {
-        if (id == 6) {
-            setPulling();
-            motionX = 0.0;
-            motionY = 0.0;
-            motionZ = 0.0;
-        }
-    }
-    
-    protected void onImpact(RayTraceResult mop) {
-        if (!world.isRemote) {
-            setPulling();
-            motionX = 0.0;
-            motionY = 0.0;
-            motionZ = 0.0;
-            posX = mop.hitVec.x;
-            posY = mop.hitVec.y;
-            posZ = mop.hitVec.z;
-            world.setEntityState(this, (byte)6);
-        }
-    }
-    
-    static {
-        EntityGrapple.grapples = new HashMap<Integer, Integer>();
-    }
+/**
+ * Replaces the old (1.12.2) {@code EntityGrapple} - the hookshot projectile behind
+ * {@link thaumcraft.common.items.tools.ItemGrappleGun}. Flies until it hits something, then pulls the
+ * thrower toward the impact point using the same spring-like velocity formula the original used (stronger
+ * pull the further away, capped once close). Extends vanilla's {@link ThrowableProjectile}, same base every
+ * other simple projectile in this port uses.
+ *
+ * {@link #ACTIVE} (thrower UUID -> grapple entity id) replaces the original's own static map, keyed by UUID
+ * instead of a raw int entity id (more robust across id reuse) - it exists for two things: only one grapple
+ * can pull a given player at a time ({@link #discardActiveFor} is called before firing a new one, moved to
+ * fire-time instead of the original's own reactive every-tick check), and it's what
+ * {@code ItemGrappleGun}'s "loaded" item-model override reads via {@link #hasActive} - no stored NBT/data
+ * component flag needed on the item itself, since "is there a live grapple for this player" is already real,
+ * live, queryable state.
+ *
+ * Dropped: the original's manual reset of the player connection's "floating tick count" (an anti-cheat
+ * counter preventing a fly-kick during a long pull) - a real, minor simplification; a very long pull could in
+ * theory trip vanilla's own airborne-too-long check, not addressed this pass.
+ */
+public class EntityGrapple extends ThrowableProjectile {
+
+	private static final Map<UUID, Integer> ACTIVE = new HashMap<>();
+
+	private boolean pulling;
+	private boolean boosted;
+
+	public EntityGrapple(EntityType<? extends EntityGrapple> type, Level level) {
+		super(type, level);
+	}
+
+	public EntityGrapple(LivingEntity thrower, Level level) {
+		super(ThaumcraftEntities.GRAPPLE.get(), thrower, level);
+	}
+
+	/** Discards any grapple this thrower already has active, so only one can ever be pulling them. */
+	public static void discardActiveFor(LivingEntity thrower) {
+		Integer existingId = ACTIVE.remove(thrower.getUUID());
+		if (existingId != null && thrower.level().getEntity(existingId) instanceof EntityGrapple grapple) {
+			grapple.discard();
+		}
+	}
+
+	public static boolean hasActive(LivingEntity thrower) {
+		return ACTIVE.containsKey(thrower.getUUID());
+	}
+
+	@Override
+	protected void defineSynchedData(SynchedEntityData.Builder builder) {
+		// no synced state - purely a server-side physics helper, nothing client-visible to sync.
+	}
+
+	@Override
+	protected double getDefaultGravity() {
+		return pulling ? 0.0 : 0.03;
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+		Entity owner = getOwner();
+		if (owner == null || (!pulling && tickCount > 30)) {
+			discardSelf(owner);
+			return;
+		}
+		if (!level().isClientSide && pulling) {
+			if (owner.isShiftKeyDown()) {
+				discardSelf(owner);
+				return;
+			}
+			pull((LivingEntity) owner);
+		}
+	}
+
+	private void discardSelf(Entity owner) {
+		if (owner != null) {
+			ACTIVE.remove(owner.getUUID());
+		}
+		discard();
+	}
+
+	/** Same spring formula as the original: pull strength grows the closer you already are (capped once very
+	 * close so you don't overshoot violently past the anchor), plus a one-time upward boost on first pull to
+	 * get the thrower off the ground. */
+	private void pull(LivingEntity owner) {
+		double dis = owner.distanceTo(this);
+		double mx = getX() - owner.getX();
+		double my = getY() - owner.getY();
+		double mz = getZ() - owner.getZ();
+		double dd = dis < 8.0 ? dis * (8.0 - dis) : dis;
+		dd = Math.max(1.0E-9, dd);
+		mx /= dd * 5.0;
+		my /= dd * 5.0;
+		mz /= dd * 5.0;
+		Vec3 pull = new Vec3(mx, my, mz);
+		if (pull.lengthSqr() > 0.0625) {
+			pull = pull.normalize().scale(0.25);
+		}
+		Vec3 motion = owner.getDeltaMovement().add(pull.x, pull.y + 0.033, pull.z);
+		if (!boosted) {
+			motion = motion.add(0, 0.4, 0);
+			boosted = true;
+		}
+		owner.setDeltaMovement(motion);
+		owner.resetFallDistance();
+		owner.hurtMarked = true;
+	}
+
+	@Override
+	protected void onHitEntity(EntityHitResult result) {
+		super.onHitEntity(result);
+		land(result.getLocation());
+	}
+
+	@Override
+	protected void onHitBlock(BlockHitResult result) {
+		super.onHitBlock(result);
+		land(result.getLocation());
+	}
+
+	private void land(Vec3 pos) {
+		if (level().isClientSide) {
+			return;
+		}
+		pulling = true;
+		setDeltaMovement(Vec3.ZERO);
+		setPos(pos.x, pos.y, pos.z);
+		Entity owner = getOwner();
+		if (owner != null) {
+			ACTIVE.put(owner.getUUID(), getId());
+		}
+	}
 }

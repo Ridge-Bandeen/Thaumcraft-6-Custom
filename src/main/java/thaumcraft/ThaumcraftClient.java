@@ -48,6 +48,13 @@ public class ThaumcraftClient {
         // label.json's model switches on the same predicate, same reasoning as phial.
         event.enqueueWork(() -> ItemProperties.register(ItemsTC.label.get(), ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "filled"),
                 (stack, level, entity, seed) -> stack.has(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get()) ? 1.0f : 0.0f));
+
+        // grapple_gun.json's model switches on this ("predicate": {"type": 0|1}), reused unchanged from the
+        // original asset - no stored per-stack state needed, EntityGrapple.hasActive already tracks live
+        // whether this player currently has an active (fired) grapple, see that class's own doc comment.
+        event.enqueueWork(() -> ItemProperties.register(ItemsTC.grappleGun.get(), ResourceLocation.withDefaultNamespace("type"),
+                (stack, level, entity, seed) -> entity instanceof net.minecraft.world.entity.LivingEntity living
+                        && thaumcraft.common.entities.projectile.EntityGrapple.hasActive(living) ? 1.0f : 0.0f));
     }
 
     @SubscribeEvent

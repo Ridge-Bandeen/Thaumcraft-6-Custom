@@ -11,6 +11,7 @@ import thaumcraft.common.entities.projectile.EntityBottleTaint;
 import thaumcraft.common.entities.projectile.EntityFocusCloud;
 import thaumcraft.common.entities.projectile.EntityFocusMine;
 import thaumcraft.common.entities.projectile.EntityFocusProjectile;
+import thaumcraft.common.entities.projectile.EntityGrapple;
 
 /** First entity types this port has needed - see {@link EntityFocusProjectile}'s own doc comment. */
 public final class ThaumcraftEntities {
@@ -66,6 +67,18 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.updateInterval(10)
 					.build("following_item"));
+
+	/** See {@link EntityGrapple}'s own doc comment. Invisible/short-lived like the focus-carrier entities
+	 * above (no custom renderer, and a mid-flight-or-pulling hookshot isn't worth persisting across a
+	 * reload), so {@code noSave()} matches those rather than Alumentum/BottleTaint's own real-dropped-item
+	 * persistence. */
+	public static final DeferredHolder<EntityType<?>, EntityType<EntityGrapple>> GRAPPLE = ENTITY_TYPES.register("grapple",
+			() -> EntityType.Builder.<EntityGrapple>of(EntityGrapple::new, MobCategory.MISC)
+					.sized(0.1f, 0.1f)
+					.clientTrackingRange(64)
+					.updateInterval(10)
+					.noSave()
+					.build("grapple"));
 
 	private ThaumcraftEntities() {
 	}

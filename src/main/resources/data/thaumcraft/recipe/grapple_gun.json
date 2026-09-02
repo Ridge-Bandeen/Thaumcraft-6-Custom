@@ -1,0 +1,21 @@
+{
+  "type": "thaumcraft:arcane_shaped",
+  "research": "FIRSTSTEPS",
+  "vis": 75,
+  "crystals": {
+    "aer": 1,
+    "ignis": 1
+  },
+  "pattern": [
+    "  S",
+    "III",
+    " RW"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "S": { "item": "minecraft:string" },
+    "R": { "item": "minecraft:redstone" },
+    "W": { "tag": "minecraft:planks" }
+  },
+  "result": { "id": "thaumcraft:grapple_gun" }
+}

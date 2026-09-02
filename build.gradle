@@ -257,6 +257,8 @@ sourceSets {
             include 'thaumcraft/common/registry/ThaumcraftTreeGrowers.java'
             include 'thaumcraft/common/items/curios/ItemCurio.java'
             include 'thaumcraft/common/items/curios/ItemPechWand.java'
+            include 'thaumcraft/common/items/tools/ItemGrappleGun.java'
+            include 'thaumcraft/common/entities/projectile/EntityGrapple.java'
 
             include 'thaumcraft/common/entities/projectile/EntityAlumentum.java'
             include 'thaumcraft/common/items/consumables/ItemAlumentum.java'

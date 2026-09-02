@@ -1,88 +1,60 @@
 package thaumcraft.common.items.tools;
-import javax.annotation.Nullable;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.EnumRarity;
-import net.minecraft.item.IItemPropertyGetter;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTBase;
-import net.minecraft.nbt.NBTTagByte;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.EnumActionResult;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
+import net.minecraft.world.level.Level;
 import thaumcraft.api.items.IRechargable;
 import thaumcraft.api.items.RechargeHelper;
 import thaumcraft.common.entities.projectile.EntityGrapple;
-import thaumcraft.common.items.ItemTCBase;
-import thaumcraft.common.lib.SoundsTC;
 
+/**
+ * Replaces the old (1.12.2) {@code ItemGrappleGun} - a rechargable (100 max charge, same
+ * {@link IRechargable}/{@link RechargeHelper} pattern already shipped for the Boots of the Traveller) hookshot
+ * launcher. Fires one {@link EntityGrapple} per charge, discarding any grapple already pulling this player
+ * first (only one active at a time - see that class's own doc comment). The original's "loaded" item-model
+ * override (a bow-like drawn/undrawn appearance) is wired in {@code ThaumcraftClient} against
+ * {@link EntityGrapple#hasActive} directly, needing no stored per-stack state.
+ *
+ * The original's own {@code SoundsTC.ice} fire sound isn't ported (a custom sound); substituted with vanilla's
+ * {@link SoundEvents#TRIDENT_THROW}, a real "launch a mechanical projectile" sound.
+ */
+public class ItemGrappleGun extends Item implements IRechargable {
 
-public class ItemGrappleGun extends ItemTCBase implements IRechargable
-{
-    public ItemGrappleGun() {
-        super("grapple_gun");
-        setMaxStackSize(1);
-        addPropertyOverride(new ResourceLocation("type"), new IItemPropertyGetter() {
-            @SideOnly(Side.CLIENT)
-            public float apply(ItemStack stack, @Nullable World worldIn, @Nullable EntityLivingBase entityIn) {
-                return (stack.hasTagCompound() && stack.getTagCompound().getByte("loaded") == 1) ? 1.0f : 0.0f;
-            }
-        });
-    }
-    
-    @Override
-    public int getMaxCharge(ItemStack stack, EntityLivingBase player) {
-        return 100;
-    }
-    
-    @Override
-    public EnumChargeDisplay showInHud(ItemStack stack, EntityLivingBase player) {
-        return EnumChargeDisplay.NORMAL;
-    }
-    
-    public EnumRarity getRarity(ItemStack itemstack) {
-        return EnumRarity.UNCOMMON;
-    }
-    
-    public void onUpdate(ItemStack stack, World worldIn, Entity entityIn, int itemSlot, boolean isSelected) {
-        if (!EntityGrapple.grapples.containsKey(entityIn.getEntityId()) && stack.hasTagCompound() && stack.getTagCompound().getByte("loaded") == 1) {
-            stack.setTagInfo("loaded", new NBTTagByte((byte)0));
-        }
-    }
-    
-    public ActionResult<ItemStack> onItemRightClick(World world, EntityPlayer player, EnumHand hand) {
-        player.playSound(SoundsTC.ice, 3.0f, 0.8f + world.rand.nextFloat() * 0.1f);
-        if (!world.isRemote && RechargeHelper.getCharge(player.getHeldItem(hand)) > 0) {
-            EntityGrapple grapple = new EntityGrapple(world, player, hand);
-            grapple.shoot(player, player.rotationPitch, player.rotationYaw, -5.0f, 1.5f, 0.0f);
-            double px = -MathHelper.cos((player.rotationYaw - 0.5f) / 180.0f * 3.141593f) * 0.2f * ((grapple.hand == EnumHand.MAIN_HAND) ? 1 : -1);
-            double pz = -MathHelper.sin((player.rotationYaw - 0.5f) / 180.0f * 3.141593f) * 0.3f * ((grapple.hand == EnumHand.MAIN_HAND) ? 1 : -1);
-            Vec3d vl = player.getLookVec();
-            EntityGrapple entityGrapple = grapple;
-            entityGrapple.posX += px + vl.x;
-            EntityGrapple entityGrapple2 = grapple;
-            entityGrapple2.posZ += pz + vl.y;
-            if (world.spawnEntity(grapple)) {
-                RechargeHelper.consumeCharge(player.getHeldItem(hand), player, 1);
-                player.getHeldItem(hand).setTagInfo("loaded", new NBTTagByte((byte)1));
-            }
-        }
-        return (ActionResult<ItemStack>)new ActionResult(EnumActionResult.SUCCESS, player.getHeldItem(hand));
-    }
-    
-    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
-        if (oldStack.getItem() != null && oldStack.getItem() == this && newStack.getItem() != null && newStack.getItem() == this && !ItemStack.areItemStackTagsEqual(oldStack, newStack)) {
-            boolean b1 = !oldStack.hasTagCompound() || oldStack.getTagCompound().getByte("loaded") == 0;
-            boolean b2 = !newStack.hasTagCompound() || newStack.getTagCompound().getByte("loaded") == 0;
-            return b1 != b2;
-        }
-        return newStack.getItem() != oldStack.getItem();
-    }
+	public ItemGrappleGun(Properties properties) {
+		super(properties.stacksTo(1).rarity(Rarity.UNCOMMON));
+	}
+
+	@Override
+	public int getMaxCharge(ItemStack stack, LivingEntity player) {
+		return 100;
+	}
+
+	@Override
+	public EnumChargeDisplay showInHud(ItemStack stack, LivingEntity player) {
+		return EnumChargeDisplay.NORMAL;
+	}
+
+	@Override
+	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+		ItemStack stack = player.getItemInHand(hand);
+		level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.TRIDENT_THROW,
+				SoundSource.PLAYERS, 3.0f, 0.8f + level.getRandom().nextFloat() * 0.1f);
+
+		if (!level.isClientSide && RechargeHelper.getCharge(stack) > 0) {
+			EntityGrapple.discardActiveFor(player);
+			EntityGrapple grapple = new EntityGrapple(player, level);
+			grapple.shootFromRotation(player, player.getXRot(), player.getYRot(), -5.0f, 1.5f, 0.0f);
+			if (level.addFreshEntity(grapple)) {
+				RechargeHelper.consumeCharge(stack, player, 1);
+			}
+		}
+		return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+	}
 }

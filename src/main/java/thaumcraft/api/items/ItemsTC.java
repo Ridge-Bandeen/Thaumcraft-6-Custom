@@ -309,6 +309,10 @@ public final class ItemsTC {
 	public static final DeferredItem<Item> thaumiumSword = ITEMS.registerItem("thaumium_sword",
 			props -> new SwordItem(TIER_THAUMIUM, props.attributes(SwordItem.createAttributes(TIER_THAUMIUM, 3, -2.4F))));
 
+	/** See {@link thaumcraft.common.items.tools.ItemGrappleGun}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemGrappleGun> grappleGun =
+			ITEMS.registerItem("grapple_gun", thaumcraft.common.items.tools.ItemGrappleGun::new);
+
 	/** {@code ThaumcraftMaterials.ARMORMAT_THAUMIUM}, via {@link ThaumcraftArmorMaterials#THAUMIUM} - see that
 	 * class for why armor needs a real registry entry instead of a plain {@code Tier}-style object. Durability
 	 * is {@code Type.getDurability(25)} (the original's durability multiplier), same convention vanilla's own
