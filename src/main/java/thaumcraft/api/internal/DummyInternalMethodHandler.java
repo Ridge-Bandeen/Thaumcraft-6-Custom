@@ -2,6 +2,7 @@ package thaumcraft.api.internal;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -37,6 +38,11 @@ public class DummyInternalMethodHandler implements IInternalMethodHandler {
 
 	@Override
 	public AspectList generateTags(ItemStack is) {
+		return null;
+	}
+
+	@Override
+	public AspectList getEntityAspects(Entity entity) {
 		return null;
 	}
 

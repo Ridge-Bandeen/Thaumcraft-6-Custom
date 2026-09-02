@@ -8,8 +8,10 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -22,6 +24,11 @@ import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockDropsEvent;
 import thaumcraft.Thaumcraft;
+import thaumcraft.api.aspects.Aspect;
+import thaumcraft.api.aspects.AspectHelper;
+import thaumcraft.api.aspects.AspectList;
+import thaumcraft.api.items.ItemGenericEssentiaContainer;
+import thaumcraft.api.items.ItemsTC;
 import thaumcraft.common.entities.EntityFollowingItem;
 import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
 
@@ -45,14 +52,18 @@ import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
  * direct {@code EntityFollowingItem} wrapping for the kill side) - unified here into one
  * {@link #redirectToHomeOn} used both places, since {@link BlockDropsEvent}/{@link LivingDropsEvent} both
  * already hand over a mutable list of not-yet-spawned {@code ItemEntity}s to replace in place.</li>
+ * <li>{@link EnumInfusionEnchantment#ESSENCE} - on a kill, drops up to {@code level} essentia crystals drawn
+ * from the victim's own {@link thaumcraft.api.aspects.AspectHelper#getEntityAspects}, each a real crystal
+ * (see {@link #makeCrystal}) removed one unit at a time from a copy of the victim's aspect pool so the same
+ * aspect isn't drawn more than it actually had. Interops with {@code COLLECTOR} automatically if the killer
+ * also has it (the crystal is added post-{@link #redirectToHomeOn}, as a real homing entity, not a plain
+ * drop) - simplified from the original's own parallel "if COLLECTOR, make it a following item too" branch,
+ * same outcome either way.</li>
  * </ul>
  * Deferred (all real, just not built yet - see the port-tracking memory notes): {@link EnumInfusionEnchantment#ARCING}/
  * {@link EnumInfusionEnchantment#SOUNDING} (need a client FX packet - no custom packet system ported yet),
- * {@link EnumInfusionEnchantment#ESSENCE} (needs the still-unported {@code AspectHelper.getEntityAspects} -
- * its own {@code COLLECTOR}-interop half, redirecting the dropped crystal through the same homing path, is
- * ready and waiting in {@link #redirectToHomeOn} once it lands), {@link EnumInfusionEnchantment#REFINING}/
- * {@link EnumInfusionEnchantment#BURROWING} (need the old ore-dictionary "special mining result" table,
- * which has no modern tag-based equivalent built yet).
+ * {@link EnumInfusionEnchantment#REFINING}/{@link EnumInfusionEnchantment#BURROWING} (need the old
+ * ore-dictionary "special mining result" table, which has no modern tag-based equivalent built yet).
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID)
 public class ToolEvents {
@@ -100,11 +111,19 @@ public class ToolEvents {
 			return;
 		}
 		ItemStack tool = killer.getMainHandItem();
-		if (tool.isEmpty() || !EnumInfusionEnchantment.getInfusionEnchantments(tool).contains(EnumInfusionEnchantment.COLLECTOR)) {
+		if (tool.isEmpty()) {
 			return;
 		}
-		if (event.getDrops() instanceof List<ItemEntity> drops) {
+		List<EnumInfusionEnchantment> enchantments = EnumInfusionEnchantment.getInfusionEnchantments(tool);
+		if (enchantments.isEmpty()) {
+			return;
+		}
+		boolean collector = enchantments.contains(EnumInfusionEnchantment.COLLECTOR);
+		if (collector && event.getDrops() instanceof List<ItemEntity> drops) {
 			redirectToHomeOn(drops, killer);
+		}
+		if (enchantments.contains(EnumInfusionEnchantment.ESSENCE)) {
+			dropEssenceCrystals(event, killer, tool, collector);
 		}
 	}
 
@@ -115,6 +134,37 @@ public class ToolEvents {
 	 * enough. */
 	private static void redirectToHomeOn(List<ItemEntity> drops, Entity target) {
 		drops.replaceAll(drop -> new EntityFollowingItem(drop.level(), drop.getX(), drop.getY(), drop.getZ(), drop.getItem(), target));
+	}
+
+	private static void dropEssenceCrystals(LivingDropsEvent event, Player killer, ItemStack tool, boolean collector) {
+		LivingEntity victim = event.getEntity();
+		AspectList entityAspects = AspectHelper.getEntityAspects(victim);
+		if (entityAspects == null || entityAspects.size() <= 0) {
+			return;
+		}
+		int level = EnumInfusionEnchantment.getInfusionEnchantmentLevel(tool, EnumInfusionEnchantment.ESSENCE);
+		AspectList pool = entityAspects.copy();
+		RandomSource rand = victim.getRandom();
+		double x = victim.getX();
+		double y = victim.getY() + victim.getEyeHeight();
+		double z = victim.getZ();
+		for (int i = 0; i < level && pool.size() > 0; i++) {
+			Aspect[] available = pool.getAspects();
+			Aspect chosen = available[rand.nextInt(available.length)];
+			pool.remove(chosen, 1);
+			ItemStack crystal = makeCrystal(chosen);
+			event.getDrops().add(collector
+					? new EntityFollowingItem(victim.level(), x, y, z, crystal, killer)
+					: new ItemEntity(victim.level(), x, y, z, crystal));
+		}
+	}
+
+	/** Small, local stand-in for the original's {@code ThaumcraftApiHelper.makeCrystal} - that whole class
+	 * is still 1.12.2-era, unconverted, and not worth porting in full just for this one method. */
+	private static ItemStack makeCrystal(Aspect aspect) {
+		ItemStack stack = new ItemStack(ItemsTC.crystalEssence.get());
+		((ItemGenericEssentiaContainer) stack.getItem()).setAspects(stack, new AspectList().add(aspect, 1));
+		return stack;
 	}
 
 	private static void tryPlaceLamplight(ServerLevel level, BlockPos pos) {

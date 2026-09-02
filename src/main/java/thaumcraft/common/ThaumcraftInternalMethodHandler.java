@@ -2,6 +2,7 @@ package thaumcraft.common;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -34,8 +35,9 @@ import thaumcraft.common.world.aura.AuraHandler;
  * an unbuilt subsystem" precedent (e.g. the FIRSTSTEPS@2 default knowledge).</li>
  * <li>{@code getObjectAspects}/{@code generateTags} now wire through to
  * {@link thaumcraft.common.lib.crafting.ThaumcraftObjectTags} - see that class's own doc comment for what's
- * simplified in the object-tag database it replaces. The seal/golem registry methods stay no-ops (no
- * seals/golems ported yet), same as the original's own {@code DummyInternalMethodHandler}.</li>
+ * simplified in the object-tag database it replaces. {@code getEntityAspects} wires through to its sibling
+ * {@link thaumcraft.common.lib.crafting.ThaumcraftEntityTags} the same way. The seal/golem registry methods
+ * stay no-ops (no seals/golems ported yet), same as the original's own {@code DummyInternalMethodHandler}.</li>
  * </ul>
  */
 public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
@@ -89,6 +91,11 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 		// ThaumcraftObjectTags#getObjectTags has no tracing step to cache the output of; it's already a
 		// flat, cheap map+tag lookup every time.
 		return thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(is);
+	}
+
+	@Override
+	public AspectList getEntityAspects(Entity entity) {
+		return thaumcraft.common.lib.crafting.ThaumcraftEntityTags.getEntityTags(entity);
 	}
 
 	@Override

@@ -3010,6 +3010,50 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void aspectHelperReturnsRealEntityAspectsForARegisteredMobAndAPlayer(GameTestHelper helper) {
+		Zombie zombie = EntityType.ZOMBIE.create(helper.getLevel());
+		AspectList zombieAspects = thaumcraft.api.aspects.AspectHelper.getEntityAspects(zombie);
+		helper.assertTrue(zombieAspects != null && zombieAspects.getAmount(Aspect.UNDEAD) == 20,
+				"a Zombie should report its real registered UNDEAD aspect, found: " + zombieAspects);
+
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		AspectList playerAspects = thaumcraft.api.aspects.AspectHelper.getEntityAspects(player);
+		// >= not == : the 3 random aspects rolled on top of the base Man are drawn from the whole aspect
+		// pool, which can itself land on Man again (AspectList#add accumulates, not overwrites).
+		helper.assertTrue(playerAspects != null && playerAspects.getAmount(Aspect.MAN) >= 4,
+				"a player should always report at least the base 4 Man aspect, found: " + playerAspects);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void toolEventsEssenceDropsCrystalsFromTheVictimsAspects(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(new BlockPos(3, 2, 3));
+		ServerLevel level = helper.getLevel();
+		ServerPlayer killer = spawnCasterAt(helper, origin);
+		ItemStack sword = new ItemStack(Items.IRON_SWORD);
+		thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.addInfusionEnchantment(sword,
+				thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.ESSENCE, 2);
+		killer.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, sword);
+
+		Pig pig = spawnPigFacedBy(helper, killer, origin);
+		List<ItemEntity> drops = new java.util.ArrayList<>();
+		net.minecraft.world.damagesource.DamageSource source = level.damageSources().playerAttack(killer);
+		net.neoforged.neoforge.event.entity.living.LivingDropsEvent event =
+				new net.neoforged.neoforge.event.entity.living.LivingDropsEvent(pig, source, drops, true);
+		thaumcraft.common.lib.events.ToolEvents.onLivingDrops(event);
+
+		// A Pig has 3 distinct registered aspects (BEAST/EARTH/DESIRE) - level 2 should draw exactly 2 of them.
+		helper.assertTrue(drops.size() == 2, "ESSENCE level 2 should drop exactly 2 crystals from a pig's 3-aspect pool, found " + drops.size());
+		for (ItemEntity drop : drops) {
+			ItemStack crystal = drop.getItem();
+			AspectList crystalAspects = ((thaumcraft.api.items.ItemGenericEssentiaContainer) crystal.getItem()).getAspects(crystal);
+			helper.assertTrue(crystalAspects != null && crystalAspects.size() == 1,
+					"each ESSENCE drop should be a single-aspect crystal, found: " + crystalAspects);
+		}
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Essentia Resonator - a pure diagnostic tool, same onItemUseFirst shape as the caster wiring above.
 	// --------------------------------------------------------------------------------------------------

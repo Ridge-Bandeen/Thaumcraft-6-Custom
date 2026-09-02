@@ -149,6 +149,7 @@ sourceSets {
             include 'thaumcraft/common/ThaumcraftInternalMethodHandler.java'
             include 'thaumcraft/api/aspects/AspectHelper.java'
             include 'thaumcraft/common/lib/crafting/ThaumcraftObjectTags.java'
+            include 'thaumcraft/common/lib/crafting/ThaumcraftEntityTags.java'
             include 'thaumcraft/api/aura/AuraHelper.java'
 
             include 'thaumcraft/api/blocks/ILabelable.java'

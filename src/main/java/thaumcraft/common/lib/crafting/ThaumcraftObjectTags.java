@@ -47,8 +47,8 @@ import thaumcraft.api.aspects.IEssentiaContainerItem;
  * aspects. An item with no explicit tag match and no bonus-tag heuristic hit here just gets {@code null} -
  * same "no aspects known" outcome the original had for anything neither explicitly tagged nor
  * recipe-traceable.</li>
- * <li><b>No entity tags.</b> The original's parallel {@code registerEntityTag} table (mob scans) fed the
- * Thaumometer, which is still blocked on the unbuilt Thaumonomicon/scanning subsystem regardless.</li>
+ * <li><b>No entity tags here</b> - the original's parallel {@code registerEntityTag} table (mob scans) is a
+ * real, separate sibling class now: {@link ThaumcraftEntityTags}.</li>
  * <li><b>Tool-tier bonus is coarser.</b> The original scaled {@code Aspect.TOOL} off
  * {@code Item.ToolMaterial}'s harvest level (0-4, gone in modern Minecraft - tool-vs-block interaction
  * moved to tags). This uses {@link TieredItem#getTier()}'s durability ({@code getUses()}) as a proxy for

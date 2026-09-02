@@ -3,19 +3,17 @@ package thaumcraft.api.aspects;
 import java.util.ArrayList;
 import java.util.Random;
 
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import thaumcraft.api.ThaumcraftApi;
 
 /**
  * Replaces the old (1.12.2) {@code AspectHelper}. Almost entirely self-contained aspect arithmetic - no
- * registry dependency - except {@link #getObjectAspects}/{@link #generateTags}, which (same as the
- * original) delegate to {@code ThaumcraftApi.internalMethods}. See
- * {@link thaumcraft.common.lib.crafting.ThaumcraftObjectTags}'s own doc comment for the real
- * item-to-aspect lookup this port now backs those with.
- *
- * Dropped: the original's entity-scanning overload ({@code getEntityAspects}) - that fed the Thaumometer's
- * "scan a mob" path, which is still blocked on the unbuilt Thaumonomicon/scanning subsystem regardless of
- * whether this class is real, so there's nothing to call it yet.
+ * registry dependency - except {@link #getObjectAspects}/{@link #generateTags}/{@link #getEntityAspects},
+ * which (same as the original) delegate to {@code ThaumcraftApi.internalMethods}. See
+ * {@link thaumcraft.common.lib.crafting.ThaumcraftObjectTags}/{@code ThaumcraftEntityTags}'s own doc
+ * comments for the real item-to-aspect/entity-to-aspect lookups this port now backs those with.
  */
 public class AspectHelper {
 
@@ -68,6 +66,25 @@ public class AspectHelper {
 
 	public static AspectList generateTags(ItemStack is) {
 		return ThaumcraftApi.internalMethods.generateTags(is);
+	}
+
+	/**
+	 * A player's aspects were never a real lookup even in the original - just 4 Man plus 3 random aspects at
+	 * 15 each, reseeded per player name (so the same player always "scans" the same, but different players
+	 * differ) rather than actually representing anything about them. Kept exactly as-is; every other entity
+	 * goes through {@code ThaumcraftApi.internalMethods} to {@code ThaumcraftEntityTags}'s real registry.
+	 */
+	public static AspectList getEntityAspects(Entity entity) {
+		if (entity instanceof Player player) {
+			AspectList tags = new AspectList().add(Aspect.MAN, 4);
+			Random rand = new Random(player.getGameProfile().getName().hashCode());
+			Aspect[] all = Aspect.aspects.values().toArray(new Aspect[0]);
+			tags.add(all[rand.nextInt(all.length)], 15);
+			tags.add(all[rand.nextInt(all.length)], 15);
+			tags.add(all[rand.nextInt(all.length)], 15);
+			return tags;
+		}
+		return ThaumcraftApi.internalMethods.getEntityAspects(entity);
 	}
 
 	public static Aspect getCombinationResult(Aspect aspect1, Aspect aspect2) {

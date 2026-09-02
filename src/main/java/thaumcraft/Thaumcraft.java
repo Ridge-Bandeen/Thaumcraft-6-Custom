@@ -111,6 +111,11 @@ public class Thaumcraft {
         // mod constructor itself.
         thaumcraft.common.lib.crafting.ThaumcraftObjectTags.init();
 
+        // Its entity-tag sibling - see ThaumcraftEntityTags' own doc comment. No registry-timing dependency
+        // of its own (every entry keys off a vanilla EntityType constant), but grouped here with the
+        // object-tag table it mirrors rather than in the constructor.
+        thaumcraft.common.lib.crafting.ThaumcraftEntityTags.init();
+
         // Mirrors the original's own PotionFluxTaint.instance convention - see MobEffectFluxTaint's own doc
         // comment for why the static field exists at all. Same "needs registries populated" timing as the
         // object-tag table above.

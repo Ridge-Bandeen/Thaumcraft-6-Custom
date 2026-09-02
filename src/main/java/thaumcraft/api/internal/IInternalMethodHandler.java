@@ -2,6 +2,7 @@ package thaumcraft.api.internal;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -65,6 +66,10 @@ public interface IInternalMethodHandler {
 	AspectList getObjectAspects(ItemStack is);
 
 	AspectList generateTags(ItemStack is);
+
+	/** Non-player entities only - {@link thaumcraft.api.aspects.AspectHelper#getEntityAspects} handles the
+	 * player case itself (a random per-name pool, not a registry lookup). May return {@code null}. */
+	AspectList getEntityAspects(Entity entity);
 
 	float drainVis(Level level, BlockPos pos, float amount, boolean simulate);
 
