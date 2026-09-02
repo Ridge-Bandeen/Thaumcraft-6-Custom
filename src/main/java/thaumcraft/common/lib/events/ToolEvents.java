@@ -1,8 +1,11 @@
 package thaumcraft.common.lib.events;
 
+import java.util.ArrayDeque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
@@ -10,6 +13,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -21,12 +25,14 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LightBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.Tags;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
@@ -88,20 +94,37 @@ import thaumcraft.common.lib.network.fx.PacketFXSlash;
  * client-only ore-vein radar visual, {@code PacketFXScanSource}) is real client FX work of the same shape
  * {@code BlockDioptra}'s own scan visual was cut for - deferred rather than built this pass, since it's a
  * distinct feature from "does the packet system work", which {@code ARCING} already proves.</li>
+ * <li>{@link EnumInfusionEnchantment#BURROWING} - auto-tunnels toward the furthest still-standing block of
+ * the same type connected to the one just mined ({@link #findFurthestMatchingBlock}), a plain bounded
+ * breadth-first search replacing the original's own recursive "restart the whole cube scan from the new best
+ * match" approach in {@code BlockUtils.findBlocks} - same real search (matches by block type, diagonal
+ * connections count, a wood log gets a wider reach than an ore block), a clearer/cheaper way to run it.
+ * {@code level.destroyBlock} (already proven by {@code DESTRUCTIVE}) covers the original's own
+ * {@code BlockUtils.harvestBlock} - that whole hand-rolled helper turns out to just be a 1.12.2-era
+ * reimplementation of what {@code ServerPlayerGameMode#destroyBlock} already does natively now.
+ * <p>
+ * One real behavioural difference from the original, forced by which event this hooks: the original
+ * canceled the actual clicked block's own break ({@code BlockEvent.BreakEvent}, fired before removal) and
+ * harvested only the vein's tip instead - a "redirect the mine" effect. This hooks {@link BlockDropsEvent}
+ * (fired after removal, same as every other enchantment here) instead, which can't cancel anything - so this
+ * version mines the clicked block normally *and*, as a bonus, the vein's tip too, rather than redirecting to
+ * just the tip. A real difference, not a bug - both are "auto-tunnel toward the end of the vein", this one is
+ * just additive instead of substitutive.</li>
  * </ul>
- * Deferred (all real, just not built yet - see the port-tracking memory notes):
- * {@link EnumInfusionEnchantment#BURROWING} - checked closely enough to rule out "just needs a modern tag"
- * (unlike {@code REFINING}, its "is this a log or ore" check is the easy half): the real blocker is
- * {@code BlockUtils.breakFurthestBlock}'s own recursive greedy vein-walk (mutable-static BFS re-scanning a
- * shrinking cube around the current best match, out to a ~24/48/24 radius, plus a custom harvest helper with
- * its own flag set) - real standalone work on the order of {@code DESTRUCTIVE}'s own neighbour-plane logic,
- * not a small addition, so left for its own future pass.
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID)
 public class ToolEvents {
 
 	private static final Map<UUID, Direction> LAST_FACE_CLICKED = new HashMap<>();
 	private static boolean destructiveRecursion;
+	private static boolean burrowingRecursion;
+
+	/** How far (in blocks, each axis) BURROWING's vein-walk is allowed to search from the block actually
+	 * mined, and how many blocks it's allowed to visit doing so - both real caps the original also had
+	 * (~24/48/24), the second one a modern addition (the original's own restart-the-whole-cube-scan approach
+	 * had no hard visited-node bound of its own, relying on the position caps alone). */
+	private static final int BURROW_MAX_RADIUS = 24;
+	private static final int BURROW_MAX_VISITED = 4096;
 
 	/** REFINING's real target table - see this class's own doc comment. Populated by {@link #initSpecialMining}
 	 * (called from {@code Thaumcraft#commonSetup}, not a static initializer - the same
@@ -209,6 +232,9 @@ public class ToolEvents {
 		}
 		if (!destructiveRecursion && enchantments.contains(EnumInfusionEnchantment.DESTRUCTIVE)) {
 			breakSurroundingBlocks(level, pos, harvester, tool);
+		}
+		if (!burrowingRecursion && enchantments.contains(EnumInfusionEnchantment.BURROWING)) {
+			tryBurrow(level, pos, event.getState(), harvester, tool);
 		}
 		if (enchantments.contains(EnumInfusionEnchantment.COLLECTOR)) {
 			redirectToHomeOn(event.getDrops(), harvester);
@@ -333,5 +359,75 @@ public class ToolEvents {
 			case X -> center.offset(0, a, b);
 			case Z -> center.offset(a, b, 0);
 		};
+	}
+
+	/** Finds the furthest still-standing block of the same type as {@code brokenState} connected (through
+	 * more of the same type, possibly diagonally) to {@code minedPos}, and breaks that one instead - the
+	 * original's own "auto-tunnel toward the end of a vein/log" effect. Replaces
+	 * {@code BlockUtils.findBlocks}' own recursive "restart the whole cube scan from the new best match"
+	 * approach with a plain bounded breadth-first search - same real search (same-type, same reach,
+	 * same position caps), a clearer/cheaper way to run it. */
+	private static void tryBurrow(ServerLevel level, BlockPos minedPos, BlockState brokenState, Player harvester, ItemStack tool) {
+		if (!isValidBurrowBlock(brokenState)) {
+			return;
+		}
+		int reach = brokenState.is(BlockTags.LOGS) ? 2 : 1;
+		BlockPos furthest = findFurthestMatchingBlock(level, minedPos, brokenState.getBlock(), reach);
+		if (furthest.equals(minedPos)) {
+			return;
+		}
+		burrowingRecursion = true;
+		try {
+			tool.hurtAndBreak(1, harvester, EquipmentSlot.MAINHAND);
+			level.destroyBlock(furthest, true, harvester, 512);
+		} finally {
+			burrowingRecursion = false;
+		}
+	}
+
+	private static boolean isValidBurrowBlock(BlockState state) {
+		return state.is(BlockTags.LOGS) || state.is(Tags.Blocks.ORES);
+	}
+
+	private static BlockPos findFurthestMatchingBlock(ServerLevel level, BlockPos origin, Block match, int reach) {
+		ArrayDeque<BlockPos> queue = new ArrayDeque<>();
+		Set<BlockPos> visited = new HashSet<>();
+		queue.add(origin);
+		visited.add(origin);
+		BlockPos furthest = origin;
+		long furthestDistSq = 0;
+
+		while (!queue.isEmpty() && visited.size() < BURROW_MAX_VISITED) {
+			BlockPos current = queue.poll();
+			long dx = current.getX() - origin.getX();
+			long dy = current.getY() - origin.getY();
+			long dz = current.getZ() - origin.getZ();
+			long distSq = dx * dx + dy * dy + dz * dz;
+			if (distSq > furthestDistSq) {
+				furthestDistSq = distSq;
+				furthest = current;
+			}
+			for (int xx = -reach; xx <= reach; xx++) {
+				for (int yy = -reach; yy <= reach; yy++) {
+					for (int zz = -reach; zz <= reach; zz++) {
+						if (xx == 0 && yy == 0 && zz == 0) {
+							continue;
+						}
+						BlockPos next = current.offset(xx, yy, zz);
+						if (visited.contains(next)
+								|| Math.abs(next.getX() - origin.getX()) > BURROW_MAX_RADIUS
+								|| Math.abs(next.getY() - origin.getY()) > BURROW_MAX_RADIUS
+								|| Math.abs(next.getZ() - origin.getZ()) > BURROW_MAX_RADIUS) {
+							continue;
+						}
+						if (level.getBlockState(next).is(match)) {
+							visited.add(next);
+							queue.add(next);
+						}
+					}
+				}
+			}
+		}
+		return furthest;
 	}
 }

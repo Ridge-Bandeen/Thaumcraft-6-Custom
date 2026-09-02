@@ -3161,6 +3161,37 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void toolEventsBurrowingAutoMinesTheFurthestConnectedLog(GameTestHelper helper) {
+		BlockPos base = new BlockPos(3, 2, 3);
+		for (int i = 0; i < 5; i++) {
+			helper.setBlock(base.offset(0, 0, i), Blocks.OAK_LOG);
+		}
+		// The mined block is already gone by the time BlockDropsEvent fires - mirror that here too.
+		helper.setBlock(base, Blocks.AIR);
+		BlockPos absMined = helper.absolutePos(base);
+		ServerLevel level = helper.getLevel();
+
+		ServerPlayer harvester = spawnCasterAt(helper, absMined);
+		ItemStack axe = new ItemStack(Items.IRON_AXE);
+		thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.addInfusionEnchantment(axe,
+				thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.BURROWING, 1);
+
+		net.neoforged.neoforge.event.level.BlockDropsEvent event = new net.neoforged.neoforge.event.level.BlockDropsEvent(
+				level, absMined, Blocks.OAK_LOG.defaultBlockState(), null, new java.util.ArrayList<>(), harvester, axe);
+		thaumcraft.common.lib.events.ToolEvents.onBlockDrops(event);
+
+		BlockPos absFarthest = helper.absolutePos(base.offset(0, 0, 4));
+		helper.assertTrue(level.getBlockState(absFarthest).isAir(),
+				"BURROWING should auto-mine the furthest log connected to the one just mined, found: " + level.getBlockState(absFarthest));
+		for (int i = 1; i <= 3; i++) {
+			BlockPos mid = helper.absolutePos(base.offset(0, 0, i));
+			helper.assertTrue(!level.getBlockState(mid).isAir(),
+					"the logs between the mined block and the vein's tip should still be standing, log " + i + " found: " + level.getBlockState(mid));
+		}
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Essentia Resonator - a pure diagnostic tool, same onItemUseFirst shape as the caster wiring above.
 	// --------------------------------------------------------------------------------------------------
