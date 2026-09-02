@@ -88,6 +88,10 @@ sourceSets {
             include 'thaumcraft/api/capabilities/ThaumcraftCapabilities.java'
 
             include 'thaumcraft/api/research/IScanThing.java'
+            include 'thaumcraft/api/research/ScanningManager.java'
+            include 'thaumcraft/api/research/ScanItem.java'
+            include 'thaumcraft/api/research/ScanBlock.java'
+            include 'thaumcraft/common/items/tools/ItemThaumometer.java'
             include 'thaumcraft/api/research/ResearchAddendum.java'
             include 'thaumcraft/api/research/ResearchCategories.java'
             include 'thaumcraft/api/research/ResearchCategory.java'

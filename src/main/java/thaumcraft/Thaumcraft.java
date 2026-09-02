@@ -116,6 +116,19 @@ public class Thaumcraft {
         // object-tag table above.
         thaumcraft.api.potions.MobEffectFluxTaint.instance = thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT.get();
 
+        // A small, real scan target for ItemThaumometer - see ScanningManager's own doc comment for the
+        // overall scope of this "headless" (no book UI) slice of the research system. ItemThaumometer only
+        // has two real dispatch paths right now (interactLivingEntity and a block right-click), so the one
+        // registered here has to be block-shaped, not item-shaped, to actually be reachable in-game -
+        // ScanItem is still ported and usable by a future block/entity-and-item scan target, just not
+        // demonstrated with a live registration yet. Scanning the Runic Matrix is an invented substitute
+        // trigger for BOOTSTRAVELLER (the original granted it via a Thaumonomicon research-tree node, not
+        // ported) - it's the one already-shipped recipe this session has that's real but currently
+        // unreachable outside creative mode (TileInfusionMatrix#craftingStart checks its research key
+        // against player knowledge, and nothing before this granted BOOTSTRAVELLER to anyone).
+        thaumcraft.api.research.ScanningManager.addScannableThing(
+                new thaumcraft.api.research.ScanBlock("BOOTSTRAVELLER", BlocksTC.infusionMatrix.get()));
+
         // Salis Mundus dust triggers (thaumcraft.api.crafting.IDustTrigger) - see
         // ThaumcraftDustTriggers' own doc comment for what this unlocks and what's still deferred.
         ThaumcraftDustTriggers.register();

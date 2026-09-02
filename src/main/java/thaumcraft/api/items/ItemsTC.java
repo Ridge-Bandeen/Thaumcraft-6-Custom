@@ -45,9 +45,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> arcaneWorkbench =
 			ITEMS.registerSimpleBlockItem("arcane_workbench", BlocksTC.arcaneWorkbench);
 
-	/** Not yet wired up to the real scanning/research system - see the port-tracking memory notes. */
-	public static final DeferredItem<Item> thaumometer =
-			ITEMS.registerSimpleItem("thaumometer", new Item.Properties().stacksTo(1));
+	/** See {@link thaumcraft.common.items.tools.ItemThaumometer}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemThaumometer> thaumometer =
+			ITEMS.registerItem("thaumometer", thaumcraft.common.items.tools.ItemThaumometer::new);
 
 	public static final DeferredItem<ItemCaster> casterBasic =
 			ITEMS.registerItem("caster_basic", ItemCaster::new);

@@ -3280,4 +3280,62 @@ public class ThaumcraftGameTests {
 			helper.succeed();
 		});
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// ScanningManager + ItemThaumometer - a headless (no book UI) slice of the research system. Real
+	// consumer: TileInfusionMatrix#craftingStart already checks a recipe's research key against player
+	// knowledge, so granting BOOTSTRAVELLER for real closes a genuine existing gap (that recipe was
+	// otherwise unreachable outside creative mode).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void scanningTheRunicMatrixGrantsBootsTravellerResearch(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.infusionMatrix.get());
+		BlockPos absolute = helper.absolutePos(pos);
+
+		ServerPlayer player = spawnCasterAt(helper, absolute.above());
+		helper.assertTrue(!thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("BOOTSTRAVELLER"),
+				"the player shouldn't know BOOTSTRAVELLER yet");
+
+		ItemStack thaumometer = new ItemStack(ItemsTC.thaumometer.get());
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absolute), net.minecraft.core.Direction.UP, absolute, false);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(helper.getLevel(), player, hand, thaumometer, hit);
+
+		thaumometer.getItem().onItemUseFirst(thaumometer, context);
+
+		helper.assertTrue(thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("BOOTSTRAVELLER"),
+				"scanning the runic matrix with a thaumometer should have granted BOOTSTRAVELLER");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void scanningARegisteredEntityGrantsItsResearch(GameTestHelper helper) {
+		thaumcraft.api.research.ScanningManager.addScannableThing(new thaumcraft.api.research.IScanThing() {
+			@Override
+			public boolean checkThing(net.minecraft.world.entity.player.Player player, Object obj) {
+				return obj instanceof Pig;
+			}
+
+			@Override
+			public String getResearchKey(net.minecraft.world.entity.player.Player player, Object obj) {
+				return "TEST_PIG_SCAN";
+			}
+		});
+
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		Pig pig = spawnPigFacedBy(helper, player, origin, 2.0);
+		helper.assertTrue(!thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("TEST_PIG_SCAN"),
+				"the player shouldn't know TEST_PIG_SCAN yet");
+
+		ItemStack thaumometer = new ItemStack(ItemsTC.thaumometer.get());
+		thaumometer.getItem().interactLivingEntity(thaumometer, player, pig, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+		helper.assertTrue(thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("TEST_PIG_SCAN"),
+				"scanning the pig should have granted its registered research key");
+		helper.succeed();
+	}
 }
