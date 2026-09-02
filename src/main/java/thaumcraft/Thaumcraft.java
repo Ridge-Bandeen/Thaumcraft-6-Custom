@@ -116,6 +116,10 @@ public class Thaumcraft {
         // object-tag table it mirrors rather than in the constructor.
         thaumcraft.common.lib.crafting.ThaumcraftEntityTags.init();
 
+        // REFINING's cluster-substitution table - see ToolEvents' own doc comment. Same registry-timing
+        // reason as the two calls just above.
+        thaumcraft.common.lib.events.ToolEvents.initSpecialMining();
+
         // Mirrors the original's own PotionFluxTaint.instance convention - see MobEffectFluxTaint's own doc
         // comment for why the static field exists at all. Same "needs registries populated" timing as the
         // object-tag table above.

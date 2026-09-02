@@ -14,6 +14,8 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LightBlock;
@@ -27,6 +29,7 @@ import thaumcraft.Thaumcraft;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectHelper;
 import thaumcraft.api.aspects.AspectList;
+import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.api.items.ItemGenericEssentiaContainer;
 import thaumcraft.api.items.ItemsTC;
 import thaumcraft.common.entities.EntityFollowingItem;
@@ -59,17 +62,40 @@ import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
  * also has it (the crystal is added post-{@link #redirectToHomeOn}, as a real homing entity, not a plain
  * drop) - simplified from the original's own parallel "if COLLECTOR, make it a following item too" branch,
  * same outcome either way.</li>
+ * <li>{@link EnumInfusionEnchantment#REFINING} - a fortune-like chance (scaling with level, same
+ * {@code (1 + level) * 0.125f} formula the original used) to replace a mined drop with the matching
+ * {@code cluster_*} item instead - see {@link #SPECIAL_MINING}. The original's version of this table
+ * (Forge's pre-1.13 ore-dictionary) doesn't exist anymore, but it's not needed: the original only ever
+ * registered 4 entries (iron/gold/cinnabar/quartz), each keyed on one specific drop, so a plain
+ * {@code Item -> ItemStack} map covers it exactly - no tag matching required.</li>
  * </ul>
  * Deferred (all real, just not built yet - see the port-tracking memory notes): {@link EnumInfusionEnchantment#ARCING}/
  * {@link EnumInfusionEnchantment#SOUNDING} (need a client FX packet - no custom packet system ported yet),
- * {@link EnumInfusionEnchantment#REFINING}/{@link EnumInfusionEnchantment#BURROWING} (need the old
- * ore-dictionary "special mining result" table, which has no modern tag-based equivalent built yet).
+ * {@link EnumInfusionEnchantment#BURROWING} - checked closely enough to rule out "just needs a modern tag"
+ * (unlike {@code REFINING}, its "is this a log or ore" check is the easy half): the real blocker is
+ * {@code BlockUtils.breakFurthestBlock}'s own recursive greedy vein-walk (mutable-static BFS re-scanning a
+ * shrinking cube around the current best match, out to a ~24/48/24 radius, plus a custom harvest helper with
+ * its own flag set) - real standalone work on the order of {@code DESTRUCTIVE}'s own neighbour-plane logic,
+ * not a small addition, so left for its own future pass.
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID)
 public class ToolEvents {
 
 	private static final Map<UUID, Direction> LAST_FACE_CLICKED = new HashMap<>();
 	private static boolean destructiveRecursion;
+
+	/** REFINING's real target table - see this class's own doc comment. Populated by {@link #initSpecialMining}
+	 * (called from {@code Thaumcraft#commonSetup}, not a static initializer - the same
+	 * {@code DeferredHolder#get()}-before-{@code RegisterEvent} timing rule {@code ThaumcraftObjectTags}/
+	 * {@code ThaumcraftEntityTags} already ran into applies here too). */
+	private static final Map<Item, ItemStack> SPECIAL_MINING = new HashMap<>();
+
+	public static void initSpecialMining() {
+		SPECIAL_MINING.put(Items.RAW_IRON, new ItemStack(ItemsTC.clusterIron.get()));
+		SPECIAL_MINING.put(Items.RAW_GOLD, new ItemStack(ItemsTC.clusterGold.get()));
+		SPECIAL_MINING.put(BlocksTC.oreCinnabar.get().asItem(), new ItemStack(ItemsTC.clusterCinnabar.get()));
+		SPECIAL_MINING.put(Items.QUARTZ, new ItemStack(ItemsTC.clusterQuartz.get()));
+	}
 
 	@SubscribeEvent
 	public static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
@@ -103,6 +129,22 @@ public class ToolEvents {
 		if (enchantments.contains(EnumInfusionEnchantment.COLLECTOR)) {
 			redirectToHomeOn(event.getDrops(), harvester);
 		}
+		if (enchantments.contains(EnumInfusionEnchantment.REFINING)) {
+			rollSpecialMining(event.getDrops(), EnumInfusionEnchantment.getInfusionEnchantmentLevel(tool, EnumInfusionEnchantment.REFINING), harvester.getRandom());
+		}
+	}
+
+	private static void rollSpecialMining(List<ItemEntity> drops, int level, RandomSource rand) {
+		float chance = (1 + level) * 0.125f;
+		drops.replaceAll(drop -> {
+			ItemStack template = SPECIAL_MINING.get(drop.getItem().getItem());
+			if (template == null || rand.nextFloat() > chance) {
+				return drop;
+			}
+			ItemStack replacement = template.copyWithCount(template.getCount() * drop.getItem().getCount());
+			drop.setItem(replacement);
+			return drop;
+		});
 	}
 
 	@SubscribeEvent

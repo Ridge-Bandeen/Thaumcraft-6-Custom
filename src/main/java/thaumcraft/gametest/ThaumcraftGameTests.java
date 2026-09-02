@@ -3054,6 +3054,54 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void toolEventsRefiningEventuallyReplacesARawIronDropWithClusterIron(GameTestHelper helper) {
+		BlockPos absPos = helper.absolutePos(new BlockPos(3, 2, 3));
+		ServerLevel level = helper.getLevel();
+		ServerPlayer harvester = spawnCasterAt(helper, absPos);
+		ItemStack pickaxe = new ItemStack(Items.IRON_PICKAXE);
+		thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.addInfusionEnchantment(pickaxe,
+				thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.REFINING, 4);
+
+		// REFINING level 4 is a 62.5% chance per the (1 + level) * 0.125f formula - not deterministic, so
+		// this rolls repeatedly (a fresh drop list each time) until it's seen at least once, same idea as
+		// this file's other chance-based assertions elsewhere. 300 tries at 62.5% makes a false failure
+		// astronomically unlikely (~10^-125).
+		boolean sawCluster = false;
+		for (int i = 0; i < 300 && !sawCluster; i++) {
+			List<ItemEntity> drops = new java.util.ArrayList<>();
+			drops.add(new ItemEntity(level, absPos.getX() + 0.5, absPos.getY() + 0.5, absPos.getZ() + 0.5, new ItemStack(Items.RAW_IRON)));
+			net.neoforged.neoforge.event.level.BlockDropsEvent event = new net.neoforged.neoforge.event.level.BlockDropsEvent(
+					level, absPos, level.getBlockState(absPos), null, drops, harvester, pickaxe);
+			thaumcraft.common.lib.events.ToolEvents.onBlockDrops(event);
+			if (drops.get(0).getItem().is(ItemsTC.clusterIron.get())) {
+				sawCluster = true;
+			}
+		}
+		helper.assertTrue(sawCluster, "REFINING level 4 should have replaced a raw iron drop with cluster_iron at least once in 300 tries");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void toolEventsRefiningNeverTouchesAnUnrelatedDrop(GameTestHelper helper) {
+		BlockPos absPos = helper.absolutePos(new BlockPos(3, 2, 3));
+		ServerLevel level = helper.getLevel();
+		ServerPlayer harvester = spawnCasterAt(helper, absPos);
+		ItemStack pickaxe = new ItemStack(Items.IRON_PICKAXE);
+		thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.addInfusionEnchantment(pickaxe,
+				thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.REFINING, 4);
+
+		List<ItemEntity> drops = new java.util.ArrayList<>();
+		drops.add(new ItemEntity(level, absPos.getX() + 0.5, absPos.getY() + 0.5, absPos.getZ() + 0.5, new ItemStack(Items.COBBLESTONE)));
+		net.neoforged.neoforge.event.level.BlockDropsEvent event = new net.neoforged.neoforge.event.level.BlockDropsEvent(
+				level, absPos, level.getBlockState(absPos), null, drops, harvester, pickaxe);
+		thaumcraft.common.lib.events.ToolEvents.onBlockDrops(event);
+
+		helper.assertTrue(drops.get(0).getItem().is(Items.COBBLESTONE),
+				"REFINING should never touch a drop that isn't in its special-mining table, found: " + drops.get(0).getItem());
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Essentia Resonator - a pure diagnostic tool, same onItemUseFirst shape as the caster wiring above.
 	// --------------------------------------------------------------------------------------------------
