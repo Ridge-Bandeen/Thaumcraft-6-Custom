@@ -207,6 +207,10 @@ public final class ItemsTC {
 	public static final DeferredItem<ItemAlumentum> alumentum =
 			ITEMS.registerItem("alumentum", ItemAlumentum::new);
 
+	/** See {@link thaumcraft.common.items.consumables.ItemBottleTaint}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.consumables.ItemBottleTaint> bottleTaint =
+			ITEMS.registerItem("bottle_taint", thaumcraft.common.items.consumables.ItemBottleTaint::new);
+
 	public static final DeferredItem<BlockItem> rechargePedestal =
 			ITEMS.registerSimpleBlockItem("recharge_pedestal", BlocksTC.rechargePedestal);
 

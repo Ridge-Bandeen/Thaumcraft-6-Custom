@@ -6,6 +6,7 @@ import net.minecraft.world.entity.MobCategory;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.common.entities.projectile.EntityAlumentum;
+import thaumcraft.common.entities.projectile.EntityBottleTaint;
 import thaumcraft.common.entities.projectile.EntityFocusCloud;
 import thaumcraft.common.entities.projectile.EntityFocusMine;
 import thaumcraft.common.entities.projectile.EntityFocusProjectile;
@@ -47,6 +48,13 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.updateInterval(10)
 					.build("alumentum"));
+
+	public static final DeferredHolder<EntityType<?>, EntityType<EntityBottleTaint>> BOTTLE_TAINT = ENTITY_TYPES.register("bottle_taint",
+			() -> EntityType.Builder.<EntityBottleTaint>of(EntityBottleTaint::new, MobCategory.MISC)
+					.sized(0.25f, 0.25f)
+					.clientTrackingRange(64)
+					.updateInterval(10)
+					.build("bottle_taint"));
 
 	private ThaumcraftEntities() {
 	}

@@ -245,6 +245,9 @@ sourceSets {
 
             include 'thaumcraft/common/entities/projectile/EntityAlumentum.java'
             include 'thaumcraft/common/items/consumables/ItemAlumentum.java'
+            include 'thaumcraft/common/entities/projectile/EntityBottleTaint.java'
+            include 'thaumcraft/common/items/consumables/ItemBottleTaint.java'
+            include 'thaumcraft/common/registry/ThaumcraftMobEffects.java'
 
             include 'thaumcraft/common/blocks/devices/BlockRechargePedestal.java'
             include 'thaumcraft/common/tiles/devices/TileRechargePedestal.java'

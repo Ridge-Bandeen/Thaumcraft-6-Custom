@@ -86,6 +86,7 @@ public class Thaumcraft {
         ThaumcraftMenus.MENUS.register(modEventBus);
         ThaumcraftCapabilities.ATTACHMENT_TYPES.register(modEventBus);
         ThaumcraftEntities.ENTITY_TYPES.register(modEventBus);
+        thaumcraft.common.registry.ThaumcraftMobEffects.MOB_EFFECTS.register(modEventBus);
         ThaumcraftGameTests.register(modEventBus);
 
         // Installs the real IInternalMethodHandler over ThaumcraftApi's DummyInternalMethodHandler default -
@@ -109,6 +110,11 @@ public class Thaumcraft {
         // #get() throws before its RegisterEvent has actually fired, which hasn't happened yet inside the
         // mod constructor itself.
         thaumcraft.common.lib.crafting.ThaumcraftObjectTags.init();
+
+        // Mirrors the original's own PotionFluxTaint.instance convention - see MobEffectFluxTaint's own doc
+        // comment for why the static field exists at all. Same "needs registries populated" timing as the
+        // object-tag table above.
+        thaumcraft.api.potions.MobEffectFluxTaint.instance = thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT.get();
 
         // Salis Mundus dust triggers (thaumcraft.api.crafting.IDustTrigger) - see
         // ThaumcraftDustTriggers' own doc comment for what this unlocks and what's still deferred.

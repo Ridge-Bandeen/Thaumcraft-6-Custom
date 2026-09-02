@@ -3242,4 +3242,42 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(result.is(Items.GOLD_INGOT) && result.getCount() == 2, "a native gold cluster should smelt into 2 gold ingots, got " + result);
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Bottle of Taint - a thrown debuff bomb, same ThrowableItemProjectile shape as Alumentum (same
+	// succeedWhen-after-real-flight-time pattern as throwingAlumentumExplodesAndDamagesANearbyTarget
+	// above). First real consumer of MobEffectFluxTaint - ported early this session, never registered or
+	// applied by anything until now.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void throwingBottleTaintAppliesFluxTaintToANearbyTarget(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Pig pig = spawnPigFacedBy(helper, caster, origin, 2.5);
+		caster.lookAt(EntityAnchorArgument.Anchor.EYES, pig.getBoundingBox().getCenter());
+
+		caster.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ItemsTC.bottleTaint.get()));
+		ItemsTC.bottleTaint.get().use(helper.getLevel(), caster, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+		helper.succeedWhen(() -> helper.assertTrue(pig.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT),
+				"the thrown bottle of taint should have applied Flux Taint to the nearby pig by now"));
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void throwingBottleTaintSkipsUndeadTargets(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		Zombie zombie = spawnZombieFacedBy(helper, caster, origin);
+		caster.lookAt(EntityAnchorArgument.Anchor.EYES, zombie.getBoundingBox().getCenter());
+
+		caster.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ItemsTC.bottleTaint.get()));
+		ItemsTC.bottleTaint.get().use(helper.getLevel(), caster, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+		helper.runAfterDelay(40, () -> {
+			helper.assertTrue(!zombie.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT),
+					"an undead target should never receive Flux Taint from a thrown bottle");
+			helper.succeed();
+		});
+	}
 }

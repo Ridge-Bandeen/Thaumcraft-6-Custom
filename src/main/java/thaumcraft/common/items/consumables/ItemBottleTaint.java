@@ -1,38 +1,43 @@
 package thaumcraft.common.items.consumables;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.EnumActionResult;
-import net.minecraft.util.EnumHand;
-import net.minecraft.world.World;
-import thaumcraft.common.config.ConfigItems;
+
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import thaumcraft.common.entities.projectile.EntityBottleTaint;
-import thaumcraft.common.items.ItemTCBase;
 
+/**
+ * Replaces the old (1.12.2) {@code ItemBottleTaint} - a thrown debuff bomb, crafted in the Crucible from a
+ * Phial and Flux+Water essentia (see {@code data/thaumcraft/recipe/bottle_taint.json}). Right-click throws
+ * a real {@link EntityBottleTaint}, same shape as {@link ItemAlumentum} (its closest already-shipped
+ * sibling) rather than the original's raw {@code EntityThrowable}-spawning code. Unlike Alumentum's
+ * overridden-and-hardcoded throw velocity, the original {@code EntityBottleTaint} never overrode
+ * {@code shoot()}, so its call-site values (0.66f velocity, 1.0f inaccuracy) are the real effective ones,
+ * reproduced here directly.
+ */
+public class ItemBottleTaint extends Item {
 
-public class ItemBottleTaint extends ItemTCBase
-{
-    public ItemBottleTaint() {
-        super("bottle_taint");
-        maxStackSize = 8;
-        setMaxDamage(0);
-        setCreativeTab(ConfigItems.TABTC);
-        setHasSubtypes(false);
-    }
-    
-    public ActionResult<ItemStack> onItemRightClick(World world, EntityPlayer player, EnumHand hand) {
-        if (!player.capabilities.isCreativeMode) {
-            player.getHeldItem(hand).shrink(1);
-        }
-        player.playSound(SoundEvents.ENTITY_EGG_THROW, 0.5f, 0.4f / (ItemBottleTaint.itemRand.nextFloat() * 0.4f + 0.8f));
-        if (!world.isRemote) {
-            EntityBottleTaint entityBottle = new EntityBottleTaint(world, player);
-            entityBottle.shoot(player, player.rotationPitch, player.rotationYaw, -5.0f, 0.66f, 1.0f);
-            world.spawnEntity(entityBottle);
-        }
-        return (ActionResult<ItemStack>)new ActionResult(EnumActionResult.SUCCESS, player.getHeldItem(hand));
-    }
+	public ItemBottleTaint(Properties properties) {
+		super(properties.stacksTo(8));
+	}
+
+	@Override
+	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+		ItemStack stack = player.getItemInHand(hand);
+		level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.EGG_THROW,
+				SoundSource.NEUTRAL, 0.5f, 0.4f / (level.getRandom().nextFloat() * 0.4f + 0.8f));
+
+		if (!level.isClientSide) {
+			EntityBottleTaint bottle = new EntityBottleTaint(player, level);
+			bottle.shootFromRotation(player, player.getXRot(), player.getYRot(), -5.0f, 0.66f, 1.0f);
+			level.addFreshEntity(bottle);
+		}
+
+		stack.consume(1, player);
+		return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
+	}
 }

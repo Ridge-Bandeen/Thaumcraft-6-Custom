@@ -1,0 +1,10 @@
+{
+  "type": "thaumcraft:crucible",
+  "research": "FIRSTSTEPS",
+  "catalyst": { "item": "thaumcraft:phial" },
+  "aspects": {
+    "vitium": 30,
+    "aqua": 30
+  },
+  "result": { "id": "thaumcraft:bottle_taint" }
+}

@@ -1,76 +1,64 @@
 package thaumcraft.common.entities.projectile;
-import java.util.Iterator;
-import java.util.List;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.projectile.EntityThrowable;
-import net.minecraft.potion.PotionEffect;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.api.blocks.BlocksTC;
+
+import net.minecraft.tags.EntityTypeTags;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
 import thaumcraft.api.entities.ITaintedMob;
-import thaumcraft.api.potions.PotionFluxTaint;
-import thaumcraft.client.fx.FXDispatcher;
+import thaumcraft.api.items.ItemsTC;
+import thaumcraft.common.registry.ThaumcraftEntities;
+import thaumcraft.common.registry.ThaumcraftMobEffects;
 
+/**
+ * Replaces the old (1.12.2) {@code EntityBottleTaint} - the thrown-debuff-bomb projectile behind
+ * {@link thaumcraft.common.items.consumables.ItemBottleTaint}. Same {@link ThrowableItemProjectile} shape as
+ * {@link EntityAlumentum} (its closest sibling this port already has). First real consumer of
+ * {@link MobEffectFluxTaint} - already ported, real, and functioning, just never registered or applied by
+ * anything until now (see that class's own doc comment: "~16 not-yet-ported call sites").
+ *
+ * Simplified from the original:
+ * <ul>
+ * <li>No Flux Goo terrain placement on impact - {@code BlocksTC.fluxGoo} is a custom finite fluid
+ * ({@code BlockFluidFinite}), the same hard boundary that already made {@code BlockStabilizer} drop its
+ * Flux-Rift-pacifying mechanic this session. The debuff itself (this projectile's actual combat purpose)
+ * stands on its own without it.</li>
+ * <li>No particle/FX (the original's {@code taintsplosionFX}/{@code bottleTaintBreak}) - the usual "no
+ * client FX" boundary this whole session.</li>
+ * <li>"Is this an undead mob" now checks {@code EntityTypeTags.UNDEAD} - the original's
+ * {@code EntityLivingBase#isEntityUndead()}/{@code CreatureAttribute} system doesn't exist anymore.</li>
+ * </ul>
+ */
+public class EntityBottleTaint extends ThrowableItemProjectile {
 
-public class EntityBottleTaint extends EntityThrowable
-{
-    public EntityBottleTaint(World p_i1788_1_) {
-        super(p_i1788_1_);
-    }
-    
-    public EntityBottleTaint(World p_i1790_1_, EntityLivingBase p_i1790_2) {
-        super(p_i1790_1_, p_i1790_2);
-    }
-    
-    public EntityBottleTaint(World worldIn, double x, double y, double z) {
-        super(worldIn, x, y, z);
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void handleStatusUpdate(byte id) {
-        if (id == 3) {
-            for (int a = 0; a < 100; ++a) {
-                FXDispatcher.INSTANCE.taintsplosionFX(this);
-            }
-            FXDispatcher.INSTANCE.bottleTaintBreak(posX, posY, posZ);
-        }
-    }
-    
-    protected void onImpact(RayTraceResult ray) {
-        if (!world.isRemote) {
-            List ents = world.getEntitiesWithinAABB(EntityLivingBase.class, new AxisAlignedBB(posX, posY, posZ, posX, posY, posZ).grow(5.0, 5.0, 5.0));
-            if (ents.size() > 0) {
-                for (Object ent : ents) {
-                    EntityLivingBase el = (EntityLivingBase)ent;
-                    if (!(el instanceof ITaintedMob) && !el.isEntityUndead()) {
-                        el.addPotionEffect(new PotionEffect(PotionFluxTaint.instance, 100, 0, false, true));
-                    }
-                }
-            }
-            for (int a = 0; a < 10; ++a) {
-                int xx = (int)((rand.nextFloat() - rand.nextFloat()) * 4.0f);
-                int zz = (int)((rand.nextFloat() - rand.nextFloat()) * 4.0f);
-                BlockPos p = getPosition().add(xx, 0, zz);
-                if (world.rand.nextBoolean()) {
-                    if (world.isBlockNormalCube(p.down(), false) && world.getBlockState(p).getBlock().isReplaceable(world, p)) {
-                        world.setBlockState(p, BlocksTC.fluxGoo.getDefaultState());
-                    }
-                    else {
-                        p = p.down();
-                        if (world.isBlockNormalCube(p.down(), false) && world.getBlockState(p).getBlock().isReplaceable(world, p)) {
-                            world.setBlockState(p, BlocksTC.fluxGoo.getDefaultState());
-                        }
-                    }
-                }
-            }
-            world.setEntityState(this, (byte)3);
-            setDead();
-        }
-    }
+	public EntityBottleTaint(EntityType<? extends EntityBottleTaint> type, Level level) {
+		super(type, level);
+	}
+
+	public EntityBottleTaint(LivingEntity thrower, Level level) {
+		super(ThaumcraftEntities.BOTTLE_TAINT.get(), thrower, level);
+	}
+
+	@Override
+	protected Item getDefaultItem() {
+		return ItemsTC.bottleTaint.get();
+	}
+
+	@Override
+	protected void onHit(HitResult result) {
+		super.onHit(result);
+		if (!level().isClientSide) {
+			AABB area = new AABB(getX(), getY(), getZ(), getX(), getY(), getZ()).inflate(5.0);
+			for (LivingEntity target : level().getEntitiesOfClass(LivingEntity.class, area)) {
+				if (!(target instanceof ITaintedMob) && !target.getType().is(EntityTypeTags.UNDEAD)) {
+					target.addEffect(new MobEffectInstance(ThaumcraftMobEffects.FLUX_TAINT, 100, 0, false, true));
+				}
+			}
+			discard();
+		}
+	}
 }
