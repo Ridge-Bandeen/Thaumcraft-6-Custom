@@ -11,6 +11,7 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
@@ -47,6 +48,7 @@ import thaumcraft.api.items.ItemGenericEssentiaContainer;
 import thaumcraft.api.items.ItemsTC;
 import thaumcraft.common.entities.EntityFollowingItem;
 import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
+import thaumcraft.common.lib.network.fx.PacketFXScanSource;
 import thaumcraft.common.lib.network.fx.PacketFXSlash;
 
 /**
@@ -89,11 +91,13 @@ import thaumcraft.common.lib.network.fx.PacketFXSlash;
  * fire" check (the original's own {@code EntityUtils.isFriendly} isn't ported) - any nearby
  * {@link LivingEntity} other than the primary target and the attacker themself is fair game, a real,
  * documented simplification.</li>
- * <li>{@link EnumInfusionEnchantment#SOUNDING} - damages the tool and plays a resonating sound on a sneak
- * right-click, matching the original's own server-side behaviour exactly. The original's other half (a
- * client-only ore-vein radar visual, {@code PacketFXScanSource}) is real client FX work of the same shape
- * {@code BlockDioptra}'s own scan visual was cut for - deferred rather than built this pass, since it's a
- * distinct feature from "does the packet system work", which {@code ARCING} already proves.</li>
+ * <li>{@link EnumInfusionEnchantment#SOUNDING} - damages the tool, plays a resonating sound, and sends a
+ * targeted {@code PacketFXScanSource} to the scanning player on a sneak right-click, matching the original's
+ * own server-side behaviour exactly. The actual scan (reading nearby block state, grouping connected ore
+ * blocks, colouring each group) happens entirely client-side in
+ * {@link thaumcraft.client.fx.ClientFxHandlers#handleScanSource} - a vanilla colored-dust particle burst per
+ * group replaces the original's custom {@code FXGeneric} billboard particle, and every group reveals at once
+ * instead of the original's distance-staggered "sonar ping" timing (a real, documented simplification).</li>
  * <li>{@link EnumInfusionEnchantment#BURROWING} - auto-tunnels toward the furthest still-standing block of
  * the same type connected to the one just mined ({@link #findFurthestMatchingBlock}), a plain bounded
  * breadth-first search replacing the original's own recursive "restart the whole cube scan from the new best
@@ -207,8 +211,14 @@ public class ToolEvents {
 		BlockPos pos = event.getPos();
 		level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.2f,
 				0.2f + level.getRandom().nextFloat() * 0.2f);
-		// The original's other half of this effect - a client-only ore-vein radar visual built from a
-		// flood-filled scan out to (4 + level * 4) blocks - is deferred; see this class's own doc comment.
+		if (player instanceof ServerPlayer serverPlayer) {
+			int rank = EnumInfusionEnchantment.getInfusionEnchantmentLevel(tool, EnumInfusionEnchantment.SOUNDING);
+			try {
+				PacketDistributor.sendToPlayer(serverPlayer, new PacketFXScanSource(pos, rank));
+			} catch (Exception ex) {
+				Thaumcraft.LOGGER.debug("Couldn't send fx_scan_source packet", ex);
+			}
+		}
 	}
 
 	@SubscribeEvent

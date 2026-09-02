@@ -201,6 +201,9 @@ public class Thaumcraft {
         // since handleSlash itself doesn't need IPayloadContext) - the safety property is the same either
         // way: ClientFxHandlers loads fine everywhere, only handleSlash's own body (never reached on a
         // dedicated server) touches client-only classes.
+        registrar.playToClient(thaumcraft.common.lib.network.fx.PacketFXScanSource.TYPE,
+                thaumcraft.common.lib.network.fx.PacketFXScanSource.STREAM_CODEC,
+                (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.handleScanSource(payload));
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {

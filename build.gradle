@@ -142,6 +142,7 @@ sourceSets {
             include 'thaumcraft/common/lib/crafting/InfusionEnchantmentRecipe.java'
             include 'thaumcraft/common/lib/events/ToolEvents.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXSlash.java'
+            include 'thaumcraft/common/lib/network/fx/PacketFXScanSource.java'
             include 'thaumcraft/client/fx/ClientFxHandlers.java'
             include 'thaumcraft/common/entities/EntityFollowingItem.java'
 
