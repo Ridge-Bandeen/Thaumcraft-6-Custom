@@ -410,6 +410,9 @@ public final class ItemsTC {
 			props -> new thaumcraft.common.items.armor.ItemRobeArmor(net.minecraft.world.item.ArmorItem.Type.LEGGINGS,
 					props.durability(net.minecraft.world.item.ArmorItem.Type.LEGGINGS.getDurability(25))));
 
+	public static final DeferredItem<BlockItem> cinderpearl =
+			ITEMS.registerSimpleBlockItem("cinderpearl", BlocksTC.cinderpearl);
+
 	public static final DeferredItem<thaumcraft.common.items.armor.ItemRobeArmor> clothBoots = ITEMS.registerItem("cloth_boots",
 			props -> new thaumcraft.common.items.armor.ItemRobeArmor(net.minecraft.world.item.ArmorItem.Type.BOOTS,
 					props.durability(net.minecraft.world.item.ArmorItem.Type.BOOTS.getDurability(25))));

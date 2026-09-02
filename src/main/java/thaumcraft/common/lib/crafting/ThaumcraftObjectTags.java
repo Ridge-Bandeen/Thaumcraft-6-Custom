@@ -240,6 +240,8 @@ public final class ThaumcraftObjectTags {
 		register(Tags.Items.EGGS, new AspectList().add(Aspect.LIFE, 6).add(Aspect.BEAST, 2));
 		register(Tags.Items.LEATHERS, new AspectList().add(Aspect.BEAST, 4).add(Aspect.EARTH, 2));
 
+		register(thaumcraft.api.blocks.BlocksTC.cinderpearl.get().asItem(), new AspectList().add(Aspect.PLANT, 5).add(Aspect.AURA, 5).add(Aspect.FIRE, 10));
+
 		register(Items.OBSIDIAN, new AspectList().add(Aspect.EARTH, 10).add(Aspect.ENTROPY, 10).add(Aspect.FIRE, 5));
 		register(Items.NETHER_STAR, new AspectList().add(Aspect.MAGIC, 25).add(Aspect.UNDEAD, 15).add(Aspect.DEATH, 10));
 		register(Items.ENCHANTED_BOOK, new AspectList().add(Aspect.MAGIC, 10).add(Aspect.MIND, 5));

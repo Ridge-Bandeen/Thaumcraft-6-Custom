@@ -93,11 +93,6 @@ public class Thaumcraft {
         // mainly). Done here (constructor) rather than commonSetup since AuraHelper could plausibly be
         // called very early.
         ThaumcraftApi.internalMethods = new ThaumcraftInternalMethodHandler();
-
-        // The real item-to-aspect object-tag table - see ThaumcraftObjectTags's own doc comment. Safe here
-        // (constructor, not commonSetup): every entry references vanilla Items/Tags.Items constants, none
-        // of which need a registration event to have fired first.
-        thaumcraft.common.lib.crafting.ThaumcraftObjectTags.init();
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
@@ -107,6 +102,13 @@ public class Thaumcraft {
         // ThaumcraftResearchCategories' own doc comment for scope (category tabs only, no research
         // entries/pages yet).
         ThaumcraftResearchCategories.register();
+
+        // The real item-to-aspect object-tag table - see ThaumcraftObjectTags's own doc comment. Moved here
+        // (commonSetup, not the constructor) once an entry needed to reference a Thaumcraft-registered item
+        // (BlocksTC.cinderpearl) rather than only vanilla Items/Tags.Items constants - a DeferredHolder's
+        // #get() throws before its RegisterEvent has actually fired, which hasn't happened yet inside the
+        // mod constructor itself.
+        thaumcraft.common.lib.crafting.ThaumcraftObjectTags.init();
 
         // Salis Mundus dust triggers (thaumcraft.api.crafting.IDustTrigger) - see
         // ThaumcraftDustTriggers' own doc comment for what this unlocks and what's still deferred.

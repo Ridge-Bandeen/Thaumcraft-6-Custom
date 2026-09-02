@@ -3105,4 +3105,44 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(modifier == 1.0f, "no armor worn should mean no vis discount, got modifier " + modifier);
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Cinderpearl - a plain BushBlock, its own real vanilla recipe (Blaze Powder), and a real
+	// ThaumcraftObjectTags entry (the essentia-smeltery path).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cinderpearlCanSurviveOnSandButNotOnStone(GameTestHelper helper) {
+		BlockPos sandPos = new BlockPos(2, 2, 2);
+		BlockPos cinderpearlOnSand = sandPos.above();
+		helper.setBlock(sandPos, Blocks.SAND);
+		helper.setBlock(cinderpearlOnSand, BlocksTC.cinderpearl.get());
+		helper.assertTrue(helper.getBlockState(cinderpearlOnSand).canSurvive(helper.getLevel(), helper.absolutePos(cinderpearlOnSand)),
+				"cinderpearl should be able to survive on sand");
+
+		BlockPos stonePos = new BlockPos(4, 2, 4);
+		BlockPos cinderpearlOnStone = stonePos.above();
+		helper.setBlock(stonePos, Blocks.STONE);
+		helper.setBlock(cinderpearlOnStone, BlocksTC.cinderpearl.get());
+		helper.assertTrue(!helper.getBlockState(cinderpearlOnStone).canSurvive(helper.getLevel(), helper.absolutePos(cinderpearlOnStone)),
+				"cinderpearl shouldn't be able to survive on stone");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cinderpearlHasRealObjectTagsForTheSmeltery(GameTestHelper helper) {
+		AspectList tags = thaumcraft.api.aspects.AspectHelper.getObjectAspects(new ItemStack(ItemsTC.cinderpearl.get()));
+		helper.assertTrue(tags != null && tags.getAmount(Aspect.FIRE) > 0, "cinderpearl should carry real Fire essentia tags for the Smeltery, got " + tags);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cinderpearlCraftsIntoBlazePowder(GameTestHelper helper) {
+		var craftingInput = net.minecraft.world.item.crafting.CraftingInput.of(1, 1, java.util.List.of(new ItemStack(ItemsTC.cinderpearl.get())));
+		var match = helper.getLevel().getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, craftingInput, helper.getLevel());
+
+		helper.assertTrue(match.isPresent() && match.get().value().getResultItem(helper.getLevel().registryAccess()).is(Items.BLAZE_POWDER),
+				"a single cinderpearl should craft into blaze powder");
+		helper.succeed();
+	}
 }

@@ -399,6 +399,12 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.devices.BlockInlay::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(0.5f).sound(SoundType.METAL).noOcclusion().noCollission().lightLevel(state -> 1));
 
+	/** See {@link thaumcraft.common.blocks.world.plants.BlockPlantCinderpearl}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.world.plants.BlockPlantCinderpearl> cinderpearl = BLOCKS.registerBlock("cinderpearl",
+			thaumcraft.common.blocks.world.plants.BlockPlantCinderpearl::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().instabreak().sound(SoundType.GRASS)
+					.offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 7));
+
 	/** See {@link thaumcraft.common.blocks.essentia.BlockAlembic}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockAlembic> alembic = BLOCKS.registerBlock("alembic",
 			thaumcraft.common.blocks.essentia.BlockAlembic::new,
