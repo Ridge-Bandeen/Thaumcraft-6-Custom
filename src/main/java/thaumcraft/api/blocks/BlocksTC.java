@@ -394,6 +394,16 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.devices.BlockInlay::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(0.5f).sound(SoundType.METAL).noOcclusion().noCollission().lightLevel(state -> 1));
 
+	/** See {@link thaumcraft.common.blocks.essentia.BlockAlembic}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockAlembic> alembic = BLOCKS.registerBlock("alembic",
+			thaumcraft.common.blocks.essentia.BlockAlembic::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0f).sound(SoundType.WOOD).noOcclusion());
+
+	/** See {@link thaumcraft.common.tiles.essentia.TileSmelter}'s own doc comment - only the Basic tier. */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockSmelter> smelter = BLOCKS.registerBlock("smelter",
+			thaumcraft.common.blocks.essentia.BlockSmelter::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(3.5f).sound(SoundType.METAL));
+
 	private BlocksTC() {
 	}
 }

@@ -7,6 +7,6 @@
         "west": "thaumcraft:blocks/smelter_basic_side",
         "particle": "thaumcraft:blocks/smelter_basic_side",   
         "up": "thaumcraft:blocks/smelter_top",
-        "down": "blocks/furnace_top"
+        "down": "minecraft:block/furnace_top"
     }
 }

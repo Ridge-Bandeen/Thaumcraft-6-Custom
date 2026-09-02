@@ -1,0 +1,20 @@
+{
+  "type": "thaumcraft:arcane_shaped",
+  "research": "ESSENTIASMELTER",
+  "vis": 50,
+  "crystals": {
+    "ignis": 1
+  },
+  "pattern": [
+    "BCB",
+    "SFS",
+    "SSS"
+  ],
+  "key": {
+    "B": { "item": "minecraft:iron_ingot" },
+    "C": { "item": "thaumcraft:crucible" },
+    "S": { "item": "minecraft:cobblestone" },
+    "F": { "item": "minecraft:furnace" }
+  },
+  "result": { "id": "thaumcraft:smelter" }
+}

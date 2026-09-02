@@ -83,6 +83,12 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.crafting.TileInfusionMatrix>> INFUSION_MATRIX = BLOCK_ENTITIES.register("infusion_matrix",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TileInfusionMatrix::new, BlocksTC.infusionMatrix.get()).build(null));
 
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.essentia.TileAlembic>> ALEMBIC = BLOCK_ENTITIES.register("alembic",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.essentia.TileAlembic::new, BlocksTC.alembic.get()).build(null));
+
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.essentia.TileSmelter>> SMELTER = BLOCK_ENTITIES.register("smelter",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.essentia.TileSmelter::new, BlocksTC.smelter.get()).build(null));
+
 	private ThaumcraftBlockEntities() {
 	}
 }

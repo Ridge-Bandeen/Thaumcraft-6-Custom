@@ -2919,4 +2919,58 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(tags != null && tags.getAmount(Aspect.FIRE) > 0, "a filled phial's object tags should reflect its real held aspect, got " + tags);
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Smelter + Alembic - the whole point of this session's ThaumcraftObjectTags chunk. The smelter smelts
+	// an item's real object aspects into stored essentia, then feeds it one unit at a time to an alembic
+	// stacked above it via TileAlembic#processAlembics.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void smelterSmeltsAnItemIntoEssentiaAndFeedsAnAlembicAbove(GameTestHelper helper) {
+		BlockPos smelterPos = new BlockPos(2, 2, 2);
+		BlockPos alembicPos = smelterPos.above();
+		helper.setBlock(smelterPos, BlocksTC.smelter.get());
+		helper.setBlock(alembicPos, BlocksTC.alembic.get());
+		BlockPos smelterAbs = helper.absolutePos(smelterPos);
+
+		thaumcraft.common.tiles.essentia.TileSmelter smelter = helper.getBlockEntity(smelterPos);
+		smelter.setItem(0, new ItemStack(Items.IRON_INGOT));
+		smelter.setItem(1, new ItemStack(Items.COAL));
+		thaumcraft.common.tiles.essentia.TileAlembic alembic = helper.getBlockEntity(alembicPos);
+
+		net.minecraft.world.level.block.state.BlockState smelterState = helper.getBlockState(smelterPos);
+		for (int i = 0; i < 400; i++) {
+			thaumcraft.common.tiles.essentia.TileSmelter.tick(helper.getLevel(), smelterAbs, smelterState, smelter);
+		}
+
+		helper.assertTrue(smelter.getItem(0).isEmpty(), "the input item should have been consumed once smelted, found " + smelter.getItem(0));
+		helper.assertTrue(alembic.getEssentiaAmount(net.minecraft.core.Direction.UP) > 0,
+				"the smelted iron ingot's Metal essentia should have made its way into the alembic above, found " + alembic.getEssentiaAmount(net.minecraft.core.Direction.UP));
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void smelterRefusesAnItemWithNoRealAspects(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.smelter.get());
+		thaumcraft.common.tiles.essentia.TileSmelter smelter = helper.getBlockEntity(pos);
+
+		helper.assertTrue(!smelter.canPlaceItem(0, new ItemStack(Items.DIRT)), "an untagged item like dirt shouldn't be acceptable smelter input");
+		helper.assertTrue(smelter.canPlaceItem(0, new ItemStack(Items.IRON_INGOT)), "a real object-tagged item like an iron ingot should be acceptable smelter input");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void alembicCanBeLabelledToOneAspectAndCleared(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.alembic.get());
+		thaumcraft.common.tiles.essentia.TileAlembic tile = helper.getBlockEntity(pos);
+
+		helper.assertTrue(tile.applyLabel(Aspect.FIRE), "labelling an empty alembic should succeed");
+		helper.assertTrue(tile.getAspectFilter() == Aspect.FIRE, "the alembic should now be filtered to Fire, found " + tile.getAspectFilter());
+		tile.clearLabel();
+		helper.assertTrue(tile.getAspectFilter() == null, "clearing the label should remove the filter, found " + tile.getAspectFilter());
+		helper.succeed();
+	}
 }
