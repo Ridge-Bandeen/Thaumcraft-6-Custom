@@ -2842,6 +2842,117 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
+	// Infusion Enchantments - see EnumInfusionEnchantment/InfusionEnchantmentRecipe/ToolEvents' own doc
+	// comments for what's ported this pass (LAMPLIGHT, DESTRUCTIVE) and what's deferred (the other 6 of the
+	// 8 reachable, tool-restricted entries - ARCING/SOUNDING/COLLECTOR/ESSENCE/REFINING/BURROWING).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionEnchantLamplightRecipeMatchesAndGrantsTheEnchantment(GameTestHelper helper) {
+		ItemStack pickaxe = new ItemStack(Items.IRON_PICKAXE);
+		thaumcraft.api.crafting.InfusionRecipeInput input = new thaumcraft.api.crafting.InfusionRecipeInput(
+				pickaxe,
+				java.util.List.of(
+						new ItemStack(ItemsTC.crystalEssence.get()),
+						new ItemStack(Items.GLOWSTONE_DUST),
+						new ItemStack(Items.TORCH)));
+
+		var match = helper.getLevel().getRecipeManager().getRecipeFor(thaumcraft.api.crafting.ThaumcraftRecipeTypes.INFUSION_TYPE.get(), input, helper.getLevel());
+		helper.assertTrue(match.isPresent(), "the infusion_enchant_lamplight recipe should match a plain pickaxe with its real components");
+
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(0, 2, 0)));
+		ItemStack result = match.get().value().getRecipeOutput(player, pickaxe, input.components());
+		helper.assertTrue(!result.isEmpty(), "a fresh iron pickaxe should be a valid LAMPLIGHT infusion target");
+		helper.assertTrue(thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.getInfusionEnchantmentLevel(result, thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.LAMPLIGHT) == 1,
+				"crafting the recipe should raise LAMPLIGHT from unenchanted to level 1, found level "
+						+ thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.getInfusionEnchantmentLevel(result, thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.LAMPLIGHT));
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionEnchantDestructiveRecipeRefusesANonToolCentralItem(GameTestHelper helper) {
+		thaumcraft.api.crafting.InfusionRecipeInput input = new thaumcraft.api.crafting.InfusionRecipeInput(
+				new ItemStack(Items.LEATHER_BOOTS),
+				java.util.List.of(
+						new ItemStack(ItemsTC.crystalEssence.get()),
+						new ItemStack(ItemsTC.crystalEssence.get()),
+						new ItemStack(Items.TNT)));
+
+		var match = helper.getLevel().getRecipeManager().getRecipeFor(thaumcraft.api.crafting.ThaumcraftRecipeTypes.INFUSION_TYPE.get(), input, helper.getLevel());
+		helper.assertTrue(match.isEmpty(), "DESTRUCTIVE is axe/pickaxe/shovel-only, so a pair of boots should never match, found: " + match);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void toolEventsLamplightPlacesARealLightSourceInADarkMinedSpot(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(3, 2, 3);
+		for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+			helper.setBlock(pos.relative(dir), Blocks.STONE);
+		}
+		helper.setBlock(pos, Blocks.AIR);
+		BlockPos absPos = helper.absolutePos(pos);
+
+		ServerPlayer player = spawnCasterAt(helper, absPos);
+		ItemStack pickaxe = new ItemStack(Items.IRON_PICKAXE);
+		thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.addInfusionEnchantment(pickaxe,
+				thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.LAMPLIGHT, 1);
+
+		// The lighting engine processes the new stone enclosure's shadow lazily and asynchronously (a real
+		// dedicated server runs it off the main thread - calling it directly from here isn't safe, per an
+		// earlier draft of this test crashing with "Ran automatically on a different thread!"). Re-firing
+		// the (idempotent - it only ever places the light block once brightness actually drops) event every
+		// tick via succeedWhen sidesteps needing to guess how long that settling takes.
+		ServerLevel level = helper.getLevel();
+		helper.succeedWhen(() -> {
+			net.neoforged.neoforge.event.level.BlockDropsEvent event = new net.neoforged.neoforge.event.level.BlockDropsEvent(
+					level, absPos, level.getBlockState(absPos), null, new java.util.ArrayList<>(), player, pickaxe);
+			thaumcraft.common.lib.events.ToolEvents.onBlockDrops(event);
+
+			helper.assertTrue(level.getBlockState(absPos).is(Blocks.LIGHT),
+					"LAMPLIGHT should place a real light source in a dark, fully air-enclosed mined spot (brightness "
+							+ level.getMaxLocalRawBrightness(absPos) + "), found: " + level.getBlockState(absPos));
+		});
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void toolEventsDestructiveChainBreaksTheMinedPlanesEightNeighbours(GameTestHelper helper) {
+		BlockPos center = new BlockPos(3, 2, 3);
+		helper.setBlock(center, Blocks.AIR);
+		for (int a = -1; a <= 1; a++) {
+			for (int b = -1; b <= 1; b++) {
+				if (a == 0 && b == 0) continue;
+				// No face was left-clicked in this test, so ToolEvents falls back to Direction.UP - an
+				// UP face's plane is the XZ plane at the same Y, matching this layout.
+				helper.setBlock(center.offset(a, 0, b), Blocks.STONE);
+			}
+		}
+		BlockPos absCenter = helper.absolutePos(center);
+
+		ServerPlayer player = spawnCasterAt(helper, absCenter.above(3));
+		// Mock players default to creative (instabuild = true), which skips item damage entirely - force
+		// survival so the durability assertion below is meaningful, same idiom used throughout this file.
+		player.getAbilities().instabuild = false;
+		ItemStack pickaxe = new ItemStack(Items.DIAMOND_PICKAXE);
+		thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.addInfusionEnchantment(pickaxe,
+				thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.DESTRUCTIVE, 1);
+
+		net.neoforged.neoforge.event.level.BlockDropsEvent event = new net.neoforged.neoforge.event.level.BlockDropsEvent(
+				helper.getLevel(), absCenter, helper.getLevel().getBlockState(absCenter), null, new java.util.ArrayList<>(), player, pickaxe);
+		thaumcraft.common.lib.events.ToolEvents.onBlockDrops(event);
+
+		int broken = 0;
+		for (int a = -1; a <= 1; a++) {
+			for (int b = -1; b <= 1; b++) {
+				if (a == 0 && b == 0) continue;
+				if (helper.getLevel().getBlockState(absCenter.offset(a, 0, b)).isAir()) broken++;
+			}
+		}
+		helper.assertTrue(broken == 8, "DESTRUCTIVE should chain-break all 8 neighbours in the mined plane, broke " + broken + "/8");
+		helper.assertTrue(pickaxe.getDamageValue() > 0, "the tool should take durability damage for each neighbour it chain-breaks, found damage " + pickaxe.getDamageValue());
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
 	// Essentia Resonator - a pure diagnostic tool, same onItemUseFirst shape as the caster wiring above.
 	// --------------------------------------------------------------------------------------------------
 

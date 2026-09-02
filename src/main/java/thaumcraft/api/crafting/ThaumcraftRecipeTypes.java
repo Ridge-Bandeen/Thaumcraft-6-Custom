@@ -37,6 +37,14 @@ public final class ThaumcraftRecipeTypes {
 	public static final Supplier<RecipeSerializer<InfusionRecipe>> INFUSION_SERIALIZER =
 			RECIPE_SERIALIZERS.register("infusion", () -> new InfusionRecipe.Serializer());
 
+	/** {@link thaumcraft.common.lib.crafting.InfusionEnchantmentRecipe} is a real subclass of
+	 * {@link InfusionRecipe}, sharing {@link #INFUSION_TYPE} with a second serializer - same "one shared
+	 * type, one serializer per concrete shape" pattern {@link #ARCANE_TYPE} already uses for its shaped/
+	 * shapeless pair. {@link net.minecraft.world.item.crafting.RecipeManager#getRecipeFor} looks up by type,
+	 * not serializer, so {@code TileInfusionMatrix}'s existing lookup needs no changes to also find these. */
+	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.InfusionEnchantmentRecipe>> INFUSION_ENCHANTMENT_SERIALIZER =
+			RECIPE_SERIALIZERS.register("infusion_enchantment", () -> new thaumcraft.common.lib.crafting.InfusionEnchantmentRecipe.Serializer());
+
 	private static <T extends net.minecraft.world.item.crafting.Recipe<?>> Supplier<RecipeType<T>> registerType(String name) {
 		return RECIPE_TYPES.register(name, () -> new RecipeType<T>() {
 			@Override

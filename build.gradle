@@ -138,6 +138,9 @@ sourceSets {
             include 'thaumcraft/api/crafting/Part.java'
             include 'thaumcraft/api/crafting/RecipeMisc.java'
             include 'thaumcraft/api/crafting/ThaumcraftRecipeTypes.java'
+            include 'thaumcraft/common/lib/enchantment/EnumInfusionEnchantment.java'
+            include 'thaumcraft/common/lib/crafting/InfusionEnchantmentRecipe.java'
+            include 'thaumcraft/common/lib/events/ToolEvents.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'
             include 'thaumcraft/api/internal/IInternalMethodHandler.java'

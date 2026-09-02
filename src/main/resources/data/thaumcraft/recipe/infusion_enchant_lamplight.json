@@ -1,0 +1,14 @@
+{
+  "type": "thaumcraft:infusion_enchantment",
+  "instability": 4,
+  "aspects": {
+    "lux": 20,
+    "terra": 10
+  },
+  "components": [
+    { "item": "thaumcraft:crystal_essence" },
+    { "item": "minecraft:glowstone_dust" },
+    { "item": "minecraft:torch" }
+  ],
+  "enchantment": "LAMPLIGHT"
+}

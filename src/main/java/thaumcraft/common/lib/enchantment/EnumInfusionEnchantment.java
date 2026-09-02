@@ -1,106 +1,126 @@
 package thaumcraft.common.lib.enchantment;
-import com.google.common.collect.ImmutableSet;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTBase;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
 
+import com.google.common.collect.ImmutableSet;
 
-public enum EnumInfusionEnchantment
-{
-    COLLECTOR(ImmutableSet.of("axe", "pickaxe", "shovel", "weapon"), 1, "INFUSIONENCHANTMENT"),
-    DESTRUCTIVE(ImmutableSet.of("axe", "pickaxe", "shovel"), 1, "INFUSIONENCHANTMENT"),
-    BURROWING(ImmutableSet.of("axe", "pickaxe"), 1, "INFUSIONENCHANTMENT"),
-    SOUNDING(ImmutableSet.of("pickaxe"), 4, "INFUSIONENCHANTMENT"),
-    REFINING(ImmutableSet.of("pickaxe"), 4, "INFUSIONENCHANTMENT"),
-    ARCING(ImmutableSet.of("weapon"), 4, "INFUSIONENCHANTMENT"),
-    ESSENCE(ImmutableSet.of("weapon"), 5, "INFUSIONENCHANTMENT"),
-    VISBATTERY(ImmutableSet.of("chargable"), 3, "?"),
-    VISCHARGE(ImmutableSet.of("chargable"), 1, "?"),
-    SWIFT(ImmutableSet.of("boots"), 4, "IEARMOR"),
-    AGILE(ImmutableSet.of("legs"), 1, "IEARMOR"),
-    INFESTED(ImmutableSet.of("chest"), 1, "IETAINT"),
-    LAMPLIGHT(ImmutableSet.of("axe", "pickaxe", "shovel"), 1, "INFUSIONENCHANTMENT");
-    
-    public Set<String> toolClasses;
-    public int maxLevel;
-    public String research;
-    
-    private EnumInfusionEnchantment(Set<String> toolClasses, int ml, String research) {
-        this.toolClasses = toolClasses;
-        maxLevel = ml;
-        this.research = research;
-    }
-    
-    public static NBTTagList getInfusionEnchantmentTagList(ItemStack stack) {
-        return (stack == null || stack.isEmpty() || stack.getTagCompound() == null) ? null : stack.getTagCompound().getTagList("infench", 10);
-    }
-    
-    public static List<EnumInfusionEnchantment> getInfusionEnchantments(ItemStack stack) {
-        NBTTagList nbttaglist = getInfusionEnchantmentTagList(stack);
-        List<EnumInfusionEnchantment> list = new ArrayList<EnumInfusionEnchantment>();
-        if (nbttaglist != null) {
-            for (int j = 0; j < nbttaglist.tagCount(); ++j) {
-                int k = nbttaglist.getCompoundTagAt(j).getShort("id");
-                int l = nbttaglist.getCompoundTagAt(j).getShort("lvl");
-                if (k >= 0 && k < values().length) {
-                    list.add(values()[k]);
-                }
-            }
-        }
-        return list;
-    }
-    
-    public static int getInfusionEnchantmentLevel(ItemStack stack, EnumInfusionEnchantment enchantment) {
-        NBTTagList nbttaglist = getInfusionEnchantmentTagList(stack);
-        List<EnumInfusionEnchantment> list = new ArrayList<EnumInfusionEnchantment>();
-        if (nbttaglist != null) {
-            for (int j = 0; j < nbttaglist.tagCount(); ++j) {
-                int k = nbttaglist.getCompoundTagAt(j).getShort("id");
-                int l = nbttaglist.getCompoundTagAt(j).getShort("lvl");
-                if (k >= 0 && k < values().length && values()[k] == enchantment) {
-                    return l;
-                }
-            }
-        }
-        return 0;
-    }
-    
-    public static void addInfusionEnchantment(ItemStack stack, EnumInfusionEnchantment ie, int level) {
-        if (stack == null || stack.isEmpty() || level > ie.maxLevel) {
-            return;
-        }
-        NBTTagList nbttaglist = getInfusionEnchantmentTagList(stack);
-        if (nbttaglist != null) {
-            int j = 0;
-            while (j < nbttaglist.tagCount()) {
-                int k = nbttaglist.getCompoundTagAt(j).getShort("id");
-                int l = nbttaglist.getCompoundTagAt(j).getShort("lvl");
-                if (k == ie.ordinal()) {
-                    if (level <= l) {
-                        return;
-                    }
-                    nbttaglist.getCompoundTagAt(j).setShort("lvl", (short)level);
-                    stack.setTagInfo("infench", nbttaglist);
-                    return;
-                }
-                else {
-                    ++j;
-                }
-            }
-        }
-        else {
-            nbttaglist = new NBTTagList();
-        }
-        NBTTagCompound nbttagcompound = new NBTTagCompound();
-        nbttagcompound.setShort("id", (short)ie.ordinal());
-        nbttagcompound.setShort("lvl", (short)level);
-        nbttaglist.appendTag(nbttagcompound);
-        if (nbttaglist.tagCount() > 0) {
-            stack.setTagInfo("infench", nbttaglist);
-        }
-    }
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
+import thaumcraft.api.items.IRechargable;
+import thaumcraft.api.items.ThaumcraftDataComponents;
+
+/**
+ * Replaces the old (1.12.2) {@code EnumInfusionEnchantment}. Same 13 entries (tool-class restriction, max
+ * level, research key) and the same NBT-style static accessors, now backed by
+ * {@link ThaumcraftDataComponents#INFUSION_ENCHANTMENTS} instead of a raw {@code "infench"} NBTTagList - see
+ * that field's own doc comment.
+ *
+ * {@link #isValidTool} replaces the big inline tool/armor/bauble/rechargable-matching block that used to live
+ * in {@code InfusionEnchantmentRecipe.matches()} - {@code ItemTool}/{@code getToolClasses()} don't exist
+ * anymore, so tool-class membership is now a vanilla {@link ItemTags} check, and "weapon" is now a scan of the
+ * item's own {@link DataComponents#ATTRIBUTE_MODIFIERS} for an {@code ATTACK_DAMAGE} entry rather than
+ * {@code getAttributeModifiers(EntityEquipmentSlot.MAINHAND)}. {@link #isValidTool} still recognizes the
+ * bauble-slot classes as vocabulary ("bauble", "amulet", "belt", "ring") but they can never match - Baubles/
+ * Curios equipment isn't ported (see the port-tracking memory notes). None of the 13 entries below actually
+ * need those classes ({@link #SWIFT}/{@link #AGILE}/{@link #INFESTED} are plain armor-slot-restricted), so
+ * this doesn't cut anything reachable yet - it only matters once a future bauble-restricted enchantment or
+ * real Curios items exist.
+ */
+public enum EnumInfusionEnchantment {
+	COLLECTOR(ImmutableSet.of("axe", "pickaxe", "shovel", "weapon"), 1, "INFUSIONENCHANTMENT"),
+	DESTRUCTIVE(ImmutableSet.of("axe", "pickaxe", "shovel"), 1, "INFUSIONENCHANTMENT"),
+	BURROWING(ImmutableSet.of("axe", "pickaxe"), 1, "INFUSIONENCHANTMENT"),
+	SOUNDING(ImmutableSet.of("pickaxe"), 4, "INFUSIONENCHANTMENT"),
+	REFINING(ImmutableSet.of("pickaxe"), 4, "INFUSIONENCHANTMENT"),
+	ARCING(ImmutableSet.of("weapon"), 4, "INFUSIONENCHANTMENT"),
+	ESSENCE(ImmutableSet.of("weapon"), 5, "INFUSIONENCHANTMENT"),
+	VISBATTERY(ImmutableSet.of("chargable"), 3, "?"),
+	VISCHARGE(ImmutableSet.of("chargable"), 1, "?"),
+	SWIFT(ImmutableSet.of("boots"), 4, "IEARMOR"),
+	AGILE(ImmutableSet.of("legs"), 1, "IEARMOR"),
+	INFESTED(ImmutableSet.of("chest"), 1, "IETAINT"),
+	LAMPLIGHT(ImmutableSet.of("axe", "pickaxe", "shovel"), 1, "INFUSIONENCHANTMENT");
+
+	public final Set<String> toolClasses;
+	public final int maxLevel;
+	public final String research;
+
+	EnumInfusionEnchantment(Set<String> toolClasses, int maxLevel, String research) {
+		this.toolClasses = toolClasses;
+		this.maxLevel = maxLevel;
+		this.research = research;
+	}
+
+	/** Is {@code stack} a valid infusion target for this enchantment's tool-class restriction? */
+	public boolean isValidTool(ItemStack stack) {
+		if (toolClasses.contains("all")) return true;
+		if (toolClasses.contains("weapon") && hasAttackDamage(stack)) return true;
+		if (toolClasses.contains("axe") && stack.is(ItemTags.AXES)) return true;
+		if (toolClasses.contains("pickaxe") && stack.is(ItemTags.PICKAXES)) return true;
+		if (toolClasses.contains("shovel") && stack.is(ItemTags.SHOVELS)) return true;
+		if (toolClasses.contains("hoe") && stack.is(ItemTags.HOES)) return true;
+		if (toolClasses.contains("sword") && stack.is(ItemTags.SWORDS)) return true;
+		if (stack.getItem() instanceof ArmorItem armor) {
+			String slot = switch (armor.getType()) {
+				case HELMET -> "helm";
+				case CHESTPLATE -> "chest";
+				case LEGGINGS -> "legs";
+				case BOOTS -> "boots";
+				default -> "none";
+			};
+			if (toolClasses.contains("armor") || toolClasses.contains(slot)) return true;
+		}
+		if (toolClasses.contains("chargable") && stack.getItem() instanceof IRechargable) return true;
+		return false;
+	}
+
+	private static boolean hasAttackDamage(ItemStack stack) {
+		ItemAttributeModifiers mods = stack.get(DataComponents.ATTRIBUTE_MODIFIERS);
+		if (mods == null) return false;
+		for (ItemAttributeModifiers.Entry entry : mods.modifiers()) {
+			if (entry.attribute().is(Attributes.ATTACK_DAMAGE)) return true;
+		}
+		return false;
+	}
+
+	public static List<EnumInfusionEnchantment> getInfusionEnchantments(ItemStack stack) {
+		Map<String, Integer> levels = stack.get(ThaumcraftDataComponents.INFUSION_ENCHANTMENTS.get());
+		List<EnumInfusionEnchantment> list = new ArrayList<>();
+		if (levels != null) {
+			for (String name : levels.keySet()) {
+				try {
+					list.add(valueOf(name));
+				} catch (IllegalArgumentException ignored) {
+					// Stale/foreign data (e.g. from a since-removed enchantment) - skip rather than crash.
+				}
+			}
+		}
+		return list;
+	}
+
+	public static int getInfusionEnchantmentLevel(ItemStack stack, EnumInfusionEnchantment enchantment) {
+		Map<String, Integer> levels = stack.get(ThaumcraftDataComponents.INFUSION_ENCHANTMENTS.get());
+		return levels != null ? levels.getOrDefault(enchantment.name(), 0) : 0;
+	}
+
+	public static void addInfusionEnchantment(ItemStack stack, EnumInfusionEnchantment ie, int level) {
+		if (stack.isEmpty() || level > ie.maxLevel) {
+			return;
+		}
+		Map<String, Integer> current = stack.get(ThaumcraftDataComponents.INFUSION_ENCHANTMENTS.get());
+		if (current != null && current.getOrDefault(ie.name(), 0) >= level) {
+			return;
+		}
+		Map<String, Integer> updated = new HashMap<>(current != null ? current : Map.of());
+		updated.put(ie.name(), level);
+		stack.set(ThaumcraftDataComponents.INFUSION_ENCHANTMENTS.get(), Map.copyOf(updated));
+	}
 }

@@ -1,5 +1,7 @@
 package thaumcraft.api.items;
 
+import java.util.Map;
+
 import com.mojang.serialization.Codec;
 
 import net.minecraft.core.component.DataComponentType;
@@ -69,6 +71,24 @@ public final class ThaumcraftDataComponents {
 		public static final Codec<WandFocus> CODEC = ItemStack.CODEC.xmap(WandFocus::new, WandFocus::stack);
 		public static final StreamCodec<RegistryFriendlyByteBuf, WandFocus> STREAM_CODEC = ItemStack.STREAM_CODEC.map(WandFocus::new, WandFocus::stack);
 	}
+
+	/**
+	 * Levels of each {@link thaumcraft.common.lib.enchantment.EnumInfusionEnchantment} an item carries, keyed
+	 * by the enchantment's enum name. Was the {@code "infench"} NBTTagList (a list of {@code {id: short,
+	 * lvl: short}} compounds, {@code id} an enum ordinal) on the original {@code EnumInfusionEnchantment} -
+	 * a name-keyed map is the same idea with a more stable (rename-and-reorder-safe) key than a raw ordinal.
+	 * {@link Map#copyOf} on both directions keeps the stored value immutable, same reasoning as
+	 * {@link #WAND_FOCUS}'s wrapper - see that field's doc comment. No wrapper record is needed here (unlike
+	 * {@code WandFocus}) since a plain {@link Map} already has well-defined {@code equals()}/{@code hashCode()}.
+	 */
+	private static final Codec<Map<String, Integer>> INFUSION_ENCHANTMENTS_CODEC =
+			Codec.unboundedMap(Codec.STRING, Codec.INT).xmap(Map::copyOf, Map::copyOf);
+
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<Map<String, Integer>>> INFUSION_ENCHANTMENTS = DATA_COMPONENTS.register("infusion_enchantments",
+			() -> DataComponentType.<Map<String, Integer>>builder()
+					.persistent(INFUSION_ENCHANTMENTS_CODEC)
+					.networkSynchronized(ByteBufCodecs.fromCodec(INFUSION_ENCHANTMENTS_CODEC))
+					.build());
 
 	private ThaumcraftDataComponents() {
 	}
