@@ -8,7 +8,9 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
@@ -16,9 +18,11 @@ import net.minecraft.world.level.block.LightBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockDropsEvent;
 import thaumcraft.Thaumcraft;
+import thaumcraft.common.entities.EntityFollowingItem;
 import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
 
 /**
@@ -35,13 +39,20 @@ import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
  * {@link BlockDropsEvent}), and {@code level.destroyBlock(pos, true, harvester, depth)} replaces the
  * original's manual {@code BlockUtils.harvestBlock} - vanilla's own method already drops items and plays
  * sounds correctly, no hand-rolled harvest helper needed.</li>
+ * <li>{@link EnumInfusionEnchantment#COLLECTOR} - redirects both harvest drops and kill drops to home in on
+ * the player instead of falling normally, via {@link EntityFollowingItem}. The original used two different
+ * mechanisms for this (a dedicated {@code InventoryUtils.dropHarvestsAtPos} helper for the harvest side,
+ * direct {@code EntityFollowingItem} wrapping for the kill side) - unified here into one
+ * {@link #redirectToHomeOn} used both places, since {@link BlockDropsEvent}/{@link LivingDropsEvent} both
+ * already hand over a mutable list of not-yet-spawned {@code ItemEntity}s to replace in place.</li>
  * </ul>
  * Deferred (all real, just not built yet - see the port-tracking memory notes): {@link EnumInfusionEnchantment#ARCING}/
  * {@link EnumInfusionEnchantment#SOUNDING} (need a client FX packet - no custom packet system ported yet),
- * {@link EnumInfusionEnchantment#COLLECTOR}/{@link EnumInfusionEnchantment#ESSENCE} (need a homing "following
- * item" entity, and {@code ESSENCE} also needs the still-unported {@code AspectHelper.getEntityAspects}),
- * {@link EnumInfusionEnchantment#REFINING}/{@link EnumInfusionEnchantment#BURROWING} (need the old ore-dictionary
- * "special mining result" table, which has no modern tag-based equivalent built yet).
+ * {@link EnumInfusionEnchantment#ESSENCE} (needs the still-unported {@code AspectHelper.getEntityAspects} -
+ * its own {@code COLLECTOR}-interop half, redirecting the dropped crystal through the same homing path, is
+ * ready and waiting in {@link #redirectToHomeOn} once it lands), {@link EnumInfusionEnchantment#REFINING}/
+ * {@link EnumInfusionEnchantment#BURROWING} (need the old ore-dictionary "special mining result" table,
+ * which has no modern tag-based equivalent built yet).
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID)
 public class ToolEvents {
@@ -78,6 +89,32 @@ public class ToolEvents {
 		if (!destructiveRecursion && enchantments.contains(EnumInfusionEnchantment.DESTRUCTIVE)) {
 			breakSurroundingBlocks(level, pos, harvester, tool);
 		}
+		if (enchantments.contains(EnumInfusionEnchantment.COLLECTOR)) {
+			redirectToHomeOn(event.getDrops(), harvester);
+		}
+	}
+
+	@SubscribeEvent
+	public static void onLivingDrops(LivingDropsEvent event) {
+		if (!(event.getSource().getEntity() instanceof Player killer)) {
+			return;
+		}
+		ItemStack tool = killer.getMainHandItem();
+		if (tool.isEmpty() || !EnumInfusionEnchantment.getInfusionEnchantments(tool).contains(EnumInfusionEnchantment.COLLECTOR)) {
+			return;
+		}
+		if (event.getDrops() instanceof List<ItemEntity> drops) {
+			redirectToHomeOn(drops, killer);
+		}
+	}
+
+	/** Replaces every not-yet-spawned drop in {@code drops} with an {@link EntityFollowingItem} homing on
+	 * {@code target}, in place - both {@link BlockDropsEvent#getDrops()} and
+	 * {@link LivingDropsEvent#getDrops()} hand over their list before any entity in it has actually been
+	 * added to the world, so replacing list entries (rather than discarding+re-adding real entities) is
+	 * enough. */
+	private static void redirectToHomeOn(List<ItemEntity> drops, Entity target) {
+		drops.replaceAll(drop -> new EntityFollowingItem(drop.level(), drop.getX(), drop.getY(), drop.getZ(), drop.getItem(), target));
 	}
 
 	private static void tryPlaceLamplight(ServerLevel level, BlockPos pos) {

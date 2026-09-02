@@ -5,6 +5,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import thaumcraft.common.entities.EntityFollowingItem;
 import thaumcraft.common.entities.projectile.EntityAlumentum;
 import thaumcraft.common.entities.projectile.EntityBottleTaint;
 import thaumcraft.common.entities.projectile.EntityFocusCloud;
@@ -55,6 +56,16 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.updateInterval(10)
 					.build("bottle_taint"));
+
+	/** See {@link EntityFollowingItem}'s own doc comment - homes a dropped item toward whoever/wherever
+	 * earned it (COLLECTOR) instead of leaving it to fall normally. Persists across reloads like a real
+	 * dropped item (unlike the invisible focus-carrier entities above), same reasoning as Alumentum/BottleTaint. */
+	public static final DeferredHolder<EntityType<?>, EntityType<EntityFollowingItem>> FOLLOWING_ITEM = ENTITY_TYPES.register("following_item",
+			() -> EntityType.Builder.<EntityFollowingItem>of(EntityFollowingItem::new, MobCategory.MISC)
+					.sized(0.25f, 0.25f)
+					.clientTrackingRange(64)
+					.updateInterval(10)
+					.build("following_item"));
 
 	private ThaumcraftEntities() {
 	}

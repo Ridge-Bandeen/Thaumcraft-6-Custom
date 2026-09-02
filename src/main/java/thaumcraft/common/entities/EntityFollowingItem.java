@@ -1,146 +1,108 @@
 package thaumcraft.common.entities;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.entity.Entity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
-import thaumcraft.client.fx.FXDispatcher;
 
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 
-public class EntityFollowingItem extends EntitySpecialItem implements IEntityAdditionalSpawnData
-{
-    double targetX;
-    double targetY;
-    double targetZ;
-    int type;
-    public Entity target;
-    int age;
-    public double gravity;
-    
-    public EntityFollowingItem(World par1World, double par2, double par4, double par6, ItemStack par8ItemStack) {
-        super(par1World);
-        targetX = 0.0;
-        targetY = 0.0;
-        targetZ = 0.0;
-        type = 3;
-        target = null;
-        age = 20;
-        gravity = 0.03999999910593033;
-        setSize(0.25f, 0.25f);
-        setPosition(par2, par4, par6);
-        setItem(par8ItemStack);
-        rotationYaw = (float)(Math.random() * 360.0);
-    }
-    
-    public EntityFollowingItem(World par1World, double par2, double par4, double par6, ItemStack par8ItemStack, Entity target, int t) {
-        this(par1World, par2, par4, par6, par8ItemStack);
-        this.target = target;
-        targetX = target.posX;
-        targetY = target.getEntityBoundingBox().minY + target.height / 2.0f;
-        targetZ = target.posZ;
-        type = t;
-        noClip = true;
-    }
-    
-    public EntityFollowingItem(World par1World, double par2, double par4, double par6, ItemStack par8ItemStack, double tx, double ty, double tz) {
-        this(par1World, par2, par4, par6, par8ItemStack);
-        targetX = tx;
-        targetY = ty;
-        targetZ = tz;
-    }
-    
-    public EntityFollowingItem(World par1World) {
-        super(par1World);
-        targetX = 0.0;
-        targetY = 0.0;
-        targetZ = 0.0;
-        type = 3;
-        target = null;
-        age = 20;
-        gravity = 0.03999999910593033;
-        setSize(0.25f, 0.25f);
-    }
-    
-    @Override
-    public void onUpdate() {
-        if (target != null) {
-            targetX = target.posX;
-            targetY = target.getEntityBoundingBox().minY + target.height / 2.0f;
-            targetZ = target.posZ;
-        }
-        if (targetX != 0.0 || targetY != 0.0 || targetZ != 0.0) {
-            float xd = (float)(targetX - posX);
-            float yd = (float)(targetY - posY);
-            float zd = (float)(targetZ - posZ);
-            if (age > 1) {
-                --age;
-            }
-            double distance = MathHelper.sqrt(xd * xd + yd * yd + zd * zd);
-            if (distance > 0.5) {
-                distance *= age;
-                motionX = xd / distance;
-                motionY = yd / distance;
-                motionZ = zd / distance;
-            }
-            else {
-                motionX *= 0.10000000149011612;
-                motionY *= 0.10000000149011612;
-                motionZ *= 0.10000000149011612;
-                targetX = 0.0;
-                targetY = 0.0;
-                targetZ = 0.0;
-                target = null;
-                noClip = false;
-            }
-            if (world.isRemote) {
-                float h = (float)((getEntityBoundingBox().maxY - getEntityBoundingBox().minY) / 2.0) + MathHelper.sin(getAge() / 10.0f + hoverStart) * 0.1f + 0.1f;
-                if (type != 10) {
-                    FXDispatcher.INSTANCE.drawNitorCore((float) prevPosX + (rand.nextFloat() - rand.nextFloat()) * 0.125f, (float) prevPosY + h + (rand.nextFloat() - rand.nextFloat()) * 0.125f, (float) prevPosZ + (rand.nextFloat() - rand.nextFloat()) * 0.125f, rand.nextGaussian() * 0.009999999776482582, rand.nextGaussian() * 0.009999999776482582, rand.nextGaussian() * 0.009999999776482582);
-                }
-                else {
-                    FXDispatcher.INSTANCE.crucibleBubble((float) prevPosX + (rand.nextFloat() - rand.nextFloat()) * 0.125f, (float) prevPosY + h + (rand.nextFloat() - rand.nextFloat()) * 0.125f, (float) prevPosZ + (rand.nextFloat() - rand.nextFloat()) * 0.125f, 0.33f, 0.33f, 1.0f);
-                }
-            }
-        }
-        else {
-            motionY -= gravity;
-        }
-        super.onUpdate();
-    }
-    
-    public void writeEntityToNBT(NBTTagCompound par1NBTTagCompound) {
-        super.writeEntityToNBT(par1NBTTagCompound);
-        par1NBTTagCompound.setShort("type", (short) type);
-    }
-    
-    public void readEntityFromNBT(NBTTagCompound par1NBTTagCompound) {
-        super.readEntityFromNBT(par1NBTTagCompound);
-        type = par1NBTTagCompound.getShort("type");
-    }
-    
-    public void writeSpawnData(ByteBuf data) {
-        if (target != null) {
-            data.writeInt((target == null) ? -1 : target.getEntityId());
-            data.writeDouble(targetX);
-            data.writeDouble(targetY);
-            data.writeDouble(targetZ);
-            data.writeByte(type);
-        }
-    }
-    
-    public void readSpawnData(ByteBuf data) {
-        try {
-            int ent = data.readInt();
-            if (ent > -1) {
-                target = world.getEntityByID(ent);
-            }
-            targetX = data.readDouble();
-            targetY = data.readDouble();
-            targetZ = data.readDouble();
-            type = data.readByte();
-        }
-        catch (Exception ex) {}
-    }
+/**
+ * Replaces the old (1.12.2) {@code EntityFollowingItem}. A plain vanilla {@link ItemEntity} that homes in on
+ * either a fixed point or a live target entity instead of just falling - used by
+ * {@link thaumcraft.common.lib.enchantment.EnumInfusionEnchantment#COLLECTOR} to pull harvested drops (and,
+ * on a kill, dropped essentia crystals) straight to the player instead of leaving them on the ground.
+ *
+ * The original was a two-level hierarchy ({@code EntitySpecialItem extends EntityItem}, explosion-immune and
+ * always-falling, then {@code EntityFollowingItem extends EntitySpecialItem} adding the homing). Collapsed to
+ * one class here - {@code EntitySpecialItem}'s only other real behaviour (falling under manual gravity
+ * instead of an initial upward toss) isn't needed by anything else in this port, so there's no second
+ * subclass to justify keeping the split.
+ *
+ * Dropped: the client-side {@code FXDispatcher} particle trail drawn every tick while homing (the usual
+ * client-FX boundary this port has kept all session) and the original's manual network spawn-data sync
+ * ({@code IEntityAdditionalSpawnData}) - {@link Entity}'s own synced-entity-data system already replicates
+ * {@code ItemEntity}'s held stack to the client, and the homing target/destination only ever needs to be
+ * known server-side (the client just sees the entity move, same as any other server-authoritative entity).
+ */
+public class EntityFollowingItem extends ItemEntity {
+
+	private double targetX;
+	private double targetY;
+	private double targetZ;
+	private int age = 20;
+	@Nullable
+	private Entity followTarget;
+
+	public EntityFollowingItem(EntityType<? extends EntityFollowingItem> type, Level level) {
+		super(type, level);
+	}
+
+	/** Homes toward a live entity (tracked every tick, so it still finds a moving player) - the shape used
+	 * by every real call site this port ports (COLLECTOR's harvest-drop and kill-drop redirection). */
+	public EntityFollowingItem(Level level, double x, double y, double z, ItemStack stack, Entity target) {
+		this(level, x, y, z, stack);
+		this.followTarget = target;
+		this.targetX = target.getX();
+		this.targetY = target.getBoundingBox().minY + target.getBbHeight() / 2.0;
+		this.targetZ = target.getZ();
+		this.noPhysics = true;
+	}
+
+	/** Homes toward a fixed point instead of a live entity - kept as real API (the original's own third
+	 * constructor shape) even though no shipped call site uses it yet. */
+	public EntityFollowingItem(Level level, double x, double y, double z, ItemStack stack, double tx, double ty, double tz) {
+		this(level, x, y, z, stack);
+		this.targetX = tx;
+		this.targetY = ty;
+		this.targetZ = tz;
+		this.noPhysics = true;
+	}
+
+	private EntityFollowingItem(Level level, double x, double y, double z, ItemStack stack) {
+		this(thaumcraft.common.registry.ThaumcraftEntities.FOLLOWING_ITEM.get(), level);
+		this.setPos(x, y, z);
+		this.setItem(stack);
+	}
+
+	@Override
+	public void tick() {
+		if (followTarget != null) {
+			if (followTarget.isRemoved()) {
+				followTarget = null;
+			} else {
+				targetX = followTarget.getX();
+				targetY = followTarget.getBoundingBox().minY + followTarget.getBbHeight() / 2.0;
+				targetZ = followTarget.getZ();
+			}
+		}
+		if (targetX != 0.0 || targetY != 0.0 || targetZ != 0.0) {
+			double xd = targetX - getX();
+			double yd = targetY - getY();
+			double zd = targetZ - getZ();
+			if (age > 1) {
+				age--;
+			}
+			double distance = Math.sqrt(xd * xd + yd * yd + zd * zd);
+			if (distance > 0.5) {
+				distance *= age;
+				setDeltaMovement(xd / distance, yd / distance, zd / distance);
+			} else {
+				setDeltaMovement(getDeltaMovement().scale(0.1));
+				targetX = 0.0;
+				targetY = 0.0;
+				targetZ = 0.0;
+				followTarget = null;
+				noPhysics = false;
+			}
+		}
+		super.tick();
+	}
+
+	@Override
+	public boolean hurt(DamageSource source, float amount) {
+		return !source.is(DamageTypeTags.IS_EXPLOSION) && super.hurt(source, amount);
+	}
 }

@@ -2952,6 +2952,64 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void toolEventsCollectorRedirectsHarvestDropsAndHomesOnTheHarvester(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(3, 2, 3);
+		helper.setBlock(pos, Blocks.AIR);
+		BlockPos absPos = helper.absolutePos(pos);
+		ServerLevel level = helper.getLevel();
+
+		ServerPlayer harvester = spawnCasterAt(helper, absPos.offset(5, 0, 5));
+		ItemStack pickaxe = new ItemStack(Items.IRON_PICKAXE);
+		thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.addInfusionEnchantment(pickaxe,
+				thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.COLLECTOR, 1);
+
+		ItemEntity rawDrop = new ItemEntity(level, absPos.getX() + 0.5, absPos.getY() + 0.5, absPos.getZ() + 0.5, new ItemStack(Items.COBBLESTONE));
+		List<ItemEntity> drops = new java.util.ArrayList<>(java.util.List.of(rawDrop));
+
+		net.neoforged.neoforge.event.level.BlockDropsEvent event = new net.neoforged.neoforge.event.level.BlockDropsEvent(
+				level, absPos, level.getBlockState(absPos), null, drops, harvester, pickaxe);
+		thaumcraft.common.lib.events.ToolEvents.onBlockDrops(event);
+
+		helper.assertTrue(drops.size() == 1 && drops.get(0) instanceof thaumcraft.common.entities.EntityFollowingItem,
+				"COLLECTOR should replace the raw harvest drop with a homing EntityFollowingItem, found: " + drops.get(0));
+
+		ItemEntity homing = drops.get(0);
+		level.addFreshEntity(homing);
+		double startDistance = homing.position().distanceTo(harvester.position());
+		for (int i = 0; i < 10; i++) {
+			homing.tick();
+		}
+		double endDistance = homing.position().distanceTo(harvester.position());
+		helper.assertTrue(endDistance < startDistance,
+				"the homing drop should have moved closer to the harvester over 10 ticks, was " + startDistance + ", now " + endDistance);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void toolEventsCollectorRedirectsKillDropsToTheKiller(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(new BlockPos(3, 2, 3));
+		ServerLevel level = helper.getLevel();
+		ServerPlayer killer = spawnCasterAt(helper, origin);
+		ItemStack sword = new ItemStack(Items.IRON_SWORD);
+		thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.addInfusionEnchantment(sword,
+				thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.COLLECTOR, 1);
+		killer.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, sword);
+
+		Pig pig = spawnPigFacedBy(helper, killer, origin);
+		ItemEntity rawDrop = new ItemEntity(level, pig.getX(), pig.getY(), pig.getZ(), new ItemStack(Items.PORKCHOP));
+		List<ItemEntity> drops = new java.util.ArrayList<>(java.util.List.of(rawDrop));
+
+		net.minecraft.world.damagesource.DamageSource source = level.damageSources().playerAttack(killer);
+		net.neoforged.neoforge.event.entity.living.LivingDropsEvent event =
+				new net.neoforged.neoforge.event.entity.living.LivingDropsEvent(pig, source, drops, true);
+		thaumcraft.common.lib.events.ToolEvents.onLivingDrops(event);
+
+		helper.assertTrue(drops.size() == 1 && drops.get(0) instanceof thaumcraft.common.entities.EntityFollowingItem,
+				"COLLECTOR should redirect kill drops to a homing EntityFollowingItem too, found: " + drops.get(0));
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Essentia Resonator - a pure diagnostic tool, same onItemUseFirst shape as the caster wiring above.
 	// --------------------------------------------------------------------------------------------------
