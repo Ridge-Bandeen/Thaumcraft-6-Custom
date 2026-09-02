@@ -1,54 +1,38 @@
 package thaumcraft.common.lib.network.fx;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.WorldClient;
-import net.minecraft.entity.Entity;
-import net.minecraftforge.fml.client.FMLClientHandler;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
-import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.client.fx.FXDispatcher;
 
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import thaumcraft.Thaumcraft;
 
-public class PacketFXSlash implements IMessage, IMessageHandler<PacketFXSlash, IMessage>
-{
-    private int source;
-    private int target;
-    
-    public PacketFXSlash() {
-    }
-    
-    public PacketFXSlash(int source, int target) {
-        this.source = source;
-        this.target = target;
-    }
-    
-    public void toBytes(ByteBuf buffer) {
-        buffer.writeInt(source);
-        buffer.writeInt(target);
-    }
-    
-    public void fromBytes(ByteBuf buffer) {
-        source = buffer.readInt();
-        target = buffer.readInt();
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public IMessage onMessage(PacketFXSlash message, MessageContext ctx) {
-        Minecraft mc = FMLClientHandler.instance().getClient();
-        WorldClient world = mc.world;
-        Entity var2 = getEntityByID(message.source, mc, world);
-        Entity var3 = getEntityByID(message.target, mc, world);
-        if (var2 != null && var3 != null) {
-            FXDispatcher.INSTANCE.drawSlash(var2.posX, var2.getEntityBoundingBox().minY + var2.height / 2.0f, var2.posZ, var3.posX, var3.getEntityBoundingBox().minY + var3.height / 2.0f, var3.posZ, 8);
-        }
-        return null;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    private Entity getEntityByID(int par1, Minecraft mc, WorldClient world) {
-        return (par1 == mc.player.getEntityId()) ? mc.player : world.getEntityByID(par1);
-    }
+/**
+ * Replaces the old (1.12.2) {@code PacketFXSlash} - a client-bound "draw a slash effect between two
+ * entities" notification, sent for {@link thaumcraft.common.lib.enchantment.EnumInfusionEnchantment#ARCING}'s
+ * cleave hits. First real packet this port has needed - see {@code Thaumcraft#registerPayloads} for the
+ * registration side and {@link thaumcraft.client.fx.ClientFxHandlers#handleSlash} for the actual client
+ * visual, a plain vanilla particle burst replacing the original's custom textured line-trail renderer
+ * ({@code FXDispatcher.drawSlash}) - same "no custom render layer, vanilla particles instead" boundary this
+ * whole port has kept since Cinderpearl's own client FX.
+ *
+ * Carries entity ids (not positions) like the original, resolved back to live entities client-side - the
+ * source/target may have moved between the server tick that sent this and the client tick that receives it,
+ * and resolving fresh each time (rather than baking in a position) keeps the effect anchored to where the
+ * entities actually are on the client.
+ */
+public record PacketFXSlash(int source, int target) implements CustomPacketPayload {
+
+	public static final Type<PacketFXSlash> TYPE =
+			new Type<>(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "fx_slash"));
+
+	public static final StreamCodec<RegistryFriendlyByteBuf, PacketFXSlash> STREAM_CODEC = StreamCodec.composite(
+			ByteBufCodecs.VAR_INT, PacketFXSlash::source,
+			ByteBufCodecs.VAR_INT, PacketFXSlash::target,
+			PacketFXSlash::new);
+
+	@Override
+	public Type<? extends CustomPacketPayload> type() {
+		return TYPE;
+	}
 }

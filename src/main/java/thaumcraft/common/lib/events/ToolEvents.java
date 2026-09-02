@@ -8,10 +8,14 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -20,11 +24,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LightBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockDropsEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import thaumcraft.Thaumcraft;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectHelper;
@@ -34,6 +41,7 @@ import thaumcraft.api.items.ItemGenericEssentiaContainer;
 import thaumcraft.api.items.ItemsTC;
 import thaumcraft.common.entities.EntityFollowingItem;
 import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
+import thaumcraft.common.lib.network.fx.PacketFXSlash;
 
 /**
  * Replaces the old (1.12.2) {@code ToolEvents}. Only the two infusion-enchantment gameplay hooks reachable
@@ -68,9 +76,20 @@ import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
  * (Forge's pre-1.13 ore-dictionary) doesn't exist anymore, but it's not needed: the original only ever
  * registered 4 entries (iron/gold/cinnabar/quartz), each keyed on one specific drop, so a plain
  * {@code Item -> ItemStack} map covers it exactly - no tag matching required.</li>
+ * <li>{@link EnumInfusionEnchantment#ARCING} - cleaves up to {@code level} nearby living entities for half
+ * the player's attack damage whenever they land a hit, real for the first time this port has a working
+ * client packet ({@link PacketFXSlash}, see {@code Thaumcraft#registerPayloads}) - the visual cue (a small
+ * particle burst at each secondary hit, plus one more at the primary target) rides along it. No "friendly
+ * fire" check (the original's own {@code EntityUtils.isFriendly} isn't ported) - any nearby
+ * {@link LivingEntity} other than the primary target and the attacker themself is fair game, a real,
+ * documented simplification.</li>
+ * <li>{@link EnumInfusionEnchantment#SOUNDING} - damages the tool and plays a resonating sound on a sneak
+ * right-click, matching the original's own server-side behaviour exactly. The original's other half (a
+ * client-only ore-vein radar visual, {@code PacketFXScanSource}) is real client FX work of the same shape
+ * {@code BlockDioptra}'s own scan visual was cut for - deferred rather than built this pass, since it's a
+ * distinct feature from "does the packet system work", which {@code ARCING} already proves.</li>
  * </ul>
- * Deferred (all real, just not built yet - see the port-tracking memory notes): {@link EnumInfusionEnchantment#ARCING}/
- * {@link EnumInfusionEnchantment#SOUNDING} (need a client FX packet - no custom packet system ported yet),
+ * Deferred (all real, just not built yet - see the port-tracking memory notes):
  * {@link EnumInfusionEnchantment#BURROWING} - checked closely enough to rule out "just needs a modern tag"
  * (unlike {@code REFINING}, its "is this a log or ore" check is the easy half): the real blocker is
  * {@code BlockUtils.breakFurthestBlock}'s own recursive greedy vein-walk (mutable-static BFS re-scanning a
@@ -102,6 +121,71 @@ public class ToolEvents {
 		if (!event.getLevel().isClientSide) {
 			LAST_FACE_CLICKED.put(event.getEntity().getUUID(), event.getFace());
 		}
+	}
+
+	@SubscribeEvent
+	public static void onAttackEntity(AttackEntityEvent event) {
+		if (!(event.getEntity() instanceof Player attacker) || !(attacker.level() instanceof ServerLevel level)) {
+			return;
+		}
+		ItemStack tool = attacker.getMainHandItem();
+		if (tool.isEmpty() || !EnumInfusionEnchantment.getInfusionEnchantments(tool).contains(EnumInfusionEnchantment.ARCING)) {
+			return;
+		}
+		if (!(event.getTarget() instanceof LivingEntity primary) || !primary.isAlive()) {
+			return;
+		}
+
+		int rank = EnumInfusionEnchantment.getInfusionEnchantmentLevel(tool, EnumInfusionEnchantment.ARCING);
+		AABB area = primary.getBoundingBox().inflate(1.5 + rank, 1.0 + rank / 2.0, 1.5 + rank);
+		List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class, area,
+				e -> e != primary && e != attacker && e.isAlive());
+
+		float damage = (float) attacker.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.5f;
+		DamageSource source = level.damageSources().playerAttack(attacker);
+		int count = 0;
+		for (LivingEntity secondary : nearby) {
+			if (count >= rank) {
+				break;
+			}
+			if (secondary.hurt(source, damage)) {
+				count++;
+				sendSlashFx(level, primary.getX(), primary.getY(), primary.getZ(), primary.getId(), secondary.getId());
+			}
+		}
+		if (count > 0) {
+			level.playSound(null, attacker.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.0f,
+					0.9f + level.getRandom().nextFloat() * 0.2f);
+			sendSlashFx(level, attacker.getX(), attacker.getY(), attacker.getZ(), attacker.getId(), primary.getId());
+		}
+	}
+
+	/** The cleave itself (real damage, already applied by the caller) never depends on this succeeding - a
+	 * purely cosmetic packet failing to send (e.g. a GameTest mock player, which has no real client
+	 * connection to receive it) should never take the actual gameplay effect down with it. */
+	private static void sendSlashFx(ServerLevel level, double x, double y, double z, int source, int target) {
+		try {
+			PacketDistributor.sendToPlayersNear(level, null, x, y, z, 64.0, new PacketFXSlash(source, target));
+		} catch (Exception ex) {
+			Thaumcraft.LOGGER.debug("Couldn't send fx_slash packet", ex);
+		}
+	}
+
+	@SubscribeEvent
+	public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+		if (!(event.getEntity() instanceof Player player) || !(player.level() instanceof ServerLevel level) || !player.isCrouching()) {
+			return;
+		}
+		ItemStack tool = event.getItemStack();
+		if (tool.isEmpty() || !EnumInfusionEnchantment.getInfusionEnchantments(tool).contains(EnumInfusionEnchantment.SOUNDING)) {
+			return;
+		}
+		tool.hurtAndBreak(5, player, EquipmentSlot.MAINHAND);
+		BlockPos pos = event.getPos();
+		level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.2f,
+				0.2f + level.getRandom().nextFloat() * 0.2f);
+		// The original's other half of this effect - a client-only ore-vein radar visual built from a
+		// flood-filled scan out to (4 + level * 4) blocks - is deferred; see this class's own doc comment.
 	}
 
 	@SubscribeEvent

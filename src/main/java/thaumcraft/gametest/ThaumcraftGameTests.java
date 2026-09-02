@@ -3102,6 +3102,65 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void toolEventsArcingCleavesANearbySecondaryTarget(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(new BlockPos(3, 2, 3));
+		ServerLevel level = helper.getLevel();
+		ServerPlayer attacker = spawnCasterAt(helper, origin);
+		ItemStack sword = new ItemStack(Items.IRON_SWORD);
+		thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.addInfusionEnchantment(sword,
+				thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.ARCING, 1);
+		attacker.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, sword);
+
+		Pig primary = EntityType.PIG.create(level);
+		primary.moveTo(origin.getX() + 1.0, origin.getY(), origin.getZ() + 0.5);
+		level.addFreshEntity(primary);
+		Pig secondary = EntityType.PIG.create(level);
+		secondary.moveTo(origin.getX() + 1.5, origin.getY(), origin.getZ() + 0.5);
+		level.addFreshEntity(secondary);
+		float secondaryStartingHealth = secondary.getHealth();
+
+		net.neoforged.neoforge.event.entity.player.AttackEntityEvent event =
+				new net.neoforged.neoforge.event.entity.player.AttackEntityEvent(attacker, primary);
+		thaumcraft.common.lib.events.ToolEvents.onAttackEntity(event);
+
+		helper.assertTrue(secondary.getHealth() < secondaryStartingHealth,
+				"ARCING should cleave a secondary target standing next to the primary one, health was "
+						+ secondaryStartingHealth + " now " + secondary.getHealth());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void toolEventsSoundingDamagesTheToolOnASneakRightClick(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(3, 2, 3);
+		helper.setBlock(pos, Blocks.STONE);
+		BlockPos absPos = helper.absolutePos(pos);
+		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+		// isCrouching() reads the entity's actual pose, not the input-intent flag setShiftKeyDown sets (that
+		// only gets translated into a pose change during a real tick's aiStep, which nothing here drives) -
+		// force the pose directly so ToolEvents' isCrouching() check actually sees it.
+		player.setShiftKeyDown(true);
+		player.setPose(net.minecraft.world.entity.Pose.CROUCHING);
+		// Mock players default to creative (instabuild = true), which skips item damage entirely - same
+		// idiom used throughout this file (e.g. the DESTRUCTIVE test above).
+		player.getAbilities().instabuild = false;
+		ItemStack pickaxe = new ItemStack(Items.IRON_PICKAXE);
+		thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.addInfusionEnchantment(pickaxe,
+				thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.SOUNDING, 1);
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, pickaxe);
+
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absPos), net.minecraft.core.Direction.UP, absPos, false);
+		net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock event =
+				new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(player, hand, absPos, hit);
+		thaumcraft.common.lib.events.ToolEvents.onRightClickBlock(event);
+
+		helper.assertTrue(player.getItemInHand(hand).getDamageValue() == 5,
+				"SOUNDING should damage the tool by 5 on a sneak right-click, found damage " + player.getItemInHand(hand).getDamageValue());
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Essentia Resonator - a pure diagnostic tool, same onItemUseFirst shape as the caster wiring above.
 	// --------------------------------------------------------------------------------------------------

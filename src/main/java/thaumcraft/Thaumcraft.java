@@ -51,6 +51,8 @@ import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import thaumcraft.common.tiles.devices.TileRechargePedestal;
 import net.neoforged.neoforge.event.level.NoteBlockEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import thaumcraft.common.lib.network.fx.PacketFXSlash;
 import thaumcraft.common.tiles.devices.TileArcaneEar;
 
 /**
@@ -73,6 +75,7 @@ public class Thaumcraft {
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::onRegisterGameTests);
         modEventBus.addListener(this::registerCapabilities);
+        modEventBus.addListener(this::registerPayloads);
         NeoForge.EVENT_BUS.register(this);
 
         ThaumcraftAttributes.ATTRIBUTES.register(modEventBus);
@@ -176,6 +179,28 @@ public class Thaumcraft {
                 (tile, side) -> side == net.minecraft.core.Direction.UP ? tile.tank : null);
 
         thaumcraft.gametest.ThaumcraftGameTests.registerTestCapabilities(event);
+    }
+
+    /**
+     * First real networking this port has needed - a client-bound "draw a visual effect" packet
+     * ({@link PacketFXSlash}, for {@code EnumInfusionEnchantment.ARCING}). {@code RegisterPayloadHandlersEvent}
+     * fires on both sides (this method is common code, not client-only) - both sides need the payload's
+     * codec registered to en/decode it, even though only the client ever actually invokes the handler
+     * ({@code playToClient} guarantees a dedicated server, which only ever sends this payload, never
+     * receives it, never runs the handler body). The handler dispatches straight to
+     * {@link thaumcraft.client.fx.ClientFxHandlers} (a client-only-safe class - see its own doc comment for
+     * why referencing it here, from common code, doesn't break a dedicated server) - nothing client-only
+     * ever appears directly in this common class's own bytecode.
+     */
+    private void registerPayloads(RegisterPayloadHandlersEvent event) {
+        var registrar = event.registrar("1");
+        registrar.playToClient(PacketFXSlash.TYPE, PacketFXSlash.STREAM_CODEC,
+                (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.handleSlash(payload));
+        // ^ method-reference-style dispatch on purpose (a real reference, ClientFxHandlers::handleSlash,
+        // would need a 1-arg IPayloadHandler#handle-compatible signature; wrapped in a 2-arg lambda instead
+        // since handleSlash itself doesn't need IPayloadContext) - the safety property is the same either
+        // way: ClientFxHandlers loads fine everywhere, only handleSlash's own body (never reached on a
+        // dedicated server) touches client-only classes.
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {
