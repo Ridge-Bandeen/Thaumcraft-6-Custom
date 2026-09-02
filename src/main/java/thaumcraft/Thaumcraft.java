@@ -76,6 +76,7 @@ public class Thaumcraft {
         modEventBus.addListener(this::onRegisterGameTests);
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::registerPayloads);
+        modEventBus.addListener(this::registerEntityAttributes);
         NeoForge.EVENT_BUS.register(this);
 
         ThaumcraftAttributes.ATTRIBUTES.register(modEventBus);
@@ -214,6 +215,13 @@ public class Thaumcraft {
         registrar.playToClient(thaumcraft.common.lib.network.fx.PacketFXScanSource.TYPE,
                 thaumcraft.common.lib.network.fx.PacketFXScanSource.STREAM_CODEC,
                 (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.handleScanSource(payload));
+    }
+
+    /** First real living {@code Mob} this port has registered ({@link thaumcraft.common.entities.monster.EntityWisp})
+     * needs its {@code AttributeSupplier} built here - every entity registered before it was a non-living
+     * projectile/carrier with no attribute map of its own. */
+    private void registerEntityAttributes(net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent event) {
+        event.put(ThaumcraftEntities.WISP.get(), thaumcraft.common.entities.monster.EntityWisp.createAttributes().build());
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {

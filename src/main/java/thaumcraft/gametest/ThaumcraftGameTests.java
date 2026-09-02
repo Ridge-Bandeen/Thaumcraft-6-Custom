@@ -3946,4 +3946,36 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(voidSeed.getHoverName().getString().equals("Void Seed"), "void_seed should resolve its real lang name, found '" + voidSeed.getHoverName().getString() + "'");
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void wispLocksInARealAspectTypeAndDropsAMatchingCrystalOnDeath(GameTestHelper helper) {
+		BlockPos pos = helper.absolutePos(new BlockPos(3, 2, 3));
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.EntityWisp wisp =
+				new thaumcraft.common.entities.monster.EntityWisp(thaumcraft.common.registry.ThaumcraftEntities.WISP.get(), level);
+		wisp.setPos(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+		level.addFreshEntity(wisp);
+
+		for (int i = 0; i < 5 && Aspect.getAspect(wisp.getWispType()) == null; i++) {
+			wisp.tick();
+		}
+		Aspect type = Aspect.getAspect(wisp.getWispType());
+		helper.assertTrue(type != null, "a wisp should lock in a real aspect type within a few ticks, found '" + wisp.getWispType() + "'");
+
+		wisp.hurt(level.damageSources().generic(), 9999.0f);
+
+		boolean foundMatchingCrystal = false;
+		for (ItemEntity drop : level.getEntitiesOfClass(ItemEntity.class, new AABB(pos).inflate(2))) {
+			ItemStack stack = drop.getItem();
+			if (stack.getItem() == ItemsTC.crystalEssence.get()) {
+				AspectList aspects = ((ItemGenericEssentiaContainer) stack.getItem()).getAspects(stack);
+				if (aspects != null && aspects.getAmount(type) > 0) {
+					foundMatchingCrystal = true;
+				}
+			}
+		}
+		helper.assertTrue(foundMatchingCrystal, "killing a wisp should drop an essentia crystal matching its locked-in aspect type");
+		helper.succeed();
+	}
 }

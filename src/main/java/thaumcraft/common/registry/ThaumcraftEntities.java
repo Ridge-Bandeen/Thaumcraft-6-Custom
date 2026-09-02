@@ -6,6 +6,7 @@ import net.minecraft.world.entity.MobCategory;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.common.entities.EntityFollowingItem;
+import thaumcraft.common.entities.monster.EntityWisp;
 import thaumcraft.common.entities.projectile.EntityAlumentum;
 import thaumcraft.common.entities.projectile.EntityBottleTaint;
 import thaumcraft.common.entities.projectile.EntityFocusCloud;
@@ -79,6 +80,16 @@ public final class ThaumcraftEntities {
 					.updateInterval(10)
 					.noSave()
 					.build("grapple"));
+
+	/** First real living {@link net.minecraft.world.entity.Mob} this port has registered (every entry above
+	 * is a non-living projectile/carrier, {@code MobCategory.MISC}) - see {@link EntityWisp}'s own doc
+	 * comment. Needs a matching {@code EntityAttributeCreationEvent} entry, see
+	 * {@code Thaumcraft#registerEntityAttributes}. */
+	public static final DeferredHolder<EntityType<?>, EntityType<EntityWisp>> WISP = ENTITY_TYPES.register("wisp",
+			() -> EntityType.Builder.<EntityWisp>of(EntityWisp::new, MobCategory.MONSTER)
+					.sized(0.9f, 0.9f)
+					.clientTrackingRange(64)
+					.build("wisp"));
 
 	private ThaumcraftEntities() {
 	}
