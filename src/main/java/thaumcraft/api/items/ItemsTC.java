@@ -33,6 +33,7 @@ import thaumcraft.common.items.casters.ItemFocusHeal;
 import thaumcraft.common.items.casters.ItemFocusSanctuary;
 import thaumcraft.common.items.casters.ItemFocusTrap;
 import thaumcraft.common.items.curios.ItemCurio;
+import thaumcraft.common.items.curios.ItemPechWand;
 
 /**
  * See {@link BlocksTC} for why this only has a couple of fields so far instead of the ~150 the original
@@ -136,6 +137,9 @@ public final class ItemsTC {
 
 	public static final DeferredItem<ItemCurio> curio =
 			ITEMS.registerItem("curio", ItemCurio::new);
+
+	public static final DeferredItem<ItemPechWand> pechWand =
+			ITEMS.registerItem("pech_wand", ItemPechWand::new);
 
 	/** Quicksilver's first real use - a reflective glass pane. Inert beyond that for now (the original's
 	 * hand mirror/scrying mirror/golem sight devices that consume it aren't ported). */

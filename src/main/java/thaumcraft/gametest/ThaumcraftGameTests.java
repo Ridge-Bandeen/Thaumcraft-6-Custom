@@ -3775,4 +3775,27 @@ public class ThaumcraftGameTests {
 				"the Bellows shouldn't touch an idle (not actually cooking) furnace, found progress " + furnace.cookingProgress);
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Pech Wand - see ItemPechWand's own doc comment for the loosened research gate and the real
+	// (Pech-trade) acquisition gap that isn't addressed yet.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void pechWandGrantsFocusResearchAndConsumesItself(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.getAbilities().instabuild = false;
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		ItemStack wand = new ItemStack(ItemsTC.pechWand.get());
+		player.setItemInHand(hand, wand);
+
+		IPlayerKnowledge knowledge = thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player);
+		helper.assertTrue(!knowledge.isResearchKnown("FOCUSPECH"), "the player shouldn't know FOCUSPECH yet");
+
+		wand.getItem().use(helper.getLevel(), player, hand);
+
+		helper.assertTrue(knowledge.isResearchKnown("FOCUSPECH"), "using the Pech Wand should grant FOCUSPECH");
+		helper.assertTrue(player.getItemInHand(hand).isEmpty(), "a single Pech Wand should be fully consumed after one use");
+		helper.succeed();
+	}
 }

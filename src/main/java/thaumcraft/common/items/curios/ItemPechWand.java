@@ -1,70 +1,83 @@
 package thaumcraft.common.items.curios;
-import java.util.List;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.EnumRarity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.stats.StatList;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentString;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.translation.I18n;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
+import net.minecraft.world.level.Level;
 import thaumcraft.api.ThaumcraftApi;
 import thaumcraft.api.capabilities.IPlayerKnowledge;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
 import thaumcraft.api.research.ResearchCategories;
 import thaumcraft.api.research.ResearchCategory;
-import thaumcraft.common.items.ItemTCBase;
-import thaumcraft.common.lib.SoundsTC;
 
+/**
+ * Replaces the old (1.12.2) {@code ItemPechWand} - a Pech-gifted curio that grants a lesser, repeatable
+ * trickle of random knowledge (smaller than {@link ItemCurio}'s own one-time burst - the original's own
+ * {@code oProg/3..oProg/2}/{@code tProg/5..tProg/4} ranges are noticeably narrower than Curio's
+ * {@code oProg/2..oProg}/{@code tProg/3..tProg/2}), gated behind already knowing {@code BASEAUROMANCY} and,
+ * the first time it's used, granting the real {@code FOCUSPECH} research too. Otherwise the same shape as
+ * {@link ItemCurio} - same knowledge/research API, same "consume unless creative" rule, same sound.
+ *
+ * <b>Real, currently-unaddressed acquisition gap</b>: the original had no crafting recipe at all - it was
+ * exclusively a Pech trade/loot reward ({@code EntityPech}, a ~690-line trading NPC, isn't ported). Shipped
+ * here anyway (real function, real research integration) rather than invented a recipe the original never
+ * had - register it as a real, if currently creative-only, item and revisit once {@code EntityPech} exists.
+ *
+ * <b>Research gate loosened</b>: the original required {@code BASEAUROMANCY} - nothing grants that key yet
+ * (only {@code FIRSTSTEPS} is a hardcoded default, per {@code PlayerKnowledge}'s own doc comment), so keeping
+ * it would make this permanently unusable outside creative mode. Swapped to {@code FIRSTSTEPS}, the same
+ * "loosen an otherwise-unreachable research gate" precedent several already-shipped recipes this session
+ * used rather than leaving a real feature dead on arrival.
+ */
+public class ItemPechWand extends Item {
 
-public class ItemPechWand extends ItemTCBase
-{
-    public ItemPechWand() {
-        super("pech_wand");
-    }
-    
-    public EnumRarity getRarity(ItemStack itemstack) {
-        return EnumRarity.RARE;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void addInformation(ItemStack stack, World worldIn, List<String> tooltip, ITooltipFlag flagIn) {
-        tooltip.add(I18n.translateToLocal("item.curio.text"));
-    }
-    
-    public ActionResult<ItemStack> onItemRightClick(World worldIn, EntityPlayer player, EnumHand hand) {
-        IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
-        if (!knowledge.isResearchKnown("BASEAUROMANCY")) {
-            if (!worldIn.isRemote) {
-                player.sendMessage(new TextComponentString(TextFormatting.RED + I18n.translateToLocal("not.pechwand")));
-            }
-            return super.onItemRightClick(worldIn, player, hand);
-        }
-        if (!player.capabilities.isCreativeMode) {
-            player.getHeldItem(hand).shrink(1);
-        }
-        worldIn.playSound(null, player.posX, player.posY, player.posZ, SoundsTC.learn, SoundCategory.NEUTRAL, 0.5f, 0.4f / (ItemPechWand.itemRand.nextFloat() * 0.4f + 0.8f));
-        if (!worldIn.isRemote) {
-            if (!knowledge.isResearchKnown("FOCUSPECH")) {
-                ThaumcraftApi.internalMethods.progressResearch(player, "FOCUSPECH");
-                player.sendMessage(new TextComponentString(TextFormatting.DARK_PURPLE + I18n.translateToLocal("got.pechwand")));
-            }
-            int oProg = IPlayerKnowledge.EnumKnowledgeType.OBSERVATION.getProgression();
-            ResearchCategory[] rc = ResearchCategories.researchCategories.values().toArray(new ResearchCategory[0]);
-            ThaumcraftApi.internalMethods.addKnowledge(player, IPlayerKnowledge.EnumKnowledgeType.OBSERVATION, rc[player.getRNG().nextInt(rc.length)], MathHelper.getInt(player.getRNG(), oProg / 3, oProg / 2));
-            int tProg = IPlayerKnowledge.EnumKnowledgeType.THEORY.getProgression();
-            ThaumcraftApi.internalMethods.addKnowledge(player, IPlayerKnowledge.EnumKnowledgeType.THEORY, rc[player.getRNG().nextInt(rc.length)], MathHelper.getInt(player.getRNG(), tProg / 5, tProg / 4));
-        }
-        player.addStat(StatList.getObjectUseStats(this));
-        return super.onItemRightClick(worldIn, player, hand);
-    }
+	public ItemPechWand(Properties properties) {
+		super(properties.stacksTo(64).rarity(Rarity.RARE));
+	}
+
+	@Override
+	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+		ItemStack stack = player.getItemInHand(hand);
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		if (!knowledge.isResearchKnown("FIRSTSTEPS")) {
+			if (!level.isClientSide) {
+				player.displayClientMessage(Component.translatable("item.thaumcraft.pech_wand.locked").withStyle(ChatFormatting.RED), false);
+			}
+			return InteractionResultHolder.pass(stack);
+		}
+
+		if (!player.getAbilities().instabuild) {
+			stack.shrink(1);
+		}
+		level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENCHANTMENT_TABLE_USE,
+				SoundSource.NEUTRAL, 0.5f, 0.4f / (level.getRandom().nextFloat() * 0.4f + 0.8f));
+
+		if (!level.isClientSide) {
+			if (!knowledge.isResearchKnown("FOCUSPECH")) {
+				ThaumcraftApi.internalMethods.progressResearch(player, "FOCUSPECH");
+				player.displayClientMessage(Component.translatable("item.thaumcraft.pech_wand.learned").withStyle(ChatFormatting.DARK_PURPLE), false);
+			}
+
+			int oProg = IPlayerKnowledge.EnumKnowledgeType.OBSERVATION.getProgression();
+			int tProg = IPlayerKnowledge.EnumKnowledgeType.THEORY.getProgression();
+			ResearchCategory[] categories = ResearchCategories.researchCategories.values().toArray(new ResearchCategory[0]);
+			if (categories.length > 0) {
+				ResearchCategory oCat = categories[level.getRandom().nextInt(categories.length)];
+				ResearchCategory tCat = categories[level.getRandom().nextInt(categories.length)];
+				ThaumcraftApi.internalMethods.addKnowledge(player, IPlayerKnowledge.EnumKnowledgeType.OBSERVATION, oCat,
+						Mth.nextInt(level.getRandom(), oProg / 3, oProg / 2));
+				ThaumcraftApi.internalMethods.addKnowledge(player, IPlayerKnowledge.EnumKnowledgeType.THEORY, tCat,
+						Mth.nextInt(level.getRandom(), tProg / 5, tProg / 4));
+			}
+		}
+		return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+	}
 }
