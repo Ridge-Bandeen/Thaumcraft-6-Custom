@@ -12,10 +12,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.common.Tags;
 import thaumcraft.api.blocks.BlocksTC;
+import thaumcraft.common.lib.network.fx.PacketFXBlockBamf;
 import thaumcraft.common.lib.network.fx.PacketFXScanSource;
 import thaumcraft.common.lib.network.fx.PacketFXSlash;
 
@@ -58,6 +61,33 @@ public final class ClientFxHandlers {
 
 	private static Entity resolveEntity(Minecraft mc, ClientLevel level, int entityId) {
 		return mc.player != null && mc.player.getId() == entityId ? mc.player : level.getEntity(entityId);
+	}
+
+	/** {@link thaumcraft.common.entities.EntityFluxRift}'s collapse "poof" - the original drew a custom
+	 * billboard flash ({@code FXDispatcher.drawBamf}) tinted by the packed {@code color} it carries; this
+	 * drops that tint (every real call site sends a fixed placeholder colour anyway) in favour of a plain
+	 * void/portal-themed vanilla particle burst, with an optional teleport-ish sound standing in for the
+	 * original's own bamf sound effect (same "no custom audio subsystem" simplification {@code EntityWisp}
+	 * already established). {@code flair} adds a second, larger burst on top of the base one. */
+	public static void handleBlockBamf(PacketFXBlockBamf payload) {
+		Minecraft mc = Minecraft.getInstance();
+		ClientLevel level = mc.level;
+		if (level == null) {
+			return;
+		}
+		double x = payload.x();
+		double y = payload.y();
+		double z = payload.z();
+		int count = payload.flair() ? 24 : 10;
+		for (int i = 0; i < count; i++) {
+			double ox = (level.random.nextFloat() - level.random.nextFloat()) * 1.2;
+			double oy = (level.random.nextFloat() - level.random.nextFloat()) * 1.2;
+			double oz = (level.random.nextFloat() - level.random.nextFloat()) * 1.2;
+			level.addParticle(ParticleTypes.REVERSE_PORTAL, x + ox, y + oy, z + oz, 0.0, 0.05, 0.0);
+		}
+		if (payload.sound()) {
+			level.playLocalSound(x, y, z, SoundEvents.ENDERMAN_TELEPORT, SoundSource.NEUTRAL, 1.0f, 0.7f, false);
+		}
 	}
 
 	/** {@link thaumcraft.common.lib.enchantment.EnumInfusionEnchantment#SOUNDING}'s ore-vein radar - scans a

@@ -146,6 +146,7 @@ sourceSets {
             include 'thaumcraft/common/lib/events/ToolEvents.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXSlash.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXScanSource.java'
+            include 'thaumcraft/common/lib/network/fx/PacketFXBlockBamf.java'
             include 'thaumcraft/client/fx/ClientFxHandlers.java'
             include 'thaumcraft/common/entities/EntityFollowingItem.java'
 
@@ -266,6 +267,8 @@ sourceSets {
 
             include 'thaumcraft/common/items/curios/ItemPrimordialPearl.java'
             include 'thaumcraft/common/entities/monster/EntityWisp.java'
+            include 'thaumcraft/common/entities/EntityFluxRift.java'
+            include 'thaumcraft/common/lib/utils/RandomItemChooser.java'
 
             include 'thaumcraft/common/entities/projectile/EntityAlumentum.java'
             include 'thaumcraft/common/items/consumables/ItemAlumentum.java'

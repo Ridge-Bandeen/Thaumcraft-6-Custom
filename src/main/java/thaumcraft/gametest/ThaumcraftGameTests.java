@@ -4001,4 +4001,55 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(foundMatchingCrystal, "killing a wisp should drop an essentia crystal matching its locked-in aspect type");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// EntityFluxRift - the entity every other Flux Rift prerequisite this session was building toward.
+	// createRift's own real-world placement search (random offset + heightmap) isn't exercised directly
+	// here - too randomness/terrain-dependent for a small GameTest structure to reliably assert on - these
+	// instead construct a rift directly and drive its own real lifecycle logic (shape/tick/collapse).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void fluxRiftBuildsARealProceduralShapeFromItsSeedAndSize(GameTestHelper helper) {
+		BlockPos pos = helper.absolutePos(new BlockPos(3, 3, 3));
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.EntityFluxRift rift =
+				new thaumcraft.common.entities.EntityFluxRift(thaumcraft.common.registry.ThaumcraftEntities.FLUX_RIFT.get(), level);
+		rift.setRiftSeed(12345);
+		rift.setPos(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+		rift.setRiftSize(30);
+
+		helper.assertTrue(rift.points.size() > 2, "a real-sized rift should have a real procedural point cloud, found " + rift.points.size());
+		helper.assertTrue(rift.getBoundingBox().getSize() > 0.0, "the bounding box should be rebuilt from the point cloud's own extent");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void fluxRiftCollapsesAndDropsVoidSeedsWhenForced(GameTestHelper helper) {
+		BlockPos pos = helper.absolutePos(new BlockPos(3, 3, 3));
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.EntityFluxRift rift =
+				new thaumcraft.common.entities.EntityFluxRift(thaumcraft.common.registry.ThaumcraftEntities.FLUX_RIFT.get(), level);
+		rift.setRiftSeed(6789);
+		rift.setPos(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+		rift.setRiftSize(20);
+		level.addFreshEntity(rift);
+		rift.setCollapse(true);
+
+		for (int i = 0; i < 60 && rift.isAlive(); i++) {
+			rift.tick();
+		}
+		helper.assertTrue(!rift.isAlive(), "a forced collapse should fully remove the rift within a bounded number of ticks");
+
+		boolean foundVoidSeed = false;
+		for (ItemEntity drop : level.getEntitiesOfClass(ItemEntity.class, new AABB(pos).inflate(4))) {
+			if (drop.getItem().getItem() == ItemsTC.voidSeed.get()) {
+				foundVoidSeed = true;
+			}
+		}
+		helper.assertTrue(foundVoidSeed, "completing a collapse should drop at least one void seed nearby");
+		helper.succeed();
+	}
 }

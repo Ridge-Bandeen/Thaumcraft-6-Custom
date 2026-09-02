@@ -5,6 +5,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import thaumcraft.common.entities.EntityFluxRift;
 import thaumcraft.common.entities.EntityFollowingItem;
 import thaumcraft.common.entities.monster.EntityWisp;
 import thaumcraft.common.entities.projectile.EntityAlumentum;
@@ -90,6 +91,16 @@ public final class ThaumcraftEntities {
 					.sized(0.9f, 0.9f)
 					.clientTrackingRange(64)
 					.build("wisp"));
+
+	/** See {@link EntityFluxRift}'s own doc comment - a plain, non-living {@code Entity} with an entirely
+	 * custom bounding box recomputed every time its size changes, so {@code sized(...)} here is only ever
+	 * the placeholder used before the first real recompute. */
+	public static final DeferredHolder<EntityType<?>, EntityType<EntityFluxRift>> FLUX_RIFT = ENTITY_TYPES.register("flux_rift",
+			() -> EntityType.Builder.<EntityFluxRift>of(EntityFluxRift::new, MobCategory.MISC)
+					.sized(2.0f, 2.0f)
+					.clientTrackingRange(64)
+					.fireImmune()
+					.build("flux_rift"));
 
 	private ThaumcraftEntities() {
 	}

@@ -215,6 +215,9 @@ public class Thaumcraft {
         registrar.playToClient(thaumcraft.common.lib.network.fx.PacketFXScanSource.TYPE,
                 thaumcraft.common.lib.network.fx.PacketFXScanSource.STREAM_CODEC,
                 (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.handleScanSource(payload));
+        registrar.playToClient(thaumcraft.common.lib.network.fx.PacketFXBlockBamf.TYPE,
+                thaumcraft.common.lib.network.fx.PacketFXBlockBamf.STREAM_CODEC,
+                (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.handleBlockBamf(payload));
     }
 
     /** First real living {@code Mob} this port has registered ({@link thaumcraft.common.entities.monster.EntityWisp})
