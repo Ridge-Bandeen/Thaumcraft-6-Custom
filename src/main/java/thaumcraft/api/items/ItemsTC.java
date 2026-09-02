@@ -72,6 +72,11 @@ public final class ItemsTC {
 	public static final DeferredItem<Item> clusterIron =
 			ITEMS.registerSimpleItem("cluster_iron");
 
+	/** Same shape as {@link #clusterIron} - smelts into 2 quicksilver instead of the usual 1 from
+	 * {@code thaumcraft:ore_cinnabar}. See {@code data/thaumcraft/recipe/cluster_cinnabar.json}. */
+	public static final DeferredItem<Item> clusterCinnabar =
+			ITEMS.registerSimpleItem("cluster_cinnabar");
+
 	public static final DeferredItem<thaumcraft.common.items.resources.ItemCrystalEssence> crystalEssence =
 			ITEMS.registerItem("crystal_essence", thaumcraft.common.items.resources.ItemCrystalEssence::new);
 
