@@ -3689,4 +3689,29 @@ public class ThaumcraftGameTests {
 				"scanning the pig should have granted its registered research key");
 		helper.succeed();
 	}
+
+	/** Real (not ad-hoc) scan targets - {@code ScanAspect} (auto-registered once per real aspect straight
+	 * from {@code Aspect}'s own constructor) and {@code ScanEntity} (two real examples registered in
+	 * {@code Thaumcraft#commonSetup}). {@code ScanningManager#scanTheThing} matches ALL registered things,
+	 * not just the first - so scanning a real Zombie should grant its entity-type key ("!ZOMBIE") AND every
+	 * aspect key it's really tagged with in ThaumcraftEntityTags (UNDEAD/MAN/EARTH -> "!exanimis"/"!ordo... */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void scanningARealZombieGrantsItsEntityAndAspectResearch(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		Zombie zombie = spawnFacedBy(helper, player, origin, EntityType.ZOMBIE);
+
+		IPlayerKnowledge knowledge = thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player);
+		helper.assertTrue(!knowledge.isResearchKnown("!ZOMBIE") && !knowledge.isResearchKnown("!" + thaumcraft.api.aspects.Aspect.UNDEAD.getTag()),
+				"the player shouldn't know either research key yet");
+
+		ItemStack thaumometer = new ItemStack(ItemsTC.thaumometer.get());
+		thaumometer.getItem().interactLivingEntity(thaumometer, player, zombie, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+		helper.assertTrue(knowledge.isResearchKnown("!ZOMBIE"),
+				"scanning a real Zombie should grant the real registered ScanEntity(\"!ZOMBIE\") research key");
+		helper.assertTrue(knowledge.isResearchKnown("!" + thaumcraft.api.aspects.Aspect.UNDEAD.getTag()),
+				"scanning a real Zombie should also grant the real ScanAspect research key for its real UNDEAD aspect (from ThaumcraftEntityTags)");
+		helper.succeed();
+	}
 }

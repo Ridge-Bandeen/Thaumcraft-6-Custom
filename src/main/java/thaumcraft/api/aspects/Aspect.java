@@ -50,10 +50,11 @@ public class Aspect {
 		this.image = image;
 		this.blend = blend;
 		aspects.put(tag, this);
-		// NOTE: the old constructor also called ScanningManager.addScannableThing(new ScanAspect(...))
-		// here to auto-register this aspect as a thaumometer-scannable thing. thaumcraft.api.research
-		// hasn't been ported yet; re-wire this once ScanningManager/ScanAspect exist. Until then,
-		// whatever ports the research package should scan Aspect.aspects.values() itself.
+		// Auto-registers this aspect as a thaumometer-scannable thing, same as the original's own
+		// constructor - see thaumcraft.api.research.ScanAspect's own doc comment for what backs the actual
+		// match ("does this thing carry this aspect") now, and why "![tag]" (e.g. "!vitium") is the intended
+		// key format, not an invented one.
+		thaumcraft.api.research.ScanningManager.addScannableThing(new thaumcraft.api.research.ScanAspect("!" + tag, this));
 		if (components!=null) {
 			int h = (components[0].getTag()+components[1].getTag()).hashCode();
 			mixList.put(h, this);

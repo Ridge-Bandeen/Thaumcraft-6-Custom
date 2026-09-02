@@ -141,6 +141,16 @@ public class Thaumcraft {
         thaumcraft.api.research.ScanningManager.addScannableThing(
                 new thaumcraft.api.research.ScanBlock("BOOTSTRAVELLER", BlocksTC.infusionMatrix.get()));
 
+        // ScanAspect (thaumcraft.api.research) registers itself once per real aspect directly from Aspect's
+        // own constructor now - see that class's own doc comment for why, and thaumcraft.api.aspects.Aspect's
+        // constructor for the real call site. ScanEntity has no such auto-registration in the original (it
+        // was always registered per-mob by hand); two real examples here, both real vanilla mobs
+        // ThaumcraftEntityTags already carries real aspect data for.
+        thaumcraft.api.research.ScanningManager.addScannableThing(
+                new thaumcraft.api.research.ScanEntity("!ZOMBIE", net.minecraft.world.entity.EntityType.ZOMBIE));
+        thaumcraft.api.research.ScanningManager.addScannableThing(
+                new thaumcraft.api.research.ScanEntity("!PIG", net.minecraft.world.entity.EntityType.PIG));
+
         // Salis Mundus dust triggers (thaumcraft.api.crafting.IDustTrigger) - see
         // ThaumcraftDustTriggers' own doc comment for what this unlocks and what's still deferred.
         ThaumcraftDustTriggers.register();
