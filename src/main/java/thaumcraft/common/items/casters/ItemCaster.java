@@ -6,6 +6,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -17,6 +18,7 @@ import thaumcraft.api.casters.FocusPackage;
 import thaumcraft.api.casters.ICaster;
 import thaumcraft.api.casters.IFocusElement;
 import thaumcraft.api.casters.IInteractWithCaster;
+import thaumcraft.api.items.IVisDiscountGear;
 import thaumcraft.api.items.ThaumcraftDataComponents;
 import thaumcraft.common.world.aura.AuraHandler;
 
@@ -30,9 +32,10 @@ import thaumcraft.common.world.aura.AuraHandler;
  * block of chunks to draw vis from). Simplified here to always draw from the wand's own chunk only -
  * restore the wider search radii if/when it matters.
  *
- * Also dropped for this pass: architect/block-highlighting (IArchitect), dust triggers, block-picker foci,
- * and the caster-trigger-on-right-clicked-block system - all real features, just not part of the minimal
- * "does casting work" slice.
+ * Also dropped for this pass: architect/block-highlighting (IArchitect), dust triggers, block-picker foci -
+ * all real features, just not part of the minimal "does casting work" slice. The caster-trigger-on-
+ * right-clicked-block system (the original's {@code onItemUseFirst}) IS real now, via {@link #onItemUseFirst}
+ * below - see that method's own doc comment.
  */
 public class ItemCaster extends Item implements ICaster {
 
@@ -40,9 +43,25 @@ public class ItemCaster extends Item implements ICaster {
 		super(properties.stacksTo(1));
 	}
 
+	/**
+	 * Replaces the original's {@code CasterManager#getTotalVisDiscount}. Sums {@link IVisDiscountGear}'s
+	 * discount off worn armor (the original also scanned Baubles slots - not ported here, still deferred
+	 * alongside the rest of the Curios/Baubles equipment-slot work) and the potion-based Vis Exhaust penalty
+	 * the original applied on top - neither of those two pieces is built yet either, so this is armor-only
+	 * for now, capped at the interface's own documented 50% max (the original never actually enforced that
+	 * cap in code despite documenting it - enforced here for real).
+	 */
 	@Override
 	public float getConsumptionModifier(ItemStack is, Player player, boolean crafting) {
-		return 1.0f;
+		int discount = 0;
+		for (EquipmentSlot slot : new EquipmentSlot[] { EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET }) {
+			ItemStack armor = player.getItemBySlot(slot);
+			if (armor.getItem() instanceof IVisDiscountGear discountGear) {
+				discount += discountGear.getVisDiscount(armor, player);
+			}
+		}
+		discount = Math.min(discount, 50);
+		return 1.0f - discount / 100.0f;
 	}
 
 	@Override

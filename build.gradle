@@ -67,6 +67,7 @@ sourceSets {
             include 'thaumcraft/common/tiles/essentia/TileSmelter.java'
             include 'thaumcraft/common/blocks/essentia/BlockSmelter.java'
             include 'thaumcraft/common/items/armor/ItemBootsTraveller.java'
+            include 'thaumcraft/common/items/armor/ItemRobeArmor.java'
             include 'thaumcraft/api/damagesource/ThaumcraftDamageTypes.java'
             include 'thaumcraft/api/entities/IEldritchMob.java'
             include 'thaumcraft/api/entities/ITaintedMob.java'

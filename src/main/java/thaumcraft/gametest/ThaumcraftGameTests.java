@@ -3074,4 +3074,35 @@ public class ThaumcraftGameTests {
 				"the matched recipe should produce the traveller boots");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Robes - the first real IVisDiscountGear consumer. ItemCaster#getConsumptionModifier now checks worn
+	// armor for it for real (that interface was already ported early this session with zero implementers).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void wornRobesDiscountWandVisCost(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new ItemStack(ItemsTC.clothChest.get()));
+		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.LEGS, new ItemStack(ItemsTC.clothLegs.get()));
+		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, new ItemStack(ItemsTC.clothBoots.get()));
+
+		ItemStack wand = new ItemStack(ItemsTC.casterBasic.get());
+		float modifier = ((thaumcraft.common.items.casters.ItemCaster) wand.getItem()).getConsumptionModifier(wand, player, false);
+
+		// 3 (chest) + 3 (legs) + 2 (boots) = 8% total discount -> modifier 0.92
+		helper.assertTrue(Math.abs(modifier - 0.92f) < 0.001f, "wearing the full robe set should discount vis cost by 8%, got modifier " + modifier);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void noArmorMeansNoVisDiscount(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		ItemStack wand = new ItemStack(ItemsTC.casterBasic.get());
+
+		float modifier = ((thaumcraft.common.items.casters.ItemCaster) wand.getItem()).getConsumptionModifier(wand, player, false);
+
+		helper.assertTrue(modifier == 1.0f, "no armor worn should mean no vis discount, got modifier " + modifier);
+		helper.succeed();
+	}
 }

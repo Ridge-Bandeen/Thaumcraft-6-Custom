@@ -401,6 +401,19 @@ public final class ItemsTC {
 			ITEMS.registerItem("traveller_boots", props -> new thaumcraft.common.items.armor.ItemBootsTraveller(
 					props.durability(350).rarity(net.minecraft.world.item.Rarity.RARE)));
 
+	/** See {@link thaumcraft.common.items.armor.ItemRobeArmor}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemRobeArmor> clothChest = ITEMS.registerItem("cloth_chest",
+			props -> new thaumcraft.common.items.armor.ItemRobeArmor(net.minecraft.world.item.ArmorItem.Type.CHESTPLATE,
+					props.durability(net.minecraft.world.item.ArmorItem.Type.CHESTPLATE.getDurability(25))));
+
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemRobeArmor> clothLegs = ITEMS.registerItem("cloth_legs",
+			props -> new thaumcraft.common.items.armor.ItemRobeArmor(net.minecraft.world.item.ArmorItem.Type.LEGGINGS,
+					props.durability(net.minecraft.world.item.ArmorItem.Type.LEGGINGS.getDurability(25))));
+
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemRobeArmor> clothBoots = ITEMS.registerItem("cloth_boots",
+			props -> new thaumcraft.common.items.armor.ItemRobeArmor(net.minecraft.world.item.ArmorItem.Type.BOOTS,
+					props.durability(net.minecraft.world.item.ArmorItem.Type.BOOTS.getDurability(25))));
+
 	/** Diagnostic tool - see {@link thaumcraft.common.items.tools.ItemResonator}'s own doc comment. */
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemResonator> resonator =
 			ITEMS.registerItem("resonator", props -> new thaumcraft.common.items.tools.ItemResonator(props.rarity(net.minecraft.world.item.Rarity.UNCOMMON)));

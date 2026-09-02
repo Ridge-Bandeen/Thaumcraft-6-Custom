@@ -68,6 +68,28 @@ public final class ThaumcraftArmorMaterials {
 					1.0F,
 					0.0F));
 
+	/** Same stats as {@link #TRAVELLER} (the original shared one {@code ARMORMAT_SPECIAL} material between
+	 * Boots of the Traveller and the Robes set) - kept as a separate registry entry purely because a modern
+	 * {@code ArmorMaterial}'s texture {@code Layer} is baked into the material itself, unlike the original's
+	 * per-item {@code getArmorTexture} override, and Robes needs its own distinct texture
+	 * ({@code robes_layer_1/2.png}, not {@code traveller_layer_2.png}). See
+	 * {@link thaumcraft.common.items.armor.ItemRobeArmor}'s own doc comment. */
+	public static final Holder<ArmorMaterial> ROBES = ARMOR_MATERIALS.register("robes",
+			() -> new ArmorMaterial(
+					Util.make(new EnumMap<>(ArmorItem.Type.class), m -> {
+						m.put(ArmorItem.Type.BOOTS, 1);
+						m.put(ArmorItem.Type.LEGGINGS, 2);
+						m.put(ArmorItem.Type.CHESTPLATE, 3);
+						m.put(ArmorItem.Type.HELMET, 1);
+						m.put(ArmorItem.Type.BODY, 3);
+					}),
+					25,
+					SoundEvents.ARMOR_EQUIP_LEATHER,
+					() -> Ingredient.of(ItemsTC.fabric),
+					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "robes"))),
+					1.0F,
+					0.0F));
+
 	private ThaumcraftArmorMaterials() {
 	}
 }
