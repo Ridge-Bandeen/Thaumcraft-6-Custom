@@ -141,6 +141,16 @@ public final class ItemsTC {
 	public static final DeferredItem<ItemPechWand> pechWand =
 			ITEMS.registerItem("pech_wand", ItemPechWand::new);
 
+	/** A collapsed {@link thaumcraft.common.entities.EntityFluxRift}'s degraded fragment - see that item's
+	 * own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.curios.ItemPrimordialPearl> primordialPearl =
+			ITEMS.registerItem("primordial_pearl", thaumcraft.common.items.curios.ItemPrimordialPearl::new);
+
+	/** Another {@code EntityFluxRift} collapse drop - a plain item in the original too (no custom class), no
+	 * real use yet beyond that drop until the deeper Void-tier content it originally fed exists. */
+	public static final DeferredItem<Item> voidSeed =
+			ITEMS.registerSimpleItem("void_seed");
+
 	/** Quicksilver's first real use - a reflective glass pane. Real consumer now: the central item of
 	 * {@code mirror.json}'s infusion recipe - see {@link thaumcraft.common.blocks.devices.BlockMirror}'s own
 	 * doc comment. The original's other consumers (hand mirror/scrying mirror/golem sight devices) still

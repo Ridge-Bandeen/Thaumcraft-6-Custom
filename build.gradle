@@ -263,6 +263,8 @@ sourceSets {
             include 'thaumcraft/common/blocks/devices/BlockMirrorItem.java'
             include 'thaumcraft/common/tiles/devices/TileMirror.java'
 
+            include 'thaumcraft/common/items/curios/ItemPrimordialPearl.java'
+
             include 'thaumcraft/common/entities/projectile/EntityAlumentum.java'
             include 'thaumcraft/common/items/consumables/ItemAlumentum.java'
             include 'thaumcraft/common/entities/projectile/EntityBottleTaint.java'

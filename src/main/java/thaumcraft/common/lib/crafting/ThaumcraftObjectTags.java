@@ -242,6 +242,9 @@ public final class ThaumcraftObjectTags {
 
 		register(thaumcraft.api.blocks.BlocksTC.cinderpearl.get().asItem(), new AspectList().add(Aspect.PLANT, 5).add(Aspect.AURA, 5).add(Aspect.FIRE, 10));
 
+		register(thaumcraft.api.items.ItemsTC.primordialPearl.get(), new AspectList().add(Aspect.AIR, 10).add(Aspect.FIRE, 10)
+				.add(Aspect.WATER, 10).add(Aspect.EARTH, 10).add(Aspect.ORDER, 10).add(Aspect.ENTROPY, 10));
+
 		register(Items.OBSIDIAN, new AspectList().add(Aspect.EARTH, 10).add(Aspect.ENTROPY, 10).add(Aspect.FIRE, 5));
 		register(Items.NETHER_STAR, new AspectList().add(Aspect.MAGIC, 25).add(Aspect.UNDEAD, 15).add(Aspect.DEATH, 10));
 		register(Items.ENCHANTED_BOOK, new AspectList().add(Aspect.MAGIC, 10).add(Aspect.MIND, 5));

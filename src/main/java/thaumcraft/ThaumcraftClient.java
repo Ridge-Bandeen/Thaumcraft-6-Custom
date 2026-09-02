@@ -55,6 +55,11 @@ public class ThaumcraftClient {
         event.enqueueWork(() -> ItemProperties.register(ItemsTC.grappleGun.get(), ResourceLocation.withDefaultNamespace("type"),
                 (stack, level, entity, seed) -> entity instanceof net.minecraft.world.entity.LivingEntity living
                         && thaumcraft.common.entities.projectile.EntityGrapple.hasActive(living) ? 1.0f : 0.0f));
+
+        // primordial_pearl.json's model switches on the same "type" predicate, same technique as
+        // grapple_gun's above - see ItemPrimordialPearl's own doc comment for the 0/1/2 tier meaning.
+        event.enqueueWork(() -> ItemProperties.register(ItemsTC.primordialPearl.get(), ResourceLocation.withDefaultNamespace("type"),
+                (stack, level, entity, seed) -> thaumcraft.common.items.curios.ItemPrimordialPearl.typeProperty(stack)));
     }
 
     @SubscribeEvent

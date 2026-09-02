@@ -3914,4 +3914,36 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(!nearB.isEmpty(), "the transported item should eventually eject out of the linked mirror on the other side");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Flux Rift prerequisites, chunk 1: EntityFluxRift's own collapse-drop items - see
+	// ItemPrimordialPearl's own doc comment for what's ported vs. deliberately cut.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void primordialPearlNameAndModelTierFollowItsDamageValue(GameTestHelper helper) {
+		ItemStack pearl = new ItemStack(thaumcraft.api.items.ItemsTC.primordialPearl.get());
+		helper.assertTrue(pearl.getDamageValue() == 0, "a freshly created primordial pearl should start undamaged");
+		helper.assertTrue(thaumcraft.common.items.curios.ItemPrimordialPearl.typeProperty(pearl) == 0.0f
+				&& pearl.getHoverName().getString().equals("Primordial Pearl"), "a fresh stack should be the 'pearl' tier");
+
+		pearl.setDamageValue(4);
+		helper.assertTrue(thaumcraft.common.items.curios.ItemPrimordialPearl.typeProperty(pearl) == 1.0f
+				&& pearl.getHoverName().getString().equals("Primordial Nodule"), "damage 4 should read as the 'nodule' tier");
+
+		pearl.setDamageValue(7);
+		helper.assertTrue(thaumcraft.common.items.curios.ItemPrimordialPearl.typeProperty(pearl) == 2.0f
+				&& pearl.getHoverName().getString().equals("Primordial Mote"), "damage 7 should read as the 'mote' tier");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void primordialPearlAndVoidSeedHaveRealAspectsAndNames(GameTestHelper helper) {
+		AspectList pearlAspects = thaumcraft.api.aspects.AspectHelper.getObjectAspects(new ItemStack(thaumcraft.api.items.ItemsTC.primordialPearl.get()));
+		helper.assertTrue(pearlAspects != null && pearlAspects.size() > 0, "the primordial pearl should carry real registered aspects for scanning/crafting cost");
+
+		ItemStack voidSeed = new ItemStack(thaumcraft.api.items.ItemsTC.voidSeed.get());
+		helper.assertTrue(voidSeed.getHoverName().getString().equals("Void Seed"), "void_seed should resolve its real lang name, found '" + voidSeed.getHoverName().getString() + "'");
+		helper.succeed();
+	}
 }
