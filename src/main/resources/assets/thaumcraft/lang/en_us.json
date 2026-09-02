@@ -899,6 +899,8 @@
   "wandtable.text3": "Start Crafting",
   "wandtable.text4": "Crystals Required",
   "wandtable.text5": "Total Complexity",
+  "wandtable.name": "Focus name",
+  "wandtable.remove": "Remove Last",
   "button.create.theory": "Create Theory",
   "button.complete.theory": "Complete Theory",
   "button.scrap.theory": "Scrap Theory",
