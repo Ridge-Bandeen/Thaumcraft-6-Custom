@@ -147,6 +147,8 @@ sourceSets {
             include 'thaumcraft/common/lib/network/fx/PacketFXSlash.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXScanSource.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXBlockBamf.java'
+            include 'thaumcraft/common/lib/network/ServerboundSaveFocusGraphPacket.java'
+            include 'thaumcraft/common/lib/network/ServerFocalManipulatorHandlers.java'
             include 'thaumcraft/client/fx/ClientFxHandlers.java'
             include 'thaumcraft/common/entities/EntityFollowingItem.java'
 

@@ -4160,6 +4160,34 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void savingAFocusGraphPacketAppliesItToWhicheverManipulatorTheSenderHasOpen(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(3, 2, 3);
+		BlockPos absPos = helper.absolutePos(pos);
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.focalManipulator.get());
+		thaumcraft.common.tiles.crafting.TileFocalManipulator tile = helper.getBlockEntity(pos);
+		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+		player.openMenu(tile);
+		helper.assertTrue(player.containerMenu instanceof thaumcraft.common.container.FocalManipulatorMenu,
+				"opening the tile via the real MenuProvider path should give the player a real FocalManipulatorMenu");
+
+		thaumcraft.common.tiles.crafting.FocusElementNode root = new thaumcraft.common.tiles.crafting.FocusElementNode();
+		root.id = 0;
+		root.node = (thaumcraft.api.casters.FocusNode) thaumcraft.api.casters.FocusEngine.getElement("thaumcraft.TOUCH");
+		root.children = new int[] { 1 };
+		thaumcraft.common.tiles.crafting.FocusElementNode effect = new thaumcraft.common.tiles.crafting.FocusElementNode();
+		effect.id = 1;
+		effect.node = (thaumcraft.api.casters.FocusNode) thaumcraft.api.casters.FocusEngine.getElement("thaumcraft.FIRE");
+		java.util.List<net.minecraft.nbt.CompoundTag> nodeTags = java.util.List.of(root.serialize(), effect.serialize());
+
+		thaumcraft.common.lib.network.ServerFocalManipulatorHandlers.handleSaveFocusGraph(
+				new thaumcraft.common.lib.network.ServerboundSaveFocusGraphPacket(nodeTags, "My Focus"), player);
+
+		helper.assertTrue(tile.nodes.size() == 2, "the saved graph should be applied to the real tile the player has open, found " + tile.nodes.size() + " nodes");
+		helper.assertTrue(tile.focusName.equals("My Focus"), "the saved focus name should be applied too, found '" + tile.focusName + "'");
+		helper.succeed();
+	}
+
 	private static ItemStack makeAspectCrystal(Aspect aspect) {
 		ItemStack stack = new ItemStack(ItemsTC.crystalEssence.get());
 		((ItemGenericEssentiaContainer) stack.getItem()).setAspects(stack, new AspectList().add(aspect, 1));

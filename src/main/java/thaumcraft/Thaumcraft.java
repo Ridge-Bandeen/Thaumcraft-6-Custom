@@ -222,6 +222,15 @@ public class Thaumcraft {
         registrar.playToClient(thaumcraft.common.lib.network.fx.PacketFXBlockBamf.TYPE,
                 thaumcraft.common.lib.network.fx.PacketFXBlockBamf.STREAM_CODEC,
                 (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.handleBlockBamf(payload));
+
+        // First client->server packet this port has needed - see ServerboundSaveFocusGraphPacket's own
+        // doc comment. enqueueWork defers the actual tile mutation to the main server thread, same
+        // precaution every other payload handler that touches real state should take even though the FX
+        // ones above (purely cosmetic, no state mutation) didn't need to.
+        registrar.playToServer(thaumcraft.common.lib.network.ServerboundSaveFocusGraphPacket.TYPE,
+                thaumcraft.common.lib.network.ServerboundSaveFocusGraphPacket.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> thaumcraft.common.lib.network.ServerFocalManipulatorHandlers
+                        .handleSaveFocusGraph(payload, (net.minecraft.server.level.ServerPlayer) context.player())));
     }
 
     /** First real living {@code Mob} this port has registered ({@link thaumcraft.common.entities.monster.EntityWisp})
