@@ -195,7 +195,19 @@ public class AuraHandler
         if (world != null) world.setDirty();
     }
 
+    /** {@link AuraThread}'s own real spawn trigger for {@code EntityFluxRift} (see that class's own doc
+     * comment) - called from the background aura-simulation thread, so the actual spawn is handed off to
+     * the main server thread via {@link MinecraftServer#execute} rather than touching the level here. */
     static void onHighFlux(ResourceKey<Level> dim, BlockPos pos) {
-        Thaumcraft.LOGGER.debug("Aura flux is critical at {} in {} (flux rift spawning not ported yet)", pos, dim.location());
+        MinecraftServer srv = server;
+        if (srv == null) {
+            return;
+        }
+        srv.execute(() -> {
+            ServerLevel level = srv.getLevel(dim);
+            if (level != null) {
+                thaumcraft.common.entities.EntityFluxRift.createRift(level, pos);
+            }
+        });
     }
 }
