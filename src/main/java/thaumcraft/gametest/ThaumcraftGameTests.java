@@ -4127,6 +4127,39 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focalManipulatorMenusCraftButtonTriggersARealStartCraft(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(3, 2, 3);
+		BlockPos absPos = helper.absolutePos(pos);
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.focalManipulator.get());
+		thaumcraft.common.tiles.crafting.TileFocalManipulator tile = helper.getBlockEntity(pos);
+		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+		thaumcraft.common.container.FocalManipulatorMenu menu = new thaumcraft.common.container.FocalManipulatorMenu(0, player.getInventory(), tile);
+
+		boolean failed = menu.clickMenuButton(player, 0);
+		helper.assertTrue(!failed, "button 0 should refuse to start a craft with no assembled node graph and no focus in the slot");
+
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "BASEAUROMANCY");
+		player.getInventory().add(makeAspectCrystal(thaumcraft.api.aspects.Aspect.AVERSION));
+		player.getInventory().add(makeAspectCrystal(thaumcraft.api.aspects.Aspect.FIRE));
+		tile.setFocus(new ItemStack(ItemsTC.focusBlank1.get()));
+
+		thaumcraft.common.tiles.crafting.FocusElementNode root = new thaumcraft.common.tiles.crafting.FocusElementNode();
+		root.id = 0;
+		root.node = (thaumcraft.api.casters.FocusNode) thaumcraft.api.casters.FocusEngine.getElement("thaumcraft.TOUCH");
+		root.children = new int[] { 1 };
+		tile.nodes.put(0, root);
+		thaumcraft.common.tiles.crafting.FocusElementNode effect = new thaumcraft.common.tiles.crafting.FocusElementNode();
+		effect.id = 1;
+		effect.node = (thaumcraft.api.casters.FocusNode) thaumcraft.api.casters.FocusEngine.getElement("thaumcraft.FIRE");
+		tile.nodes.put(1, effect);
+
+		boolean started = menu.clickMenuButton(player, 0);
+		helper.assertTrue(started, "button 0 should start a real craft once research/vis/crystals/xp are all satisfiable");
+		helper.assertTrue(tile.vis > 0.0f, "a successful button-triggered craft should charge the tile with real vis, same as calling startCraft directly");
+		helper.succeed();
+	}
+
 	private static ItemStack makeAspectCrystal(Aspect aspect) {
 		ItemStack stack = new ItemStack(ItemsTC.crystalEssence.get());
 		((ItemGenericEssentiaContainer) stack.getItem()).setAspects(stack, new AspectList().add(aspect, 1));

@@ -6,6 +6,9 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
@@ -24,10 +27,13 @@ import thaumcraft.common.tiles.crafting.TileFocalManipulator;
  * use of that NeoForge helper in this port.
  *
  * Drops the original's secondary duplicate-hotbar display panel (a pure UI convenience, not core
- * functionality) and the "craft" button wiring (needs the node-graph screen and its own client->server
- * packet, both a later commit in this same arc - see {@code TileFocalManipulator}'s own doc comment) -
- * {@link TileFocalManipulator#startCraft} is reachable directly from server-side code/tests already, just
- * not from this menu's own UI yet.
+ * functionality). The "craft" button is real ({@link #clickMenuButton}, button id 0) - reuses vanilla's
+ * own generic container-button-click packet (the same mechanism an enchanting table's buttons use)
+ * rather than a bespoke payload, since it only ever needs to carry one int. The node-graph itself still
+ * has no UI (needs the canvas screen and its own client->server packet, a later commit in this same
+ * arc - see {@code TileFocalManipulator}'s own doc comment) - {@link TileFocalManipulator#nodes} is only
+ * reachable from server-side code/tests for now, but a future screen's "craft" button can already call
+ * {@code sendButtonClick(0)} against a real, working server-side handler.
  */
 public class FocalManipulatorMenu extends AbstractContainerMenu {
 
@@ -74,6 +80,25 @@ public class FocalManipulatorMenu extends AbstractContainerMenu {
 	@Override
 	public boolean stillValid(Player player) {
 		return stillValid(access, player, thaumcraft.api.blocks.BlocksTC.focalManipulator.get());
+	}
+
+	/** Button id 0 = "start craft" - replaces the original's own {@code enchantItem} hook. Only meaningful
+	 * server-side (the client instance has no real {@link #tile}); a failed attempt plays the same
+	 * vanilla-substitute "no" sound {@code TileFocalManipulator#tick} already uses for the equivalent
+	 * failure case, matching the original's own {@code SoundsTC.craftfail} cue. */
+	@Override
+	public boolean clickMenuButton(Player player, int id) {
+		if (id == 0 && tile != null) {
+			boolean started = tile.startCraft(player);
+			if (!started) {
+				Level level = tile.getLevel();
+				if (level != null) {
+					level.playSound(null, tile.getBlockPos(), SoundEvents.VILLAGER_NO, SoundSource.BLOCKS, 0.33f, 1.0f);
+				}
+			}
+			return started;
+		}
+		return super.clickMenuButton(player, id);
 	}
 
 	@Override
