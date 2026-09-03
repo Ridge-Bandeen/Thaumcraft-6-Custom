@@ -197,6 +197,11 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.golems.ItemSealPlacer> sealLumber =
 			ITEMS.registerItem("seal_lumber", props -> new thaumcraft.common.golems.ItemSealPlacer(props, thaumcraft.common.golems.seals.SealLumber::new));
 
+	/** Sneak-right-click a sealed block face to remove that seal - see {@code ItemGolemBell}'s own doc
+	 * comment for the real, documented cuts (no seal-config or golem-overview GUI yet). */
+	public static final DeferredItem<thaumcraft.common.golems.ItemGolemBell> golemBell =
+			ITEMS.registerItem("golem_bell", thaumcraft.common.golems.ItemGolemBell::new);
+
 	public static final DeferredItem<ItemCurio> curio =
 			ITEMS.registerItem("curio", ItemCurio::new);
 

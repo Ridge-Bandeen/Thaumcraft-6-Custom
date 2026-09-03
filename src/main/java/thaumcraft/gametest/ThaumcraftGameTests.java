@@ -4849,4 +4849,36 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void golemBellRemovesASealOnlyWhenSneaking(GameTestHelper helper) {
+		BlockPos floorPos = BlockPos.ZERO;
+		BlockPos floorAbs = helper.absolutePos(floorPos);
+		helper.setBlock(floorPos, net.minecraft.world.level.block.Blocks.STONE);
+
+		ServerPlayer player = spawnCasterAt(helper, floorAbs.above(2));
+		thaumcraft.api.golems.seals.ISeal seal = new thaumcraft.common.golems.seals.SealGuard();
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), floorAbs, net.minecraft.core.Direction.UP, seal, player),
+				"placing a fresh seal should succeed");
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(floorAbs, net.minecraft.core.Direction.UP);
+
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, new ItemStack(ItemsTC.golemBell.get()));
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(floorAbs), net.minecraft.core.Direction.UP, floorAbs, false);
+
+		net.minecraft.world.item.context.UseOnContext notSneaking = new net.minecraft.world.item.context.UseOnContext(player, hand, hit);
+		player.getItemInHand(hand).getItem().useOn(notSneaking);
+		helper.assertTrue(thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos) != null,
+				"a non-sneak click should not remove the seal");
+
+		player.setShiftKeyDown(true);
+		net.minecraft.world.item.context.UseOnContext sneaking = new net.minecraft.world.item.context.UseOnContext(player, hand, hit);
+		net.minecraft.world.InteractionResult result = player.getItemInHand(hand).getItem().useOn(sneaking);
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.SUCCESS, "a sneak click on a real seal should succeed, got: " + result);
+		helper.assertTrue(thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos) == null,
+				"a sneak click should have removed the seal");
+
+		helper.succeed();
+	}
 }
