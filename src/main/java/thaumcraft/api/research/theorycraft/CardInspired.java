@@ -1,48 +1,50 @@
 package thaumcraft.api.research.theorycraft;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.text.TextComponentTranslation;
-import net.minecraft.util.text.TextFormatting;
 
+import net.minecraft.ChatFormatting;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
 
+/** Replaces the old (1.12.2) {@code CardInspired} - direct translation. Adds a bonus to whichever category
+ * already has the most progress, scaled by that progress. */
 public class CardInspired extends TheorycraftCard {
-	
+
 	String cat = null;
 	int amt;
-	
+
 	@Override
-	public NBTTagCompound serialize() {
-		NBTTagCompound nbt = super.serialize();
-		nbt.setString("cat", cat);
-		nbt.setInteger("amt", amt);
+	public CompoundTag serialize() {
+		CompoundTag nbt = super.serialize();
+		nbt.putString("cat", cat == null ? "" : cat);
+		nbt.putInt("amt", amt);
 		return nbt;
 	}
 
 	@Override
-	public void deserialize(NBTTagCompound nbt) {
+	public void deserialize(CompoundTag nbt) {
 		super.deserialize(nbt);
 		cat = nbt.getString("cat");
-		amt = nbt.getInteger("amt");
+		amt = nbt.getInt("amt");
 	}
-	
+
 	@Override
 	public String getResearchCategory() {
 		return cat;
 	}
-	
+
 	@Override
-	public boolean initialize(EntityPlayer player, ResearchTableData data) { 
-		if (data.categoryTotals.size()<1) return false;
-		int hVal=0;
-		String hKey="";
-		for (String category:data.categoryTotals.keySet()) {
+	public boolean initialize(Player player, ResearchTableData data) {
+		if (data.categoryTotals.isEmpty()) return false;
+		int hVal = 0;
+		String hKey = "";
+		for (String category : data.categoryTotals.keySet()) {
 			int q = data.getTotal(category);
-			if (q>hVal) {
+			if (q > hVal) {
 				hVal = q;
 				hKey = category;
 			}
 		}
-		cat=hKey;
+		cat = hKey;
 		amt = 10 + (hVal / 2);
 		return true;
 	}
@@ -51,22 +53,21 @@ public class CardInspired extends TheorycraftCard {
 	public int getInspirationCost() {
 		return 2;
 	}
-	
+
 	@Override
 	public String getLocalizedName() {
-		return new TextComponentTranslation("card.inspired.name").getUnformattedText();
+		return Component.translatable("card.inspired.name").getString();
 	}
-	
+
 	@Override
 	public String getLocalizedText() {
-		return new TextComponentTranslation("card.inspired.text", amt, TextFormatting.BOLD+new TextComponentTranslation("tc.research_category."+cat).getFormattedText()+TextFormatting.RESET).getUnformattedText();
+		return Component.translatable("card.inspired.text", amt,
+				ChatFormatting.BOLD.toString() + Component.translatable("tc.research_category." + cat).getString() + ChatFormatting.RESET).getString();
 	}
-	
+
 	@Override
-	public boolean activate(EntityPlayer player, ResearchTableData data) {
+	public boolean activate(Player player, ResearchTableData data) {
 		data.addTotal(cat, amt);
 		return true;
 	}
-	
-	
 }

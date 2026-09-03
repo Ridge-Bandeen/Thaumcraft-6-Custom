@@ -4193,4 +4193,84 @@ public class ThaumcraftGameTests {
 		((ItemGenericEssentiaContainer) stack.getItem()).setAspects(stack, new AspectList().add(aspect, 1));
 		return stack;
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Research Table minigame, chunk 1: the theorycraft engine (ResearchTableData) + a first real,
+	// representative slice of the original's ~56 card/aid classes. No block/tile/GUI yet - see
+	// ResearchTableData's own doc comment for the rest of the arc.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void freshPlayerGetsBaselineInspirationAndOnlyBasicsIsAvailable(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		int inspiration = thaumcraft.api.research.theorycraft.ResearchTableData.getAvailableInspiration(player);
+		helper.assertTrue(inspiration == 5, "a fresh player with no research should have exactly the 5 baseline inspiration, found " + inspiration);
+
+		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
+		java.util.ArrayList<String> cats = data.getAvailableCategories(player);
+		helper.assertTrue(cats.size() == 1 && cats.contains("BASICS"), "a fresh player should only have the always-unlocked BASICS category available, found " + cats);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void initializeSpendsOneInspirationPerAidAndDrawCardsPullsFromTheRealRegisteredDeck(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
+		data.initialize(player, java.util.Set.of());
+		helper.assertTrue(data.inspirationStart == 5 && data.inspiration == 5, "no aids chosen should leave inspiration untouched, found start=" + data.inspirationStart + " current=" + data.inspiration);
+
+		// Most of the registered deck needs existing category progress to even initialize (CardPonder/
+		// CardRethink/CardInspired/CardReject/CardBalance all check data.categoryTotals) - a genuinely
+		// fresh session only has CardExperimentation (no initialize override) actually drawable, so seed
+		// some real progress first, matching what a real session looks like a few draws in.
+		data.categoryTotals.put("BASICS", 20);
+		data.drawCards(2, player);
+		helper.assertTrue(data.cardChoices.size() == 2, "drawing 2 with some real category progress already present should produce exactly 2 real card choices, found " + data.cardChoices.size());
+		for (thaumcraft.api.research.theorycraft.ResearchTableData.CardChoice cc : data.cardChoices) {
+			helper.assertTrue(thaumcraft.api.research.theorycraft.TheorycraftManager.cards.containsKey(cc.key), "every drawn card should come from the real registered deck, found key " + cc.key);
+			helper.assertTrue(!cc.card.isAidOnly(), "a normal (non-aid) draw should never surface an aid-only card, found " + cc.key);
+		}
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cardStudyAddsRealProgressToTheOnlyAvailableCategory(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
+
+		thaumcraft.api.research.theorycraft.CardStudy card = new thaumcraft.api.research.theorycraft.CardStudy();
+		card.setSeed(1234L);
+		helper.assertTrue(card.initialize(player, data), "CardStudy should always be able to initialize against a fresh player's BASICS-only category list");
+		helper.assertTrue(card.getResearchCategory().equals("BASICS"), "with only BASICS available, CardStudy should always target it, found " + card.getResearchCategory());
+
+		helper.assertTrue(card.activate(player, data), "CardStudy#activate should succeed");
+		int total = data.getTotal("BASICS");
+		helper.assertTrue(total >= 15 && total <= 25, "CardStudy should add 15-25 real progress to BASICS, found " + total);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cardAnalyzeFindsARealCandidateOnceObservationKnowledgeExists(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
+
+		thaumcraft.api.research.theorycraft.CardAnalyze card = new thaumcraft.api.research.theorycraft.CardAnalyze();
+		card.setSeed(1L);
+		helper.assertTrue(!card.initialize(player, data), "with zero OBSERVATION knowledge anywhere, CardAnalyze should have no real candidate category");
+
+		// IPlayerKnowledge#getKnowledge divides the raw stored amount by EnumKnowledgeType#getProgression()
+		// (16 for OBSERVATION) and floors it - a real amount needs to clear one full progression step to
+		// register as ">= 1", not just be non-zero.
+		thaumcraft.api.research.ResearchCategory alchemy = thaumcraft.api.research.ResearchCategories.getResearchCategory("ALCHEMY");
+		thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player)
+				.addKnowledge(thaumcraft.api.capabilities.IPlayerKnowledge.EnumKnowledgeType.OBSERVATION, alchemy, 20);
+
+		helper.assertTrue(card.initialize(player, data), "once a category has real OBSERVATION knowledge, CardAnalyze should find it as a candidate - this is the real 'always checked null' bug fixed while porting");
+		helper.assertTrue(card.getResearchCategory().equals("ALCHEMY"), "the only real candidate should be ALCHEMY, found " + card.getResearchCategory());
+
+		helper.assertTrue(card.activate(player, data), "CardAnalyze#activate should succeed once the category has real observation knowledge");
+		helper.assertTrue(data.getTotal("ALCHEMY") >= 25 && data.getTotal("BASICS") == 5,
+				"a successful analyze should add 25-50 progress to the analyzed category and 5 to BASICS, found ALCHEMY=" + data.getTotal("ALCHEMY") + " BASICS=" + data.getTotal("BASICS"));
+		helper.succeed();
+	}
 }

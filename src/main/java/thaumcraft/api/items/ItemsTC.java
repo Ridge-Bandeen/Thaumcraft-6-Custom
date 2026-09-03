@@ -50,6 +50,10 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemThaumometer> thaumometer =
 			ITEMS.registerItem("thaumometer", thaumcraft.common.items.tools.ItemThaumometer::new);
 
+	/** The Research Table's "ink" slot item - see {@code TileResearchTable}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemScribingTools> scribingTools =
+			ITEMS.registerItem("scribing_tools", thaumcraft.common.items.tools.ItemScribingTools::new);
+
 	public static final DeferredItem<ItemCaster> casterBasic =
 			ITEMS.registerItem("caster_basic", ItemCaster::new);
 

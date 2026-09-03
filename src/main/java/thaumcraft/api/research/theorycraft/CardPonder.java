@@ -1,50 +1,50 @@
 package thaumcraft.api.research.theorycraft;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.util.text.TextComponentTranslation;
 
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
 
+/** Replaces the old (1.12.2) {@code CardPonder} - direct translation. Spreads 25 points across every
+ * currently-unblocked category and grants a bonus draw. */
 public class CardPonder extends TheorycraftCard {
 
 	@Override
 	public int getInspirationCost() {
 		return 2;
 	}
-		
+
 	@Override
 	public String getLocalizedName() {
-		return new TextComponentTranslation("card.ponder.name").getUnformattedText();
-	}
-	
-	@Override
-	public String getLocalizedText() {
-		return new TextComponentTranslation("card.ponder.text").getUnformattedText();
-	}
-	
-	@Override
-	public boolean initialize(EntityPlayer player, ResearchTableData data) {
-		return data.categoriesBlocked.size()<data.categoryTotals.size();
+		return Component.translatable("card.ponder.name").getString();
 	}
 
 	@Override
-	public boolean activate(EntityPlayer player, ResearchTableData data) {
+	public String getLocalizedText() {
+		return Component.translatable("card.ponder.text").getString();
+	}
+
+	@Override
+	public boolean initialize(Player player, ResearchTableData data) {
+		return data.categoriesBlocked.size() < data.categoryTotals.size();
+	}
+
+	@Override
+	public boolean activate(Player player, ResearchTableData data) {
 		int a = 25;
-		int tries=0;
-		while (a>0 && tries<1000) {
+		int tries = 0;
+		while (a > 0 && tries < 1000) {
 			tries++;
-			for (String category:data.categoryTotals.keySet()) {
+			for (String category : data.categoryTotals.keySet()) {
 				if (data.categoriesBlocked.contains(category)) {
-					if (data.categoryTotals.size()<=1) return false;
+					if (data.categoryTotals.size() <= 1) return false;
 					continue;
 				}
 				data.addTotal(category, 1);
 				a--;
-				if (a<=0) break;
+				if (a <= 0) break;
 			}
 		}
 		data.addTotal("BASICS", 5);
 		data.bonusDraws++;
-		return a!=20;
+		return a != 20;
 	}
-	
-	
 }

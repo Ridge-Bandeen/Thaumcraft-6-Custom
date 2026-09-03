@@ -171,6 +171,20 @@ public class Thaumcraft {
         FocusEngine.registerElement(FocusEffectAir.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/air.png"), 16777086);
         FocusEngine.registerElement(FocusMediumMine.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/mine.png"), 8760709);
         FocusEngine.registerElement(FocusMediumCloud.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/cloud.png"), 10071429);
+
+        // Theorycraft card registry (thaumcraft.api.research.theorycraft.TheorycraftManager) - see
+        // ResearchTableData's own doc comment. A first real, representative slice of the original's ~56
+        // card/aid classes (a much larger card deck is a real, separately-scoped follow-up, not attempted
+        // in one pass - see the port-tracking memory notes).
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardStudy.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardAnalyze.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardPonder.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardReject.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardRethink.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardInspired.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardNotation.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardExperimentation.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardBalance.class);
     }
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {

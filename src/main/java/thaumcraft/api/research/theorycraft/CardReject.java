@@ -1,65 +1,66 @@
 package thaumcraft.api.research.theorycraft;
+
 import java.util.ArrayList;
 import java.util.Random;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.text.TextComponentTranslation;
-import net.minecraft.util.text.TextFormatting;
 
+import net.minecraft.ChatFormatting;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
 
-
+/** Replaces the old (1.12.2) {@code CardReject} - direct translation. Blocks a currently-active category
+ * from further progress/draws (its existing progress is kept). */
 public class CardReject extends TheorycraftCard {
-	
+
 	private String cat1;
-	
+
 	@Override
-	public NBTTagCompound serialize() {
-		NBTTagCompound nbt = super.serialize();
-		nbt.setString("cat", cat1);
+	public CompoundTag serialize() {
+		CompoundTag nbt = super.serialize();
+		nbt.putString("cat", cat1 == null ? "" : cat1);
 		return nbt;
 	}
 
 	@Override
-	public void deserialize(NBTTagCompound nbt) {
+	public void deserialize(CompoundTag nbt) {
 		super.deserialize(nbt);
 		cat1 = nbt.getString("cat");
 	}
-	
+
 	@Override
 	public int getInspirationCost() {
 		return 0;
 	}
-		
+
 	@Override
 	public String getLocalizedName() {
-		return new TextComponentTranslation("card.reject.name", TextFormatting.DARK_BLUE+""+TextFormatting.BOLD+new TextComponentTranslation("tc.research_category."+cat1).getUnformattedText()+TextFormatting.RESET+""+TextFormatting.BOLD).getUnformattedText();
+		return Component.translatable("card.reject.name",
+				ChatFormatting.DARK_BLUE.toString() + ChatFormatting.BOLD + Component.translatable("tc.research_category." + cat1).getString() + ChatFormatting.RESET + ChatFormatting.BOLD).getString();
 	}
-	
+
 	@Override
 	public String getLocalizedText() {
-		return new TextComponentTranslation("card.reject.text", TextFormatting.BOLD+new TextComponentTranslation("tc.research_category."+cat1).getFormattedText()+TextFormatting.RESET).getUnformattedText();
+		return Component.translatable("card.reject.text",
+				ChatFormatting.BOLD.toString() + Component.translatable("tc.research_category." + cat1).getString() + ChatFormatting.RESET).getString();
 	}
 
 	@Override
-	public boolean initialize(EntityPlayer player, ResearchTableData data) {
+	public boolean initialize(Player player, ResearchTableData data) {
 		ArrayList<String> s = new ArrayList<>();
-		for (String c:data.categoryTotals.keySet()) {
-			if (!data.categoriesBlocked.contains(c))
-				s.add(c);
+		for (String c : data.categoryTotals.keySet()) {
+			if (!data.categoriesBlocked.contains(c)) s.add(c);
 		}
-		if (s.size()<1) return false;
+		if (s.isEmpty()) return false;
 		Random r = new Random(getSeed());
 		cat1 = s.get(r.nextInt(s.size()));
-		return cat1!=null;
+		return cat1 != null;
 	}
 
 	@Override
-	public boolean activate(EntityPlayer player, ResearchTableData data) {		
-		if (cat1==null) return false;
+	public boolean activate(Player player, ResearchTableData data) {
+		if (cat1 == null) return false;
 		data.addTotal("BASICS", 5);
-		data.categoriesBlocked.add(cat1);				
+		data.categoriesBlocked.add(cat1);
 		return true;
 	}
-	
-	
 }
