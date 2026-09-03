@@ -14,6 +14,7 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelManager;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.DyeColor;
 import thaumcraft.api.golems.IGolemProperties;
 import thaumcraft.api.golems.parts.GolemMaterial;
 import thaumcraft.api.golems.parts.PartModel;
@@ -46,9 +47,17 @@ import thaumcraft.common.golems.EntityThaumcraftGolem;
  * {@code limbSwing}/{@code limbSwingAmount} fields. HEAD/BODY-attach parts, and the base trunk silhouette
  * itself, stay static.
  *
- * <p>Real, documented cuts for this pass: no head look pitch/yaw, no held-item rendering, no golem-bell
- * dye-color "flag" tint, no idle sway/attack wiggle, and no wheeled/flyer alternate arm motion or
- * holding-item arm pose - all real, separately-scoped follow-up work. The original also drew its base
+ * <p>The golem-bell dye-color "flag" is a real, separate {@code golem_base_flag.obj} model (the same two
+ * faces {@code golem_base.obj} used to include unconditionally in its "flag" group - split out because
+ * NeoForge's JSON {@code neoforge:obj} loader has no per-OBJ-group visibility/tint control, so a face this
+ * class wants to tint independently needs its own standalone model), drawn only when {@link
+ * EntityThaumcraftGolem#getGolemColor()} is set, tinted via this class's own {@code drawAt} tint overload -
+ * the same {@code (r,g,b)} multiply {@link ModelBlockRenderer#renderModel} already takes, no vanilla tint-
+ * index machinery needed since there's exactly one solid color per draw.
+ *
+ * <p>Real, documented cuts for this pass: no head look pitch/yaw, no held-item rendering, no idle
+ * sway/attack wiggle, and no wheeled/flyer alternate arm motion or holding-item arm pose - all real,
+ * separately-scoped follow-up work. The original also drew its base
  * model's own "arm" sub-group a second and third time (once per side, swung the same way) regardless of
  * whether an arm part was assembled at all, as a stub limb under any arm overlay; this port's base trunk is
  * one single merged model (see chunk 15's own note above) with no isolated "arm" sub-group to redraw, so
@@ -92,6 +101,20 @@ public class RenderThaumcraftGolem extends EntityRenderer<EntityThaumcraftGolem>
 			// golem_base.obj's own origin sits at the waist, not the feet - matches the original's own
 			// "translate up 0.5 before drawing chest/waist/etc" convention.
 			drawAt(baseModel, poseStack, vertexConsumer, packedLight, 0.0, 0.5, 0.0, 0.0f, 0.0f);
+		}
+
+		if (entity.getGolemColor() > 0) {
+			BakedModel flagModel = modelManager.getModel(flagModelLocation(material));
+			if (flagModel != modelManager.getMissingModel()) {
+				// Inverts EntityThaumcraftGolem#mobInteract's own "16 - dye.getDyeColor().getId()" storage
+				// mapping back into a real DyeColor.
+				DyeColor dye = DyeColor.byId(16 - entity.getGolemColor());
+				int packedColor = dye.getTextureDiffuseColor();
+				float r = ((packedColor >> 16) & 0xFF) / 255.0f;
+				float g = ((packedColor >> 8) & 0xFF) / 255.0f;
+				float b = (packedColor & 0xFF) / 255.0f;
+				drawAt(flagModel, poseStack, vertexConsumer, packedLight, 0.0, 0.5, 0.0, 0.0f, 0.0f, r, g, b);
+			}
 		}
 
 		// Modern equivalent of the original's raw limbSwing/limbSwingAmount fields - already interpolated
@@ -151,6 +174,12 @@ public class RenderThaumcraftGolem extends EntityRenderer<EntityThaumcraftGolem>
 
 	private void drawAt(BakedModel model, PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight,
 			double x, double y, double z, float swingXRotationDegrees, float extraYRotationDegrees) {
+		drawAt(model, poseStack, vertexConsumer, packedLight, x, y, z, swingXRotationDegrees, extraYRotationDegrees, 1.0f, 1.0f, 1.0f);
+	}
+
+	/** Tinted overload - used only by the dye-color flag draw above; every other part draws untinted (white). */
+	private void drawAt(BakedModel model, PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight,
+			double x, double y, double z, float swingXRotationDegrees, float extraYRotationDegrees, float r, float g, float b) {
 		poseStack.pushPose();
 		poseStack.translate(x, y, z);
 		// X-axis swing first, then the per-side Y mirror - matches the original's own rotate-call order.
@@ -160,12 +189,16 @@ public class RenderThaumcraftGolem extends EntityRenderer<EntityThaumcraftGolem>
 		if (extraYRotationDegrees != 0.0f) {
 			poseStack.mulPose(Axis.YP.rotationDegrees(extraYRotationDegrees));
 		}
-		modelRenderer.renderModel(poseStack.last(), vertexConsumer, null, model, 1.0f, 1.0f, 1.0f, packedLight, OverlayTexture.NO_OVERLAY);
+		modelRenderer.renderModel(poseStack.last(), vertexConsumer, null, model, r, g, b, packedLight, OverlayTexture.NO_OVERLAY);
 		poseStack.popPose();
 	}
 
 	private static ModelResourceLocation baseModelLocation(GolemMaterial material) {
 		return golemModelLocation("golem/base_" + material.key.toLowerCase());
+	}
+
+	private static ModelResourceLocation flagModelLocation(GolemMaterial material) {
+		return golemModelLocation("golem/flag_" + material.key.toLowerCase());
 	}
 
 	/**

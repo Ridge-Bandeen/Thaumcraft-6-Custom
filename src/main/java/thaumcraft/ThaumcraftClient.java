@@ -102,6 +102,10 @@ public class ThaumcraftClient {
         for (GolemMaterial material : GolemMaterial.getMaterials()) {
             if (material == null) continue;
             event.register(golemModelLocation("golem/base_" + material.key.toLowerCase()));
+            // The dye-color "flag" - a tiny separate model (golem_base_flag.obj) split out of the trunk
+            // so it can be tinted independently via RenderThaumcraftGolem's own (r,g,b) draw params; see
+            // that class's own doc comment.
+            event.register(golemModelLocation("golem/flag_" + material.key.toLowerCase()));
         }
         for (GolemHead head : GolemHead.getHeads()) {
             registerGolemPart(event, "head", head == null ? null : head.key, head == null ? null : head.model);
