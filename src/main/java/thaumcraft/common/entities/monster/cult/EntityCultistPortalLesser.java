@@ -1,232 +1,184 @@
 package thaumcraft.common.entities.monster.cult;
-import java.util.List;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.IEntityLivingData;
-import net.minecraft.entity.MoverType;
-import net.minecraft.entity.SharedMonsterAttributes;
-import net.minecraft.entity.monster.EntityMob;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.network.datasync.DataParameter;
-import net.minecraft.network.datasync.DataSerializers;
-import net.minecraft.network.datasync.EntityDataManager;
-import net.minecraft.potion.PotionEffect;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.SoundEvent;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.EnumDifficulty;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.common.lib.SoundsTC;
-import thaumcraft.common.lib.utils.EntityUtils;
 
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.Difficulty;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
-public class EntityCultistPortalLesser extends EntityMob
-{
-    private static DataParameter<Boolean> ACTIVE;
-    int stagecounter;
-    public int activeCounter;
-    public int pulse;
-    
-    public EntityCultistPortalLesser(World par1World) {
-        super(par1World);
-        stagecounter = 100;
-        activeCounter = 0;
-        pulse = 0;
-        isImmuneToFire = true;
-        experienceValue = 10;
-        setSize(1.5f, 3.0f);
-    }
-    
-    public int getTotalArmorValue() {
-        return 4;
-    }
-    
-    protected void entityInit() {
-        super.entityInit();
-        getDataManager().register(EntityCultistPortalLesser.ACTIVE, false);
-    }
-    
-    public boolean isActive() {
-        return (boolean) getDataManager().get((DataParameter)EntityCultistPortalLesser.ACTIVE);
-    }
-    
-    public void setActive(boolean active) {
-        getDataManager().set(EntityCultistPortalLesser.ACTIVE, active);
-    }
-    
-    protected void applyEntityAttributes() {
-        super.applyEntityAttributes();
-        getEntityAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(100.0);
-        getEntityAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).setBaseValue(0.0);
-        getEntityAttribute(SharedMonsterAttributes.KNOCKBACK_RESISTANCE).setBaseValue(1.0);
-    }
-    
-    protected boolean canDespawn() {
-        return false;
-    }
-    
-    public void writeEntityToNBT(NBTTagCompound nbt) {
-        super.writeEntityToNBT(nbt);
-        nbt.setBoolean("active", isActive());
-    }
-    
-    public void readEntityFromNBT(NBTTagCompound nbt) {
-        super.readEntityFromNBT(nbt);
-        setActive(nbt.getBoolean("active"));
-    }
-    
-    public boolean canBeCollidedWith() {
-        return true;
-    }
-    
-    public boolean canBePushed() {
-        return false;
-    }
-    
-    public void move(MoverType mt, double par1, double par3, double par5) {
-    }
-    
-    public void onLivingUpdate() {
-    }
-    
-    public boolean isInRangeToRenderDist(double par1) {
-        return par1 < 4096.0;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public int getBrightnessForRender() {
-        return 15728880;
-    }
-    
-    public float getBrightness() {
-        return 1.0f;
-    }
-    
-    public void onUpdate() {
-        super.onUpdate();
-        if (isActive()) {
-            ++activeCounter;
-        }
-        if (!world.isRemote) {
-            if (!isActive()) {
-                if (ticksExisted % 10 == 0) {
-                    EntityPlayer p = world.getClosestPlayerToEntity(this, 32.0);
-                    if (p != null) {
-                        setActive(true);
-                        playSound(SoundsTC.craftstart, 1.0f, 1.0f);
-                    }
-                }
-            }
-            else if (stagecounter-- <= 0) {
-                EntityPlayer p = world.getClosestPlayerToEntity(this, 32.0);
-                if (p != null && canEntityBeSeen(p)) {
-                    int count = (world.getDifficulty() == EnumDifficulty.HARD) ? 6 : ((world.getDifficulty() == EnumDifficulty.NORMAL) ? 4 : 2);
-                    try {
-                        List l = world.getEntitiesWithinAABB(EntityCultist.class, getEntityBoundingBox().grow(32.0, 32.0, 32.0));
-                        if (l != null) {
-                            count -= l.size();
-                        }
-                    }
-                    catch (Exception ex) {}
-                    if (count > 0) {
-                        world.setEntityState(this, (byte)16);
-                        spawnMinions();
-                    }
-                }
-                stagecounter = 50 + rand.nextInt(50);
-            }
-        }
-        if (pulse > 0) {
-            --pulse;
-        }
-    }
-    
-    int getTiming() {
-        List<Entity> l = EntityUtils.getEntitiesInRange(world, posX, posY, posZ, this, EntityCultist.class, 32.0);
-        return l.size() * 20;
-    }
-    
-    void spawnMinions() {
-        EntityCultist cultist = null;
-        if (rand.nextFloat() > 0.33) {
-            cultist = new EntityCultistKnight(world);
-        }
-        else {
-            cultist = new EntityCultistCleric(world);
-        }
-        cultist.setPosition(posX + rand.nextFloat() - rand.nextFloat(), posY + 0.25, posZ + rand.nextFloat() - rand.nextFloat());
-        cultist.onInitialSpawn(world.getDifficultyForLocation(new BlockPos(cultist.getPosition())), null);
-        world.spawnEntity(cultist);
-        cultist.spawnExplosionParticle();
-        cultist.playSound(SoundsTC.wandfail, 1.0f, 1.0f);
-        attackEntityFrom(DamageSource.OUT_OF_WORLD, (float)(5 + rand.nextInt(5)));
-    }
-    
-    protected boolean isValidLightLevel() {
-        return true;
-    }
-    
-    public void onCollideWithPlayer(EntityPlayer p) {
-        if (getDistanceSq(p) < 3.0 && p.attackEntityFrom(DamageSource.causeIndirectMagicDamage(this, this), 4.0f)) {
-            playSound(SoundsTC.zap, 1.0f, (rand.nextFloat() - rand.nextFloat()) * 0.1f + 1.0f);
-        }
-    }
-    
-    protected float getSoundVolume() {
-        return 0.75f;
-    }
-    
-    public int getTalkInterval() {
-        return 540;
-    }
-    
-    protected SoundEvent getAmbientSound() {
-        return SoundsTC.monolith;
-    }
-    
-    protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
-        return SoundsTC.zap;
-    }
-    
-    protected SoundEvent getDeathSound() {
-        return SoundsTC.shock;
-    }
-    
-    protected Item getDropItem() {
-        return Item.getItemById(0);
-    }
-    
-    protected void dropFewItems(boolean flag, int fortune) {
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void handleStatusUpdate(byte msg) {
-        if (msg == 16) {
-            pulse = 10;
-        }
-        else {
-            super.handleStatusUpdate(msg);
-        }
-    }
-    
-    public void addPotionEffect(PotionEffect p_70690_1_) {
-    }
-    
-    public void fall(float distance, float damageMultiplier) {
-    }
-    
-    public void onDeath(DamageSource p_70645_1_) {
-        if (!world.isRemote) {
-            world.newExplosion(this, posX, posY, posZ, 1.5f, false, false);
-        }
-        super.onDeath(p_70645_1_);
-    }
-    
-    static {
-        ACTIVE = EntityDataManager.createKey(EntityCultistPortalLesser.class, DataSerializers.BOOLEAN);
-    }
+/**
+ * Replaces the old (1.12.2) {@code EntityCultistPortalLesser} - an immobile "monolith" that periodically
+ * conjures real {@link EntityCultistKnight}/{@link EntityCultistCleric} minions near itself once a player
+ * gets close. Real {@link Monster} subclass (the original was {@code EntityMob} too), real {@link
+ * #move}/AI no-ops (never moves, never runs vanilla AI - matches the original's own {@code move}/{@code
+ * onLivingUpdate} overrides doing nothing).
+ *
+ * Real activation (a player within 32 blocks starts it), real periodic spawn cycle (every 50-99 ticks once
+ * active, matching the original's own {@code stagecounter} range) that conjures a real cultist (67% Knight,
+ * 33% Cleric, matching the original's own roll) capped at a real per-difficulty count of nearby {@link
+ * EntityCultist}s (2/4/6 on easy/normal/hard, reduced by however many already exist within 32 blocks -
+ * matches the original exactly), each spawn costing the portal 5-9 real self-damage. Real touch damage (4
+ * indirect-magic damage to any player within 3 blocks, matching the original's own {@code
+ * onCollideWithPlayer}), real potion immunity, real death explosion (radius 1.5, no block/mob damage,
+ * matching the original's own {@code (1.5f, false, false)} call).
+ *
+ * Real, documented cuts: no "always full-bright" self-illumination - the original's own {@code
+ * getBrightnessForRender}/{@code getBrightness} overrides don't have a real modern equivalent (entities
+ * don't carry their own light-emission override point any more; lighting is purely block-based now), a
+ * real, minor cosmetic loss. Vanilla sound substitutions throughout (the original's own bundled {@code
+ * SoundsTC.craftstart}/{@code monolith}/{@code zap}/{@code shock} aren't registered in this port yet, same
+ * real reason {@code EntityEldritchCrab}/{@code EntityInhabitedZombie} already document). The original's
+ * own {@code getTiming()} method is dead code in the original too (declared, never called anywhere in that
+ * same file) - not ported.
+ */
+public class EntityCultistPortalLesser extends Monster {
+
+	private static final EntityDataAccessor<Boolean> DATA_ACTIVE =
+			SynchedEntityData.defineId(EntityCultistPortalLesser.class, EntityDataSerializers.BOOLEAN);
+
+	private int stageCounter = 100;
+
+	public EntityCultistPortalLesser(EntityType<? extends EntityCultistPortalLesser> type, Level level) {
+		super(type, level);
+	}
+
+	public static AttributeSupplier.Builder createAttributes() {
+		return Monster.createMonsterAttributes()
+				.add(Attributes.MAX_HEALTH, 100.0)
+				.add(Attributes.ATTACK_DAMAGE, 0.0)
+				.add(Attributes.KNOCKBACK_RESISTANCE, 1.0);
+	}
+
+	@Override
+	protected void defineSynchedData(SynchedEntityData.Builder builder) {
+		super.defineSynchedData(builder);
+		builder.define(DATA_ACTIVE, false);
+	}
+
+	public boolean isActive() {
+		return entityData.get(DATA_ACTIVE);
+	}
+
+	public void setActive(boolean active) {
+		entityData.set(DATA_ACTIVE, active);
+	}
+
+	@Override
+	public int getArmorValue() {
+		return 4;
+	}
+
+	@Override
+	public boolean fireImmune() {
+		return true;
+	}
+
+	@Override
+	public boolean removeWhenFarAway(double distanceSquared) {
+		return false;
+	}
+
+	@Override
+	public boolean isPickable() {
+		return true;
+	}
+
+	@Override
+	public boolean isPushable() {
+		return false;
+	}
+
+	@Override
+	public void move(MoverType type, Vec3 movement) {
+		// Immobile - matches the original's own no-op override exactly.
+	}
+
+	@Override
+	public boolean canBeAffected(MobEffectInstance effect) {
+		return false;
+	}
+
+	@Override
+	public void aiStep() {
+		// No super.aiStep() call - matches the original's own empty onLivingUpdate() override exactly (no
+		// vanilla AI/goal-selector ticking for an immobile monolith).
+		if (level().isClientSide) {
+			return;
+		}
+		if (!isActive()) {
+			if (tickCount % 10 == 0 && level().getNearestPlayer(this, 32.0) != null) {
+				setActive(true);
+				playSound(SoundEvents.BEACON_ACTIVATE, 1.0f, 1.0f);
+			}
+		}
+		else if (stageCounter-- <= 0) {
+			Player nearest = level().getNearestPlayer(this, 32.0);
+			if (nearest != null && hasLineOfSight(nearest)) {
+				Difficulty diff = level().getCurrentDifficultyAt(blockPosition()).getDifficulty();
+				int count = diff == Difficulty.HARD ? 6 : diff == Difficulty.NORMAL ? 4 : 2;
+				count -= level().getEntitiesOfClass(EntityCultist.class, getBoundingBox().inflate(32.0)).size();
+				if (count > 0) {
+					spawnMinion();
+				}
+			}
+			stageCounter = 50 + random.nextInt(50);
+		}
+	}
+
+	private void spawnMinion() {
+		EntityCultist cultist = random.nextFloat() > 0.33f
+				? thaumcraft.common.registry.ThaumcraftEntities.CULTIST_KNIGHT.get().create(level())
+				: thaumcraft.common.registry.ThaumcraftEntities.CULTIST_CLERIC.get().create(level());
+		if (cultist == null || !(level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) {
+			return;
+		}
+		cultist.moveTo(getX() + random.nextFloat() - random.nextFloat(), getY() + 0.25, getZ() + random.nextFloat() - random.nextFloat(),
+				0.0f, 0.0f);
+		cultist.finalizeSpawn(serverLevel, level().getCurrentDifficultyAt(cultist.blockPosition()),
+				net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, null);
+		serverLevel.addFreshEntity(cultist);
+		cultist.playSound(SoundEvents.EVOKER_CAST_SPELL, 1.0f, 1.0f);
+		hurt(damageSources().magic(), 5 + random.nextInt(5));
+	}
+
+	@Override
+	public void playerTouch(Player player) {
+		if (distanceToSqr(player) < 3.0 && player.hurt(damageSources().indirectMagic(this, this), 4.0f)) {
+			playSound(SoundEvents.LIGHTNING_BOLT_THUNDER, 1.0f, (random.nextFloat() - random.nextFloat()) * 0.1f + 1.0f);
+		}
+	}
+
+	@Override
+	public void die(DamageSource source) {
+		if (level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+			serverLevel.explode(this, getX(), getY(), getZ(), 1.5f, Level.ExplosionInteraction.NONE);
+		}
+		super.die(source);
+	}
+
+	@Override
+	protected SoundEvent getAmbientSound() {
+		return SoundEvents.BEACON_AMBIENT;
+	}
+
+	@Override
+	protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
+		return SoundEvents.LIGHTNING_BOLT_THUNDER;
+	}
+
+	@Override
+	protected SoundEvent getDeathSound() {
+		return SoundEvents.LIGHTNING_BOLT_IMPACT;
+	}
 }

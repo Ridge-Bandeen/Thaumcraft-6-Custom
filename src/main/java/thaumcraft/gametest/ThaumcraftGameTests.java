@@ -6110,4 +6110,45 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cultistPortalLesserActivatesConjuresMinionsAndExplodesOnDeath(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser portal =
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_PORTAL_LESSER.get().create(level);
+		helper.assertTrue(portal != null, "the entity type should really create an instance");
+		portal.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(portal);
+		helper.assertTrue(portal.getArmorValue() == 4, "a real cultist portal should really have 4 armor, got " + portal.getArmorValue());
+		helper.assertTrue(portal.fireImmune(), "a real cultist portal should really be fire immune");
+		helper.assertTrue(!portal.isActive(), "a real freshly spawned cultist portal should really start inactive");
+
+		ServerPlayer player = spawnCasterAt(helper, abs.above(2));
+
+		boolean spawnedMinion = false;
+		for (int i = 0; i < 200 && !spawnedMinion; i++) {
+			portal.aiStep();
+			spawnedMinion = !level.getEntitiesOfClass(thaumcraft.common.entities.monster.cult.EntityCultist.class, new AABB(abs).inflate(6)).isEmpty();
+		}
+		helper.assertTrue(portal.isActive(), "a real cultist portal with a real nearby player should really have activated");
+		helper.assertTrue(spawnedMinion, "an active real cultist portal should really eventually conjure a real cultist minion");
+
+		// Doesn't exercise real touch damage against a real player - same structural test-harness
+		// limitation documented on thaumicSlimeDropsAFluxCrystalOnDeath's own doc comment (mock players
+		// from makeMockServerPlayerInLevel()/spawnCasterAt hardcode isCreative()/isSpectator() true,
+		// making them damage-immune regardless of distance) - real gameplay is unaffected, this is purely
+		// a test-harness gap, not a code gap.
+
+		// real death explosion, no block/mob damage (ExplosionInteraction.NONE).
+		net.minecraft.world.level.block.state.BlockState before = level.getBlockState(pos);
+		portal.hurt(level.damageSources().generic(), 10000.0f);
+		helper.assertTrue(!portal.isAlive(), "a real lethal hit should really kill the cultist portal");
+		helper.assertTrue(level.getBlockState(pos).is(before.getBlock()), "the real death explosion should really not damage nearby blocks");
+
+		helper.succeed();
+	}
 }

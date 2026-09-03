@@ -225,6 +225,18 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("inhabited_zombie"));
 
+	/** See {@code EntityCultistPortalLesser}'s own doc comment. {@code sized(1.5f, 3.0f)} matches the
+	 * original's own constructor-time {@code setSize(1.5f, 3.0f)} exactly. No renderer yet - the original's
+	 * own version is a fully custom raw-immediate-mode-GL animated billboard (no model at all), which
+	 * doesn't translate to the modern {@code VertexConsumer}/{@code PoseStack} pipeline directly - same
+	 * real "no renderer yet" gap {@link #FIRE_BAT}/{@link #SPELL_BAT}/{@link #ELDRITCH_CRAB} already carry,
+	 * not a missing-model oversight. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser>> CULTIST_PORTAL_LESSER = ENTITY_TYPES.register("cultist_portal_lesser",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser>of(thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser::new, MobCategory.MONSTER)
+					.sized(1.5f, 3.0f)
+					.clientTrackingRange(64)
+					.build("cultist_portal_lesser"));
+
 	private ThaumcraftEntities() {
 	}
 }
