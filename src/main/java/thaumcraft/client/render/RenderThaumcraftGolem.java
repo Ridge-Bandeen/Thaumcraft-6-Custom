@@ -9,12 +9,16 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.ModelBlockRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelManager;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 import thaumcraft.api.golems.IGolemProperties;
 import thaumcraft.api.golems.parts.GolemMaterial;
 import thaumcraft.api.golems.parts.PartModel;
@@ -55,9 +59,16 @@ import thaumcraft.common.golems.EntityThaumcraftGolem;
  * the same {@code (r,g,b)} multiply {@link ModelBlockRenderer#renderModel} already takes, no vanilla tint-
  * index machinery needed since there's exactly one solid color per draw.
  *
- * <p>Real, documented cuts for this pass: no head look pitch/yaw, no held-item rendering, no idle
- * sway/attack wiggle, and no wheeled/flyer alternate arm motion or holding-item arm pose - all real,
- * separately-scoped follow-up work. The original also drew its base
+ * <p>A carried main-hand item (real state - {@link EntityThaumcraftGolem}'s own hauler/carry slots, already
+ * used by the tasks/seals system to move items between containers) renders above the chest via {@link
+ * ItemRenderer#renderStatic}, matching the original's own {@code drawHeldItem} transform stack with its
+ * small idle-sway rotation term omitted (see this class's own {@code SWING_PHASE_SCALE} note below for the
+ * broader "no idle sway" cut) - which happens to cancel the original's two opposed X-axis rotations
+ * entirely, leaving a plain translate/scale/translate.
+ *
+ * <p>Real, documented cuts for this pass: no head look pitch/yaw, no idle sway/attack wiggle, and no
+ * wheeled/flyer alternate arm motion or holding-item arm pose (the arms don't re-pose around a held item,
+ * unlike the original) - all real, separately-scoped follow-up work. The original also drew its base
  * model's own "arm" sub-group a second and third time (once per side, swung the same way) regardless of
  * whether an arm part was assembled at all, as a stub limb under any arm overlay; this port's base trunk is
  * one single merged model (see chunk 15's own note above) with no isolated "arm" sub-group to redraw, so
@@ -72,11 +83,13 @@ public class RenderThaumcraftGolem extends EntityRenderer<EntityThaumcraftGolem>
 
 	private final ModelBlockRenderer modelRenderer;
 	private final ModelManager modelManager;
+	private final ItemRenderer itemRenderer;
 
 	public RenderThaumcraftGolem(EntityRendererProvider.Context context) {
 		super(context);
 		this.modelRenderer = context.getBlockRenderDispatcher().getModelRenderer();
 		this.modelManager = context.getModelManager();
+		this.itemRenderer = context.getItemRenderer();
 	}
 
 	@Override
@@ -131,6 +144,25 @@ public class RenderThaumcraftGolem extends EntityRenderer<EntityThaumcraftGolem>
 		renderAttachedPart("addon", props.getAddon() == null ? null : props.getAddon().key, props.getAddon() == null ? null : props.getAddon().model,
 				material, poseStack, vertexConsumer, packedLight, limbSwing, swingAmount);
 
+		drawHeldItem(entity, poseStack, buffer, packedLight);
+
+		poseStack.popPose();
+	}
+
+	/** Matches the original's own {@code drawHeldItem} - see this class's own doc comment for the transform. */
+	private void drawHeldItem(EntityThaumcraftGolem entity, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
+		ItemStack stack = entity.getMainHandItem();
+		if (stack.isEmpty()) {
+			return;
+		}
+		poseStack.pushPose();
+		poseStack.translate(0.0, 0.625, 0.0);
+		poseStack.scale(0.375f, 0.375f, 0.375f);
+		poseStack.translate(0.0, 0.25, -1.5);
+		if (!(stack.getItem() instanceof BlockItem)) {
+			poseStack.translate(0.0, -0.6, 0.0);
+		}
+		itemRenderer.renderStatic(stack, ItemDisplayContext.HEAD, packedLight, OverlayTexture.NO_OVERLAY, poseStack, buffer, entity.level(), 0);
 		poseStack.popPose();
 	}
 
