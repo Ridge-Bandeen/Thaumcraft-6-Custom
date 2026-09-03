@@ -1,0 +1,8 @@
+{
+    "loader": "neoforge:obj",
+    "model": "thaumcraft:models/obj/golem_head_scout.obj",
+    "flip_v": true,
+    "textures": {
+        "main": "thaumcraft:entity/golems/golem_head_other"
+    }
+}

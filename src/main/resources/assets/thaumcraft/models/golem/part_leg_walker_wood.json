@@ -1,0 +1,8 @@
+{
+    "loader": "neoforge:obj",
+    "model": "thaumcraft:models/obj/golem_legs_walker.obj",
+    "flip_v": true,
+    "textures": {
+        "main": "thaumcraft:entity/golems/mat_wood"
+    }
+}

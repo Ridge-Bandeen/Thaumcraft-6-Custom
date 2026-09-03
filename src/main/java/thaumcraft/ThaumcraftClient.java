@@ -15,7 +15,12 @@ import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.resources.ResourceLocation;
 import thaumcraft.api.blocks.BlocksTC;
+import thaumcraft.api.golems.parts.GolemAddon;
+import thaumcraft.api.golems.parts.GolemArm;
+import thaumcraft.api.golems.parts.GolemHead;
+import thaumcraft.api.golems.parts.GolemLeg;
 import thaumcraft.api.golems.parts.GolemMaterial;
+import thaumcraft.api.golems.parts.PartModel;
 import thaumcraft.api.items.ItemsTC;
 import thaumcraft.common.blocks.basic.BlockCandle;
 import thaumcraft.client.gui.GuiArcaneWorkbench;
@@ -85,19 +90,53 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.GOLEM.get(), RenderThaumcraftGolem::new);
     }
 
-    /** One real "additional" model per {@link GolemMaterial} - see {@link RenderThaumcraftGolem}'s own doc
+    /** One real "additional" model per {@link GolemMaterial} (the trunk/limbs silhouette every golem has),
+     * plus one per assembled head/arm/leg/addon part variant - see {@link RenderThaumcraftGolem}'s own doc
      * comment for why this is the modern replacement for the original's bespoke OBJ loader. Registered here
-     * (not tied to any block/item) so it bakes through the standard model pipeline like any other model -
+     * (not tied to any block/item) so they bake through the standard model pipeline like any other model -
      * real texture-atlas stitching included - and can be looked up later via {@code ModelManager#getModel}.
-     * {@code GolemMaterial}'s own registry is populated in {@code commonSetup} (well before model baking
-     * starts), so it's real and non-empty by the time this fires. */
+     * {@code GolemMaterial}'s and the part registries' own arrays are populated in {@code commonSetup} (well
+     * before model baking starts), so they're real and non-empty by the time this fires. */
     @SubscribeEvent
     static void onRegisterAdditionalModels(ModelEvent.RegisterAdditional event) {
         for (GolemMaterial material : GolemMaterial.getMaterials()) {
             if (material == null) continue;
-            event.register(new ModelResourceLocation(
-                    ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "golem/base_" + material.key.toLowerCase()), "standalone"));
+            event.register(golemModelLocation("golem/base_" + material.key.toLowerCase()));
         }
+        for (GolemHead head : GolemHead.getHeads()) {
+            registerGolemPart(event, "head", head == null ? null : head.key, head == null ? null : head.model);
+        }
+        for (GolemArm arm : GolemArm.getArms()) {
+            registerGolemPart(event, "arm", arm == null ? null : arm.key, arm == null ? null : arm.model);
+        }
+        for (GolemLeg leg : GolemLeg.getLegs()) {
+            registerGolemPart(event, "leg", leg == null ? null : leg.key, leg == null ? null : leg.model);
+        }
+        for (GolemAddon addon : GolemAddon.getAddons()) {
+            registerGolemPart(event, "addon", addon == null ? null : addon.key, addon == null ? null : addon.model);
+        }
+    }
+
+    /** {@code key}/{@code part} are null for the placeholder slot 0 of each part registry and for the
+     * NONE/FIGHTER addons (no real {@link PartModel}) - skipped, nothing to register. Mirrors the naming
+     * scheme the {@code part_*.json} model files were generated with, and that {@code RenderThaumcraftGolem}
+     * looks them back up with: one fixed model if the part has its own {@link PartModel#getTexture()}, one
+     * per {@link GolemMaterial} if it doesn't (painted with the golem's own material texture instead). */
+    private static void registerGolemPart(ModelEvent.RegisterAdditional event, String category, String key, PartModel part) {
+        if (key == null || part == null) return;
+        String base = "golem/part_" + category + "_" + key.toLowerCase();
+        if (part.getTexture() != null) {
+            event.register(golemModelLocation(base));
+        } else {
+            for (GolemMaterial material : GolemMaterial.getMaterials()) {
+                if (material == null) continue;
+                event.register(golemModelLocation(base + "_" + material.key.toLowerCase()));
+            }
+        }
+    }
+
+    private static ModelResourceLocation golemModelLocation(String path) {
+        return new ModelResourceLocation(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, path), "standalone");
     }
 
     /** Candles share one grayscale texture across all 16 colors (no per-color art exists, unlike vanilla's

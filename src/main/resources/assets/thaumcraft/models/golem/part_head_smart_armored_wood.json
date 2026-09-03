@@ -1,0 +1,8 @@
+{
+    "loader": "neoforge:obj",
+    "model": "thaumcraft:models/obj/golem_head_smart_armor.obj",
+    "flip_v": true,
+    "textures": {
+        "main": "thaumcraft:entity/golems/mat_wood"
+    }
+}
