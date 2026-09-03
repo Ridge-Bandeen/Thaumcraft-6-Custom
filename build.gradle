@@ -150,6 +150,7 @@ sourceSets {
             include 'thaumcraft/common/blocks/crafting/BlockGolemBuilder.java'
             include 'thaumcraft/common/container/GolemBuilderMenu.java'
             include 'thaumcraft/common/container/SealConfigMenu.java'
+            include 'thaumcraft/client/gui/SealConfigScreen.java'
             include 'thaumcraft/common/golems/tasks/TaskHandler.java'
             include 'thaumcraft/common/golems/seals/SealEntity.java'
             include 'thaumcraft/common/golems/seals/SealHandler.java'

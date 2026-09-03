@@ -62,23 +62,28 @@ public class SealConfigMenu extends AbstractContainerMenu implements IMenuProvid
 	public static final int DATA_REDSTONE = 6;
 	public static final int DATA_BLACKLIST = 7;
 	public static final int DATA_TOGGLES = 8;
-	private static final int DATA_COUNT = 9;
-
+	/** 9 consecutive slots (indices {@code DATA_FILTER_SIZE_BASE..+MAX_FILTER_SIZE-1}), one per ghost filter
+	 * slot's real target count - the ghost slot's own {@link ItemStack} always has count 1 (or 0 when empty),
+	 * so the actual stacksize-limiter target needs its own sync, unlike a normal slot where the stack's own
+	 * count already IS the number to show. */
+	private static final int DATA_FILTER_SIZE_BASE = 9;
 	private static final int MAX_FILTER_SIZE = 9;
-	private static final int BUTTON_LOCK = 10;
-	private static final int BUTTON_REDSTONE = 11;
-	private static final int BUTTON_BLACKLIST = 12;
-	private static final int BUTTON_PRIORITY_UP = 13;
-	private static final int BUTTON_PRIORITY_DOWN = 14;
-	private static final int BUTTON_COLOR_UP = 15;
-	private static final int BUTTON_COLOR_DOWN = 16;
-	private static final int BUTTON_AREA_Y_UP = 17;
-	private static final int BUTTON_AREA_Y_DOWN = 18;
-	private static final int BUTTON_AREA_X_UP = 19;
-	private static final int BUTTON_AREA_X_DOWN = 20;
-	private static final int BUTTON_AREA_Z_UP = 21;
-	private static final int BUTTON_AREA_Z_DOWN = 22;
-	private static final int BUTTON_TOGGLE_BASE = 30;
+	private static final int DATA_COUNT = DATA_FILTER_SIZE_BASE + MAX_FILTER_SIZE;
+
+	public static final int BUTTON_LOCK = 10;
+	public static final int BUTTON_REDSTONE = 11;
+	public static final int BUTTON_BLACKLIST = 12;
+	public static final int BUTTON_PRIORITY_UP = 13;
+	public static final int BUTTON_PRIORITY_DOWN = 14;
+	public static final int BUTTON_COLOR_UP = 15;
+	public static final int BUTTON_COLOR_DOWN = 16;
+	public static final int BUTTON_AREA_Y_UP = 17;
+	public static final int BUTTON_AREA_Y_DOWN = 18;
+	public static final int BUTTON_AREA_X_UP = 19;
+	public static final int BUTTON_AREA_X_DOWN = 20;
+	public static final int BUTTON_AREA_Z_UP = 21;
+	public static final int BUTTON_AREA_Z_DOWN = 22;
+	public static final int BUTTON_TOGGLE_BASE = 30;
 
 	private final ISealEntity sealEntity; // null on the client - see class doc comment
 	private final SimpleContainer ghostInventory;
@@ -225,7 +230,11 @@ public class SealConfigMenu extends AbstractContainerMenu implements IMenuProvid
 			data.set(DATA_LOCKED, sealEntity.isLocked() ? 1 : 0);
 			data.set(DATA_REDSTONE, sealEntity.isRedstoneSensitive() ? 1 : 0);
 			if (hasFilter) {
-				data.set(DATA_BLACKLIST, ((ISealConfigFilter) sealEntity.getSeal()).isBlacklist() ? 1 : 0);
+				ISealConfigFilter filter = (ISealConfigFilter) sealEntity.getSeal();
+				data.set(DATA_BLACKLIST, filter.isBlacklist() ? 1 : 0);
+				for (int i = 0; i < filterSize; i++) {
+					data.set(DATA_FILTER_SIZE_BASE + i, filter.getFilterSlotSize(i));
+				}
 			}
 			if (sealEntity.getSeal() instanceof ISealConfigToggles toggles) {
 				int mask = 0;
@@ -407,6 +416,12 @@ public class SealConfigMenu extends AbstractContainerMenu implements IMenuProvid
 
 	public boolean isToggleOn(int index) {
 		return (data.get(DATA_TOGGLES) & (1 << index)) != 0;
+	}
+
+	/** The real target count for ghost filter slot {@code index} (0 = "any amount"/unset) - see the
+	 * {@code DATA_FILTER_SIZE_BASE} field's own doc comment for why this needs its own sync. */
+	public int getFilterSlotSize(int index) {
+		return data.get(DATA_FILTER_SIZE_BASE + index);
 	}
 
 	public boolean hasFilter() {
