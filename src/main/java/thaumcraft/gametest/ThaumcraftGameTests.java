@@ -4671,4 +4671,103 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Golem construction, chunk 5: the real seals/tasks subsystem - GolemHelper's own real state (no more
+	// permanent stub), TaskHandler, SealHandler/SealEntity, the first real ISeal (SealGuard), and the golem
+	// AI (AIGotoEntity) that actually consumes the tasks a placed seal creates. See each class's own doc
+	// comment for what's simplified.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealGuardPlacementCreatesTasksThatAGolemPicksUpAsARealCombatTarget(GameTestHelper helper) {
+		BlockPos floorPos = BlockPos.ZERO;
+		BlockPos floorAbs = helper.absolutePos(floorPos);
+		helper.setBlock(floorPos, net.minecraft.world.level.block.Blocks.STONE);
+
+		ServerPlayer player = spawnCasterAt(helper, floorAbs.above(2));
+		player.getAbilities().instabuild = false;
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, new ItemStack(ItemsTC.sealGuard.get()));
+
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(floorAbs), net.minecraft.core.Direction.UP, floorAbs, false);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(player, hand, hit);
+		net.minecraft.world.InteractionResult result = player.getItemInHand(hand).getItem().useOn(context);
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.SUCCESS, "placing a seal against a solid block should succeed, got: " + result);
+		helper.assertTrue(player.getItemInHand(hand).isEmpty(), "the single seal stack should be consumed");
+
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(floorAbs, net.minecraft.core.Direction.UP);
+		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
+		helper.assertTrue(sealEntity != null && sealEntity.getSeal() instanceof thaumcraft.common.golems.seals.SealGuard,
+				"a real SealGuard entity should now be registered at the placed position");
+
+		net.minecraft.world.entity.monster.Zombie zombie = new net.minecraft.world.entity.monster.Zombie(net.minecraft.world.entity.EntityType.ZOMBIE, helper.getLevel());
+		zombie.moveTo(floorAbs.getX() + 0.5, floorAbs.getY() + 1.0, floorAbs.getZ() + 0.5, 0, 0);
+		helper.getLevel().addFreshEntity(zombie);
+
+		// SealGuard#tickSeal only scans every 20th call, starting from a random 0-21 offset - loop enough
+		// times to guarantee crossing that boundary at least once, rather than assuming tick 1 lands on it.
+		boolean foundTask = false;
+		for (int i = 0; i < 25 && !foundTask; i++) {
+			sealEntity.tickSealEntity(helper.getLevel());
+			for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
+				if (t.getEntity() == zombie) foundTask = true;
+			}
+		}
+		helper.assertTrue(foundTask, "tickSealEntity should have created a real task targeting the zombie");
+
+		thaumcraft.api.golems.parts.GolemAddon fighter = findPartByKey(thaumcraft.api.golems.parts.GolemAddon.getAddons(), a -> a.key, "FIGHTER");
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setAddon(fighter);
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, floorAbs);
+		golem.initializeGolem(props, 0);
+
+		thaumcraft.common.golems.ai.AIGotoEntity goal = new thaumcraft.common.golems.ai.AIGotoEntity(golem);
+		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the guard task");
+		helper.assertTrue(golem.getTarget() == zombie,
+				"picking up a guard task should immediately set the zombie as the golem's real combat target (SealGuard#onTaskStarted)");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void removingASealSuspendsItsOwnTasks(GameTestHelper helper) {
+		BlockPos pos = helper.absolutePos(BlockPos.ZERO);
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(pos, net.minecraft.core.Direction.UP);
+		thaumcraft.api.golems.seals.ISeal seal = new thaumcraft.common.golems.seals.SealGuard();
+		ServerPlayer owner = spawnCasterAt(helper, pos.above(2));
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), pos, net.minecraft.core.Direction.UP, seal, owner),
+				"adding a fresh seal entity should succeed");
+
+		thaumcraft.api.golems.tasks.Task task = new thaumcraft.api.golems.tasks.Task(sealPos, pos);
+		thaumcraft.common.golems.tasks.TaskHandler.addTask(helper.getLevel().dimension(), task);
+		helper.assertTrue(!task.isSuspended(), "a freshly created task should not start suspended");
+
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos);
+		helper.assertTrue(thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos) == null, "the seal should be gone after removal");
+		helper.assertTrue(task.isSuspended(), "removing a seal should suspend every task still tied to it");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void taskHandlerSortsUnreservedTasksByPriorityWeightedDistance(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer stand = spawnCasterAt(helper, origin);
+
+		thaumcraft.api.golems.tasks.Task near = new thaumcraft.api.golems.tasks.Task(null, origin.offset(2, 0, 0));
+		thaumcraft.api.golems.tasks.Task far = new thaumcraft.api.golems.tasks.Task(null, origin.offset(20, 0, 0));
+		far.setPriority((byte) 5);
+		thaumcraft.common.golems.tasks.TaskHandler.addTask(helper.getLevel().dimension(), near);
+		thaumcraft.common.golems.tasks.TaskHandler.addTask(helper.getLevel().dimension(), far);
+
+		java.util.ArrayList<thaumcraft.api.golems.tasks.Task> sorted =
+				thaumcraft.common.golems.tasks.TaskHandler.getBlockTasksSorted(helper.getLevel().dimension(), null, stand);
+		helper.assertTrue(sorted.contains(near) && sorted.contains(far), "both real unreserved tasks should be returned");
+		helper.assertTrue(sorted.indexOf(far) < sorted.indexOf(near),
+				"a high enough priority should let a farther task sort ahead of a closer, lower-priority one");
+
+		helper.succeed();
+	}
 }

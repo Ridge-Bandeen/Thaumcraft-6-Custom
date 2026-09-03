@@ -105,8 +105,33 @@ public class EntityThaumcraftGolem extends TamableAnimal implements IGolemAPI, R
 	/** Not synced - matches the original's own plain (non-{@code DataParameter}) field. */
 	private int rankXp;
 
+	/** The task this golem is currently working, if any - see {@code thaumcraft.common.golems.ai.AIGoto}'s
+	 * own doc comment. Not synced or persisted (matches the original's own plain field): a task is
+	 * short-lived, server-side-only bookkeeping, not real entity state worth surviving a reload. */
+	private thaumcraft.api.golems.tasks.Task task;
+
 	public EntityThaumcraftGolem(EntityType<? extends EntityThaumcraftGolem> type, Level level) {
 		super(type, level);
+	}
+
+	public thaumcraft.api.golems.tasks.Task getTask() {
+		return task;
+	}
+
+	public void setTask(thaumcraft.api.golems.tasks.Task task) {
+		this.task = task;
+	}
+
+	/** Real translation of the original's own speed-multiplier formula, used by {@code AIGoto}'s family of
+	 * task-seeking goals in place of a flat speed constant. */
+	public double getGolemMoveSpeed() {
+		IGolemProperties props = getProperties();
+		double speed = 1.0 + props.getRank() * 0.025;
+		if (props.hasTrait(EnumGolemTrait.LIGHT)) speed += 0.2;
+		if (props.hasTrait(EnumGolemTrait.HEAVY)) speed -= 0.175;
+		if (props.hasTrait(EnumGolemTrait.FLYER)) speed -= 0.33;
+		if (props.hasTrait(EnumGolemTrait.WHEELED)) speed += 0.25;
+		return speed;
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {
@@ -261,6 +286,9 @@ public class EntityThaumcraftGolem extends TamableAnimal implements IGolemAPI, R
 		if (isFollowingOwner()) {
 			goalSelector.addGoal(4, new FollowOwnerGoal(this, 1.0, 10.0f, 2.0f));
 		} else {
+			// higher priority than the wander fallback - a golem with a real task to do (see getTask()/
+			// setTask() and thaumcraft.common.golems.ai's own doc comments) takes it over just wandering.
+			goalSelector.addGoal(3, new thaumcraft.common.golems.ai.AIGotoEntity(this));
 			goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 1.0));
 		}
 		goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8.0f));

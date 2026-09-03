@@ -188,6 +188,11 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.golems.ItemGolemPlacer> golemPlacer =
 			ITEMS.registerItem("golem", thaumcraft.common.golems.ItemGolemPlacer::new);
 
+	/** Places a real {@code SealGuard} - see {@code ItemSealPlacer}'s own doc comment for why this is one
+	 * dedicated item per seal type rather than the original's shared metadata-variant item. */
+	public static final DeferredItem<thaumcraft.common.golems.ItemSealPlacer> sealGuard =
+			ITEMS.registerItem("seal_guard", props -> new thaumcraft.common.golems.ItemSealPlacer(props, thaumcraft.common.golems.seals.SealGuard::new));
+
 	public static final DeferredItem<ItemCurio> curio =
 			ITEMS.registerItem("curio", ItemCurio::new);
 

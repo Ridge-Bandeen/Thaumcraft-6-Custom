@@ -1,6 +1,9 @@
 package thaumcraft.api.golems;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceKey;
@@ -17,32 +20,82 @@ import thaumcraft.api.golems.tasks.Task;
 
 public class GolemHelper {
 
-	// TODO: these five all delegated to ThaumcraftApi.internalMethods, which sits at the
-	// integration root of the whole API (needs research/golems/crafting types to all exist
-	// first) and hasn't been ported yet. Wire these back up once it lands - until then they
-	// behave the same as they do today before Thaumcraft finishes loading, when
-	// internalMethods is still the do-nothing DummyInternalMethodHandler.
+	/**
+	 * Real state now (was a permanent stub delegating to a never-built {@code ThaumcraftApi.internalMethods}
+	 * indirection layer - same "make it real, no more permanent stub" fix {@code AspectHelper}'s own
+	 * object-tag lookup already got earlier this session). This class is the single source of truth for
+	 * registered seal types, placed seal instances, and per-dimension golem task queues -
+	 * {@code thaumcraft.common.golems.seals.SealHandler}/{@code tasks.TaskHandler} are thin common-side
+	 * convenience wrappers built on top of the real accessors here (not the other way around - api-package
+	 * code never depends on common-package code).
+	 */
+	private static final Map<String, ISeal> SEAL_TYPES = new LinkedHashMap<>();
+	private static final Map<ResourceKey<Level>, Map<SealPos, ISealEntity>> SEAL_ENTITIES = new HashMap<>();
+	private static final Map<ResourceKey<Level>, Map<Integer, Task>> GOLEM_TASKS = new HashMap<>();
 
 	/**
 	 * Make sure to register your seals during the preInit phase before TC is loaded
 	 * @param seal
 	 */
 	public static void registerSeal(ISeal seal) {
+		SEAL_TYPES.putIfAbsent(seal.getKey(), seal);
 	}
 
 	public static ISeal getSeal(String key) {
-		return null;
+		return SEAL_TYPES.get(key);
 	}
 
+	public static String[] getRegisteredSealKeys() {
+		return SEAL_TYPES.keySet().toArray(new String[0]);
+	}
+
+	/** Reflectively creates a fresh {@link ISeal} instance of whatever class was registered under this key -
+	 * every placed seal (and every seal restored from NBT) needs its own live instance, since implementations
+	 * like the original's {@code SealHarvest} hold real per-placement mutable state (its replant-tracking
+	 * map). Same reflective-fresh-instance shape the original's own {@code SealHandler}/{@code SealEntity}
+	 * used ({@code getSeal(key).getClass().newInstance()}), just via modern {@code getDeclaredConstructor()}
+	 * instead of the deprecated no-arg {@code Class#newInstance()}. Returns {@code null} (rather than
+	 * throwing) if the key isn't registered or the class has no accessible no-arg constructor - callers
+	 * already treat a {@code null}/failed seal as "can't place/restore here", matching the original. */
+	public static ISeal createSeal(String key) {
+		ISeal prototype = SEAL_TYPES.get(key);
+		if (prototype == null) return null;
+		try {
+			return prototype.getClass().getDeclaredConstructor().newInstance();
+		} catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+			return null;
+		}
+	}
+
+	/** No generic per-key placer-item lookup yet (unlike the original's shared metadata-variant
+	 * {@code ItemsTC.seals} item, this port ships one dedicated {@code ItemSealPlacer} instance per seal
+	 * type - see that class's own doc comment) - real follow-up work once enough seal types exist to make a
+	 * generic lookup worthwhile. */
 	public static ItemStack getSealStack(String key) {
 		return null;
 	}
 
 	public static ISealEntity getSealEntity(ResourceKey<Level> dim, SealPos pos) {
-		return null;
+		if (pos == null) return null;
+		Map<SealPos, ISealEntity> m = SEAL_ENTITIES.get(dim);
+		return m != null ? m.get(pos) : null;
+	}
+
+	/** The live, mutable per-dimension seal map - not a defensive copy, callers (this port's own
+	 * {@code SealHandler}) iterate/insert/remove directly, same as the original's own {@code sealEntities}
+	 * field was used. */
+	public static Map<SealPos, ISealEntity> getSealEntities(ResourceKey<Level> dim) {
+		return SEAL_ENTITIES.computeIfAbsent(dim, d -> new LinkedHashMap<>());
 	}
 
 	public static void addGolemTask(ResourceKey<Level> dim, Task task) {
+		getTasks(dim).put(task.getId(), task);
+	}
+
+	/** The live, mutable per-dimension task map - see {@link #getSealEntities}'s own doc comment for why
+	 * this isn't a defensive copy. */
+	public static Map<Integer, Task> getTasks(ResourceKey<Level> dim) {
+		return GOLEM_TASKS.computeIfAbsent(dim, d -> new LinkedHashMap<>());
 	}
 
 	public static HashMap<ResourceKey<Level>,ArrayList<ProvisionRequest>> provisionRequests = new HashMap<>();

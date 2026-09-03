@@ -128,6 +128,10 @@ public class Thaumcraft {
         // comment. Same registry-timing reason as the calls above.
         thaumcraft.common.golems.GolemProperties.init();
 
+        // The real seal type registry - see SealHandler#init's own doc comment. Same registry-timing
+        // reason as the calls above.
+        thaumcraft.common.golems.seals.SealHandler.init();
+
         // Mirrors the original's own PotionFluxTaint.instance convention - see MobEffectFluxTaint's own doc
         // comment for why the static field exists at all. Same "needs registries populated" timing as the
         // object-tag table above.
@@ -311,6 +315,21 @@ public class Thaumcraft {
     @SubscribeEvent
     public void onLevelTickPost(LevelTickEvent.Post event) {
         TileArcaneEar.clearNoteEvents(event.getLevel());
+    }
+
+    /** Drives the whole seals/tasks subsystem - was {@code ServerEvents#tickAuraHandler}'s own tail end
+     * ({@code SealHandler.tickSealEntities}/{@code TaskHandler.clearSuspendedOrExpiredTasks} calls) in the
+     * original. Seal ticking runs every level tick (each {@link thaumcraft.common.golems.seals.SealEntity}
+     * paces its own real work internally); task cleanup only every 20 ticks, matching the original's own
+     * cadence exactly. */
+    @SubscribeEvent
+    public void tickGolemSeals(LevelTickEvent.Post event) {
+        net.minecraft.world.level.Level level = event.getLevel();
+        if (level.isClientSide) return;
+        thaumcraft.common.golems.seals.SealHandler.tickSealEntities(level);
+        if (level.getGameTime() % 20 == 0) {
+            thaumcraft.common.golems.tasks.TaskHandler.clearSuspendedOrExpiredTasks(level);
+        }
     }
 
     /** A real vanilla Zombie kill has a chance to drop a Zombie Brain - see {@code ItemZombieBrain}'s own

@@ -149,6 +149,13 @@ sourceSets {
             include 'thaumcraft/common/tiles/crafting/TileGolemBuilder.java'
             include 'thaumcraft/common/blocks/crafting/BlockGolemBuilder.java'
             include 'thaumcraft/common/container/GolemBuilderMenu.java'
+            include 'thaumcraft/common/golems/tasks/TaskHandler.java'
+            include 'thaumcraft/common/golems/seals/SealEntity.java'
+            include 'thaumcraft/common/golems/seals/SealHandler.java'
+            include 'thaumcraft/common/golems/seals/SealGuard.java'
+            include 'thaumcraft/common/golems/ItemSealPlacer.java'
+            include 'thaumcraft/common/golems/ai/AIGoto.java'
+            include 'thaumcraft/common/golems/ai/AIGotoEntity.java'
 
             include 'thaumcraft/api/crafting/ArcaneCraftingInput.java'
             include 'thaumcraft/api/crafting/ArcaneRecipe.java'
