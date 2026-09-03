@@ -39,14 +39,25 @@ import thaumcraft.common.golems.EntityThaumcraftGolem;
  * mesh - exactly what sidesteps the original sweep's real "can't dynamically merge geometry without
  * CodeChicken" blocker.
  *
- * <p>Real, documented cuts for this pass: every part is drawn at a single static attach-point offset
- * (matching the original's own resting-pose translate values for BODY/HEAD/ARMS/LEGS), with no walk/swing
- * limb animation, no head look pitch/yaw, no held-item rendering, and no golem-bell dye-color "flag" tint -
- * all real, separately-scoped follow-up work. The original also picked textures per-OBJ-sub-group (any
- * group named {@code "bm*"} used the material texture, everything else used the part's own fixed texture);
- * this port simplifies that to a single whole-part choice - {@link PartModel#getTexture()} if non-null,
- * else the golem's own {@link GolemMaterial#texture} - which is why parts with a null texture need one
- * baked model per material instead of one shared model with per-face texture switching.</p>
+ * <p>ARMS/LEGS-attach overlay parts get a real walk-swing rotation, matching the original's own
+ * {@code cos(limbSwing * 0.6662) * swingAmount} formula (right leg and left arm share one phase, left leg
+ * and right arm share the same phase shifted by half a cycle) - driven by {@link
+ * net.minecraft.world.entity.LivingEntity#walkAnimation}, the modern equivalent of the original's raw
+ * {@code limbSwing}/{@code limbSwingAmount} fields. HEAD/BODY-attach parts, and the base trunk silhouette
+ * itself, stay static.
+ *
+ * <p>Real, documented cuts for this pass: no head look pitch/yaw, no held-item rendering, no golem-bell
+ * dye-color "flag" tint, no idle sway/attack wiggle, and no wheeled/flyer alternate arm motion or
+ * holding-item arm pose - all real, separately-scoped follow-up work. The original also drew its base
+ * model's own "arm" sub-group a second and third time (once per side, swung the same way) regardless of
+ * whether an arm part was assembled at all, as a stub limb under any arm overlay; this port's base trunk is
+ * one single merged model (see chunk 15's own note above) with no isolated "arm" sub-group to redraw, so
+ * only assembled overlay parts swing - a golem with no arm/leg part assigned simply has nothing there to
+ * animate, same as it has nothing there to draw at rest. The original also picked textures per-OBJ-sub-group
+ * (any group named {@code "bm*"} used the material texture, everything else used the part's own fixed
+ * texture); this port simplifies that to a single whole-part choice - {@link PartModel#getTexture()} if
+ * non-null, else the golem's own {@link GolemMaterial#texture} - which is why parts with a null texture need
+ * one baked model per material instead of one shared model with per-face texture switching.</p>
  */
 public class RenderThaumcraftGolem extends EntityRenderer<EntityThaumcraftGolem> {
 
@@ -80,28 +91,37 @@ public class RenderThaumcraftGolem extends EntityRenderer<EntityThaumcraftGolem>
 		if (baseModel != modelManager.getMissingModel()) {
 			// golem_base.obj's own origin sits at the waist, not the feet - matches the original's own
 			// "translate up 0.5 before drawing chest/waist/etc" convention.
-			drawAt(baseModel, poseStack, vertexConsumer, packedLight, 0.0, 0.5, 0.0, 0.0f);
+			drawAt(baseModel, poseStack, vertexConsumer, packedLight, 0.0, 0.5, 0.0, 0.0f, 0.0f);
 		}
 
+		// Modern equivalent of the original's raw limbSwing/limbSwingAmount fields - already interpolated
+		// and clamped by the engine, see this class's own doc comment for the swing formula this drives.
+		float limbSwing = entity.walkAnimation.position(partialTick);
+		float swingAmount = Math.min(entity.walkAnimation.speed(partialTick), 1.0f);
+
 		renderAttachedPart("head", props.getHead() == null ? null : props.getHead().key, props.getHead() == null ? null : props.getHead().model,
-				material, poseStack, vertexConsumer, packedLight);
+				material, poseStack, vertexConsumer, packedLight, limbSwing, swingAmount);
 		renderAttachedPart("arm", props.getArms() == null ? null : props.getArms().key, props.getArms() == null ? null : props.getArms().model,
-				material, poseStack, vertexConsumer, packedLight);
+				material, poseStack, vertexConsumer, packedLight, limbSwing, swingAmount);
 		renderAttachedPart("leg", props.getLegs() == null ? null : props.getLegs().key, props.getLegs() == null ? null : props.getLegs().model,
-				material, poseStack, vertexConsumer, packedLight);
+				material, poseStack, vertexConsumer, packedLight, limbSwing, swingAmount);
 		renderAttachedPart("addon", props.getAddon() == null ? null : props.getAddon().key, props.getAddon() == null ? null : props.getAddon().model,
-				material, poseStack, vertexConsumer, packedLight);
+				material, poseStack, vertexConsumer, packedLight, limbSwing, swingAmount);
 
 		poseStack.popPose();
 	}
 
+	/** Matches the original's own {@code cos(limbSwing * 0.6662) * swingAmount} swing-phase scale. */
+	private static final double SWING_PHASE_SCALE = 0.6662;
+
 	/**
 	 * Draws one assembled part's overlay at its own {@link PartModel.EnumAttachPoint}'s resting-pose
-	 * transform. {@code part} is null for slots with no real geometry (the NONE/FIGHTER addons), which is
-	 * silently skipped, same as the original's own "nothing to render" case.
+	 * transform, swinging ARMS/LEGS parts back and forth as the golem walks. {@code part} is null for slots
+	 * with no real geometry (the NONE/FIGHTER addons), which is silently skipped, same as the original's own
+	 * "nothing to render" case.
 	 */
 	private void renderAttachedPart(String category, String key, PartModel part, GolemMaterial material,
-			PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight) {
+			PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, float limbSwing, float swingAmount) {
 		if (key == null || part == null) {
 			return;
 		}
@@ -110,23 +130,33 @@ public class RenderThaumcraftGolem extends EntityRenderer<EntityThaumcraftGolem>
 			return;
 		}
 		switch (part.getAttachPoint()) {
-			case HEAD -> drawAt(model, poseStack, vertexConsumer, packedLight, 0.0, 0.75, -0.03125, 0.0f);
-			case BODY -> drawAt(model, poseStack, vertexConsumer, packedLight, 0.0, 0.5, 0.0, 0.0f);
+			case HEAD -> drawAt(model, poseStack, vertexConsumer, packedLight, 0.0, 0.75, -0.03125, 0.0f, 0.0f);
+			case BODY -> drawAt(model, poseStack, vertexConsumer, packedLight, 0.0, 0.5, 0.0, 0.0f, 0.0f);
 			case ARMS -> {
-				drawAt(model, poseStack, vertexConsumer, packedLight, 0.20625, 0.6875, 0.0, 0.0f);
-				drawAt(model, poseStack, vertexConsumer, packedLight, -0.20625, 0.6875, 0.0, 180.0f);
+				// Right arm and left leg share one swing phase, left arm and right leg share the phase
+				// shifted by half a cycle (Math.PI) - same pairing the original's own formula used.
+				float rightSwing = (float) Math.toDegrees(Math.cos(limbSwing * SWING_PHASE_SCALE + Math.PI) * swingAmount);
+				float leftSwing = (float) Math.toDegrees(Math.cos(limbSwing * SWING_PHASE_SCALE) * swingAmount);
+				drawAt(model, poseStack, vertexConsumer, packedLight, 0.20625, 0.6875, 0.0, rightSwing, 0.0f);
+				drawAt(model, poseStack, vertexConsumer, packedLight, -0.20625, 0.6875, 0.0, leftSwing, 180.0f);
 			}
 			case LEGS -> {
-				drawAt(model, poseStack, vertexConsumer, packedLight, 0.09375, 0.375, 0.0, 0.0f);
-				drawAt(model, poseStack, vertexConsumer, packedLight, -0.09375, 0.375, 0.0, 0.0f);
+				float rightSwing = (float) Math.toDegrees(Math.cos(limbSwing * SWING_PHASE_SCALE) * swingAmount);
+				float leftSwing = (float) Math.toDegrees(Math.cos(limbSwing * SWING_PHASE_SCALE + Math.PI) * swingAmount);
+				drawAt(model, poseStack, vertexConsumer, packedLight, 0.09375, 0.375, 0.0, rightSwing, 0.0f);
+				drawAt(model, poseStack, vertexConsumer, packedLight, -0.09375, 0.375, 0.0, leftSwing, 0.0f);
 			}
 		}
 	}
 
 	private void drawAt(BakedModel model, PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight,
-			double x, double y, double z, float extraYRotationDegrees) {
+			double x, double y, double z, float swingXRotationDegrees, float extraYRotationDegrees) {
 		poseStack.pushPose();
 		poseStack.translate(x, y, z);
+		// X-axis swing first, then the per-side Y mirror - matches the original's own rotate-call order.
+		if (swingXRotationDegrees != 0.0f) {
+			poseStack.mulPose(Axis.XP.rotationDegrees(swingXRotationDegrees));
+		}
 		if (extraYRotationDegrees != 0.0f) {
 			poseStack.mulPose(Axis.YP.rotationDegrees(extraYRotationDegrees));
 		}
