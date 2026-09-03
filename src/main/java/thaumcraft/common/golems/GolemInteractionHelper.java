@@ -1,89 +1,98 @@
 package thaumcraft.common.golems;
-import com.mojang.authlib.GameProfile;
+
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
-import net.minecraft.block.Block;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.item.ItemBlock;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.EnumPacketDirection;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldServer;
-import net.minecraftforge.common.util.FakePlayer;
-import net.minecraftforge.common.util.FakePlayerFactory;
+
+import com.mojang.authlib.GameProfile;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import thaumcraft.api.golems.IGolemAPI;
-import thaumcraft.common.lib.network.FakeNetHandlerPlayServer;
-import thaumcraft.common.lib.utils.InventoryUtils;
 
+/**
+ * Replaces the old (1.12.2) {@code GolemInteractionHelper} - simulates a golem "using" or "breaking" a block
+ * by puppeting a real {@link FakePlayer} through it (same real approach the original used, just onto modern
+ * {@link net.minecraft.server.level.ServerPlayerGameMode} entry points): {@link
+ * net.minecraft.server.level.ServerPlayerGameMode#useItemOn} for a right-click (matches the original's own
+ * {@code processRightClickBlock}), {@link net.minecraft.server.level.ServerPlayerGameMode#destroyBlock} for
+ * a left-click - the same "one real action, no progressive-mining simulation" simplification {@link
+ * thaumcraft.common.golems.seals.SealBreaker} already established for its own block breaking, reused here
+ * for the same reason (still real loot-table drops, tool/hardness rules, and XP via the fake player's own
+ * game mode - just not spread across multiple ticks).
+ *
+ * Real, documented cuts: the original's own pre-placement collision nudge (moving the golem out of the way
+ * if it's itself standing where a block would be placed) isn't ported - a golem blocking its own placement
+ * simply fails the click, same outcome a real player bumping into their own placement gets. Left-over items
+ * are collected via a single loop over {@link Inventory#getContainerSize()} (main array indices 0-35 +
+ * armor 36-39 + offhand 40, all through one {@code Container}-interface indexing scheme modern
+ * {@link Inventory} already provides) rather than the original's separate main/armor loops - a real
+ * simplification of iteration, not of behavior.
+ */
+public final class GolemInteractionHelper {
 
-public class GolemInteractionHelper
-{
-    public static void golemClick(World world, IGolemAPI golem, BlockPos pos, EnumFacing face, ItemStack clickStack, boolean sneaking, boolean rightClick) {
-        FakePlayer fp = FakePlayerFactory.get((WorldServer)world, new GameProfile(null, "FakeThaumcraftGolem"));
-        fp.connection = new FakeNetHandlerPlayServer(fp.mcServer, new NetworkManager(EnumPacketDirection.CLIENTBOUND), fp);
-        fp.setPositionAndRotation(golem.getGolemEntity().posX, golem.getGolemEntity().posY, golem.getGolemEntity().posZ, golem.getGolemEntity().rotationYaw, golem.getGolemEntity().rotationPitch);
-        IBlockState bs = world.getBlockState(pos);
-        fp.setHeldItem(EnumHand.MAIN_HAND, clickStack);
-        fp.setSneaking(sneaking);
-        if (!rightClick) {
-            try {
-                fp.interactionManager.onBlockClicked(pos, face);
-            }
-            catch (Exception ex) {}
-        }
-        else {
-            if (fp.getHeldItemMainhand().getItem() instanceof ItemBlock && !mayPlace(world, ((ItemBlock)fp.getHeldItemMainhand().getItem()).getBlock(), pos, face)) {
-                golem.getGolemEntity().setPosition(golem.getGolemEntity().posX + face.getFrontOffsetX(), golem.getGolemEntity().posY + face.getFrontOffsetY(), golem.getGolemEntity().posZ + face.getFrontOffsetZ());
-            }
-            try {
-                fp.interactionManager.processRightClickBlock(fp, world, fp.getHeldItemMainhand(), EnumHand.MAIN_HAND, pos, face, 0.5f, 0.5f, 0.5f);
-            }
-            catch (Exception ex2) {}
-        }
-        golem.addRankXp(1);
-        if (!fp.getHeldItemMainhand().isEmpty() && fp.getHeldItemMainhand().getCount() <= 0) {
-            fp.setHeldItem(EnumHand.MAIN_HAND, ItemStack.EMPTY);
-        }
-        dropSomeItems(fp, golem);
-        golem.swingArm();
-    }
-    
-    private static boolean mayPlace(World world, Block blockIn, BlockPos pos, EnumFacing side) {
-        IBlockState block = world.getBlockState(pos);
-        AxisAlignedBB axisalignedbb = blockIn.getBoundingBox(blockIn.getDefaultState(), world, pos);
-        return axisalignedbb == null || world.checkNoEntityCollision(axisalignedbb, null);
-    }
-    
-    private static void dropSomeItems(FakePlayer fp2, IGolemAPI golem) {
-        for (int i = 0; i < fp2.inventory.mainInventory.size(); ++i) {
-            if (!fp2.inventory.mainInventory.get(i).isEmpty()) {
-                if (golem.canCarry(fp2.inventory.mainInventory.get(i), true)) {
-                    fp2.inventory.mainInventory.set(i, golem.holdItem(fp2.inventory.mainInventory.get(i)));
-                }
-                if (!fp2.inventory.mainInventory.get(i).isEmpty() && fp2.inventory.mainInventory.get(i).getCount() > 0) {
-                    InventoryUtils.dropItemAtEntity(golem.getGolemWorld(), fp2.inventory.mainInventory.get(i), golem.getGolemEntity());
-                }
-                fp2.inventory.mainInventory.set(i, ItemStack.EMPTY);
-            }
-        }
-        for (int i = 0; i < fp2.inventory.armorInventory.size(); ++i) {
-            if (!fp2.inventory.armorInventory.get(i).isEmpty()) {
-                if (golem.canCarry(fp2.inventory.armorInventory.get(i), true)) {
-                    fp2.inventory.armorInventory.set(i, golem.holdItem(fp2.inventory.armorInventory.get(i)));
-                }
-                if (!fp2.inventory.mainInventory.get(i).isEmpty() && fp2.inventory.armorInventory.get(i).getCount() > 0) {
-                    InventoryUtils.dropItemAtEntity(golem.getGolemWorld(), fp2.inventory.armorInventory.get(i), golem.getGolemEntity());
-                }
-                fp2.inventory.armorInventory.set(i, ItemStack.EMPTY);
-            }
-        }
-    }
+	// A real, non-null, stable UUID - unlike the original's own "null UUID" GameProfile (1.12.2's
+	// GameProfile tolerated a null id; modern GameProfile requires one), derived the same way vanilla itself
+	// derives offline-mode player UUIDs so it stays deterministic across calls.
+	private static final GameProfile PROFILE = new GameProfile(
+			UUID.nameUUIDFromBytes("OfflinePlayer:FakeThaumcraftGolem".getBytes(StandardCharsets.UTF_8)), "FakeThaumcraftGolem");
+
+	private GolemInteractionHelper() {
+	}
+
+	public static void golemClick(Level world, IGolemAPI golem, BlockPos pos, Direction face, ItemStack clickStack, boolean sneaking, boolean rightClick) {
+		if (!(world instanceof ServerLevel serverLevel)) return;
+		FakePlayer fp = FakePlayerFactory.get(serverLevel, PROFILE);
+		var golemEntity = golem.getGolemEntity();
+		fp.moveTo(golemEntity.getX(), golemEntity.getY(), golemEntity.getZ(), golemEntity.getYRot(), golemEntity.getXRot());
+		fp.setItemInHand(InteractionHand.MAIN_HAND, clickStack);
+		fp.setShiftKeyDown(sneaking);
+
+		if (!rightClick) {
+			fp.gameMode.destroyBlock(pos);
+		} else {
+			BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), face, pos, false);
+			fp.gameMode.useItemOn(fp, serverLevel, fp.getItemInHand(InteractionHand.MAIN_HAND), InteractionHand.MAIN_HAND, hit);
+		}
+
+		golem.addRankXp(1);
+		if (fp.getItemInHand(InteractionHand.MAIN_HAND).getCount() <= 0) {
+			fp.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+		}
+		collectLeftoverItems(world, fp, golem);
+		golem.swingArm();
+	}
+
+	/** Whatever the fake player ends up holding after the click (leftover placed-item stack, or something it
+	 * picked up as a side effect, e.g. a broken block's own drops landing straight in its inventory) goes
+	 * back into the golem's own carry slots, or drops at the golem's feet if it can't carry any more. */
+	private static void collectLeftoverItems(Level world, FakePlayer fp, IGolemAPI golem) {
+		Inventory inv = fp.getInventory();
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			ItemStack stack = inv.getItem(i);
+			if (stack.isEmpty()) continue;
+			if (golem.canCarry(stack, true)) {
+				stack = golem.holdItem(stack);
+			}
+			if (!stack.isEmpty()) {
+				dropAtGolem(world, golem, stack);
+			}
+			inv.setItem(i, ItemStack.EMPTY);
+		}
+	}
+
+	private static void dropAtGolem(Level world, IGolemAPI golem, ItemStack stack) {
+		var golemEntity = golem.getGolemEntity();
+		ItemEntity entity = new ItemEntity(world, golemEntity.getX(), golemEntity.getY() + 0.5, golemEntity.getZ(), stack);
+		world.addFreshEntity(entity);
+	}
 }

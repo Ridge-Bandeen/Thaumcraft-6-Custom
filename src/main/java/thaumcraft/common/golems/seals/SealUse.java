@@ -1,20 +1,12 @@
 package thaumcraft.common.golems.seals;
+
 import java.util.Random;
-import net.minecraft.block.Block;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.FakePlayer;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.api.ThaumcraftInvHelper;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import thaumcraft.api.golems.EnumGolemTrait;
 import thaumcraft.api.golems.GolemHelper;
 import thaumcraft.api.golems.IGolemAPI;
@@ -22,173 +14,141 @@ import thaumcraft.api.golems.seals.ISealConfigToggles;
 import thaumcraft.api.golems.seals.ISealEntity;
 import thaumcraft.api.golems.tasks.Task;
 import thaumcraft.common.golems.GolemInteractionHelper;
-import thaumcraft.common.golems.client.gui.SealBaseContainer;
-import thaumcraft.common.golems.client.gui.SealBaseGUI;
 import thaumcraft.common.golems.tasks.TaskHandler;
-import thaumcraft.common.lib.utils.InventoryUtils;
 
+/**
+ * Replaces the old (1.12.2) {@code SealUse} - the most general logistics seal: makes a golem right- or
+ * left-click its own position with a real filter-matched carried item (or an empty hand), via {@link
+ * GolemInteractionHelper}'s real {@link net.neoforged.neoforge.common.util.FakePlayer} simulation. Same
+ * "keep exactly one standing task open" throttle {@link SealFill} already established, gated on the
+ * {@code pempty} toggle deciding whether this seal only fires against an empty (air) position or a
+ * non-empty one.
+ *
+ * Real toggles kept (dropping the meta/NBT/ore/mod matching toggles superseded by {@link SealFiltered}'s own
+ * simplification, same as every other filtered seal): {@code pempty} (fire on an empty/air position instead
+ * of a non-empty one - e.g. for placing rather than using), {@code pemptyhand} (click with an empty hand
+ * instead of requiring a filter match), {@code pleft} (left-click/attack instead of right-click/use),
+ * {@code psneak} (sneak while clicking), {@code ppro} (request provisioning of the filter's first item when
+ * whitelisted and none is currently carried - same real {@code GolemHelper.requestProvisioning} mechanism
+ * {@link SealStock} already established).
+ */
+public class SealUse extends SealFiltered implements ISealConfigToggles {
 
-public class SealUse extends SealFiltered implements ISealConfigToggles
-{
-    int delay;
-    int watchedTask;
-    ResourceLocation icon;
-    protected SealToggle[] props;
-    
-    public SealUse() {
-        delay = new Random(System.nanoTime()).nextInt(49);
-        watchedTask = Integer.MIN_VALUE;
-        icon = new ResourceLocation("thaumcraft", "items/seals/seal_use");
-        props = new SealToggle[] { new SealToggle(true, "pmeta", "golem.prop.meta"), new SealToggle(true, "pnbt", "golem.prop.nbt"), new SealToggle(false, "pore", "golem.prop.ore"), new SealToggle(false, "pmod", "golem.prop.mod"), new SealToggle(false, "pleft", "golem.prop.left"), new SealToggle(false, "pempty", "golem.prop.empty"), new SealToggle(false, "pemptyhand", "golem.prop.emptyhand"), new SealToggle(false, "psneak", "golem.prop.sneak"), new SealToggle(false, "ppro", "golem.prop.provision.wl") };
-    }
-    
-    @Override
-    public String getKey() {
-        return "thaumcraft:use";
-    }
-    
-    @Override
-    public void tickSeal(World world, ISealEntity seal) {
-        if (delay++ % 5 != 0) {
-            return;
-        }
-        Task oldTask = TaskHandler.getTask(world.provider.getDimension(), watchedTask);
-        if (oldTask == null || oldTask.isSuspended() || oldTask.isCompleted()) {
-            if (getToggles()[5].value != world.isAirBlock(seal.getSealPos().pos)) {
-                return;
-            }
-            Task task = new Task(seal.getSealPos(), seal.getSealPos().pos);
-            task.setPriority(seal.getPriority());
-            TaskHandler.addTask(world.provider.getDimension(), task);
-            watchedTask = task.getId();
-        }
-    }
-    
-    @Override
-    public void onTaskStarted(World world, IGolemAPI golem, Task task) {
-    }
-    
-    public boolean mayPlace(World world, Block blockIn, BlockPos pos, EnumFacing side) {
-        IBlockState block = world.getBlockState(pos);
-        AxisAlignedBB axisalignedbb = blockIn.getBoundingBox(blockIn.getDefaultState(), world, pos);
-        return axisalignedbb == null || world.checkNoEntityCollision(axisalignedbb, null);
-    }
-    
-    @Override
-    public boolean onTaskCompletion(World world, IGolemAPI golem, Task task) {
-        if (getToggles()[5].value == world.isAirBlock(task.getPos())) {
-            ItemStack clickStack = golem.getCarrying().get(0);
-            if (!filter.get(0).isEmpty()) {
-                clickStack = InventoryUtils.findFirstMatchFromFilter(filter, filterSize, blacklist, golem.getCarrying(), new ThaumcraftInvHelper.InvFilter(!props[0].value, !props[1].value, props[2].value, props[3].value));
-            }
-            if (!clickStack.isEmpty() || props[6].value) {
-                ItemStack ss = ItemStack.EMPTY;
-                if (!clickStack.isEmpty()) {
-                    ss = clickStack.copy();
-                    golem.dropItem(clickStack.copy());
-                }
-                GolemInteractionHelper.golemClick(world, golem, task.getPos(), task.getSealPos().face, props[6].value ? ItemStack.EMPTY : ss, props[7].value, !getToggles()[4].value);
-            }
-        }
-        task.setSuspended(true);
-        return true;
-    }
-    
-    private void dropSomeItems(FakePlayer fp2, IGolemAPI golem) {
-        for (int i = 0; i < fp2.inventory.mainInventory.size(); ++i) {
-            if (!fp2.inventory.mainInventory.get(i).isEmpty()) {
-                if (golem.canCarry(fp2.inventory.mainInventory.get(i), true)) {
-                    fp2.inventory.mainInventory.set(i, golem.holdItem(fp2.inventory.mainInventory.get(i)));
-                }
-                if (!fp2.inventory.mainInventory.get(i).isEmpty() && fp2.inventory.mainInventory.get(i).getCount() > 0) {
-                    InventoryUtils.dropItemAtEntity(golem.getGolemWorld(), fp2.inventory.mainInventory.get(i), golem.getGolemEntity());
-                }
-                fp2.inventory.mainInventory.set(i, ItemStack.EMPTY);
-            }
-        }
-        for (int i = 0; i < fp2.inventory.armorInventory.size(); ++i) {
-            if (!fp2.inventory.armorInventory.get(i).isEmpty()) {
-                if (golem.canCarry(fp2.inventory.armorInventory.get(i), true)) {
-                    fp2.inventory.armorInventory.set(i, golem.holdItem(fp2.inventory.armorInventory.get(i)));
-                }
-                if (!fp2.inventory.mainInventory.get(i).isEmpty() && fp2.inventory.armorInventory.get(i).getCount() > 0) {
-                    InventoryUtils.dropItemAtEntity(golem.getGolemWorld(), fp2.inventory.armorInventory.get(i), golem.getGolemEntity());
-                }
-                fp2.inventory.armorInventory.set(i, ItemStack.EMPTY);
-            }
-        }
-    }
-    
-    @Override
-    public boolean canGolemPerformTask(IGolemAPI golem, Task task) {
-        if (!props[6].value) {
-            boolean found = !InventoryUtils.findFirstMatchFromFilter(filter, filterSize, blacklist, golem.getCarrying(), new ThaumcraftInvHelper.InvFilter(!props[0].value, !props[1].value, props[2].value, props[3].value)).isEmpty();
-            if (!found && getToggles()[8].value && !blacklist && getInv().get(0) != null) {
-                ISealEntity se = SealHandler.getSealEntity(golem.getGolemWorld().provider.getDimension(), task.getSealPos());
-                if (se != null) {
-                    ItemStack stack = getInv().get(0).copy();
-                    if (!props[0].value) {
-                        stack.setItemDamage(32767);
-                    }
-                    GolemHelper.requestProvisioning(golem.getGolemWorld(), se, stack);
-                }
-            }
-            return found;
-        }
-        return true;
-    }
-    
-    @Override
-    public void onTaskSuspension(World world, Task task) {
-    }
-    
-    @Override
-    public boolean canPlaceAt(World world, BlockPos pos, EnumFacing side) {
-        return true;
-    }
-    
-    @Override
-    public ResourceLocation getSealIcon() {
-        return icon;
-    }
-    
-    @Override
-    public void onRemoval(World world, BlockPos pos, EnumFacing side) {
-    }
-    
-    @Override
-    public Object returnContainer(World world, EntityPlayer player, BlockPos pos, EnumFacing side, ISealEntity seal) {
-        return new SealBaseContainer(player.inventory, world, seal);
-    }
-    
-    @SideOnly(Side.CLIENT)
-    @Override
-    public Object returnGui(World world, EntityPlayer player, BlockPos pos, EnumFacing side, ISealEntity seal) {
-        return new SealBaseGUI(player.inventory, world, seal);
-    }
-    
-    @Override
-    public int[] getGuiCategories() {
-        return new int[] { 1, 3, 0, 4 };
-    }
-    
-    @Override
-    public EnumGolemTrait[] getRequiredTags() {
-        return new EnumGolemTrait[] { EnumGolemTrait.DEFT, EnumGolemTrait.SMART };
-    }
-    
-    @Override
-    public EnumGolemTrait[] getForbiddenTags() {
-        return null;
-    }
-    
-    @Override
-    public SealToggle[] getToggles() {
-        return props;
-    }
-    
-    @Override
-    public void setToggle(int indx, boolean value) {
-        props[indx].setValue(value);
-    }
+	private int delay = new Random().nextInt(49);
+	private int watchedTask = Integer.MIN_VALUE;
+	private final SealToggle[] props = {
+			new SealToggle(false, "pempty", "golem.prop.empty"),
+			new SealToggle(false, "pemptyhand", "golem.prop.emptyhand"),
+			new SealToggle(false, "pleft", "golem.prop.left"),
+			new SealToggle(false, "psneak", "golem.prop.sneak"),
+			new SealToggle(false, "ppro", "golem.prop.provision.wl"),
+	};
+	private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("thaumcraft", "items/seals/seal_use");
+
+	@Override
+	public String getKey() {
+		return "thaumcraft:use";
+	}
+
+	@Override
+	public void tickSeal(Level world, ISealEntity seal) {
+		if (delay++ % 5 != 0) return;
+		Task oldTask = TaskHandler.getTask(world.dimension(), watchedTask);
+		if (oldTask == null || oldTask.isSuspended() || oldTask.isCompleted()) {
+			if (props[0].getValue() != world.isEmptyBlock(seal.getSealPos().pos)) return;
+			Task task = new Task(seal.getSealPos(), seal.getSealPos().pos);
+			task.setPriority(seal.getPriority());
+			TaskHandler.addTask(world.dimension(), task);
+			watchedTask = task.getId();
+		}
+	}
+
+	private boolean matches(ItemStack stack) {
+		boolean m = matchesFilter(stack.getItem());
+		return isBlacklist() ? !m : m;
+	}
+
+	private ItemStack findMatchingCarried(IGolemAPI golem) {
+		for (ItemStack stack : golem.getCarrying()) {
+			if (!stack.isEmpty() && matches(stack)) return stack;
+		}
+		return ItemStack.EMPTY;
+	}
+
+	@Override
+	public boolean onTaskCompletion(Level world, IGolemAPI golem, Task task) {
+		if (props[0].getValue() == world.isEmptyBlock(task.getPos())) {
+			ItemStack clickStack = findMatchingCarried(golem);
+			if (!clickStack.isEmpty() || props[1].getValue()) {
+				ItemStack toUse = ItemStack.EMPTY;
+				if (!clickStack.isEmpty()) {
+					toUse = golem.dropItem(clickStack);
+				}
+				GolemInteractionHelper.golemClick(world, golem, task.getPos(), task.getSealPos().face,
+						props[1].getValue() ? ItemStack.EMPTY : toUse, props[3].getValue(), !props[2].getValue());
+			}
+		}
+		task.setSuspended(true);
+		return true;
+	}
+
+	@Override
+	public boolean canGolemPerformTask(IGolemAPI golem, Task task) {
+		if (props[1].getValue()) return true;
+		boolean found = !findMatchingCarried(golem).isEmpty();
+		if (!found && props[4].getValue() && !isBlacklist()) {
+			ItemStack want = getInv().get(0);
+			if (!want.isEmpty()) {
+				GolemHelper.requestProvisioning(golem.getGolemWorld(), task.getSealPos().pos, task.getSealPos().face, want.copy());
+			}
+		}
+		return found;
+	}
+
+	@Override
+	public void onTaskStarted(Level world, IGolemAPI golem, Task task) {
+	}
+
+	@Override
+	public void onTaskSuspension(Level world, Task task) {
+	}
+
+	@Override
+	public boolean canPlaceAt(Level world, BlockPos pos, Direction side) {
+		return true;
+	}
+
+	@Override
+	public ResourceLocation getSealIcon() {
+		return ICON;
+	}
+
+	@Override
+	public void onRemoval(Level world, BlockPos pos, Direction side) {
+	}
+
+	@Override
+	public EnumGolemTrait[] getRequiredTags() {
+		return new EnumGolemTrait[] { EnumGolemTrait.DEFT, EnumGolemTrait.SMART };
+	}
+
+	@Override
+	public EnumGolemTrait[] getForbiddenTags() {
+		return null;
+	}
+
+	@Override
+	public int[] getGuiCategories() {
+		return new int[] { CAT_FILTER, CAT_TOGGLES, CAT_PRIORITY, CAT_TAGS };
+	}
+
+	@Override
+	public SealToggle[] getToggles() {
+		return props;
+	}
+
+	@Override
+	public void setToggle(int index, boolean value) {
+		props[index].setValue(value);
+	}
 }

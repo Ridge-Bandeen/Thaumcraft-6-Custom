@@ -66,6 +66,7 @@ public final class SealHandler {
 		GolemHelper.registerSeal(new SealProvide());
 		GolemHelper.registerSeal(new SealFill());
 		GolemHelper.registerSeal(new SealEmpty());
+		GolemHelper.registerSeal(new SealUse());
 	}
 
 	public static ISeal getSeal(String key) {

@@ -5290,4 +5290,60 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealUseTogglesALeverWithAnEmptyHandClick(GameTestHelper helper) {
+		BlockPos leverPos = BlockPos.ZERO;
+		BlockPos leverAbs = helper.absolutePos(leverPos);
+		helper.setBlock(leverPos, net.minecraft.world.level.block.Blocks.LEVER);
+
+		ServerPlayer owner = spawnCasterAt(helper, leverAbs.above(3));
+		thaumcraft.common.golems.seals.SealUse seal = new thaumcraft.common.golems.seals.SealUse();
+		seal.setToggle(1, true); // pemptyhand - click even without a matching carried item
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), leverAbs, net.minecraft.core.Direction.UP, seal, owner),
+				"placing a fresh seal should succeed");
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(leverAbs, net.minecraft.core.Direction.UP);
+		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
+
+		// SealUse requires the DEFT + SMART traits (see its own getRequiredTags) - a SMART head + FINE arms
+		// combo grants both, same lookup pattern golemPropertiesUnionsRealTraitsAndCancelsOpposites uses.
+		thaumcraft.api.golems.parts.GolemMaterial iron = findPartByKey(thaumcraft.api.golems.parts.GolemMaterial.getMaterials(), m -> m.key, "IRON");
+		thaumcraft.api.golems.parts.GolemHead smartHead = findPartByKey(thaumcraft.api.golems.parts.GolemHead.getHeads(), h -> h.key, "SMART");
+		thaumcraft.api.golems.parts.GolemArm fineArm = findPartByKey(thaumcraft.api.golems.parts.GolemArm.getArms(), a -> a.key, "FINE");
+		thaumcraft.api.golems.parts.GolemLeg walkerLeg = findPartByKey(thaumcraft.api.golems.parts.GolemLeg.getLegs(), l -> l.key, "WALKER");
+		thaumcraft.api.golems.parts.GolemAddon noAddon = findPartByKey(thaumcraft.api.golems.parts.GolemAddon.getAddons(), a -> a.key, "NONE");
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setMaterial(iron);
+		props.setHead(smartHead);
+		props.setArms(fineArm);
+		props.setLegs(walkerLeg);
+		props.setAddon(noAddon);
+
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, leverAbs);
+		golem.initializeGolem(props, 0);
+
+		boolean foundTask = false;
+		thaumcraft.api.golems.tasks.Task useTask = null;
+		for (int i = 0; i < 30 && !foundTask; i++) {
+			sealEntity.tickSealEntity(helper.getLevel());
+			for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
+				if (sealPos.equals(t.getSealPos())) {
+					foundTask = true;
+					useTask = t;
+				}
+			}
+		}
+		helper.assertTrue(foundTask, "tickSealEntity should have created a real standing use task");
+
+		thaumcraft.common.golems.ai.AIGotoBlock goal = new thaumcraft.common.golems.ai.AIGotoBlock(golem);
+		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the use task");
+		helper.assertTrue(golem.getTask() == useTask, "the golem should have reserved the real use task");
+
+		boolean before = helper.getBlockState(leverPos).getValue(net.minecraft.world.level.block.LeverBlock.POWERED);
+		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
+		boolean after = helper.getBlockState(leverPos).getValue(net.minecraft.world.level.block.LeverBlock.POWERED);
+		helper.assertTrue(before != after, "completing the use task should have really toggled the lever, before=" + before + " after=" + after);
+
+		helper.succeed();
+	}
 }

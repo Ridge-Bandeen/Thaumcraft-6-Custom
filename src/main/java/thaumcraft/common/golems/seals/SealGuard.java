@@ -41,7 +41,7 @@ import thaumcraft.common.golems.tasks.TaskHandler;
  * ({@code pmob}/{@code panimal}/{@code pplayer}) are still fully real and functional, they're just only
  * reachable via NBT/creative-tools for now, not an in-game config screen.
  */
-public class SealGuard implements ISeal, ISealGui, ISealConfigArea {
+public class SealGuard implements ISeal, ISealGui, ISealConfigArea, ISealConfigToggles {
 
 	private int delay = new Random().nextInt(22);
 	private final ISealConfigToggles.SealToggle[] props = {
@@ -161,10 +161,12 @@ public class SealGuard implements ISeal, ISealGui, ISealConfigArea {
 		return new int[] { CAT_AREA, CAT_PRIORITY, CAT_TAGS };
 	}
 
+	@Override
 	public ISealConfigToggles.SealToggle[] getToggles() {
 		return props;
 	}
 
+	@Override
 	public void setToggle(int index, boolean value) {
 		props[index].setValue(value);
 	}

@@ -38,7 +38,7 @@ import thaumcraft.common.golems.tasks.TaskHandler;
  * un-GUI'd but functional - same real-toggle-without-a-screen-yet pattern {@code SealGuard} already
  * established).
  */
-public class SealEmpty extends SealFiltered {
+public class SealEmpty extends SealFiltered implements ISealConfigToggles {
 
 	private int delay = new Random().nextInt(30);
 	/** Task id -> the specific stack matched when that task was created - the original's own tracking map. */
@@ -177,12 +177,12 @@ public class SealEmpty extends SealFiltered {
 		return new int[] { CAT_FILTER, CAT_PRIORITY, CAT_TAGS };
 	}
 
-	/** Real, un-GUI'd toggle - same pattern {@code SealGuard} already established (reachable via NBT/creative
-	 * tools for now, not an in-game config screen). */
+	@Override
 	public ISealConfigToggles.SealToggle[] getToggles() {
 		return props;
 	}
 
+	@Override
 	public void setToggle(int index, boolean value) {
 		props[index].setValue(value);
 	}
