@@ -159,6 +159,14 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("mind_spider"));
 
+	/** Never naturally spawned - only ever conjured by {@code FocusMediumSpellBat#execute}, same
+	 * {@code MobCategory.MISC} treatment {@link #GOLEM} (also never a natural spawn) already got. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.EntitySpellBat>> SPELL_BAT = ENTITY_TYPES.register("spell_bat",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.EntitySpellBat>of(thaumcraft.common.entities.monster.EntitySpellBat::new, MobCategory.MISC)
+					.sized(0.5f, 0.9f)
+					.clientTrackingRange(64)
+					.build("spell_bat"));
+
 	private ThaumcraftEntities() {
 	}
 }

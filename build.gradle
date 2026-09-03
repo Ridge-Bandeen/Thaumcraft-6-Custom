@@ -187,6 +187,11 @@ sourceSets {
             include 'thaumcraft/common/entities/monster/EntityGiantBrainyZombie.java'
             include 'thaumcraft/common/entities/monster/EntityFireBat.java'
             include 'thaumcraft/common/entities/monster/EntityMindSpider.java'
+            include 'thaumcraft/common/entities/monster/EntitySpellBat.java'
+            include 'thaumcraft/common/items/casters/foci/FocusMediumSpellBat.java'
+            include 'thaumcraft/common/items/casters/foci/FocusModScatter.java'
+            include 'thaumcraft/common/items/casters/foci/FocusModSplitTarget.java'
+            include 'thaumcraft/common/items/casters/foci/FocusModSplitTrajectory.java'
 
             include 'thaumcraft/api/crafting/ArcaneCraftingInput.java'
             include 'thaumcraft/api/crafting/ArcaneRecipe.java'

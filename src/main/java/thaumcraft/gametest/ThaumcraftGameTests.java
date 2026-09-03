@@ -5707,4 +5707,68 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focusModScatterFansOutRealTrajectoriesWithJitter(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		ServerPlayer caster = spawnCasterAt(helper, abs);
+
+		thaumcraft.api.casters.FocusPackage pack = new thaumcraft.api.casters.FocusPackage(caster);
+		thaumcraft.api.casters.FocusMediumRoot root = new thaumcraft.api.casters.FocusMediumRoot();
+		root.setupFromCaster(caster);
+		pack.addNode(root);
+
+		thaumcraft.common.items.casters.foci.FocusModScatter scatter = new thaumcraft.common.items.casters.foci.FocusModScatter();
+		scatter.setPackage(pack);
+		scatter.setParent(root);
+		scatter.getSetting("forks").setValue(4);
+		scatter.getSetting("cone").setValue(90);
+
+		thaumcraft.api.casters.Trajectory[] result = scatter.supplyTrajectories();
+		helper.assertTrue(result.length == 4, "scattering with 4 real forks should really produce 4 trajectories, got " + result.length);
+		for (thaumcraft.api.casters.Trajectory t : result) {
+			helper.assertTrue(Math.abs(t.direction.length() - 1.0) < 0.01, "each real scattered trajectory should really stay a unit vector, length=" + t.direction.length());
+		}
+		helper.assertTrue(scatter.execute(), "execute() should really always succeed for a real scatter mod");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focusMediumSpellBatSpawnsARealCastingBatWithTheRightOwner(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		ServerPlayer caster = spawnCasterAt(helper, abs);
+
+		thaumcraft.api.casters.FocusPackage pack = new thaumcraft.api.casters.FocusPackage(caster);
+		thaumcraft.api.casters.FocusMediumRoot root = new thaumcraft.api.casters.FocusMediumRoot();
+		root.setupFromCaster(caster);
+		pack.addNode(root);
+
+		thaumcraft.common.items.casters.foci.FocusMediumSpellBat medium = new thaumcraft.common.items.casters.foci.FocusMediumSpellBat();
+		medium.setPackage(pack);
+		medium.setParent(root);
+		medium.getSetting("target").setValue(0);
+		pack.addNode(medium);
+
+		thaumcraft.common.items.casters.foci.FocusEffectFlux effect = new thaumcraft.common.items.casters.foci.FocusEffectFlux();
+		pack.addNode(effect);
+		pack.setExecutionIndex(1);
+
+		thaumcraft.api.casters.Trajectory trajectory = new thaumcraft.api.casters.Trajectory(
+				new net.minecraft.world.phys.Vec3(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5), new net.minecraft.world.phys.Vec3(0.0, 0.0, 1.0));
+
+		boolean spawned = medium.execute(trajectory);
+		helper.assertTrue(spawned, "spawning a real spell bat should succeed");
+
+		List<thaumcraft.common.entities.monster.EntitySpellBat> bats = helper.getLevel().getEntitiesOfClass(
+				thaumcraft.common.entities.monster.EntitySpellBat.class, new AABB(abs).inflate(3));
+		helper.assertTrue(bats.size() == 1, "exactly one real spell bat should have really been spawned, found " + bats.size());
+		thaumcraft.common.entities.monster.EntitySpellBat bat = bats.get(0);
+		helper.assertTrue(!bat.isFriendly(), "the spell bat should really be in enemy-targeting mode");
+		helper.assertTrue(bat.getOwner() == caster, "the spell bat's real owner should really be the real caster");
+
+		helper.succeed();
+	}
 }
