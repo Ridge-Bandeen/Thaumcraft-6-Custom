@@ -238,6 +238,26 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.golems.ItemSealPlacer> sealUse =
 			ITEMS.registerItem("seal_use", props -> new thaumcraft.common.golems.ItemSealPlacer(props, thaumcraft.common.golems.seals.SealUse::new));
 
+	/** Places a real {@code SealGuardAdvanced} - see that class's own doc comment. */
+	public static final DeferredItem<thaumcraft.common.golems.ItemSealPlacer> sealGuardAdvanced =
+			ITEMS.registerItem("seal_guard_advanced", props -> new thaumcraft.common.golems.ItemSealPlacer(props, thaumcraft.common.golems.seals.SealGuardAdvanced::new));
+
+	/** Places a real {@code SealBreakerAdvanced} - see that class's own doc comment. */
+	public static final DeferredItem<thaumcraft.common.golems.ItemSealPlacer> sealBreakerAdvanced =
+			ITEMS.registerItem("seal_breaker_advanced", props -> new thaumcraft.common.golems.ItemSealPlacer(props, thaumcraft.common.golems.seals.SealBreakerAdvanced::new));
+
+	/** Places a real {@code SealPickupAdvanced} - see that class's own doc comment. */
+	public static final DeferredItem<thaumcraft.common.golems.ItemSealPlacer> sealPickupAdvanced =
+			ITEMS.registerItem("seal_pickup_advanced", props -> new thaumcraft.common.golems.ItemSealPlacer(props, thaumcraft.common.golems.seals.SealPickupAdvanced::new));
+
+	/** Places a real {@code SealFillAdvanced} - see that class's own doc comment. */
+	public static final DeferredItem<thaumcraft.common.golems.ItemSealPlacer> sealFillAdvanced =
+			ITEMS.registerItem("seal_fill_advanced", props -> new thaumcraft.common.golems.ItemSealPlacer(props, thaumcraft.common.golems.seals.SealFillAdvanced::new));
+
+	/** Places a real {@code SealEmptyAdvanced} - see that class's own doc comment. */
+	public static final DeferredItem<thaumcraft.common.golems.ItemSealPlacer> sealEmptyAdvanced =
+			ITEMS.registerItem("seal_empty_advanced", props -> new thaumcraft.common.golems.ItemSealPlacer(props, thaumcraft.common.golems.seals.SealEmptyAdvanced::new));
+
 	public static final DeferredItem<ItemCurio> curio =
 			ITEMS.registerItem("curio", ItemCurio::new);
 

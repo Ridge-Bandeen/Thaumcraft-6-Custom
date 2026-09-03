@@ -14,6 +14,7 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
 import thaumcraft.api.golems.EnumGolemTrait;
 import thaumcraft.api.golems.IGolemAPI;
+import thaumcraft.api.golems.seals.ISealConfigToggles;
 import thaumcraft.api.golems.seals.ISealEntity;
 import thaumcraft.api.golems.tasks.Task;
 import thaumcraft.common.golems.tasks.TaskHandler;
@@ -33,11 +34,19 @@ import thaumcraft.common.golems.tasks.TaskHandler;
  * deposited in full). {@link #canPlaceAt} keeps the original's own real, looser rule (any non-air block, not
  * just ones with a real inventory) - {@link #onTaskCompletion} drops the item on the ground next to the seal
  * when there's no real {@link IItemHandler} there, exactly like the original's own {@code EntityItem} spawn.
+ *
+ * <p>One real toggle survives the {@code SealFiltered} matching simplification above: {@code pexist}
+ * ("only top up a container that already has some") - real and kept, just like {@link SealGuard}'s own real
+ * toggles, only reachable via NBT/creative tools at this tier (no {@code CAT_TOGGLES} in this seal's own
+ * {@link #getGuiCategories}) - {@link SealFillAdvanced} is what exposes it in the real config GUI.
  */
-public class SealFill extends SealFiltered {
+public class SealFill extends SealFiltered implements ISealConfigToggles {
 
 	private int delay = new Random().nextInt(50);
 	private int watchedTask = Integer.MIN_VALUE;
+	protected final SealToggle[] props = {
+			new SealToggle(false, "pexist", "golem.prop.exist"),
+	};
 	private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("thaumcraft", "items/seals/seal_fill");
 
 	@Override
@@ -99,7 +108,13 @@ public class SealFill extends SealFiltered {
 
 	@Override
 	public boolean canGolemPerformTask(IGolemAPI golem, Task task) {
-		return !findMatchingCarried(golem).isEmpty();
+		ItemStack match = findMatchingCarried(golem);
+		if (match.isEmpty()) return false;
+		if (props[0].getValue()) {
+			IItemHandler inv = golem.getGolemWorld().getCapability(Capabilities.ItemHandler.BLOCK, task.getSealPos().pos, task.getSealPos().face);
+			if (inv != null && SealStock.countMatching(inv, match.getItem()) <= 0) return false;
+		}
+		return true;
 	}
 
 	@Override
@@ -137,5 +152,15 @@ public class SealFill extends SealFiltered {
 	@Override
 	public int[] getGuiCategories() {
 		return new int[] { CAT_FILTER, CAT_PRIORITY, CAT_TAGS };
+	}
+
+	@Override
+	public SealToggle[] getToggles() {
+		return props;
+	}
+
+	@Override
+	public void setToggle(int index, boolean value) {
+		props[index].setValue(value);
 	}
 }

@@ -28,17 +28,19 @@ import thaumcraft.common.golems.tasks.TaskHandler;
  *
  * Real, documented simplification: the original's own {@code onTaskCompletion} was a real multi-tick mining
  * simulation - block-hardness-based progress accumulated across repeated task completions, with visible
- * crack-stage updates and a real silk-touch toggle, all driven through a {@code FakePlayer}'s simulated
- * harvest. None of that (progressive mining, crack stages, silk touch) is ported - this breaks the matched
- * block in one action via {@code Level#destroyBlock} for real loot-table drops (arguably a *more* correct
- * drop path than the original's own FakePlayer-harvest simulation, even without the silk-touch option).
- * Real ore-dictionary-style fuzzy/metadata matching is also dropped, see {@code SealFiltered}'s own doc
- * comment for why (exact item identity only).
+ * crack-stage updates, all driven through a {@code FakePlayer}'s simulated harvest. None of that
+ * (progressive mining, crack stages) is ported - this breaks the matched block in one action via
+ * {@link #breakBlock} (default: {@code Level#destroyBlock} for real loot-table drops, arguably a *more*
+ * correct drop path than the original's own FakePlayer-harvest simulation). {@link #breakBlock} is a real,
+ * protected seam - {@link SealBreakerAdvanced} overrides it for real silk-touch dropping, the one piece of
+ * the original's silk-touch toggle that IS ported (just not the progressive mining alongside it). Real
+ * ore-dictionary-style fuzzy/metadata matching is also dropped, see {@code SealFiltered}'s own doc comment
+ * for why (exact item identity only).
  */
 public class SealBreaker extends SealFiltered implements ISealConfigArea {
 
 	private int delay = new Random().nextInt(42);
-	private final Set<Long> tracked = new HashSet<>();
+	protected final Set<Long> tracked = new HashSet<>();
 	private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("thaumcraft", "items/seals/seal_breaker");
 
 	@Override
@@ -67,7 +69,7 @@ public class SealBreaker extends SealFiltered implements ISealConfigArea {
 	/** A block is a real candidate if it's not air, not "unbreakable" ({@code getDestroySpeed} < 0, e.g.
 	 * bedrock), and matches the real filter (blacklist: break anything NOT listed; whitelist: break only
 	 * what IS listed). */
-	private boolean isValidBlock(Level world, BlockPos pos) {
+	protected boolean isValidBlock(Level world, BlockPos pos) {
 		if (world.isEmptyBlock(pos)) return false;
 		BlockState state = world.getBlockState(pos);
 		if (state.getDestroySpeed(world, pos) < 0.0f) return false;
@@ -75,12 +77,18 @@ public class SealBreaker extends SealFiltered implements ISealConfigArea {
 		return isBlacklist() ? !matches : matches;
 	}
 
+	/** Real, overridable seam for how the matched block is actually removed - see this class's own doc
+	 * comment for why {@link SealBreakerAdvanced} overrides it. */
+	protected void breakBlock(Level world, BlockPos pos) {
+		world.destroyBlock(pos, true);
+	}
+
 	@Override
 	public boolean onTaskCompletion(Level world, IGolemAPI golem, Task task) {
 		BlockPos pos = task.getPos();
 		if (isValidBlock(world, pos)) {
 			golem.swingArm();
-			world.destroyBlock(pos, true);
+			breakBlock(world, pos);
 			golem.addRankXp(1);
 		}
 		tracked.remove(pos.asLong());

@@ -5396,4 +5396,133 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealBreakerAdvancedSilkTouchesTheMatchedBlock(GameTestHelper helper) {
+		BlockPos anchorPos = BlockPos.ZERO;
+		BlockPos anchorAbs = helper.absolutePos(anchorPos);
+		helper.setBlock(anchorPos, net.minecraft.world.level.block.Blocks.STONE);
+
+		BlockPos targetPos = anchorPos.above();
+		BlockPos targetAbs = helper.absolutePos(targetPos);
+		helper.setBlock(targetPos, net.minecraft.world.level.block.Blocks.STONE);
+
+		ServerPlayer owner = spawnCasterAt(helper, anchorAbs.above(3));
+		thaumcraft.common.golems.seals.SealBreakerAdvanced seal = new thaumcraft.common.golems.seals.SealBreakerAdvanced();
+		seal.setToggle(0, true); // psilk
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), anchorAbs, net.minecraft.core.Direction.UP, seal, owner),
+				"placing a fresh seal should succeed");
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(anchorAbs, net.minecraft.core.Direction.UP);
+		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
+
+		boolean foundTask = false;
+		thaumcraft.api.golems.tasks.Task breakTask = null;
+		for (int i = 0; i < 60 && !foundTask; i++) {
+			sealEntity.tickSealEntity(helper.getLevel());
+			for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
+				if (t.getPos().equals(targetAbs)) {
+					foundTask = true;
+					breakTask = t;
+				}
+			}
+		}
+		helper.assertTrue(foundTask, "an empty blacklist should match nothing, so the stone should get a real break task");
+
+		thaumcraft.api.golems.parts.GolemHead smartHead = findPartByKey(thaumcraft.api.golems.parts.GolemHead.getHeads(), h -> h.key, "SMART");
+		thaumcraft.api.golems.parts.GolemArm breakerArm = findPartByKey(thaumcraft.api.golems.parts.GolemArm.getArms(), a -> a.key, "BREAKERS");
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setHead(smartHead);
+		props.setArms(breakerArm);
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, anchorAbs);
+		golem.initializeGolem(props, 0);
+
+		thaumcraft.common.golems.ai.AIGotoBlock goal = new thaumcraft.common.golems.ai.AIGotoBlock(golem);
+		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the break task");
+		helper.assertTrue(golem.getTask() == breakTask, "the golem should have reserved the real break task");
+
+		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
+		helper.assertTrue(helper.getLevel().getBlockState(targetAbs).isAir(), "completing the break task should have really broken the stone");
+
+		List<net.minecraft.world.entity.item.ItemEntity> drops = helper.getLevel().getEntitiesOfClass(
+				net.minecraft.world.entity.item.ItemEntity.class, new AABB(targetAbs).inflate(2));
+		boolean foundStone = false;
+		for (net.minecraft.world.entity.item.ItemEntity ie : drops) {
+			if (ie.getItem().is(net.minecraft.world.item.Items.STONE)) foundStone = true;
+		}
+		helper.assertTrue(foundStone, "silk touch should really have dropped the stone block itself, not cobblestone");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealEmptyAdvancedCyclesThroughRealWhitelistedItemsInTurn(GameTestHelper helper) {
+		BlockPos chestPos = BlockPos.ZERO;
+		BlockPos chestAbs = helper.absolutePos(chestPos);
+		helper.setBlock(chestPos, net.minecraft.world.level.block.Blocks.CHEST);
+		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(chestPos);
+		chest.setItem(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 5));
+		chest.setItem(1, new ItemStack(net.minecraft.world.item.Items.GOLD_INGOT, 5));
+
+		ServerPlayer owner = spawnCasterAt(helper, chestAbs.above(3));
+		thaumcraft.common.golems.seals.SealEmptyAdvanced seal = new thaumcraft.common.golems.seals.SealEmptyAdvanced();
+		seal.setBlacklist(false);
+		seal.setFilterSlot(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT));
+		seal.setFilterSlot(1, new ItemStack(net.minecraft.world.item.Items.GOLD_INGOT));
+		seal.setToggle(1, true); // pcycle
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), chestAbs, net.minecraft.core.Direction.UP, seal, owner),
+				"placing a fresh seal should succeed");
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(chestAbs, net.minecraft.core.Direction.UP);
+		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
+
+		thaumcraft.api.golems.parts.GolemHead smartHead = findPartByKey(thaumcraft.api.golems.parts.GolemHead.getHeads(), h -> h.key, "SMART");
+		thaumcraft.api.golems.IGolemProperties props1 = new thaumcraft.common.golems.GolemProperties();
+		props1.setHead(smartHead);
+		thaumcraft.common.golems.EntityThaumcraftGolem golem1 = spawnGolem(helper, chestAbs);
+		golem1.initializeGolem(props1, 0);
+
+		boolean foundFirst = false;
+		thaumcraft.api.golems.tasks.Task firstTask = null;
+		for (int i = 0; i < 30 && !foundFirst; i++) {
+			sealEntity.tickSealEntity(helper.getLevel());
+			for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
+				if (sealPos.equals(t.getSealPos())) {
+					foundFirst = true;
+					firstTask = t;
+				}
+			}
+		}
+		helper.assertTrue(foundFirst, "tickSealEntity should have created a real empty task cycling to the first whitelisted item");
+
+		thaumcraft.common.golems.ai.AIGotoBlock goal1 = new thaumcraft.common.golems.ai.AIGotoBlock(golem1);
+		helper.assertTrue(goal1.canUse(), "the first golem should be able to pick up the first empty task");
+		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem1.getTask(), golem1);
+		helper.assertTrue(golem1.isCarrying(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT)),
+				"the first cycle (index 0) should have really pulled the first filter slot's item (iron)");
+
+		thaumcraft.api.golems.IGolemProperties props2 = new thaumcraft.common.golems.GolemProperties();
+		props2.setHead(smartHead);
+		thaumcraft.common.golems.EntityThaumcraftGolem golem2 = spawnGolem(helper, chestAbs);
+		golem2.initializeGolem(props2, 0);
+
+		boolean foundSecond = false;
+		thaumcraft.api.golems.tasks.Task secondTask = null;
+		for (int i = 0; i < 30 && !foundSecond; i++) {
+			sealEntity.tickSealEntity(helper.getLevel());
+			for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
+				if (sealPos.equals(t.getSealPos()) && t != firstTask) {
+					foundSecond = true;
+					secondTask = t;
+				}
+			}
+		}
+		helper.assertTrue(foundSecond, "tickSealEntity should have created a real second empty task cycling to the second whitelisted item");
+
+		thaumcraft.common.golems.ai.AIGotoBlock goal2 = new thaumcraft.common.golems.ai.AIGotoBlock(golem2);
+		helper.assertTrue(goal2.canUse(), "the second golem should be able to pick up the second empty task");
+		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem2.getTask(), golem2);
+		helper.assertTrue(golem2.isCarrying(new ItemStack(net.minecraft.world.item.Items.GOLD_INGOT)),
+				"the second cycle (index 1) should have really pulled the second filter slot's item (gold), not repeated the first");
+
+		helper.succeed();
+	}
 }

@@ -34,17 +34,22 @@ import thaumcraft.common.golems.tasks.TaskHandler;
  * {@link net.minecraft.world.item.Item} identity only). The original's own round-robin "cycle through filter
  * slots" field ({@code filterInc}) is dropped too - it was already dead code in the original itself (its own
  * {@code getInv(int)} override discarded the index and just returned the full filter every time), so nothing
- * real is lost by not porting it. The real "leave one behind" toggle IS kept (see {@code pleave} below,
- * un-GUI'd but functional - same real-toggle-without-a-screen-yet pattern {@code SealGuard} already
- * established).
+ * real is lost by not porting it at THIS tier - {@link SealEmptyAdvanced} does implement it for real, see
+ * that class's own doc comment. The real "leave one behind" toggle IS kept (see {@code pleave} below,
+ * un-GUI'd but functional at this tier - same real-toggle-without-a-screen-yet pattern {@code SealGuard}
+ * already established, {@code SealEmptyAdvanced} is what exposes both in the real config GUI).
  */
 public class SealEmpty extends SealFiltered implements ISealConfigToggles {
 
 	private int delay = new Random().nextInt(30);
 	/** Task id -> the specific stack matched when that task was created - the original's own tracking map. */
 	private final Map<Integer, ItemStack> cache = new HashMap<>();
-	private final ISealConfigToggles.SealToggle[] props = {
+	/** {@code pcycle} is real but inert at this tier (matches the original exactly - its own base
+	 * {@code SealEmpty} never consulted it either, only the Advanced variant's own overridden match-finding
+	 * did) - present here only so {@link SealEmptyAdvanced} inherits the field. */
+	protected final ISealConfigToggles.SealToggle[] props = {
 			new ISealConfigToggles.SealToggle(false, "pleave", "golem.prop.leave"),
+			new ISealConfigToggles.SealToggle(false, "pcycle", "golem.prop.cycle"),
 	};
 	private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("thaumcraft", "items/seals/seal_empty");
 
@@ -71,12 +76,14 @@ public class SealEmpty extends SealFiltered implements ISealConfigToggles {
 		}
 	}
 
-	private boolean matches(ItemStack stack) {
+	protected boolean matches(ItemStack stack) {
 		boolean m = matchesFilter(stack.getItem());
 		return isBlacklist() ? !m : m;
 	}
 
-	private ItemStack findFirstMatching(IItemHandler inv) {
+	/** Real, overridable seam - {@link SealEmptyAdvanced} overrides this for real round-robin cycling through
+	 * the filter's own matching items instead of always picking the first, gated on {@code pcycle}. */
+	protected ItemStack findFirstMatching(IItemHandler inv) {
 		for (int i = 0; i < inv.getSlots(); i++) {
 			ItemStack stack = inv.getStackInSlot(i);
 			if (!stack.isEmpty() && matches(stack)) return stack.copy();
@@ -84,7 +91,7 @@ public class SealEmpty extends SealFiltered implements ISealConfigToggles {
 		return ItemStack.EMPTY;
 	}
 
-	private static ItemStack extractMatching(IItemHandler inv, ItemStack want) {
+	protected static ItemStack extractMatching(IItemHandler inv, ItemStack want) {
 		for (int i = 0; i < inv.getSlots(); i++) {
 			ItemStack slotStack = inv.getStackInSlot(i);
 			if (!slotStack.isEmpty() && slotStack.getItem() == want.getItem()) {

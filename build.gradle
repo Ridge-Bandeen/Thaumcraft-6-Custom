@@ -172,6 +172,11 @@ sourceSets {
             include 'thaumcraft/common/golems/seals/SealFill.java'
             include 'thaumcraft/common/golems/seals/SealEmpty.java'
             include 'thaumcraft/common/golems/seals/SealUse.java'
+            include 'thaumcraft/common/golems/seals/SealGuardAdvanced.java'
+            include 'thaumcraft/common/golems/seals/SealBreakerAdvanced.java'
+            include 'thaumcraft/common/golems/seals/SealPickupAdvanced.java'
+            include 'thaumcraft/common/golems/seals/SealFillAdvanced.java'
+            include 'thaumcraft/common/golems/seals/SealEmptyAdvanced.java'
             include 'thaumcraft/common/golems/GolemInteractionHelper.java'
             include 'thaumcraft/client/render/RenderThaumcraftGolem.java'
 
