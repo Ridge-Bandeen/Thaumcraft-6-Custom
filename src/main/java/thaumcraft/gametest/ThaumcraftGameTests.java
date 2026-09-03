@@ -4305,4 +4305,58 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(tile.checkSurroundingAids().isEmpty(), "no aids are registered yet in this port, so the real (working) scan should always come back empty for now");
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void researchTableMenuDrawsPicksAndConfirmsARealCardThroughItsButtons(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(3, 2, 3);
+		BlockPos absPos = helper.absolutePos(pos);
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.researchTable.get());
+		thaumcraft.common.tiles.crafting.TileResearchTable tile = helper.getBlockEntity(pos);
+		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+
+		tile.getItemHandler().setStackInSlot(0, new ItemStack(ItemsTC.scribingTools.get()));
+		tile.getItemHandler().setStackInSlot(1, new ItemStack(Items.PAPER, 5));
+		tile.startNewTheory(player, java.util.Set.of());
+		tile.data.categoryTotals.put("BASICS", 20); // gives most of the deck a real candidate to draw, same lesson as the engine-only test above
+
+		thaumcraft.common.container.ResearchTableMenu menu = new thaumcraft.common.container.ResearchTableMenu(0, player.getInventory(), tile);
+		helper.assertTrue(menu.stillValid(player), "the menu should remain valid while the player is near the real placed table");
+
+		helper.assertTrue(menu.clickMenuButton(player, 2), "button 2 should draw 2 real cards, consuming 1 paper");
+		helper.assertTrue(tile.data.cardChoices.size() == 2, "drawing should leave exactly 2 real card choices, found " + tile.data.cardChoices.size());
+		helper.assertTrue(tile.getPaper().getCount() == 4, "drawing should have consumed exactly 1 paper, found " + tile.getPaper().getCount());
+
+		int inspirationBefore = tile.data.inspiration;
+		helper.assertTrue(menu.clickMenuButton(player, 4), "button 4 should pick and activate the first real card choice");
+		helper.assertTrue(tile.data.cardChoices.get(0).selected, "the picked choice should be marked selected");
+		helper.assertTrue(tile.data.inspiration < inspirationBefore || tile.data.cardChoices.get(0).card.getInspirationCost() <= 0,
+				"picking a positive-cost card should spend real inspiration, before=" + inspirationBefore + " after=" + tile.data.inspiration);
+
+		helper.assertTrue(menu.clickMenuButton(player, 1), "button 1 should confirm the current selection");
+		helper.assertTrue(tile.data.cardChoices.isEmpty(), "confirming should clear the drawn choices");
+		helper.assertTrue(tile.data.lastDraw != null, "confirming should record the selected choice as the last draw");
+
+		tile.data.inspiration = 0;
+		helper.assertTrue(!menu.clickMenuButton(player, 9), "button 9 (abandon) should refuse once the theory is already complete");
+		helper.assertTrue(menu.clickMenuButton(player, 7), "button 7 should finish a complete theory");
+		helper.assertTrue(tile.data == null, "finishing should clear the theory");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void researchTableMenuAbandonClearsAnIncompleteTheory(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(3, 2, 3);
+		BlockPos absPos = helper.absolutePos(pos);
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.researchTable.get());
+		thaumcraft.common.tiles.crafting.TileResearchTable tile = helper.getBlockEntity(pos);
+		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+
+		tile.startNewTheory(player, java.util.Set.of());
+		thaumcraft.common.container.ResearchTableMenu menu = new thaumcraft.common.container.ResearchTableMenu(0, player.getInventory(), tile);
+
+		helper.assertTrue(tile.data != null && !tile.data.isComplete(), "a fresh theory should not already be complete");
+		helper.assertTrue(menu.clickMenuButton(player, 9), "button 9 should abandon an incomplete theory");
+		helper.assertTrue(tile.data == null, "abandoning should clear the theory");
+		helper.succeed();
+	}
 }

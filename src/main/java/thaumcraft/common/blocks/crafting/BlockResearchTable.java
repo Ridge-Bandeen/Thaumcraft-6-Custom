@@ -5,8 +5,6 @@ import javax.annotation.Nullable;
 import com.mojang.serialization.MapCodec;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -34,9 +32,9 @@ import thaumcraft.common.tiles.crafting.TileResearchTable;
  * Real, documented cut: the original was a real 4-way {@code IBlockFacingHorizontal} block (faces the
  * placing player); this ships non-directional for now - purely cosmetic (nothing in the real minigame logic
  * reads the table's facing), same class of simplification already made for other devices' rotation-only
- * cosmetics. No menu/GUI yet either (see the tile's own arc notes) - right-click for now deposits/withdraws
- * ink or paper directly, same temporary convenience {@code BlockFocalManipulator}'s own first commit used
- * before its real menu existed.
+ * cosmetics. Right-click opens the real {@link thaumcraft.common.container.ResearchTableMenu} now (same
+ * {@code player.openMenu(tile)} pattern every menu-backed device this session uses) - still no screen (see
+ * the tile's own arc notes for the rest of this arc).
  */
 public class BlockResearchTable extends Block implements EntityBlock {
 
@@ -77,15 +75,13 @@ public class BlockResearchTable extends Block implements EntityBlock {
 
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-		return interact(level, pos, player, ItemStack.EMPTY);
-	}
-
-	@Override
-	protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
-			net.minecraft.world.InteractionHand hand, BlockHitResult hitResult) {
-		InteractionResult result = interact(level, pos, player, stack);
-		return result == InteractionResult.SUCCESS ? net.minecraft.world.ItemInteractionResult.SUCCESS
-				: net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+		if (level.isClientSide) {
+			return InteractionResult.SUCCESS;
+		}
+		if (level.getBlockEntity(pos) instanceof TileResearchTable tile) {
+			player.openMenu(tile);
+		}
+		return InteractionResult.CONSUME;
 	}
 
 	@Override
@@ -99,35 +95,5 @@ public class BlockResearchTable extends Block implements EntityBlock {
 			}
 		}
 		super.onRemove(state, level, pos, newState, movedByPiston);
-	}
-
-	private InteractionResult interact(Level level, BlockPos pos, Player player, ItemStack held) {
-		if (level.isClientSide) return InteractionResult.SUCCESS;
-		if (!(level.getBlockEntity(pos) instanceof TileResearchTable tile)) return InteractionResult.PASS;
-		var handler = tile.getItemHandler();
-
-		if (!held.isEmpty()) {
-			for (int slot = 0; slot < handler.getSlots(); slot++) {
-				if (handler.getStackInSlot(slot).isEmpty() && handler.isItemValid(slot, held)) {
-					ItemStack single = held.split(slot == 1 ? held.getCount() : 1);
-					handler.setStackInSlot(slot, single);
-					level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.2f, 1.6f);
-					return InteractionResult.SUCCESS;
-				}
-			}
-			return InteractionResult.PASS;
-		}
-		for (int slot = 0; slot < handler.getSlots(); slot++) {
-			if (!handler.getStackInSlot(slot).isEmpty()) {
-				ItemStack returned = handler.getStackInSlot(slot);
-				handler.setStackInSlot(slot, ItemStack.EMPTY);
-				if (!player.getInventory().add(returned)) {
-					player.drop(returned, false);
-				}
-				level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.2f, 1.5f);
-				return InteractionResult.SUCCESS;
-			}
-		}
-		return InteractionResult.PASS;
 	}
 }

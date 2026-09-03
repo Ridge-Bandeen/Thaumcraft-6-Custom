@@ -8,6 +8,7 @@ import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.common.container.ArcaneWorkbenchMenu;
 import thaumcraft.common.container.FocalManipulatorMenu;
+import thaumcraft.common.container.ResearchTableMenu;
 
 public final class ThaumcraftMenus {
 
@@ -18,6 +19,9 @@ public final class ThaumcraftMenus {
 
 	public static final Supplier<MenuType<FocalManipulatorMenu>> FOCAL_MANIPULATOR = MENUS.register("focal_manipulator",
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new FocalManipulatorMenu(windowId, inv)));
+
+	public static final Supplier<MenuType<ResearchTableMenu>> RESEARCH_TABLE = MENUS.register("research_table",
+			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new ResearchTableMenu(windowId, inv)));
 
 	private ThaumcraftMenus() {
 	}

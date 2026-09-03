@@ -11,8 +11,12 @@ import java.util.stream.Collectors;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -30,6 +34,7 @@ import thaumcraft.api.research.ResearchCategory;
 import thaumcraft.api.research.theorycraft.ITheorycraftAid;
 import thaumcraft.api.research.theorycraft.ResearchTableData;
 import thaumcraft.api.research.theorycraft.TheorycraftManager;
+import thaumcraft.common.container.ResearchTableMenu;
 import thaumcraft.common.registry.ThaumcraftBlockEntities;
 
 /**
@@ -46,7 +51,7 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * job for the menu commit still to come, not this one. World-save persistence ({@link #saveAdditional}/
  * {@link #loadAdditional}) is real here regardless.
  */
-public class TileResearchTable extends BlockEntity {
+public class TileResearchTable extends BlockEntity implements MenuProvider {
 
 	private final ItemStackHandler items = new ItemStackHandler(2) {
 		@Override
@@ -72,6 +77,16 @@ public class TileResearchTable extends BlockEntity {
 
 	public ItemStackHandler getItemHandler() {
 		return items;
+	}
+
+	@Override
+	public Component getDisplayName() {
+		return Component.translatable("block.thaumcraft.research_table");
+	}
+
+	@Override
+	public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
+		return new ResearchTableMenu(containerId, inventory, this);
 	}
 
 	public ItemStack getInk() {

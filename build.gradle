@@ -112,6 +112,7 @@ sourceSets {
             include 'thaumcraft/api/research/theorycraft/CardBalance.java'
             include 'thaumcraft/common/tiles/crafting/TileResearchTable.java'
             include 'thaumcraft/common/blocks/crafting/BlockResearchTable.java'
+            include 'thaumcraft/common/container/ResearchTableMenu.java'
             include 'thaumcraft/api/research/ResearchAddendum.java'
             include 'thaumcraft/api/research/ResearchCategories.java'
             include 'thaumcraft/api/research/ResearchCategory.java'
