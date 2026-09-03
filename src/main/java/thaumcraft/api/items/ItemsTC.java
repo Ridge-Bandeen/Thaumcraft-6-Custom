@@ -69,6 +69,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> researchTable =
 			ITEMS.registerSimpleBlockItem("research_table", BlocksTC.researchTable);
 
+	public static final DeferredItem<BlockItem> golemBuilder =
+			ITEMS.registerSimpleBlockItem("golem_builder", BlocksTC.golemBuilder);
+
 	public static final DeferredItem<BlockItem> oreQuartz =
 			ITEMS.registerSimpleBlockItem("ore_quartz", BlocksTC.oreQuartz);
 

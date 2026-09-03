@@ -23,6 +23,9 @@ public final class ThaumcraftMenus {
 	public static final Supplier<MenuType<ResearchTableMenu>> RESEARCH_TABLE = MENUS.register("research_table",
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new ResearchTableMenu(windowId, inv)));
 
+	public static final Supplier<MenuType<thaumcraft.common.container.GolemBuilderMenu>> GOLEM_BUILDER = MENUS.register("golem_builder",
+			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.GolemBuilderMenu(windowId, inv)));
+
 	private ThaumcraftMenus() {
 	}
 }

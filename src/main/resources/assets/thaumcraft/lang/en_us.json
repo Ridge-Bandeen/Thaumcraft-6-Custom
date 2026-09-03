@@ -505,6 +505,7 @@
   "tile.pattern_crafter.name": "Arcane Pattern Crafter",
   "tile.redstone_relay.name": "Redstone Relay",
   "block.thaumcraft.research_table": "Research Table",
+  "block.thaumcraft.golem_builder": "Golem Builder",
   "tile.arcane_ear.name": "Arcane Ear",
   "tile.arcane_ear_toggle.name": "Arcane Ear (Toggle)",
   "tile.levitator.name": "Arcane Levitator",

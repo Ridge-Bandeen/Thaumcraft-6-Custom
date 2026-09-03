@@ -146,6 +146,9 @@ sourceSets {
             include 'thaumcraft/common/golems/GolemProperties.java'
             include 'thaumcraft/common/golems/EntityThaumcraftGolem.java'
             include 'thaumcraft/common/golems/ItemGolemPlacer.java'
+            include 'thaumcraft/common/tiles/crafting/TileGolemBuilder.java'
+            include 'thaumcraft/common/blocks/crafting/BlockGolemBuilder.java'
+            include 'thaumcraft/common/container/GolemBuilderMenu.java'
 
             include 'thaumcraft/api/crafting/ArcaneCraftingInput.java'
             include 'thaumcraft/api/crafting/ArcaneRecipe.java'

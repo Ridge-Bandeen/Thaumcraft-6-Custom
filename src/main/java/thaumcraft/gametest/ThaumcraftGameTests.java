@@ -4630,4 +4630,45 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void golemBuilderCraftsAPlacerFromSelectedPartsAndEssentia(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.golemBuilder.get());
+		thaumcraft.common.tiles.crafting.TileGolemBuilder tile = helper.getBlockEntity(pos);
+
+		ServerPlayer player = spawnCasterAt(helper, abs.above(2));
+		player.openMenu(tile);
+		helper.assertTrue(player.containerMenu instanceof thaumcraft.common.container.GolemBuilderMenu,
+				"opening the tile via the real MenuProvider path should give the player a real GolemBuilderMenu");
+		thaumcraft.common.container.GolemBuilderMenu menu = (thaumcraft.common.container.GolemBuilderMenu) player.containerMenu;
+
+		menu.clickMenuButton(player, 0); // cycle material -> index 1
+		menu.clickMenuButton(player, 1); // cycle head -> index 1
+
+		thaumcraft.api.golems.IGolemProperties expected = menu.buildSelectedProperties();
+		for (ItemStack stack : expected.generateComponents()) {
+			player.getInventory().add(new ItemStack(stack.getItem(), 64));
+		}
+
+		boolean started = menu.clickMenuButton(player, 5);
+		helper.assertTrue(started, "starting a craft with sufficient components in the player's inventory should succeed");
+		helper.assertTrue(tile.golem == expected.toLong(), "the tile should now be building exactly the selected properties");
+		helper.assertTrue(tile.cost > 0 && tile.cost == tile.maxCost, "cost should be initialized and equal to maxCost at the very start");
+
+		int initialCost = tile.cost;
+		for (int i = 0; i < (initialCost + 2) * 6 && tile.golem >= 0L; i++) {
+			tile.addEssentia(thaumcraft.api.aspects.Aspect.MECHANISM, 1, net.minecraft.core.Direction.UP);
+			thaumcraft.common.tiles.crafting.TileGolemBuilder.tick(helper.getLevel(), abs, helper.getLevel().getBlockState(abs), tile);
+		}
+
+		helper.assertTrue(tile.golem < 0L && tile.cost == 0, "the build should have completed within a generous tick budget");
+		ItemStack output = tile.getItemHandler().getStackInSlot(0);
+		helper.assertTrue(!output.isEmpty() && output.getItem() == ItemsTC.golemPlacer.get(), "the output slot should now hold a real golem placer");
+		thaumcraft.api.items.ThaumcraftDataComponents.GolemPlacerData data = output.get(thaumcraft.api.items.ThaumcraftDataComponents.GOLEM_PLACER_DATA.get());
+		helper.assertTrue(data != null && data.props() == expected.toLong(), "the placer's stored properties should match what was selected");
+
+		helper.succeed();
+	}
 }
