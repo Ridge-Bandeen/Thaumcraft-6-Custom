@@ -5677,4 +5677,34 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void mindSpiderIsHarmlessAndSelfTerminatingWhenFlagged(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+
+		thaumcraft.common.entities.monster.EntityMindSpider spider =
+				thaumcraft.common.registry.ThaumcraftEntities.MIND_SPIDER.get().create(helper.getLevel());
+		helper.assertTrue(spider != null, "the entity type should really create an instance");
+		spider.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		helper.getLevel().addFreshEntity(spider);
+		helper.assertTrue(Math.abs(spider.getMaxHealth() - 1.0f) < 0.01f, "a mind spider should really have 1 max health, was " + spider.getMaxHealth());
+
+		net.minecraft.world.entity.npc.Villager target = net.minecraft.world.entity.EntityType.VILLAGER.create(helper.getLevel());
+		helper.assertTrue(target != null, "the villager entity type should really create an instance");
+		target.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		helper.getLevel().addFreshEntity(target);
+
+		spider.setHarmless(true);
+		boolean hurtWhileHarmless = spider.doHurtTarget(target);
+		helper.assertTrue(!hurtWhileHarmless, "a real harmless mind spider should really refuse to attack");
+
+		helper.assertTrue(spider.isAlive(), "the spider should still be alive before its real lifespan expires");
+		spider.tickCount = 1300;
+		spider.tick();
+		helper.assertTrue(!spider.isAlive(), "a real harmless mind spider should really discard itself once its 1200-tick lifespan expires");
+
+		helper.succeed();
+	}
 }

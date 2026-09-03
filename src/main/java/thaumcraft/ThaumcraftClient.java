@@ -92,6 +92,9 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.THAUMIC_SLIME.get(), thaumcraft.client.render.RenderThaumicSlime::new);
         event.registerEntityRenderer(ThaumcraftEntities.BRAINY_ZOMBIE.get(), thaumcraft.client.render.RenderBrainyZombie::new);
         event.registerEntityRenderer(ThaumcraftEntities.GIANT_BRAINY_ZOMBIE.get(), thaumcraft.client.render.RenderGiantBrainyZombie::new);
+        // Real vanilla spider texture/model reused directly (SpiderRenderer<T extends Spider> is generic,
+        // no subclass needed) - see ThaumcraftEntities.MIND_SPIDER's own doc comment for why.
+        event.registerEntityRenderer(ThaumcraftEntities.MIND_SPIDER.get(), net.minecraft.client.renderer.entity.SpiderRenderer::new);
     }
 
     /** One real "additional" model per {@link GolemMaterial} (the trunk/limbs silhouette every golem has),

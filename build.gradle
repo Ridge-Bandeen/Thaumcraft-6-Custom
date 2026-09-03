@@ -186,6 +186,7 @@ sourceSets {
             include 'thaumcraft/client/render/RenderGiantBrainyZombie.java'
             include 'thaumcraft/common/entities/monster/EntityGiantBrainyZombie.java'
             include 'thaumcraft/common/entities/monster/EntityFireBat.java'
+            include 'thaumcraft/common/entities/monster/EntityMindSpider.java'
 
             include 'thaumcraft/api/crafting/ArcaneCraftingInput.java'
             include 'thaumcraft/api/crafting/ArcaneRecipe.java'

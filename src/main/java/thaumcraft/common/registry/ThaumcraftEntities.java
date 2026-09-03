@@ -149,6 +149,16 @@ public final class ThaumcraftEntities {
 					.fireImmune()
 					.build("fire_bat"));
 
+	/** Real {@link net.minecraft.world.entity.monster.Spider} subclass - real vanilla spider texture/model
+	 * reused unchanged (no bundled custom texture in the original either - see that class's own doc comment
+	 * for why an "illusory" mob makes sense looking identical to a real one). {@code sized(1.4f, 0.9f)}
+	 * matches vanilla's own {@code EntityType.SPIDER} sizing exactly. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.EntityMindSpider>> MIND_SPIDER = ENTITY_TYPES.register("mind_spider",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.EntityMindSpider>of(thaumcraft.common.entities.monster.EntityMindSpider::new, MobCategory.MONSTER)
+					.sized(1.4f, 0.9f)
+					.clientTrackingRange(64)
+					.build("mind_spider"));
+
 	private ThaumcraftEntities() {
 	}
 }

@@ -276,6 +276,7 @@ public class Thaumcraft {
         event.put(ThaumcraftEntities.BRAINY_ZOMBIE.get(), thaumcraft.common.entities.monster.EntityBrainyZombie.createAttributes().build());
         event.put(ThaumcraftEntities.GIANT_BRAINY_ZOMBIE.get(), thaumcraft.common.entities.monster.EntityGiantBrainyZombie.createAttributes().build());
         event.put(ThaumcraftEntities.FIRE_BAT.get(), thaumcraft.common.entities.monster.EntityFireBat.createAttributes().build());
+        event.put(ThaumcraftEntities.MIND_SPIDER.get(), thaumcraft.common.entities.monster.EntityMindSpider.createAttributes().build());
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {
