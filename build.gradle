@@ -237,6 +237,7 @@ sourceSets {
             include 'thaumcraft/client/gui/GuiArcaneWorkbench.java'
             include 'thaumcraft/client/gui/GuiFocalManipulator.java'
             include 'thaumcraft/client/gui/GuiResearchTable.java'
+            include 'thaumcraft/client/gui/GuiGolemBuilder.java'
 
             include 'thaumcraft/common/items/casters/ItemCaster.java'
             include 'thaumcraft/common/items/casters/ItemFocus.java'

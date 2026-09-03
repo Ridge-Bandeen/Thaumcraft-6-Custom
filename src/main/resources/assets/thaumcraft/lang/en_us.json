@@ -952,6 +952,7 @@
   "golem.prop.provision": "Request provisioning",
   "golem.prop.provision.wl": "Request provisioning from whitelist",
   "golem.rank": "Rank",
+  "golem.craft": "Assemble",
   "golem.prop.priority": "Task Priority",
   "golem.prop.color": "Set for %s golems",
   "golem.prop.colorall": "All golems",
