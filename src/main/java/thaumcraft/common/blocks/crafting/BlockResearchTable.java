@@ -1,83 +1,133 @@
 package thaumcraft.common.blocks.crafting;
-import java.util.Random;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.client.particle.Particle;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.Thaumcraft;
-import thaumcraft.client.fx.ParticleEngine;
-import thaumcraft.client.fx.particles.FXGeneric;
-import thaumcraft.common.blocks.BlockTCDevice;
-import thaumcraft.common.blocks.IBlockFacingHorizontal;
+
+import javax.annotation.Nullable;
+
+import com.mojang.serialization.MapCodec;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 import thaumcraft.common.tiles.crafting.TileResearchTable;
 
+/**
+ * Replaces the old (1.12.2) {@code BlockResearchTable}. See {@link TileResearchTable}'s own doc comment for
+ * the device's scope this pass. No custom {@code BlockTCDevice} base, same "pick the right vanilla base
+ * directly" precedent every device this session has used.
+ *
+ * Real, documented cut: the original was a real 4-way {@code IBlockFacingHorizontal} block (faces the
+ * placing player); this ships non-directional for now - purely cosmetic (nothing in the real minigame logic
+ * reads the table's facing), same class of simplification already made for other devices' rotation-only
+ * cosmetics. No menu/GUI yet either (see the tile's own arc notes) - right-click for now deposits/withdraws
+ * ink or paper directly, same temporary convenience {@code BlockFocalManipulator}'s own first commit used
+ * before its real menu existed.
+ */
+public class BlockResearchTable extends Block implements EntityBlock {
 
-public class BlockResearchTable extends BlockTCDevice implements IBlockFacingHorizontal
-{
-    public BlockResearchTable() {
-        super(Material.WOOD, TileResearchTable.class, "research_table");
-        setSoundType(SoundType.WOOD);
-    }
-    
-    @Override
-    public int damageDropped(IBlockState state) {
-        return 0;
-    }
-    
-    public boolean isOpaqueCube(IBlockState state) {
-        return false;
-    }
-    
-    public boolean isFullCube(IBlockState state) {
-        return false;
-    }
-    
-    public boolean isSideSolid(IBlockState state, IBlockAccess world, BlockPos pos, EnumFacing side) {
-        return false;
-    }
-    
-    public boolean onBlockActivated(World world, BlockPos pos, IBlockState state, EntityPlayer player, EnumHand hand, EnumFacing side, float hitX, float hitY, float hitZ) {
-        if (world.isRemote) {
-            return true;
-        }
-        player.openGui(Thaumcraft.instance, 10, world, pos.getX(), pos.getY(), pos.getZ());
-        return true;
-    }
-    
-    @Override
-    public IBlockState getStateForPlacement(World worldIn, BlockPos pos, EnumFacing facing, float hitX, float hitY, float hitZ, int meta, EntityLivingBase placer) {
-        IBlockState bs = getDefaultState();
-        bs = bs.withProperty((IProperty)IBlockFacingHorizontal.FACING, (Comparable)placer.getHorizontalFacing());
-        return bs;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void randomDisplayTick(IBlockState state, World world, BlockPos pos, Random rand) {
-        TileEntity te = world.getTileEntity(pos);
-        if (rand.nextInt(5) == 0 && te != null && ((TileResearchTable)te).data != null) {
-            double xx = rand.nextGaussian() / 2.0;
-            double zz = rand.nextGaussian() / 2.0;
-            double yy = 1.5 + rand.nextFloat();
-            int a = 40 + rand.nextInt(20);
-            FXGeneric fb = new FXGeneric(world, pos.getX() + 0.5 + xx, pos.getY() + yy, pos.getZ() + 0.5 + zz, -xx / a, -(yy - 0.85) / a, -zz / a);
-            fb.setMaxAge(a);
-            fb.setRBGColorF(0.5f + rand.nextFloat() * 0.5f, 0.5f + rand.nextFloat() * 0.5f, 0.5f + rand.nextFloat() * 0.5f);
-            fb.setAlphaF(0.0f, 0.25f, 0.5f, 0.75f, 0.0f);
-            fb.setParticles(384 + rand.nextInt(16), 1, 1);
-            fb.setScale(0.8f + rand.nextFloat() * 0.3f, 0.3f);
-            fb.setLayer(0);
-            ParticleEngine.addEffect(world, fb);
-        }
-    }
+	public static final MapCodec<BlockResearchTable> CODEC = simpleCodec(BlockResearchTable::new);
+
+	private static final VoxelShape SHAPE = Shapes.box(0, 0, 0, 1, 0.875, 1);
+
+	public BlockResearchTable(BlockBehaviour.Properties properties) {
+		super(properties);
+	}
+
+	@Override
+	protected MapCodec<? extends Block> codec() {
+		return CODEC;
+	}
+
+	@Override
+	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		return SHAPE;
+	}
+
+	@Override
+	protected boolean useShapeForLightOcclusion(BlockState state) {
+		return true;
+	}
+
+	@Nullable
+	@Override
+	public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+		return new TileResearchTable(pos, state);
+	}
+
+	@Nullable
+	@Override
+	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+		return null;
+	}
+
+	@Override
+	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+		return interact(level, pos, player, ItemStack.EMPTY);
+	}
+
+	@Override
+	protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+			net.minecraft.world.InteractionHand hand, BlockHitResult hitResult) {
+		InteractionResult result = interact(level, pos, player, stack);
+		return result == InteractionResult.SUCCESS ? net.minecraft.world.ItemInteractionResult.SUCCESS
+				: net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+	}
+
+	@Override
+	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+		if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TileResearchTable tile) {
+			for (int slot = 0; slot < tile.getItemHandler().getSlots(); slot++) {
+				ItemStack held = tile.getItemHandler().getStackInSlot(slot);
+				if (!held.isEmpty()) {
+					net.minecraft.world.Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, held);
+				}
+			}
+		}
+		super.onRemove(state, level, pos, newState, movedByPiston);
+	}
+
+	private InteractionResult interact(Level level, BlockPos pos, Player player, ItemStack held) {
+		if (level.isClientSide) return InteractionResult.SUCCESS;
+		if (!(level.getBlockEntity(pos) instanceof TileResearchTable tile)) return InteractionResult.PASS;
+		var handler = tile.getItemHandler();
+
+		if (!held.isEmpty()) {
+			for (int slot = 0; slot < handler.getSlots(); slot++) {
+				if (handler.getStackInSlot(slot).isEmpty() && handler.isItemValid(slot, held)) {
+					ItemStack single = held.split(slot == 1 ? held.getCount() : 1);
+					handler.setStackInSlot(slot, single);
+					level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.2f, 1.6f);
+					return InteractionResult.SUCCESS;
+				}
+			}
+			return InteractionResult.PASS;
+		}
+		for (int slot = 0; slot < handler.getSlots(); slot++) {
+			if (!handler.getStackInSlot(slot).isEmpty()) {
+				ItemStack returned = handler.getStackInSlot(slot);
+				handler.setStackInSlot(slot, ItemStack.EMPTY);
+				if (!player.getInventory().add(returned)) {
+					player.drop(returned, false);
+				}
+				level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.2f, 1.5f);
+				return InteractionResult.SUCCESS;
+			}
+		}
+		return InteractionResult.PASS;
+	}
 }

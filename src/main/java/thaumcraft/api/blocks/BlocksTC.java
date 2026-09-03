@@ -46,6 +46,11 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.crafting.BlockFocalManipulator::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0f).sound(SoundType.STONE).noOcclusion());
 
+	/** See {@code TileResearchTable}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.crafting.BlockResearchTable> researchTable = BLOCKS.registerBlock("research_table",
+			thaumcraft.common.blocks.crafting.BlockResearchTable::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD).noOcclusion());
+
 	/**
 	 * First step into world generation - the original's overworld quartz ore variant. No custom Block
 	 * subclass needed (unlike {@code BlockOreTC}, which only special-cased amber's bonus curio drop and

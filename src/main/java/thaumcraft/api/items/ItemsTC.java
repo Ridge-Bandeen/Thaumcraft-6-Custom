@@ -66,6 +66,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> focalManipulator =
 			ITEMS.registerSimpleBlockItem("focal_manipulator", BlocksTC.focalManipulator);
 
+	public static final DeferredItem<BlockItem> researchTable =
+			ITEMS.registerSimpleBlockItem("research_table", BlocksTC.researchTable);
+
 	public static final DeferredItem<BlockItem> oreQuartz =
 			ITEMS.registerSimpleBlockItem("ore_quartz", BlocksTC.oreQuartz);
 

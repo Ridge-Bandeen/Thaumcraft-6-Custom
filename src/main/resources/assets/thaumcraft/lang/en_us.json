@@ -496,7 +496,7 @@
   "tile.crucible.name": "Crucible",
   "tile.pattern_crafter.name": "Arcane Pattern Crafter",
   "tile.redstone_relay.name": "Redstone Relay",
-  "tile.research_table.name": "Research Table",
+  "block.thaumcraft.research_table": "Research Table",
   "tile.arcane_ear.name": "Arcane Ear",
   "tile.arcane_ear_toggle.name": "Arcane Ear (Toggle)",
   "tile.levitator.name": "Arcane Levitator",

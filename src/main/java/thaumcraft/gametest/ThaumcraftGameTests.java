@@ -4273,4 +4273,36 @@ public class ThaumcraftGameTests {
 				"a successful analyze should add 25-50 progress to the analyzed category and 5 to BASICS, found ALCHEMY=" + data.getTotal("ALCHEMY") + " BASICS=" + data.getTotal("BASICS"));
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void researchTableConsumesInkAndPaperAndTracksARealTheory(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(3, 2, 3);
+		BlockPos absPos = helper.absolutePos(pos);
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.researchTable.get());
+		thaumcraft.common.tiles.crafting.TileResearchTable tile = helper.getBlockEntity(pos);
+		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+
+		tile.getItemHandler().setStackInSlot(0, new ItemStack(ItemsTC.scribingTools.get()));
+		tile.getItemHandler().setStackInSlot(1, new ItemStack(Items.PAPER, 5));
+
+		helper.assertTrue(tile.consumeInkFromTable(), "consuming ink should succeed with real scribing tools in slot 0");
+		helper.assertTrue(tile.getInk().getDamageValue() == 1, "consuming ink should damage the scribing tools by exactly 1, found " + tile.getInk().getDamageValue());
+
+		helper.assertTrue(tile.consumePaperFromTable(), "consuming paper should succeed with real paper in slot 1");
+		helper.assertTrue(tile.getPaper().getCount() == 4, "consuming paper should remove exactly 1 sheet, found " + tile.getPaper().getCount());
+
+		helper.assertTrue(tile.data == null, "no theory should be in progress yet");
+		tile.startNewTheory(player, java.util.Set.of());
+		helper.assertTrue(tile.data != null && tile.data.inspirationStart == 5, "starting a new theory with no aids should give the real 5 baseline inspiration, found " + (tile.data == null ? "null" : tile.data.inspirationStart));
+
+		tile.data.categoryTotals.put("BASICS", 100);
+		tile.finishTheory(player);
+		helper.assertTrue(tile.data == null, "finishing a theory should clear it");
+		int theoryKnowledge = thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player)
+				.getKnowledge(thaumcraft.api.capabilities.IPlayerKnowledge.EnumKnowledgeType.THEORY, thaumcraft.api.research.ResearchCategories.getResearchCategory("BASICS"));
+		helper.assertTrue(theoryKnowledge >= 1, "a full 100% BASICS theory should grant at least 1 real THEORY knowledge point, found " + theoryKnowledge);
+
+		helper.assertTrue(tile.checkSurroundingAids().isEmpty(), "no aids are registered yet in this port, so the real (working) scan should always come back empty for now");
+		helper.succeed();
+	}
 }

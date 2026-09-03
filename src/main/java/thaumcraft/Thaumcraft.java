@@ -207,6 +207,9 @@ public class Thaumcraft {
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ThaumcraftBlockEntities.FOCAL_MANIPULATOR.get(),
                 (tile, side) -> ((thaumcraft.common.tiles.crafting.TileFocalManipulator) tile).getItemHandler());
 
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ThaumcraftBlockEntities.RESEARCH_TABLE.get(),
+                (tile, side) -> ((thaumcraft.common.tiles.crafting.TileResearchTable) tile).getItemHandler());
+
         thaumcraft.gametest.ThaumcraftGameTests.registerTestCapabilities(event);
     }
 
