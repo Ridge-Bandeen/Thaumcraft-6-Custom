@@ -5604,4 +5604,39 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void giantBrainyZombieGrowsAndHitsHarderAsRealAngerRises(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+
+		thaumcraft.common.entities.monster.EntityGiantBrainyZombie zombie =
+				thaumcraft.common.registry.ThaumcraftEntities.GIANT_BRAINY_ZOMBIE.get().create(helper.getLevel());
+		helper.assertTrue(zombie != null, "the entity type should really create an instance");
+		zombie.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		helper.getLevel().addFreshEntity(zombie);
+
+		helper.assertTrue(Math.abs(zombie.getMaxHealth() - 60.0f) < 0.01f, "a giant brainy zombie should really have 60 max health, was " + zombie.getMaxHealth());
+
+		float widthAtRest = zombie.getBbWidth();
+		float heightAtRest = zombie.getBbHeight();
+		zombie.aiStep();
+		helper.assertTrue(Math.abs(zombie.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) - 2.0) < 0.01,
+				"at zero anger the real per-tick formula (7 + (anger-1)*5) should really compute to 2.0, was "
+						+ zombie.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE));
+
+		net.minecraft.world.entity.npc.Villager attacker = net.minecraft.world.entity.EntityType.VILLAGER.create(helper.getLevel());
+		helper.assertTrue(attacker != null, "the villager entity type should really create an instance");
+		attacker.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		helper.getLevel().addFreshEntity(attacker);
+
+		zombie.hurt(helper.getLevel().damageSources().mobAttack(attacker), 1.0f);
+		helper.assertTrue(Math.abs(zombie.getAnger() - 0.1f) < 0.001f, "getting hurt should have really raised anger by 0.1, was " + zombie.getAnger());
+		helper.assertTrue(zombie.getBbWidth() > widthAtRest && zombie.getBbHeight() > heightAtRest,
+				"a real anger rise should have really grown the zombie's own hitbox, width " + widthAtRest + " -> " + zombie.getBbWidth()
+						+ ", height " + heightAtRest + " -> " + zombie.getBbHeight());
+
+		helper.succeed();
+	}
 }

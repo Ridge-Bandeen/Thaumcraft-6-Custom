@@ -132,6 +132,14 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("brainy_zombie"));
 
+	/** Real dynamic size ({@code sized(0.6f, 1.95f)} is only the resting/zero-anger placeholder - see
+	 * {@code EntityGiantBrainyZombie#getDimensions}'s own real per-tick scaling). */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.EntityGiantBrainyZombie>> GIANT_BRAINY_ZOMBIE = ENTITY_TYPES.register("giant_brainy_zombie",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.EntityGiantBrainyZombie>of(thaumcraft.common.entities.monster.EntityGiantBrainyZombie::new, MobCategory.MONSTER)
+					.sized(0.6f, 1.95f)
+					.clientTrackingRange(64)
+					.build("giant_brainy_zombie"));
+
 	private ThaumcraftEntities() {
 	}
 }

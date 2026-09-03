@@ -91,6 +91,7 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.GOLEM.get(), RenderThaumcraftGolem::new);
         event.registerEntityRenderer(ThaumcraftEntities.THAUMIC_SLIME.get(), thaumcraft.client.render.RenderThaumicSlime::new);
         event.registerEntityRenderer(ThaumcraftEntities.BRAINY_ZOMBIE.get(), thaumcraft.client.render.RenderBrainyZombie::new);
+        event.registerEntityRenderer(ThaumcraftEntities.GIANT_BRAINY_ZOMBIE.get(), thaumcraft.client.render.RenderGiantBrainyZombie::new);
     }
 
     /** One real "additional" model per {@link GolemMaterial} (the trunk/limbs silhouette every golem has),
