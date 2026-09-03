@@ -5639,4 +5639,42 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void fireBatUnhangsWhenApproachedAndIsRealFireAndExplosionImmune(GameTestHelper helper) {
+		BlockPos ceilingPos = new BlockPos(0, 3, 0);
+		BlockPos ceilingAbs = helper.absolutePos(ceilingPos);
+		helper.setBlock(ceilingPos, net.minecraft.world.level.block.Blocks.STONE);
+		BlockPos hangPos = ceilingPos.below();
+		BlockPos hangAbs = helper.absolutePos(hangPos);
+
+		thaumcraft.common.entities.monster.EntityFireBat bat =
+				thaumcraft.common.registry.ThaumcraftEntities.FIRE_BAT.get().create(helper.getLevel());
+		helper.assertTrue(bat != null, "the entity type should really create an instance");
+		bat.moveTo(hangAbs.getX() + 0.5, hangAbs.getY() + 0.9, hangAbs.getZ() + 0.5, 0.0f, 0.0f);
+		helper.getLevel().addFreshEntity(bat);
+		helper.assertTrue(bat.isHanging(), "a fresh fire bat should really start hanging");
+
+		bat.tickCount = 5;
+		float healthBefore = bat.getHealth();
+		boolean fireHurt = bat.hurt(helper.getLevel().damageSources().inFire(), 5.0f);
+		helper.assertTrue(!fireHurt && bat.getHealth() == healthBefore, "a real fire bat should really be immune to fire damage");
+		boolean explosionHurt = bat.hurt(helper.getLevel().damageSources().explosion(null, null), 5.0f);
+		helper.assertTrue(!explosionHurt && bat.getHealth() == healthBefore, "a real fire bat should really be immune to explosion damage");
+
+		ServerPlayer nearby = spawnCasterAt(helper, hangAbs);
+		bat.aiStep();
+		helper.assertTrue(!bat.isHanging(), "a real fire bat should really unhang once a player is within 4 blocks");
+
+		bat.hurt(helper.getLevel().damageSources().generic(), 1000.0f);
+		List<net.minecraft.world.entity.item.ItemEntity> drops = helper.getLevel().getEntitiesOfClass(
+				net.minecraft.world.entity.item.ItemEntity.class, new AABB(hangAbs).inflate(3));
+		boolean foundGunpowder = false;
+		for (net.minecraft.world.entity.item.ItemEntity ie : drops) {
+			if (ie.getItem().is(net.minecraft.world.item.Items.GUNPOWDER)) foundGunpowder = true;
+		}
+		helper.assertTrue(foundGunpowder, "killing a fire bat should really drop gunpowder");
+
+		helper.succeed();
+	}
 }

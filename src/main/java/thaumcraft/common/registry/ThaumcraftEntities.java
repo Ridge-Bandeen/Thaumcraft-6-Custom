@@ -140,6 +140,15 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("giant_brainy_zombie"));
 
+	/** Real fire immunity via the builder flag itself (see {@code EntityFireBat}'s own doc comment) rather
+	 * than a per-hit damage-source check. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.EntityFireBat>> FIRE_BAT = ENTITY_TYPES.register("fire_bat",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.EntityFireBat>of(thaumcraft.common.entities.monster.EntityFireBat::new, MobCategory.MONSTER)
+					.sized(0.5f, 0.9f)
+					.clientTrackingRange(64)
+					.fireImmune()
+					.build("fire_bat"));
+
 	private ThaumcraftEntities() {
 	}
 }
