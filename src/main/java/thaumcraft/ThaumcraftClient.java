@@ -7,16 +7,20 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.item.ItemProperties;
+import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.resources.ResourceLocation;
 import thaumcraft.api.blocks.BlocksTC;
+import thaumcraft.api.golems.parts.GolemMaterial;
 import thaumcraft.api.items.ItemsTC;
 import thaumcraft.common.blocks.basic.BlockCandle;
 import thaumcraft.client.gui.GuiArcaneWorkbench;
 import thaumcraft.client.render.RenderFocusProjectile;
+import thaumcraft.client.render.RenderThaumcraftGolem;
 import thaumcraft.common.registry.ThaumcraftEntities;
 import thaumcraft.common.registry.ThaumcraftMenus;
 
@@ -78,6 +82,22 @@ public class ThaumcraftClient {
         // Alumentum renders as a real spinning item icon (vanilla's own snowball/egg renderer), unlike
         // the invisible focus-carrier entities above.
         event.registerEntityRenderer(ThaumcraftEntities.ALUMENTUM.get(), ThrownItemRenderer::new);
+        event.registerEntityRenderer(ThaumcraftEntities.GOLEM.get(), RenderThaumcraftGolem::new);
+    }
+
+    /** One real "additional" model per {@link GolemMaterial} - see {@link RenderThaumcraftGolem}'s own doc
+     * comment for why this is the modern replacement for the original's bespoke OBJ loader. Registered here
+     * (not tied to any block/item) so it bakes through the standard model pipeline like any other model -
+     * real texture-atlas stitching included - and can be looked up later via {@code ModelManager#getModel}.
+     * {@code GolemMaterial}'s own registry is populated in {@code commonSetup} (well before model baking
+     * starts), so it's real and non-empty by the time this fires. */
+    @SubscribeEvent
+    static void onRegisterAdditionalModels(ModelEvent.RegisterAdditional event) {
+        for (GolemMaterial material : GolemMaterial.getMaterials()) {
+            if (material == null) continue;
+            event.register(new ModelResourceLocation(
+                    ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "golem/base_" + material.key.toLowerCase()), "standalone"));
+        }
     }
 
     /** Candles share one grayscale texture across all 16 colors (no per-color art exists, unlike vanilla's

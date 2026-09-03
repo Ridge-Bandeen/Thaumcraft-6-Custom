@@ -1,0 +1,8 @@
+{
+    "loader": "neoforge:obj",
+    "model": "thaumcraft:models/obj/golem_base.obj",
+    "flip_v": true,
+    "textures": {
+        "Material__25": "thaumcraft:entity/golems/mat_thaumium"
+    }
+}
