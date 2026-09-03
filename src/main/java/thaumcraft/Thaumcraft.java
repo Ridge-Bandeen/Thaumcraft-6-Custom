@@ -267,6 +267,7 @@ public class Thaumcraft {
      * projectile/carrier with no attribute map of its own. */
     private void registerEntityAttributes(net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent event) {
         event.put(ThaumcraftEntities.WISP.get(), thaumcraft.common.entities.monster.EntityWisp.createAttributes().build());
+        event.put(ThaumcraftEntities.GOLEM.get(), thaumcraft.common.golems.EntityThaumcraftGolem.createAttributes().build());
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {

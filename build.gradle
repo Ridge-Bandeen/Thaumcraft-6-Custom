@@ -144,6 +144,7 @@ sourceSets {
             include 'thaumcraft/api/golems/seals/SealPos.java'
             include 'thaumcraft/api/golems/tasks/Task.java'
             include 'thaumcraft/common/golems/GolemProperties.java'
+            include 'thaumcraft/common/golems/EntityThaumcraftGolem.java'
 
             include 'thaumcraft/api/crafting/ArcaneCraftingInput.java'
             include 'thaumcraft/api/crafting/ArcaneRecipe.java'

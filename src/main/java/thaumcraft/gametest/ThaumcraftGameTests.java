@@ -4454,4 +4454,142 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(components.length > 0 && foundMechanism, "generateComponents should return a real, non-empty component list including the material's own mechanism, found " + components.length + " entries");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Golem construction, chunk 2: the real living entity - see EntityThaumcraftGolem's own doc comment
+	// for what's simplified (no task/seal system, no custom pathfinding, no placer/bell items yet).
+	// --------------------------------------------------------------------------------------------------
+
+	private static thaumcraft.common.golems.EntityThaumcraftGolem spawnGolem(GameTestHelper helper, BlockPos origin) {
+		ServerLevel level = helper.getLevel();
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = thaumcraft.common.registry.ThaumcraftEntities.GOLEM.get().create(level);
+		golem.moveTo(origin.getX() + 0.5, origin.getY() + 1.0, origin.getZ() + 0.5, 0, 0);
+		level.addFreshEntity(golem);
+		return golem;
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void golemEntityAttributesAreDrivenByItsAssembledParts(GameTestHelper helper) {
+		thaumcraft.api.golems.parts.GolemMaterial iron = findPartByKey(thaumcraft.api.golems.parts.GolemMaterial.getMaterials(), m -> m.key, "IRON");
+		thaumcraft.api.golems.parts.GolemHead basic = findPartByKey(thaumcraft.api.golems.parts.GolemHead.getHeads(), h -> h.key, "BASIC");
+		thaumcraft.api.golems.parts.GolemArm basicArm = findPartByKey(thaumcraft.api.golems.parts.GolemArm.getArms(), a -> a.key, "BASIC");
+		thaumcraft.api.golems.parts.GolemLeg walker = findPartByKey(thaumcraft.api.golems.parts.GolemLeg.getLegs(), l -> l.key, "WALKER");
+		thaumcraft.api.golems.parts.GolemAddon fighter = findPartByKey(thaumcraft.api.golems.parts.GolemAddon.getAddons(), a -> a.key, "FIGHTER");
+
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setMaterial(iron);
+		props.setHead(basic);
+		props.setArms(basicArm);
+		props.setLegs(walker);
+		props.setAddon(fighter);
+		props.setRank(2);
+
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, origin);
+		golem.initializeGolem(props, 0);
+
+		// synced-data round trip: getProperties() must reflect exactly what was assembled.
+		thaumcraft.api.golems.IGolemProperties restored = golem.getProperties();
+		helper.assertTrue(restored.getMaterial() == iron && restored.getHead() == basic && restored.getArms() == basicArm
+				&& restored.getLegs() == walker && restored.getAddon() == fighter && restored.getRank() == 2,
+				"getProperties() should round-trip exactly what initializeGolem() assembled");
+
+		// IRON healthMod=20, no FRAGILE trait in this loadout -> 10 + 20 + rank(2) = 32.
+		helper.assertTrue(golem.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).getValue() == 32.0,
+				"max health should be 10 + material.healthMod + rank, was " + golem.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).getValue());
+
+		// FIGHTER addon -> real attack damage: IRON damage=3 + rank(2)*0.25 = 3.5.
+		helper.assertTrue(golem.getProperties().hasTrait(thaumcraft.api.golems.EnumGolemTrait.FIGHTER), "FIGHTER addon should contribute the FIGHTER trait");
+		double attack = golem.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE).getValue();
+		helper.assertTrue(Math.abs(attack - 3.5) < 0.001, "FIGHTER golem should have real attack damage from its material + rank, was " + attack);
+
+		// no SCOUT trait in this loadout -> follow range stays the un-boosted 40.
+		helper.assertTrue(golem.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE).getValue() == 40.0,
+				"follow range should be 40 without SCOUT, was " + golem.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE).getValue());
+
+		helper.assertTrue(golem.hasRestriction(), "initializeGolem() should anchor a home restriction at the build site");
+		helper.succeed();
+	}
+
+	/** {@link thaumcraft.api.golems.IGolemAPI#hasTrait} isn't part of the interface - convenience delegate
+	 * used only by this test file. */
+	private static boolean hasTrait(thaumcraft.common.golems.EntityThaumcraftGolem golem, thaumcraft.api.golems.EnumGolemTrait trait) {
+		return golem.getProperties().hasTrait(trait);
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void golemEntityHoldsAndDropsCarriedItemsRespectingHaulerCapacity(GameTestHelper helper) {
+		thaumcraft.api.golems.parts.GolemMaterial wood = findPartByKey(thaumcraft.api.golems.parts.GolemMaterial.getMaterials(), m -> m.key, "WOOD");
+		thaumcraft.api.golems.parts.GolemHead basic = findPartByKey(thaumcraft.api.golems.parts.GolemHead.getHeads(), h -> h.key, "BASIC");
+		thaumcraft.api.golems.parts.GolemArm basicArm = findPartByKey(thaumcraft.api.golems.parts.GolemArm.getArms(), a -> a.key, "BASIC");
+		thaumcraft.api.golems.parts.GolemLeg walker = findPartByKey(thaumcraft.api.golems.parts.GolemLeg.getLegs(), l -> l.key, "WALKER");
+		thaumcraft.api.golems.parts.GolemAddon hauler = findPartByKey(thaumcraft.api.golems.parts.GolemAddon.getAddons(), a -> a.key, "HAULER");
+
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setMaterial(wood);
+		props.setHead(basic);
+		props.setArms(basicArm);
+		props.setLegs(walker);
+		props.setAddon(hauler);
+
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, origin);
+		golem.initializeGolem(props, 0);
+		helper.assertTrue(hasTrait(golem, thaumcraft.api.golems.EnumGolemTrait.HAULER), "HAULER addon should contribute the HAULER trait");
+
+		ItemStack cobble = new ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 64);
+		ItemStack leftover = golem.holdItem(cobble.copy());
+		helper.assertTrue(leftover.isEmpty(), "a single stack should fit entirely in the first carry slot, leftover was " + leftover);
+		helper.assertTrue(golem.isCarrying(new ItemStack(net.minecraft.world.item.Items.COBBLESTONE)), "golem should now be carrying cobblestone");
+
+		ItemStack secondLeftover = golem.holdItem(new ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 64));
+		helper.assertTrue(secondLeftover.isEmpty(), "HAULER golem has a second carry slot, a second full stack should also fit entirely");
+
+		ItemStack thirdLeftover = golem.holdItem(new ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 64));
+		helper.assertTrue(thirdLeftover.getCount() == 64, "both carry slots are full - a third stack should come back entirely unaccepted, was " + thirdLeftover);
+
+		ItemStack dropped = golem.dropItem(ItemStack.EMPTY);
+		helper.assertTrue(dropped.is(net.minecraft.world.item.Items.COBBLESTONE) && dropped.getCount() == 64, "dropItem(EMPTY) should hand back one full carried stack, was " + dropped);
+		helper.assertTrue(golem.canCarry(new ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 64), false), "freeing one slot should make room for another full stack again");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void golemEntityRoundTripsThroughSaveData(GameTestHelper helper) {
+		thaumcraft.api.golems.parts.GolemMaterial clay = findPartByKey(thaumcraft.api.golems.parts.GolemMaterial.getMaterials(), m -> m.key, "CLAY");
+		thaumcraft.api.golems.parts.GolemHead basic = findPartByKey(thaumcraft.api.golems.parts.GolemHead.getHeads(), h -> h.key, "BASIC");
+		thaumcraft.api.golems.parts.GolemArm basicArm = findPartByKey(thaumcraft.api.golems.parts.GolemArm.getArms(), a -> a.key, "BASIC");
+		thaumcraft.api.golems.parts.GolemLeg walker = findPartByKey(thaumcraft.api.golems.parts.GolemLeg.getLegs(), l -> l.key, "WALKER");
+		thaumcraft.api.golems.parts.GolemAddon none = findPartByKey(thaumcraft.api.golems.parts.GolemAddon.getAddons(), a -> a.key, "NONE");
+
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setMaterial(clay);
+		props.setHead(basic);
+		props.setArms(basicArm);
+		props.setLegs(walker);
+		props.setAddon(none);
+		props.setRank(4);
+
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		thaumcraft.common.golems.EntityThaumcraftGolem original = spawnGolem(helper, origin);
+		original.initializeGolem(props, 750);
+		original.setGolemColor((byte) 9);
+		original.setFollowingOwner(true);
+
+		net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+		original.addAdditionalSaveData(tag);
+
+		thaumcraft.common.golems.EntityThaumcraftGolem restored = spawnGolem(helper, origin.offset(3, 0, 0));
+		restored.readAdditionalSaveData(tag);
+
+		helper.assertTrue(restored.getProperties().getMaterial() == clay && restored.getProperties().getRank() == 4,
+				"restored golem should have the same parts and rank as the saved one");
+		helper.assertTrue(restored.getGolemColor() == 9, "restored golem should have the same colour, was " + restored.getGolemColor());
+		helper.assertTrue(restored.isFollowingOwner(), "restored golem should remember it was set to follow its owner");
+		helper.assertTrue(restored.hasRestriction() && restored.getRestrictCenter().equals(original.getRestrictCenter()),
+				"restored golem should remember its home restriction centre");
+
+		helper.succeed();
+	}
 }

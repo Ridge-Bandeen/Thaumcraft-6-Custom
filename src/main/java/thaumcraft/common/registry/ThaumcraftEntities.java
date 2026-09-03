@@ -102,6 +102,16 @@ public final class ThaumcraftEntities {
 					.fireImmune()
 					.build("flux_rift"));
 
+	/** See {@link thaumcraft.common.golems.EntityThaumcraftGolem}'s own doc comment - the second real
+	 * living {@link net.minecraft.world.entity.Mob} this port has registered (after {@link #WISP}), same
+	 * matching {@code EntityAttributeCreationEvent} entry requirement (see
+	 * {@code Thaumcraft#registerEntityAttributes}). */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.golems.EntityThaumcraftGolem>> GOLEM = ENTITY_TYPES.register("golem",
+			() -> EntityType.Builder.<thaumcraft.common.golems.EntityThaumcraftGolem>of(thaumcraft.common.golems.EntityThaumcraftGolem::new, MobCategory.MISC)
+					.sized(0.7f, 1.1f)
+					.clientTrackingRange(64)
+					.build("golem"));
+
 	private ThaumcraftEntities() {
 	}
 }
