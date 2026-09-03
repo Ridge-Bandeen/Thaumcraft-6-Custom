@@ -288,8 +288,11 @@ public class EntityThaumcraftGolem extends TamableAnimal implements IGolemAPI, R
 		} else {
 			// higher priority than the wander fallback - a golem with a real task to do (see getTask()/
 			// setTask() and thaumcraft.common.golems.ai's own doc comments) takes it over just wandering.
+			// Entity-position tasks (SealGuard) are tried slightly before block-position ones (SealLumber),
+			// matching the original's own AIGotoEntity=3/AIGotoBlock=4 ordering.
 			goalSelector.addGoal(3, new thaumcraft.common.golems.ai.AIGotoEntity(this));
-			goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 1.0));
+			goalSelector.addGoal(4, new thaumcraft.common.golems.ai.AIGotoBlock(this));
+			goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 1.0));
 		}
 		goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8.0f));
 		goalSelector.addGoal(9, new RandomLookAroundGoal(this));

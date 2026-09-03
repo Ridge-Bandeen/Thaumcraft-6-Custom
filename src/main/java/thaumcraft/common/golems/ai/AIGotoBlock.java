@@ -1,95 +1,75 @@
 package thaumcraft.common.golems.ai;
+
 import java.util.ArrayList;
-import java.util.Iterator;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.pathfinding.Path;
-import net.minecraft.pathfinding.PathPoint;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import thaumcraft.api.golems.IGolemAPI;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
 import thaumcraft.api.golems.tasks.Task;
-import thaumcraft.common.config.ModConfig;
 import thaumcraft.common.golems.EntityThaumcraftGolem;
 import thaumcraft.common.golems.tasks.TaskHandler;
 
+/**
+ * Replaces the old (1.12.2) {@code AIGotoBlock} - the {@link AIGoto} that seeks out block-position tasks
+ * (currently {@code SealLumber}'s "chop this log" tasks - see that class's own doc comment). Direct
+ * translation of the original's own "stand in whichever open horizontal space is closest to the target
+ * block" approach ({@link #getAdjacentSpace}); {@link #canEasilyReach} is simplified the same way
+ * {@link AIGotoEntity}'s own is - a generous flat distance ceiling instead of inspecting the navigator's
+ * own computed path endpoint.
+ */
+public class AIGotoBlock extends AIGoto {
 
-public class AIGotoBlock extends AIGoto
-{
-    public AIGotoBlock(EntityThaumcraftGolem g) {
-        super(g, (byte)0);
-    }
-    
-    @Override
-    public void updateTask() {
-        super.updateTask();
-        if (golem.getLookHelper() != null) {
-            golem.getLookHelper().setLookPosition(golem.getTask().getPos().getX() + 0.5, golem.getTask().getPos().getY() + 0.5, golem.getTask().getPos().getZ() + 0.5, 10.0f, (float) golem.getVerticalFaceSpeed());
-        }
-    }
-    
-    @Override
-    protected void moveTo() {
-        if (targetBlock != null) {
-            golem.getNavigator().tryMoveToXYZ(targetBlock.getX() + 0.5, targetBlock.getY() + 0.5, targetBlock.getZ() + 0.5, golem.getGolemMoveSpeed());
-        }
-        else {
-            golem.getNavigator().tryMoveToXYZ(golem.getTask().getPos().getX() + 0.5, golem.getTask().getPos().getY() + 0.5, golem.getTask().getPos().getZ() + 0.5, golem.getGolemMoveSpeed());
-        }
-    }
-    
-    @Override
-    protected boolean findDestination() {
-        ArrayList<Task> list = TaskHandler.getBlockTasksSorted(golem.world.provider.getDimension(), golem.getUniqueID(), golem);
-        for (Task ticket : list) {
-            if (areGolemTagsValidForTask(ticket) && ticket.canGolemPerformTask(golem) && golem.isWithinHomeDistanceFromPosition(ticket.getPos()) && isValidDestination(golem.world, ticket.getPos()) && canEasilyReach(ticket.getPos())) {
-                targetBlock = getAdjacentSpace(ticket.getPos());
-                golem.setTask(ticket);
-                golem.getTask().setReserved(true);
-                if (ModConfig.CONFIG_GRAPHICS.showGolemEmotes) {
-                    golem.world.setEntityState(golem, (byte)5);
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    private BlockPos getAdjacentSpace(BlockPos pos) {
-        double d = Double.MAX_VALUE;
-        BlockPos closest = null;
-        for (EnumFacing face : EnumFacing.HORIZONTALS) {
-            IBlockState block = golem.world.getBlockState(pos.offset(face));
-            if (!block.getMaterial().blocksMovement()) {
-                double dist = pos.offset(face).distanceSqToCenter(golem.posX, golem.posY, golem.posZ);
-                if (dist < d) {
-                    closest = pos.offset(face);
-                    d = dist;
-                }
-            }
-        }
-        return closest;
-    }
-    
-    private boolean canEasilyReach(BlockPos pos) {
-        if (golem.getDistanceSqToCenter(pos) < minDist) {
-            return true;
-        }
-        Path pathentity = golem.getNavigator().getPathToXYZ(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-        if (pathentity == null) {
-            return false;
-        }
-        PathPoint pathpoint = pathentity.getFinalPathPoint();
-        if (pathpoint == null) {
-            return false;
-        }
-        int i = pathpoint.x - MathHelper.floor((float)pos.getX());
-        int j = pathpoint.z - MathHelper.floor((float)pos.getZ());
-        int k = pathpoint.y - MathHelper.floor((float)pos.getY());
-        if (i == 0 && j == 0 && k == 2) {
-            --k;
-        }
-        return i * i + j * j + k * k < 2.25;
-    }
+	public AIGotoBlock(EntityThaumcraftGolem golem) {
+		super(golem);
+	}
+
+	@Override
+	protected void moveTo() {
+		if (targetBlock != null) {
+			golem.getNavigation().moveTo(targetBlock.getX() + 0.5, targetBlock.getY() + 0.5, targetBlock.getZ() + 0.5, golem.getGolemMoveSpeed());
+		} else if (golem.getTask() != null) {
+			BlockPos p = golem.getTask().getPos();
+			golem.getNavigation().moveTo(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, golem.getGolemMoveSpeed());
+		}
+	}
+
+	@Override
+	protected boolean findDestination() {
+		ArrayList<Task> list = TaskHandler.getBlockTasksSorted(golem.level().dimension(), golem.getUUID(), golem);
+		for (Task ticket : list) {
+			BlockPos pos = ticket.getPos();
+			if (areGolemTagsValidForTask(ticket) && ticket.canGolemPerformTask(golem)
+					&& golem.isWithinRestriction(pos)
+					&& isValidDestination(golem.level(), pos)
+					&& canEasilyReach(pos)) {
+				targetBlock = getAdjacentSpace(pos);
+				golem.setTask(ticket);
+				ticket.setReserved(true);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Picks whichever of the 4 horizontal neighbors of {@code pos} is both open (doesn't block motion) and
+	 * closest to the golem - real translation of the original's own {@code getAdjacentSpace}. */
+	private BlockPos getAdjacentSpace(BlockPos pos) {
+		double best = Double.MAX_VALUE;
+		BlockPos closest = null;
+		for (Direction face : Direction.Plane.HORIZONTAL) {
+			BlockPos candidate = pos.relative(face);
+			if (!golem.level().getBlockState(candidate).blocksMotion()) {
+				double dist = golem.distanceToSqr(Vec3.atCenterOf(candidate));
+				if (dist < best) {
+					best = dist;
+					closest = candidate;
+				}
+			}
+		}
+		return closest;
+	}
+
+	private boolean canEasilyReach(BlockPos pos) {
+		return golem.distanceToSqr(Vec3.atCenterOf(pos)) < Math.max(minDist, 256.0);
+	}
 }

@@ -4799,4 +4799,54 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealLumberDetectsLogsAndAGolemChopsThemDownForReal(GameTestHelper helper) {
+		BlockPos floorPos = BlockPos.ZERO;
+		BlockPos floorAbs = helper.absolutePos(floorPos);
+		helper.setBlock(floorPos, net.minecraft.world.level.block.Blocks.STONE);
+
+		BlockPos logPos = floorPos.above();
+		BlockPos logAbs = helper.absolutePos(logPos);
+		helper.setBlock(logPos, net.minecraft.world.level.block.Blocks.OAK_LOG);
+
+		ServerPlayer owner = spawnCasterAt(helper, floorAbs.above(3));
+		thaumcraft.api.golems.seals.ISeal seal = new thaumcraft.common.golems.seals.SealLumber();
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), floorAbs, net.minecraft.core.Direction.UP, seal, owner),
+				"placing a fresh seal should succeed");
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(floorAbs, net.minecraft.core.Direction.UP);
+		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
+
+		boolean foundTask = false;
+		thaumcraft.api.golems.tasks.Task logTask = null;
+		for (int i = 0; i < 40 && !foundTask; i++) {
+			sealEntity.tickSealEntity(helper.getLevel());
+			for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
+				if (t.getPos().equals(logAbs)) {
+					foundTask = true;
+					logTask = t;
+				}
+			}
+		}
+		helper.assertTrue(foundTask, "tickSealEntity should have created a real chop task for the log");
+
+		thaumcraft.api.golems.parts.GolemArm breakerArm = findPartByKey(thaumcraft.api.golems.parts.GolemArm.getArms(), a -> a.key, "BREAKERS");
+		thaumcraft.api.golems.parts.GolemHead smartHead = findPartByKey(thaumcraft.api.golems.parts.GolemHead.getHeads(), h -> h.key, "SMART");
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setArms(breakerArm);
+		props.setHead(smartHead);
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, floorAbs);
+		golem.initializeGolem(props, 0);
+
+		thaumcraft.common.golems.ai.AIGotoBlock goal = new thaumcraft.common.golems.ai.AIGotoBlock(golem);
+		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the chop task");
+		helper.assertTrue(golem.getTask() == logTask, "the golem should have reserved the real chop task");
+
+		// Exercises the real completion path directly (the same call TaskHandler.completeTask makes once a
+		// golem is actually adjacent) rather than ticking real pathfinding to convergence in a GameTest.
+		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
+		helper.assertTrue(helper.getLevel().getBlockState(logAbs).isAir(), "completing the chop task should have really broken the log");
+
+		helper.succeed();
+	}
 }

@@ -157,6 +157,8 @@ sourceSets {
             include 'thaumcraft/common/golems/ItemSealPlacer.java'
             include 'thaumcraft/common/golems/ai/AIGoto.java'
             include 'thaumcraft/common/golems/ai/AIGotoEntity.java'
+            include 'thaumcraft/common/golems/ai/AIGotoBlock.java'
+            include 'thaumcraft/common/golems/seals/SealLumber.java'
 
             include 'thaumcraft/api/crafting/ArcaneCraftingInput.java'
             include 'thaumcraft/api/crafting/ArcaneRecipe.java'

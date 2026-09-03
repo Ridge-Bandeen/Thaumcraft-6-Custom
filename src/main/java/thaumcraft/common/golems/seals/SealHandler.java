@@ -57,6 +57,7 @@ public final class SealHandler {
 	 * per-placement copies from) - see that method's own doc comment for why a fresh instance matters. */
 	public static void init() {
 		GolemHelper.registerSeal(new SealGuard());
+		GolemHelper.registerSeal(new SealLumber());
 	}
 
 	public static ISeal getSeal(String key) {
