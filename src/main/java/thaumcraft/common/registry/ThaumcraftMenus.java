@@ -26,6 +26,12 @@ public final class ThaumcraftMenus {
 	public static final Supplier<MenuType<thaumcraft.common.container.GolemBuilderMenu>> GOLEM_BUILDER = MENUS.register("golem_builder",
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.GolemBuilderMenu(windowId, inv)));
 
+	/** Unlike every menu above, {@code SealConfigMenu}'s own client constructor genuinely needs the extra-data
+	 * buffer (variable per-seal shape - see that class's own doc comment), so this one really uses the
+	 * {@code (windowId, inv, buf)} parameter instead of ignoring it. */
+	public static final Supplier<MenuType<thaumcraft.common.container.SealConfigMenu>> SEAL_CONFIG = MENUS.register("seal_config",
+			() -> IMenuTypeExtension.create(thaumcraft.common.container.SealConfigMenu::new));
+
 	private ThaumcraftMenus() {
 	}
 }

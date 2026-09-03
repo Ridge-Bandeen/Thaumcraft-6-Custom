@@ -23,11 +23,12 @@ import thaumcraft.common.golems.seals.SealHandler;
  * port has never needed anywhere else) - a plain right click already tells us exactly which block face was
  * clicked, which is all a {@link SealPos} ever needs.
  *
- * Real, documented cut: the original's non-sneak click opened a seal-config GUI ({@code ISealGui}), and a
- * sneak-click anywhere else (with the "GOLEMLOGISTICS" research known) opened a separate golem-overview
- * GUI - neither exists in this port yet (same "no custom screen yet" boundary the whole seals arc has kept
- * to). A non-sneak click on a sealed face is a real no-op ({@code PASS}) rather than silently consuming the
- * interaction or crashing.
+ * A non-sneak click on a sealed face now opens a real {@link thaumcraft.common.container.SealConfigMenu} (see
+ * that class's own doc comment) - see {@link thaumcraft.common.golems.seals.SealEntity#createMenu}, the same
+ * {@code MenuProvider} pattern {@code TileGolemBuilder} already established. Real, documented cut: the
+ * original's own separate sneak-click-anywhere golem-overview GUI (gated on the "GOLEMLOGISTICS" research)
+ * doesn't exist in this port - a real, separately-scoped screen with no seal-specific state to reuse from
+ * this chunk's own work.
  */
 public class ItemGolemBell extends Item implements ISealDisplayer {
 
@@ -54,6 +55,9 @@ public class ItemGolemBell extends Item implements ISealDisplayer {
 			level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.5f, 1.0f);
 			return InteractionResult.SUCCESS;
 		}
-		return InteractionResult.PASS;
+		if (seal instanceof net.minecraft.world.MenuProvider provider) {
+			player.openMenu(provider);
+		}
+		return InteractionResult.SUCCESS;
 	}
 }

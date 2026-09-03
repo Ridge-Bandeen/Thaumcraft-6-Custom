@@ -5346,4 +5346,54 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealConfigMenuChangesRealSealStateThroughTheRealMenuProviderPath(GameTestHelper helper) {
+		BlockPos chestPos = BlockPos.ZERO;
+		BlockPos chestAbs = helper.absolutePos(chestPos);
+		helper.setBlock(chestPos, net.minecraft.world.level.block.Blocks.CHEST);
+
+		ServerPlayer owner = spawnCasterAt(helper, chestAbs.above(3));
+		thaumcraft.common.golems.seals.SealStock seal = new thaumcraft.common.golems.seals.SealStock();
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), chestAbs, net.minecraft.core.Direction.UP, seal, owner),
+				"placing a fresh seal should succeed");
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(chestAbs, net.minecraft.core.Direction.UP);
+		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
+
+		owner.openMenu((net.minecraft.world.MenuProvider) sealEntity);
+		helper.assertTrue(owner.containerMenu instanceof thaumcraft.common.container.SealConfigMenu,
+				"opening a seal via the real MenuProvider path should give the player a real SealConfigMenu");
+		thaumcraft.common.container.SealConfigMenu menu = (thaumcraft.common.container.SealConfigMenu) owner.containerMenu;
+
+		byte priorityBefore = sealEntity.getPriority();
+		helper.assertTrue(menu.clickMenuButton(owner, 13), "the priority-up button should succeed"); // BUTTON_PRIORITY_UP
+		helper.assertTrue(sealEntity.getPriority() == priorityBefore + 1, "priority should have really increased on the live seal");
+
+		helper.assertTrue(menu.clickMenuButton(owner, 10), "the lock button should succeed for the real owner"); // BUTTON_LOCK
+		helper.assertTrue(sealEntity.isLocked(), "the seal should now really be locked");
+
+		ServerPlayer stranger = spawnCasterAt(helper, chestAbs.above(5));
+		helper.assertTrue(!menu.clickMenuButton(stranger, 14), "a non-owner should be refused any change while the seal is locked"); // BUTTON_PRIORITY_DOWN
+		helper.assertTrue(sealEntity.getPriority() == priorityBefore + 1, "priority should be unchanged after the refused non-owner click");
+
+		helper.assertTrue(menu.clickMenuButton(owner, 10), "the lock button should toggle back off for the real owner");
+		helper.assertTrue(!sealEntity.isLocked(), "the seal should now really be unlocked");
+
+		// First left-click assigns the ghost slot's item (target count starts at 0, meaning "unset") - matches
+		// the original's own real two-step gesture: only a REPEAT click on an already-matching slot
+		// accumulates a real target count, a fresh/mismatched slot always resets it to 0 first.
+		menu.setCarried(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 5));
+		menu.clicked(0, 0, net.minecraft.world.inventory.ClickType.PICKUP, owner);
+		helper.assertTrue(seal.getFilterSlot(0).is(net.minecraft.world.item.Items.IRON_INGOT),
+				"left-clicking a ghost filter slot with a cursor item should really set the live seal's filter");
+		helper.assertTrue(seal.getFilterSlotSize(0) == 0,
+				"a fresh ghost slot's first assignment should leave the real target count unset (0), was " + seal.getFilterSlotSize(0));
+
+		menu.setCarried(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 5));
+		menu.clicked(0, 0, net.minecraft.world.inventory.ClickType.PICKUP, owner);
+		helper.assertTrue(seal.getFilterSlotSize(0) == 5,
+				"a second matching left-click should really accumulate the real target amount, was " + seal.getFilterSlotSize(0));
+
+		helper.succeed();
+	}
 }

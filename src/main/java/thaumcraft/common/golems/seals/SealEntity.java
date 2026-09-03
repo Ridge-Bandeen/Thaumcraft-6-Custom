@@ -2,6 +2,11 @@ package thaumcraft.common.golems.seals;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.Level;
 import thaumcraft.api.golems.GolemHelper;
 import thaumcraft.api.golems.seals.ISeal;
@@ -18,10 +23,14 @@ import thaumcraft.api.golems.tasks.Task;
  * to this seal the moment it goes powered rather than removing them outright.
  *
  * Real, documented cut: {@link #syncToClient} is a real no-op - the original's {@code PacketSealToClient}
- * existed purely to drive in-world seal-icon rendering and a config GUI, neither of which exist in this
- * port yet (same "no custom renderer, no GUI screen yet" boundary the whole golem arc has kept to).
+ * existed purely to drive in-world seal-icon rendering, which still doesn't exist in this port (unlike the
+ * config GUI - see {@link #createMenu} below, real now).
+ *
+ * <p>{@link MenuProvider} (matching {@code TileGolemBuilder}'s own established "the real backing object
+ * IS the provider" pattern) opens a real {@link thaumcraft.common.container.SealConfigMenu} - see that
+ * class's own doc comment for the config screen this powers.
  */
-public class SealEntity implements ISealEntity {
+public class SealEntity implements ISealEntity, MenuProvider {
 
 	private SealPos sealPos;
 	private ISeal seal;
@@ -194,6 +203,17 @@ public class SealEntity implements ISealEntity {
 
 	@Override
 	public void syncToClient(Level level) {
-		// no seal-icon renderer or config GUI exists yet - see this class's own doc comment.
+		// no in-world seal-icon renderer exists yet - see this class's own doc comment.
+	}
+
+	@Override
+	public Component getDisplayName() {
+		return seal != null ? Component.translatable("item.thaumcraft.seal_" + seal.getKey().substring(seal.getKey().indexOf(':') + 1))
+				: Component.literal("Seal");
+	}
+
+	@Override
+	public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
+		return new thaumcraft.common.container.SealConfigMenu(containerId, inventory, this);
 	}
 }
