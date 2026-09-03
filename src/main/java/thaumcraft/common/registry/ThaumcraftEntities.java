@@ -112,6 +112,17 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("golem"));
 
+	/** First of a new real content area for this port - hostile mobs (see {@code EntityThaumicSlime}'s own
+	 * doc comment). {@code sized(2.04f, 2.04f)} matches vanilla's own {@code EntityType.SLIME} registration -
+	 * the max-size placeholder before {@link net.minecraft.world.entity.monster.Slime}'s own real
+	 * per-instance {@code getDefaultDimensions}/{@code refreshDimensions} (inherited, unchanged) take over.
+	 * Same matching {@code EntityAttributeCreationEvent} entry requirement as {@link #WISP}/{@link #GOLEM}. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.EntityThaumicSlime>> THAUMIC_SLIME = ENTITY_TYPES.register("thaumic_slime",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.EntityThaumicSlime>of(thaumcraft.common.entities.monster.EntityThaumicSlime::new, MobCategory.MONSTER)
+					.sized(2.04f, 2.04f)
+					.clientTrackingRange(64)
+					.build("thaumic_slime"));
+
 	private ThaumcraftEntities() {
 	}
 }

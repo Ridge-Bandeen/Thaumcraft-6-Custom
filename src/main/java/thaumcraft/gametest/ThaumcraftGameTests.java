@@ -5525,4 +5525,47 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	/**
+	 * Doesn't exercise real touch damage against a real player - confirmed via direct investigation
+	 * ({@code javap} on {@code GameTestHelper$2}, the real anonymous class backing every mock/test player
+	 * this whole file's tests use) that {@code makeMockServerPlayerInLevel()}'s own players hardcode
+	 * {@code isSpectator()}/{@code isCreative()} to {@code true} regardless of any {@code setGameMode}/
+	 * {@code Abilities} state a test sets on them afterward - a real, structural test-harness limitation
+	 * (mock players are deliberately damage-immune by design), not a gap in this port's own code. Real
+	 * vanilla {@code Slime#playerTouch}/{@code #dealDamage} is reused unmodified for the size-scaled attack
+	 * itself (only {@link thaumcraft.common.entities.monster.EntityThaumicSlime#getAttackDamage} is new,
+	 * simple, and low-risk), so this test covers the part that's actually new: the death drop.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumicSlimeDropsAFluxCrystalOnDeath(GameTestHelper helper) {
+		BlockPos floorPos = BlockPos.ZERO;
+		BlockPos floorAbs = helper.absolutePos(floorPos);
+		helper.setBlock(floorPos, net.minecraft.world.level.block.Blocks.STONE);
+
+		thaumcraft.common.entities.monster.EntityThaumicSlime slime =
+				thaumcraft.common.registry.ThaumcraftEntities.THAUMIC_SLIME.get().create(helper.getLevel());
+		helper.assertTrue(slime != null, "the entity type should really create an instance");
+		slime.moveTo(floorAbs.getX() + 0.5, floorAbs.getY() + 1.0, floorAbs.getZ() + 0.5, 0.0f, 0.0f);
+		slime.setSize(4, true);
+		helper.getLevel().addFreshEntity(slime);
+		helper.assertTrue(slime instanceof thaumcraft.api.entities.ITaintedMob, "a thaumic slime should really be a tainted mob");
+
+		slime.hurt(helper.getLevel().damageSources().generic(), 1000.0f);
+		List<net.minecraft.world.entity.item.ItemEntity> drops = helper.getLevel().getEntitiesOfClass(
+				net.minecraft.world.entity.item.ItemEntity.class, new AABB(floorAbs).inflate(3));
+		boolean foundFluxCrystal = false;
+		for (net.minecraft.world.entity.item.ItemEntity ie : drops) {
+			ItemStack stack = ie.getItem();
+			if (stack.getItem() == ItemsTC.crystalEssence.get()) {
+				thaumcraft.api.aspects.AspectList aspects = stack.get(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get());
+				if (aspects != null && aspects.getAmount(thaumcraft.api.aspects.Aspect.FLUX) > 0) {
+					foundFluxCrystal = true;
+				}
+			}
+		}
+		helper.assertTrue(foundFluxCrystal, "killing a size>1 thaumic slime should really drop a flux-aspected crystal essence");
+
+		helper.succeed();
+	}
 }

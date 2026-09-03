@@ -272,6 +272,7 @@ public class Thaumcraft {
     private void registerEntityAttributes(net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent event) {
         event.put(ThaumcraftEntities.WISP.get(), thaumcraft.common.entities.monster.EntityWisp.createAttributes().build());
         event.put(ThaumcraftEntities.GOLEM.get(), thaumcraft.common.golems.EntityThaumcraftGolem.createAttributes().build());
+        event.put(ThaumcraftEntities.THAUMIC_SLIME.get(), thaumcraft.common.entities.monster.EntityThaumicSlime.createAttributes().build());
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {

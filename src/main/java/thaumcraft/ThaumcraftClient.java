@@ -89,6 +89,7 @@ public class ThaumcraftClient {
         // the invisible focus-carrier entities above.
         event.registerEntityRenderer(ThaumcraftEntities.ALUMENTUM.get(), ThrownItemRenderer::new);
         event.registerEntityRenderer(ThaumcraftEntities.GOLEM.get(), RenderThaumcraftGolem::new);
+        event.registerEntityRenderer(ThaumcraftEntities.THAUMIC_SLIME.get(), thaumcraft.client.render.RenderThaumicSlime::new);
     }
 
     /** One real "additional" model per {@link GolemMaterial} (the trunk/limbs silhouette every golem has),

@@ -179,6 +179,8 @@ sourceSets {
             include 'thaumcraft/common/golems/seals/SealEmptyAdvanced.java'
             include 'thaumcraft/common/golems/GolemInteractionHelper.java'
             include 'thaumcraft/client/render/RenderThaumcraftGolem.java'
+            include 'thaumcraft/client/render/RenderThaumicSlime.java'
+            include 'thaumcraft/common/entities/monster/EntityThaumicSlime.java'
 
             include 'thaumcraft/api/crafting/ArcaneCraftingInput.java'
             include 'thaumcraft/api/crafting/ArcaneRecipe.java'
