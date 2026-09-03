@@ -124,6 +124,10 @@ public class Thaumcraft {
         // reason as the two calls just above.
         thaumcraft.common.lib.events.ToolEvents.initSpecialMining();
 
+        // The real golem part registry (material/head/arm/leg/addon) - see GolemProperties' own doc
+        // comment. Same registry-timing reason as the calls above.
+        thaumcraft.common.golems.GolemProperties.init();
+
         // Mirrors the original's own PotionFluxTaint.instance convention - see MobEffectFluxTaint's own doc
         // comment for why the static field exists at all. Same "needs registries populated" timing as the
         // object-tag table above.

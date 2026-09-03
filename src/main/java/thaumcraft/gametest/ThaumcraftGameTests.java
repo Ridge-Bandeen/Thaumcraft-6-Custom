@@ -4380,4 +4380,78 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(!menu.clickMenuButton(player, 0), "button 0 should refuse to start a second theory while one is already in progress");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Golem construction, chunk 1: the real part registry + GolemProperties data model - headless, no
+	// entity/builder block/menu/GUI yet. See GolemProperties' own doc comment for what's simplified.
+	// --------------------------------------------------------------------------------------------------
+
+	private static <T> T findPartByKey(T[] parts, java.util.function.Function<T, String> keyOf, String key) {
+		for (T part : parts) {
+			if (keyOf.apply(part).equals(key)) return part;
+		}
+		throw new IllegalStateException("no part registered with key " + key);
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void golemPropertiesUnionsRealTraitsAndCancelsOpposites(GameTestHelper helper) {
+		thaumcraft.api.golems.parts.GolemMaterial iron = findPartByKey(thaumcraft.api.golems.parts.GolemMaterial.getMaterials(), m -> m.key, "IRON");
+		thaumcraft.api.golems.parts.GolemHead smart = findPartByKey(thaumcraft.api.golems.parts.GolemHead.getHeads(), h -> h.key, "SMART");
+		thaumcraft.api.golems.parts.GolemArm fine = findPartByKey(thaumcraft.api.golems.parts.GolemArm.getArms(), a -> a.key, "FINE");
+		thaumcraft.api.golems.parts.GolemLeg walker = findPartByKey(thaumcraft.api.golems.parts.GolemLeg.getLegs(), l -> l.key, "WALKER");
+		thaumcraft.api.golems.parts.GolemAddon armored = findPartByKey(thaumcraft.api.golems.parts.GolemAddon.getAddons(), a -> a.key, "ARMORED");
+
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setMaterial(iron);
+		props.setHead(smart);
+		props.setArms(fine);
+		props.setLegs(walker);
+		props.setAddon(armored);
+
+		// IRON = HEAVY/FIREPROOF/BLASTPROOF, SMART head = SMART/FRAGILE, FINE arms = DEFT/FRAGILE,
+		// ARMORED addon = ARMORED/HEAVY. FRAGILE (head+arms) and ARMORED (addon) are real opposites - the
+		// original's own addTraitSmart only ever *removes* the opposite already present, it never adds the
+		// cancelling trait itself, so ARMORED is spent purely cancelling FRAGILE out and never appears in
+		// the final set either (a real, slightly surprising rule worth a regression test on its own).
+		java.util.Set<thaumcraft.api.golems.EnumGolemTrait> traits = props.getTraits();
+		helper.assertTrue(traits.contains(thaumcraft.api.golems.EnumGolemTrait.HEAVY), "IRON material should contribute HEAVY, found " + traits);
+		helper.assertTrue(traits.contains(thaumcraft.api.golems.EnumGolemTrait.SMART), "SMART head should contribute SMART, found " + traits);
+		helper.assertTrue(traits.contains(thaumcraft.api.golems.EnumGolemTrait.DEFT), "FINE arms should contribute DEFT, found " + traits);
+		helper.assertTrue(!traits.contains(thaumcraft.api.golems.EnumGolemTrait.ARMORED), "ARMORED should be spent cancelling FRAGILE, never added itself, found " + traits);
+		helper.assertTrue(!traits.contains(thaumcraft.api.golems.EnumGolemTrait.FRAGILE), "ARMORED (added last) should have cancelled out the earlier FRAGILE traits, found " + traits);
+
+		helper.assertTrue(props.hasTrait(thaumcraft.api.golems.EnumGolemTrait.HEAVY), "hasTrait should agree with getTraits()");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void golemPropertiesRoundTripsThroughALongAndGeneratesRealComponents(GameTestHelper helper) {
+		thaumcraft.api.golems.parts.GolemMaterial wood = findPartByKey(thaumcraft.api.golems.parts.GolemMaterial.getMaterials(), m -> m.key, "WOOD");
+		thaumcraft.api.golems.parts.GolemHead basic = findPartByKey(thaumcraft.api.golems.parts.GolemHead.getHeads(), h -> h.key, "BASIC");
+		thaumcraft.api.golems.parts.GolemArm basicArm = findPartByKey(thaumcraft.api.golems.parts.GolemArm.getArms(), a -> a.key, "BASIC");
+		thaumcraft.api.golems.parts.GolemLeg walker = findPartByKey(thaumcraft.api.golems.parts.GolemLeg.getLegs(), l -> l.key, "WALKER");
+		thaumcraft.api.golems.parts.GolemAddon none = findPartByKey(thaumcraft.api.golems.parts.GolemAddon.getAddons(), a -> a.key, "NONE");
+
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setMaterial(wood);
+		props.setHead(basic);
+		props.setArms(basicArm);
+		props.setLegs(walker);
+		props.setAddon(none);
+		props.setRank(3);
+
+		long packed = props.toLong();
+		thaumcraft.api.golems.IGolemProperties restored = thaumcraft.common.golems.GolemProperties.fromLong(packed);
+		helper.assertTrue(restored.getMaterial() == wood && restored.getHead() == basic && restored.getArms() == basicArm
+				&& restored.getLegs() == walker && restored.getAddon() == none && restored.getRank() == 3,
+				"packing into a long and unpacking it again should restore every real part and the rank exactly");
+
+		ItemStack[] components = props.generateComponents();
+		boolean foundMechanism = false;
+		for (ItemStack stack : components) {
+			if (stack.is(ItemsTC.mechanismSimple.get())) foundMechanism = true;
+		}
+		helper.assertTrue(components.length > 0 && foundMechanism, "generateComponents should return a real, non-empty component list including the material's own mechanism, found " + components.length + " entries");
+		helper.succeed();
+	}
 }

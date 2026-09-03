@@ -156,6 +156,29 @@ public final class ItemsTC {
 	public static final DeferredItem<Item> amber =
 			ITEMS.registerSimpleItem("amber");
 
+	/** Golem construction components - see {@code GolemProperties}' own doc comment for the parts system
+	 * they craft into. Plain items, same as the original ({@code ItemTCBase} with metadata subtypes, split
+	 * into separate items here matching every other metadata-variant item this port has ported). No real
+	 * recipes yet - shipped as real, obtainable-in-creative components first, matching the precedent
+	 * already set for {@link #amber} and others (ship the item, the recipe chain is real follow-up work). */
+	public static final DeferredItem<Item> mechanismSimple =
+			ITEMS.registerSimpleItem("mechanism_simple");
+	public static final DeferredItem<Item> plateBrass =
+			ITEMS.registerSimpleItem("plate_brass");
+	public static final DeferredItem<Item> plateIron =
+			ITEMS.registerSimpleItem("plate_iron");
+	// plateThaumium already registered above (see ingotThaumium's own section) - reused here as-is.
+	public static final DeferredItem<Item> plateVoid =
+			ITEMS.registerSimpleItem("plate_void");
+	public static final DeferredItem<Item> mindClockwork =
+			ITEMS.registerSimpleItem("mind_clockwork");
+	public static final DeferredItem<Item> mindBiothaumic =
+			ITEMS.registerSimpleItem("mind_biothaumic");
+	public static final DeferredItem<Item> moduleVision =
+			ITEMS.registerSimpleItem("module_vision");
+	public static final DeferredItem<Item> moduleAggression =
+			ITEMS.registerSimpleItem("module_aggression");
+
 	public static final DeferredItem<ItemCurio> curio =
 			ITEMS.registerItem("curio", ItemCurio::new);
 
