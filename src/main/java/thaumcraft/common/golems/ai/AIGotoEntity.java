@@ -9,12 +9,12 @@ import thaumcraft.common.golems.tasks.TaskHandler;
 
 /**
  * Replaces the old (1.12.2) {@code AIGotoEntity} - the {@link AIGoto} that seeks out entity-targeted tasks
- * (currently only {@code SealGuard}'s "watch this entity" tasks - see that class's own doc comment). Direct
- * translation, with {@link #canEasilyReach} simplified: the original checked how close the navigator's own
- * computed path actually ended up to the target; this just checks real distance against a generous
- * (256-block-squared) ceiling instead - simpler, and {@code SealGuard} tasks resolve instantly in
- * {@code onTaskStarted} (they never actually need the golem to finish walking anywhere), so the fine
- * path-endpoint check the original made barely mattered for the one seal type this port ships so far.
+ * (currently {@code SealGuard}/{@code SealButcher}'s "target this entity" tasks and {@code SealPickup}'s
+ * "grab this dropped item" tasks - see each class's own doc comment). Direct translation, with
+ * {@link #canEasilyReach} simplified: the original checked how close the navigator's own computed path
+ * actually ended up to the target; this checks real distance against a flat ceiling instead (see that
+ * method's own doc comment for the real bug a GameTest caught in an earlier, too-generous version of this
+ * check).
  */
 public class AIGotoEntity extends AIGoto {
 
@@ -50,6 +50,8 @@ public class AIGotoEntity extends AIGoto {
 	}
 
 	private boolean canEasilyReach(Entity target) {
-		return golem.distanceToSqr(target) < Math.max(minDist, 256.0);
+		// See AIGotoBlock's own doc comment on its sibling method - same real fix, tightened from a 256
+		// (16-block) ceiling down to 36 (6 blocks), caught by cross-seal task interference in a GameTest.
+		return golem.distanceToSqr(target) < Math.max(minDist, 36.0);
 	}
 }

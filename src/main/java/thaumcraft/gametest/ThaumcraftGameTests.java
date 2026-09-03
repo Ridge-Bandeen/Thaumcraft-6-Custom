@@ -5088,4 +5088,106 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealProvideDeliversStockedItemsFromOneContainerToAnother(GameTestHelper helper) {
+		BlockPos provideChestPos = BlockPos.ZERO;
+		BlockPos provideChestAbs = helper.absolutePos(provideChestPos);
+		helper.setBlock(provideChestPos, net.minecraft.world.level.block.Blocks.CHEST);
+		net.minecraft.world.level.block.entity.ChestBlockEntity provideChest = helper.getBlockEntity(provideChestPos);
+		provideChest.setItem(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 10));
+
+		BlockPos destChestPos = provideChestPos.offset(3, 0, 0);
+		BlockPos destChestAbs = helper.absolutePos(destChestPos);
+		helper.setBlock(destChestPos, net.minecraft.world.level.block.Blocks.CHEST);
+
+		ServerPlayer owner = spawnCasterAt(helper, provideChestAbs.above(3));
+		thaumcraft.common.golems.seals.SealProvide seal = new thaumcraft.common.golems.seals.SealProvide();
+		seal.setBlacklist(false);
+		seal.setFilterSlot(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT));
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), provideChestAbs, net.minecraft.core.Direction.UP, seal, owner),
+				"placing a fresh seal should succeed");
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(provideChestAbs, net.minecraft.core.Direction.UP);
+		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
+
+		thaumcraft.api.golems.GolemHelper.requestProvisioning(helper.getLevel(), destChestAbs, net.minecraft.core.Direction.UP,
+				new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 4));
+
+		// GolemHelper's per-dimension task/provisioning maps are shared, dimension-wide state across every
+		// concurrently-running GameTest - always scope a search back to our own sealPos, never assume the
+		// first structurally-matching task found is ours (a real cross-test-interference bug caught here).
+		boolean foundFetch = false;
+		thaumcraft.api.golems.tasks.Task fetchTask = null;
+		for (int i = 0; i < 30 && !foundFetch; i++) {
+			sealEntity.tickSealEntity(helper.getLevel());
+			for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
+				if (t.getLinkedProvision() != null && t.getData() == 0 && sealPos.equals(t.getSealPos())) {
+					foundFetch = true;
+					fetchTask = t;
+				}
+			}
+		}
+		helper.assertTrue(foundFetch, "SealProvide should have created a real fetch task for the stocked iron ingots");
+
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, provideChestAbs);
+		golem.initializeGolem(new thaumcraft.common.golems.GolemProperties(), 0);
+
+		thaumcraft.common.golems.ai.AIGotoBlock fetchGoal = new thaumcraft.common.golems.ai.AIGotoBlock(golem);
+		helper.assertTrue(fetchGoal.canUse(), "the golem should be able to pick up the fetch task");
+		helper.assertTrue(golem.getTask() == fetchTask, "the golem should have reserved the real fetch task");
+
+		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
+		helper.assertTrue(golem.isCarrying(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT)),
+				"completing the fetch task should have the golem really carrying the iron ingots");
+
+		thaumcraft.api.golems.tasks.Task deliverTask = null;
+		for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
+			if (t.getLinkedProvision() != null && t.getData() == 1 && sealPos.equals(t.getSealPos())) deliverTask = t;
+		}
+		helper.assertTrue(deliverTask != null, "completing the fetch task should have queued a real delivery task");
+
+		thaumcraft.common.golems.ai.AIGotoBlock deliverGoal = new thaumcraft.common.golems.ai.AIGotoBlock(golem);
+		helper.assertTrue(deliverGoal.canUse(), "the golem should be able to pick up the delivery task");
+		helper.assertTrue(golem.getTask() == deliverTask, "the golem should have reserved the real delivery task");
+
+		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
+		helper.assertTrue(!golem.isCarrying(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT)),
+				"completing the delivery task should have the golem no longer carrying the iron ingots");
+
+		net.minecraft.world.level.block.entity.ChestBlockEntity destChest = helper.getBlockEntity(destChestPos);
+		boolean delivered = false;
+		for (int i = 0; i < destChest.getContainerSize(); i++) {
+			if (destChest.getItem(i).is(net.minecraft.world.item.Items.IRON_INGOT)) delivered = true;
+		}
+		helper.assertTrue(delivered, "the delivered iron ingots should really be in the destination chest");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealStockRequestsProvisioningWhenBelowTargetCount(GameTestHelper helper) {
+		BlockPos chestPos = BlockPos.ZERO;
+		BlockPos chestAbs = helper.absolutePos(chestPos);
+		helper.setBlock(chestPos, net.minecraft.world.level.block.Blocks.CHEST);
+		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(chestPos);
+		chest.setItem(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 2));
+
+		ServerPlayer owner = spawnCasterAt(helper, chestAbs.above(3));
+		thaumcraft.common.golems.seals.SealStock seal = new thaumcraft.common.golems.seals.SealStock();
+		seal.setFilterSlot(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT));
+		seal.setFilterSlotSize(0, 8);
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), chestAbs, net.minecraft.core.Direction.UP, seal, owner),
+				"placing a fresh seal should succeed");
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(chestAbs, net.minecraft.core.Direction.UP);
+		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
+
+		int before = thaumcraft.api.golems.GolemHelper.provisionRequests.getOrDefault(helper.getLevel().dimension(), new java.util.ArrayList<>()).size();
+		for (int i = 0; i < 25; i++) {
+			sealEntity.tickSealEntity(helper.getLevel());
+		}
+		int after = thaumcraft.api.golems.GolemHelper.provisionRequests.getOrDefault(helper.getLevel().dimension(), new java.util.ArrayList<>()).size();
+		helper.assertTrue(after > before, "having only 2 of a real 8-target stock should register a real provisioning request, before=" + before + " after=" + after);
+
+		helper.succeed();
+	}
 }

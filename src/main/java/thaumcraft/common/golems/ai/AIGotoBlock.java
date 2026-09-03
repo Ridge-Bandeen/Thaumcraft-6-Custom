@@ -11,11 +11,12 @@ import thaumcraft.common.golems.tasks.TaskHandler;
 
 /**
  * Replaces the old (1.12.2) {@code AIGotoBlock} - the {@link AIGoto} that seeks out block-position tasks
- * (currently {@code SealLumber}'s "chop this log" tasks - see that class's own doc comment). Direct
- * translation of the original's own "stand in whichever open horizontal space is closest to the target
- * block" approach ({@link #getAdjacentSpace}); {@link #canEasilyReach} is simplified the same way
- * {@link AIGotoEntity}'s own is - a generous flat distance ceiling instead of inspecting the navigator's
- * own computed path endpoint.
+ * (currently {@code SealLumber}/{@code SealHarvest}/{@code SealBreaker}'s own block-position tasks, and
+ * {@code SealProvide}'s "fetch"/"deliver" tasks - see each class's own doc comment). Direct translation of
+ * the original's own "stand in whichever open horizontal space is closest to the target block" approach
+ * ({@link #getAdjacentSpace}); {@link #canEasilyReach} is simplified the same way {@link AIGotoEntity}'s
+ * own is - see that method's own doc comment for the real bug a GameTest caught in an earlier, too-generous
+ * version of this check.
  */
 public class AIGotoBlock extends AIGoto {
 
@@ -70,6 +71,14 @@ public class AIGotoBlock extends AIGoto {
 	}
 
 	private boolean canEasilyReach(BlockPos pos) {
-		return golem.distanceToSqr(Vec3.atCenterOf(pos)) < Math.max(minDist, 256.0);
+		// A real, tightened-down real bug fix: this originally used a 256 (16-block) ceiling, but the
+		// original's own real gate here was tight (~4.0, `minDist`'s own default) before ever falling back
+		// to real path-endpoint proximity for farther targets - 16 blocks is dramatically more permissive
+		// than that. A too-generous radius isn't just an overshoot from the original: it made a golem
+		// happily "reach" a task 15 blocks away in a totally different area, caught for real by a GameTest
+		// where two unrelated seals' own tasks ended up within 16 blocks of each other and a golem grabbed
+		// the wrong one. 6 blocks is a real, deliberately tighter stand-in for the original's own
+		// pathfinding-based check without actually computing a path.
+		return golem.distanceToSqr(Vec3.atCenterOf(pos)) < Math.max(minDist, 36.0);
 	}
 }
