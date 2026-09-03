@@ -161,6 +161,7 @@ sourceSets {
             include 'thaumcraft/common/golems/seals/SealLumber.java'
             include 'thaumcraft/common/golems/ItemGolemBell.java'
             include 'thaumcraft/common/golems/seals/SealHarvest.java'
+            include 'thaumcraft/common/golems/seals/SealButcher.java'
 
             include 'thaumcraft/api/crafting/ArcaneCraftingInput.java'
             include 'thaumcraft/api/crafting/ArcaneRecipe.java'

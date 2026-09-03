@@ -4935,4 +4935,56 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealButcherCullsOverpopulatedAnimalsAsARealCombatTarget(GameTestHelper helper) {
+		BlockPos floorPos = BlockPos.ZERO;
+		BlockPos floorAbs = helper.absolutePos(floorPos);
+		helper.setBlock(floorPos, net.minecraft.world.level.block.Blocks.STONE);
+
+		ServerPlayer owner = spawnCasterAt(helper, floorAbs.above(4));
+		thaumcraft.api.golems.seals.ISeal seal = new thaumcraft.common.golems.seals.SealButcher();
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), floorAbs, net.minecraft.core.Direction.UP, seal, owner),
+				"placing a fresh seal should succeed");
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(floorAbs, net.minecraft.core.Direction.UP);
+		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
+
+		net.minecraft.world.entity.animal.Pig[] pigs = new net.minecraft.world.entity.animal.Pig[4];
+		for (int i = 0; i < pigs.length; i++) {
+			net.minecraft.world.entity.animal.Pig pig = new net.minecraft.world.entity.animal.Pig(net.minecraft.world.entity.EntityType.PIG, helper.getLevel());
+			pig.moveTo(floorAbs.getX() + 0.5 + i * 0.6, floorAbs.getY() + 1.0, floorAbs.getZ() + 0.5, 0, 0);
+			pig.setAge(0); // adult - a baby pig must never be a valid cull target
+			helper.getLevel().addFreshEntity(pig);
+			pigs[i] = pig;
+		}
+
+		// SealButcher#tickSeal gates on a %200 cadence starting from a random 0-199 offset - loop generously.
+		boolean foundTask = false;
+		thaumcraft.api.golems.tasks.Task cullTask = null;
+		for (int i = 0; i < 250 && !foundTask; i++) {
+			sealEntity.tickSealEntity(helper.getLevel());
+			for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
+				if (t.getEntity() instanceof net.minecraft.world.entity.animal.Pig) {
+					foundTask = true;
+					cullTask = t;
+				}
+			}
+		}
+		helper.assertTrue(foundTask, "tickSealEntity should have created a real cull task once 3+ adult pigs were present");
+
+		thaumcraft.api.golems.parts.GolemAddon fighter = findPartByKey(thaumcraft.api.golems.parts.GolemAddon.getAddons(), a -> a.key, "FIGHTER");
+		thaumcraft.api.golems.parts.GolemHead smartHead = findPartByKey(thaumcraft.api.golems.parts.GolemHead.getHeads(), h -> h.key, "SMART");
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setAddon(fighter);
+		props.setHead(smartHead);
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, floorAbs);
+		golem.initializeGolem(props, 0);
+
+		thaumcraft.common.golems.ai.AIGotoEntity goal = new thaumcraft.common.golems.ai.AIGotoEntity(golem);
+		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the cull task");
+		helper.assertTrue(golem.getTarget() == cullTask.getEntity(),
+				"picking up a cull task should immediately set the pig as the golem's real combat target");
+
+		helper.succeed();
+	}
 }

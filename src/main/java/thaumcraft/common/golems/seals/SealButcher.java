@@ -1,24 +1,20 @@
 package thaumcraft.common.golems.seals;
-import java.util.Iterator;
+
 import java.util.List;
 import java.util.Random;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLiving;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.monster.EntityGolem;
-import net.minecraft.entity.monster.IMob;
-import net.minecraft.entity.passive.EntityAnimal;
-import net.minecraft.entity.passive.EntityTameable;
-import net.minecraft.entity.passive.IAnimals;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import thaumcraft.api.golems.EnumGolemTrait;
 import thaumcraft.api.golems.GolemHelper;
 import thaumcraft.api.golems.IGolemAPI;
@@ -27,138 +23,136 @@ import thaumcraft.api.golems.seals.ISealConfigArea;
 import thaumcraft.api.golems.seals.ISealEntity;
 import thaumcraft.api.golems.seals.ISealGui;
 import thaumcraft.api.golems.tasks.Task;
-import thaumcraft.common.golems.client.gui.SealBaseContainer;
-import thaumcraft.common.golems.client.gui.SealBaseGUI;
 import thaumcraft.common.golems.tasks.TaskHandler;
 
+/**
+ * Replaces the old (1.12.2) {@code SealButcher} - a "population control" variant of {@code SealGuard}
+ * (real target-then-suspend-immediately shape, see that class's own doc comment for how the combat handoff
+ * to {@code AIGotoEntity}/the golem's own real melee AI works). A FIGHTER+SMART golem only culls an adult,
+ * untamed, non-hostile animal when at least 3 of that same species are present in the seal's area (the
+ * original's own overflow heuristic, kept exactly - real breeding stock is left alone until a farm is
+ * actually overcrowded).
+ *
+ * Real, direct simplification: the original also defensively excluded {@code EntityGolem} targets
+ * (vanilla's snow/iron golem base class in 1.12.2) - moot in modern code, since neither
+ * {@link net.minecraft.world.entity.animal.IronGolem} nor {@link net.minecraft.world.entity.animal.SnowGolem}
+ * extend {@link Animal} to begin with, so the existing {@code instanceof Animal} check already excludes
+ * them without a separate check.
+ */
+public class SealButcher implements ISeal, ISealGui, ISealConfigArea {
 
-public class SealButcher implements ISeal, ISealGui, ISealConfigArea
-{
-    int delay;
-    boolean wait;
-    ResourceLocation icon;
-    
-    public SealButcher() {
-        delay = new Random(System.nanoTime()).nextInt(200);
-        wait = false;
-        icon = new ResourceLocation("thaumcraft", "items/seals/seal_butcher");
-    }
-    
-    @Override
-    public String getKey() {
-        return "thaumcraft:butcher";
-    }
-    
-    @Override
-    public void tickSeal(World world, ISealEntity seal) {
-        if (delay++ % 200 != 0 || wait) {
-            return;
-        }
-        AxisAlignedBB area = GolemHelper.getBoundsForArea(seal);
-        List list = world.getEntitiesWithinAABB(EntityLivingBase.class, area);
-        if (list.size() > 0) {
-            for (Object e : list) {
-                EntityLivingBase target = (EntityLivingBase)e;
-                if (isValidTarget(target)) {
-                    List<EntityLivingBase> var55 = world.getEntitiesWithinAABB(target.getClass(), area);
-                    Iterator<EntityLivingBase> var56;
-                    int count;
-                    EntityLivingBase var57;
-                    for (var56 = var55.iterator(), count = 0; var56.hasNext() && count < 3; ++count) {
-                        var57 = var56.next();
-                        if (isValidTarget(var57)) {}
-                    }
-                    if (count > 2) {
-                        Task task = new Task(seal.getSealPos(), target);
-                        task.setPriority(seal.getPriority());
-                        task.setLifespan((short)10);
-                        TaskHandler.addTask(world.provider.getDimension(), task);
-                        wait = true;
-                        break;
-                    }
-                    continue;
-                }
-            }
-        }
-    }
-    
-    private boolean isValidTarget(EntityLivingBase target) {
-        return (target instanceof EntityAnimal || target instanceof IAnimals) && !(target instanceof IMob) && (!(target instanceof EntityTameable) || !((EntityTameable)target).isTamed()) && !(target instanceof EntityGolem) && (!(target instanceof EntityAnimal) || !target.isChild());
-    }
-    
-    @Override
-    public void onTaskStarted(World world, IGolemAPI golem, Task task) {
-        if (task.getEntity() != null && task.getEntity() instanceof EntityLivingBase && isValidTarget((EntityLivingBase)task.getEntity())) {
-            ((EntityLiving)golem).setAttackTarget((EntityLivingBase)task.getEntity());
-            golem.addRankXp(1);
-        }
-        task.setSuspended(true);
-        wait = false;
-    }
-    
-    @Override
-    public boolean onTaskCompletion(World world, IGolemAPI golem, Task task) {
-        task.setSuspended(true);
-        wait = false;
-        return true;
-    }
-    
-    @Override
-    public boolean canGolemPerformTask(IGolemAPI golem, Task task) {
-        return true;
-    }
-    
-    @Override
-    public boolean canPlaceAt(World world, BlockPos pos, EnumFacing side) {
-        return !world.isAirBlock(pos);
-    }
-    
-    @Override
-    public ResourceLocation getSealIcon() {
-        return icon;
-    }
-    
-    @Override
-    public int[] getGuiCategories() {
-        return new int[] { 2, 0, 4 };
-    }
-    
-    @Override
-    public EnumGolemTrait[] getRequiredTags() {
-        return new EnumGolemTrait[] { EnumGolemTrait.FIGHTER, EnumGolemTrait.SMART };
-    }
-    
-    @Override
-    public EnumGolemTrait[] getForbiddenTags() {
-        return null;
-    }
-    
-    @Override
-    public void onTaskSuspension(World world, Task task) {
-        wait = false;
-    }
-    
-    @Override
-    public void readCustomNBT(NBTTagCompound nbt) {
-    }
-    
-    @Override
-    public void writeCustomNBT(NBTTagCompound nbt) {
-    }
-    
-    @Override
-    public void onRemoval(World world, BlockPos pos, EnumFacing side) {
-        wait = false;
-    }
-    
-    @Override
-    public Object returnContainer(World world, EntityPlayer player, BlockPos pos, EnumFacing side, ISealEntity seal) {
-        return new SealBaseContainer(player.inventory, world, seal);
-    }
-    
-    @SideOnly(Side.CLIENT)
-    @Override
-    public Object returnGui(World world, EntityPlayer player, BlockPos pos, EnumFacing side, ISealEntity seal) {
-        return new SealBaseGUI(player.inventory, world, seal);
-    }
+	private int delay = new Random().nextInt(200);
+	private boolean waiting;
+	private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("thaumcraft", "items/seals/seal_butcher");
+
+	@Override
+	public String getKey() {
+		return "thaumcraft:butcher";
+	}
+
+	@Override
+	public void tickSeal(Level world, ISealEntity seal) {
+		if (delay++ % 200 != 0 || waiting) return;
+		AABB area = GolemHelper.getBoundsForArea(seal);
+		List<LivingEntity> list = world.getEntitiesOfClass(LivingEntity.class, area);
+		for (LivingEntity target : list) {
+			if (!isValidTarget(target)) continue;
+			int count = 0;
+			for (LivingEntity other : list) {
+				if (other.getClass() == target.getClass() && isValidTarget(other)) {
+					count++;
+					if (count > 2) break;
+				}
+			}
+			if (count > 2) {
+				Task task = new Task(seal.getSealPos(), target);
+				task.setPriority(seal.getPriority());
+				task.setLifespan((short) 10);
+				TaskHandler.addTask(world.dimension(), task);
+				waiting = true;
+				break;
+			}
+		}
+	}
+
+	private static boolean isValidTarget(LivingEntity target) {
+		if (!(target instanceof Animal animal) || target instanceof Enemy) return false;
+		if (target instanceof TamableAnimal tameable && tameable.isTame()) return false;
+		return !animal.isBaby();
+	}
+
+	@Override
+	public void onTaskStarted(Level world, IGolemAPI golem, Task task) {
+		if (task.getEntity() instanceof LivingEntity target && isValidTarget(target) && golem.getGolemEntity() instanceof Mob mob) {
+			mob.setTarget(target);
+			golem.addRankXp(1);
+		}
+		task.setSuspended(true);
+		waiting = false;
+	}
+
+	@Override
+	public boolean onTaskCompletion(Level world, IGolemAPI golem, Task task) {
+		task.setSuspended(true);
+		waiting = false;
+		return true;
+	}
+
+	@Override
+	public boolean canGolemPerformTask(IGolemAPI golem, Task task) {
+		return true;
+	}
+
+	@Override
+	public void onTaskSuspension(Level world, Task task) {
+		waiting = false;
+	}
+
+	@Override
+	public void readCustomNBT(CompoundTag nbt) {
+	}
+
+	@Override
+	public void writeCustomNBT(CompoundTag nbt) {
+	}
+
+	@Override
+	public boolean canPlaceAt(Level world, BlockPos pos, Direction side) {
+		return !world.isEmptyBlock(pos);
+	}
+
+	@Override
+	public ResourceLocation getSealIcon() {
+		return ICON;
+	}
+
+	@Override
+	public void onRemoval(Level world, BlockPos pos, Direction side) {
+		waiting = false;
+	}
+
+	@Override
+	public Object returnContainer(Level world, Player player, BlockPos pos, Direction side, ISealEntity seal) {
+		return null;
+	}
+
+	@Override
+	public Object returnGui(Level world, Player player, BlockPos pos, Direction side, ISealEntity seal) {
+		return null;
+	}
+
+	@Override
+	public EnumGolemTrait[] getRequiredTags() {
+		return new EnumGolemTrait[] { EnumGolemTrait.FIGHTER, EnumGolemTrait.SMART };
+	}
+
+	@Override
+	public EnumGolemTrait[] getForbiddenTags() {
+		return null;
+	}
+
+	@Override
+	public int[] getGuiCategories() {
+		return new int[] { CAT_AREA, CAT_PRIORITY, CAT_TAGS };
+	}
 }
