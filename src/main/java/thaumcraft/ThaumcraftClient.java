@@ -96,6 +96,8 @@ public class ThaumcraftClient {
         // no subclass needed) - see ThaumcraftEntities.MIND_SPIDER's own doc comment for why.
         event.registerEntityRenderer(ThaumcraftEntities.MIND_SPIDER.get(), net.minecraft.client.renderer.entity.SpiderRenderer::new);
         event.registerEntityRenderer(ThaumcraftEntities.CULTIST_KNIGHT.get(), thaumcraft.client.render.RenderCultistKnight::new);
+        // No visible model - see RenderFocusProjectile's own doc comment (shared with FOCUS_PROJECTILE/FOCUS_MINE).
+        event.registerEntityRenderer(ThaumcraftEntities.GOLEM_ORB.get(), RenderFocusProjectile::new);
     }
 
     /** One real "additional" model per {@link GolemMaterial} (the trunk/limbs silhouette every golem has),

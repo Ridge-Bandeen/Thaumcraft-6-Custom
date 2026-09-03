@@ -198,6 +198,7 @@ sourceSets {
             include 'thaumcraft/client/render/RenderCultistKnight.java'
             include 'thaumcraft/common/items/tools/ItemVoidSword.java'
             include 'thaumcraft/common/items/armor/ItemCultistBoots.java'
+            include 'thaumcraft/common/entities/projectile/EntityGolemOrb.java'
 
             include 'thaumcraft/api/crafting/ArcaneCraftingInput.java'
             include 'thaumcraft/api/crafting/ArcaneRecipe.java'

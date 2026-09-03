@@ -189,6 +189,17 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("cultist_knight"));
 
+	/** {@link thaumcraft.common.entities.projectile.EntityGolemOrb}'s own type - same {@code noSave()}/
+	 * small-hitbox/fast-update-interval shape as {@link #FOCUS_PROJECTILE} (also a short-lived, server-only
+	 * homing bolt). */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.projectile.EntityGolemOrb>> GOLEM_ORB = ENTITY_TYPES.register("golem_orb",
+			() -> EntityType.Builder.<thaumcraft.common.entities.projectile.EntityGolemOrb>of(thaumcraft.common.entities.projectile.EntityGolemOrb::new, MobCategory.MISC)
+					.sized(0.25f, 0.25f)
+					.clientTrackingRange(64)
+					.updateInterval(10)
+					.noSave()
+					.build("golem_orb"));
+
 	private ThaumcraftEntities() {
 	}
 }

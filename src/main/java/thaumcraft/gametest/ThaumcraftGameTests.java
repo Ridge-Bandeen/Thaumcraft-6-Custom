@@ -5883,4 +5883,49 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void golemOrbHomesInOnAndDamagesItsRealTargetAndIsReallyReflectable(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.cult.EntityCultistKnight thrower =
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_KNIGHT.get().create(level);
+		helper.assertTrue(thrower != null, "the entity type should really create an instance");
+		thrower.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(thrower);
+
+		net.minecraft.world.entity.npc.Villager target = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+		helper.assertTrue(target != null, "the villager entity type should really create an instance");
+		target.moveTo(abs.getX() + 4.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(target);
+
+		thaumcraft.common.entities.projectile.EntityGolemOrb orb =
+				new thaumcraft.common.entities.projectile.EntityGolemOrb(thrower, target, true);
+		orb.setPos(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5);
+		level.addFreshEntity(orb);
+
+		float healthBefore = target.getHealth();
+		for (int i = 0; i < 200 && !orb.isRemoved() && target.getHealth() >= healthBefore; i++) {
+			orb.tick();
+		}
+		helper.assertTrue(target.getHealth() < healthBefore,
+				"a real homing golem orb should really eventually hit and damage its target, before=" + healthBefore + " after=" + target.getHealth());
+
+		// real reflect mechanic: a hit on the orb itself redirects it along the attacker's own look vector.
+		thaumcraft.common.entities.projectile.EntityGolemOrb reflectable =
+				new thaumcraft.common.entities.projectile.EntityGolemOrb(thrower, null, false);
+		reflectable.setPos(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5);
+		reflectable.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+		level.addFreshEntity(reflectable);
+		ServerPlayer reflector = spawnCasterAt(helper, abs.above(3));
+		boolean reflected = reflectable.hurt(level.damageSources().playerAttack(reflector), 1.0f);
+		helper.assertTrue(reflected, "a real golem orb should really be reflectable by a real player hit");
+		helper.assertTrue(reflectable.getDeltaMovement().lengthSqr() > 0.0,
+				"a reflected orb should really pick up real non-zero velocity from the attacker's own look vector");
+
+		helper.succeed();
+	}
 }

@@ -1,114 +1,124 @@
 package thaumcraft.common.entities.projectile;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.SharedMonsterAttributes;
-import net.minecraft.entity.projectile.EntityThrowable;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
-import thaumcraft.client.fx.FXDispatcher;
-import thaumcraft.common.lib.SoundsTC;
 
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.projectile.ThrowableProjectile;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
+import thaumcraft.common.registry.ThaumcraftEntities;
 
-public class EntityGolemOrb extends EntityThrowable implements IEntityAdditionalSpawnData
-{
-    int targetID;
-    EntityLivingBase target;
-    public boolean red;
-    
-    public EntityGolemOrb(World par1World) {
-        super(par1World);
-        targetID = 0;
-        red = false;
-    }
-    
-    public EntityGolemOrb(World par1World, EntityLivingBase par2EntityLiving, EntityLivingBase t, boolean r) {
-        super(par1World, par2EntityLiving);
-        targetID = 0;
-        red = false;
-        target = t;
-        red = r;
-    }
-    
-    protected float getGravityVelocity() {
-        return 0.0f;
-    }
-    
-    public void writeSpawnData(ByteBuf data) {
-        int id = -1;
-        if (target != null) {
-            id = target.getEntityId();
-        }
-        data.writeInt(id);
-        data.writeBoolean(red);
-    }
-    
-    public void readSpawnData(ByteBuf data) {
-        int id = data.readInt();
-        try {
-            if (id >= 0) {
-                target = (EntityLivingBase) world.getEntityByID(id);
-            }
-        }
-        catch (Exception ex) {}
-        red = data.readBoolean();
-    }
-    
-    protected void onImpact(RayTraceResult mop) {
-        if (!world.isRemote && getThrower() != null && mop.typeOfHit == RayTraceResult.Type.ENTITY) {
-            mop.entityHit.attackEntityFrom(DamageSource.causeIndirectMagicDamage(this, getThrower()), (float) getThrower().getEntityAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue() * (red ? 1.0f : 0.6f));
-        }
-        playSound(SoundsTC.shock, 1.0f, 1.0f + (rand.nextFloat() - rand.nextFloat()) * 0.2f);
-        if (world.isRemote) {
-            FXDispatcher.INSTANCE.burst(posX, posY, posZ, 1.0f);
-        }
-        setDead();
-    }
-    
-    public void onUpdate() {
-        super.onUpdate();
-        if (ticksExisted > (red ? 240 : 160)) {
-            setDead();
-        }
-        if (target != null) {
-            double d = getDistanceSq(target);
-            double dx = target.posX - posX;
-            double dy = target.getEntityBoundingBox().minY + target.height * 0.6 - posY;
-            double dz = target.posZ - posZ;
-            double d2 = 0.2;
-            dx /= d;
-            dy /= d;
-            dz /= d;
-            motionX += dx * d2;
-            motionY += dy * d2;
-            motionZ += dz * d2;
-            motionX = MathHelper.clamp((float) motionX, -0.25f, 0.25f);
-            motionY = MathHelper.clamp((float) motionY, -0.25f, 0.25f);
-            motionZ = MathHelper.clamp((float) motionZ, -0.25f, 0.25f);
-        }
-    }
-    
-    public boolean attackEntityFrom(DamageSource source, float damage) {
-        if (isEntityInvulnerable(source)) {
-            return false;
-        }
-        if (source.getTrueSource() != null) {
-            Vec3d vec3 = source.getTrueSource().getLookVec();
-            if (vec3 != null) {
-                motionX = vec3.x;
-                motionY = vec3.y;
-                motionZ = vec3.z;
-                motionX *= 0.9;
-                motionY *= 0.9;
-                motionZ *= 0.9;
-                playSound(SoundsTC.zap, 1.0f, 1.0f + (rand.nextFloat() - rand.nextFloat()) * 0.2f);
-            }
-            return true;
-        }
-        return false;
-    }
+/**
+ * Replaces the old (1.12.2) {@code EntityGolemOrb} - {@link thaumcraft.common.entities.monster.cult.EntityCultistCleric}'s
+ * real ranged attack projectile (the "blast" alt-attack, vs. the small-fireball alt-attack; see that
+ * class's own {@code attackEntityWithRangedAttack}). Extends {@link ThrowableProjectile} rather than
+ * reimplementing flight by hand, same real pattern {@code EntityFocusProjectile} already established -
+ * only {@link #tick()} (for homing) and {@link #onHitEntity}/{@link #onHitBlock} (for impact damage) are
+ * overridden.
+ *
+ * Real homing: steers toward its {@code target} every tick, clamped to the original's own
+ * ±0.25-per-axis speed limit. Real damage on hit (thrower's own {@code Attributes.ATTACK_DAMAGE} - full
+ * for a "red" orb, 60% for a normal one) via {@code damageSources().indirectMagic}, matching the original's
+ * {@code DamageSource.causeIndirectMagicDamage}. Real self-expiry (240 ticks red / 160 ticks normal,
+ * matching the original exactly). Real "reflect it back" mechanic via {@link #hurt} - a player who hits the
+ * orb redirects it along their own look vector, exactly like the original.
+ *
+ * Real, documented cuts vs the original: no client spawn-data sync for {@code target}/{@code red} (this
+ * project's established "no client FX" simplification, same as every other focus/projectile entity here -
+ * the homing math and damage calc are server-only anyway) and no impact/travel particle effects (tied to
+ * the unported {@code FXDispatcher}). Uses {@link thaumcraft.client.render.RenderFocusProjectile} (no
+ * visible model) for the same reason.
+ */
+public class EntityGolemOrb extends ThrowableProjectile {
+
+	private LivingEntity target;
+	public boolean red;
+
+	public EntityGolemOrb(EntityType<? extends EntityGolemOrb> type, Level level) {
+		super(type, level);
+	}
+
+	public EntityGolemOrb(LivingEntity thrower, LivingEntity target, boolean red) {
+		super(ThaumcraftEntities.GOLEM_ORB.get(), thrower, thrower.level());
+		setOwner(thrower);
+		this.target = target;
+		this.red = red;
+	}
+
+	@Override
+	protected void defineSynchedData(SynchedEntityData.Builder builder) {
+		// no per-entity synced state - see the class doc comment.
+	}
+
+	@Override
+	protected double getDefaultGravity() {
+		return 0.0;
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+		if (tickCount > (red ? 240 : 160)) {
+			discard();
+			return;
+		}
+		if (target != null && target.isAlive()) {
+			Vec3 pos = position();
+			double dx = target.getX() - pos.x;
+			double dy = target.getBoundingBox().minY + target.getBbHeight() * 0.6 - pos.y;
+			double dz = target.getZ() - pos.z;
+			double distSq = Math.max(dx * dx + dy * dy + dz * dz, 1.0e-4);
+			double dist = Math.sqrt(distSq);
+			double pull = 0.2;
+			Vec3 motion = getDeltaMovement();
+			double mx = clamp(motion.x + (dx / dist) * pull, -0.25, 0.25);
+			double my = clamp(motion.y + (dy / dist) * pull, -0.25, 0.25);
+			double mz = clamp(motion.z + (dz / dist) * pull, -0.25, 0.25);
+			setDeltaMovement(mx, my, mz);
+		}
+	}
+
+	private static double clamp(double v, double min, double max) {
+		return v < min ? min : Math.min(v, max);
+	}
+
+	@Override
+	protected void onHitEntity(EntityHitResult result) {
+		super.onHitEntity(result);
+		if (!level().isClientSide && getOwner() != null) {
+			var attackDamage = getOwner() instanceof LivingEntity owner ? owner.getAttribute(Attributes.ATTACK_DAMAGE) : null;
+			float damage = attackDamage != null ? (float) attackDamage.getValue() * (red ? 1.0f : 0.6f) : (red ? 4.0f : 2.4f);
+			result.getEntity().hurt(level().damageSources().indirectMagic(this, getOwner()), damage);
+		}
+		playSound(SoundEvents.LIGHTNING_BOLT_IMPACT, 1.0f, 1.0f + (random.nextFloat() - random.nextFloat()) * 0.2f);
+		discard();
+	}
+
+	@Override
+	protected void onHitBlock(BlockHitResult result) {
+		super.onHitBlock(result);
+		playSound(SoundEvents.LIGHTNING_BOLT_IMPACT, 1.0f, 1.0f + (random.nextFloat() - random.nextFloat()) * 0.2f);
+		discard();
+	}
+
+	@Override
+	public boolean hurt(DamageSource source, float amount) {
+		if (isInvulnerableTo(source)) {
+			return false;
+		}
+		Entity direct = source.getDirectEntity();
+		if (direct != null) {
+			Vec3 look = direct.getLookAngle();
+			setDeltaMovement(look.scale(0.9));
+			playSound(SoundEvents.LIGHTNING_BOLT_THUNDER, 1.0f, 1.0f + (random.nextFloat() - random.nextFloat()) * 0.2f);
+			return true;
+		}
+		return false;
+	}
 }
