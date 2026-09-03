@@ -4881,4 +4881,58 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealHarvestDetectsGrownCropsAndAGolemHarvestsAndReplantsThem(GameTestHelper helper) {
+		BlockPos dirtPos = BlockPos.ZERO;
+		BlockPos dirtAbs = helper.absolutePos(dirtPos);
+		helper.setBlock(dirtPos, net.minecraft.world.level.block.Blocks.FARMLAND);
+
+		BlockPos cropPos = dirtPos.above();
+		BlockPos cropAbs = helper.absolutePos(cropPos);
+		helper.setBlock(cropPos, net.minecraft.world.level.block.Blocks.WHEAT.defaultBlockState()
+				.setValue(net.minecraft.world.level.block.CropBlock.AGE, 7));
+
+		ServerPlayer owner = spawnCasterAt(helper, dirtAbs.above(3));
+		thaumcraft.api.golems.seals.ISeal seal = new thaumcraft.common.golems.seals.SealHarvest();
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), dirtAbs, net.minecraft.core.Direction.UP, seal, owner),
+				"placing a fresh seal should succeed");
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(dirtAbs, net.minecraft.core.Direction.UP);
+		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
+
+		// SealHarvest#tickSeal only samples a new area position every 5th call (unlike SealLumber, which
+		// samples every call), and getPosInArea walks a different offset each time - loop generously to
+		// guarantee covering the whole area at least once rather than assuming a short loop lands on it.
+		boolean foundTask = false;
+		thaumcraft.api.golems.tasks.Task cropTask = null;
+		for (int i = 0; i < 500 && !foundTask; i++) {
+			sealEntity.tickSealEntity(helper.getLevel());
+			for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
+				if (t.getPos().equals(cropAbs)) {
+					foundTask = true;
+					cropTask = t;
+				}
+			}
+		}
+		helper.assertTrue(foundTask, "tickSealEntity should have created a real harvest task for the grown wheat");
+
+		thaumcraft.api.golems.parts.GolemArm fineArm = findPartByKey(thaumcraft.api.golems.parts.GolemArm.getArms(), a -> a.key, "FINE");
+		thaumcraft.api.golems.parts.GolemHead smartHead = findPartByKey(thaumcraft.api.golems.parts.GolemHead.getHeads(), h -> h.key, "SMART");
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setArms(fineArm);
+		props.setHead(smartHead);
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, dirtAbs);
+		golem.initializeGolem(props, 0);
+
+		thaumcraft.common.golems.ai.AIGotoBlock goal = new thaumcraft.common.golems.ai.AIGotoBlock(golem);
+		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the harvest task");
+		helper.assertTrue(golem.getTask() == cropTask, "the golem should have reserved the real harvest task");
+
+		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
+		int age = helper.getLevel().getBlockState(cropAbs).getValue(net.minecraft.world.level.block.CropBlock.AGE);
+		helper.assertTrue(helper.getLevel().getBlockState(cropAbs).is(net.minecraft.world.level.block.Blocks.WHEAT) && age == 0,
+				"completing the harvest task should have broken the grown wheat and replanted it at age 0, found age " + age);
+
+		helper.succeed();
+	}
 }
