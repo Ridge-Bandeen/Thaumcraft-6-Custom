@@ -1,7 +1,10 @@
 package thaumcraft.common.container;
 
+import java.util.Set;
 import java.util.function.Predicate;
 
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -11,8 +14,10 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
+import net.neoforged.neoforge.network.PacketDistributor;
 import thaumcraft.api.research.theorycraft.ResearchTableData;
 import thaumcraft.api.research.theorycraft.TheorycraftCard;
+import thaumcraft.common.lib.network.ClientboundResearchDataPacket;
 import thaumcraft.common.registry.ThaumcraftMenus;
 import thaumcraft.common.tiles.crafting.TileResearchTable;
 
@@ -30,11 +35,15 @@ import thaumcraft.common.tiles.crafting.TileResearchTable;
  * carry) - real, separately-scoped follow-up work for whenever the canvas-style aid-picker screen exists;
  * {@link TileResearchTable#startNewTheory} is already real and directly callable server-side/from tests.
  *
- * Real, documented cut: no live sync of {@code data} (the drawn cards/category progress) to the viewing
- * player yet - same gap {@code FocalManipulatorMenu}'s own node graph left open, for the same reason (this
- * needs real per-action sync to whoever has the menu open, a job for the screen commit that actually needs
- * it, not invented speculatively here). Every button's real server-side effect on {@code tile.data} is
- * already correct and independently testable without it.
+ * Button 0 starts a new theory - real and immediate rather than deferred, since {@code TheorycraftManager.aids}
+ * has no real entries yet in this port (see {@code TileResearchTable}'s own doc comment): there is nothing
+ * for a real aid-picker UI to offer yet, so this always starts with an empty aid set, matching reality
+ * exactly rather than building a picker with nothing to pick from.
+ *
+ * {@code data} (drawn cards/category progress) now syncs for real: every mutating action below sends a
+ * fresh {@link ClientboundResearchDataPacket} to the viewing player afterward (and once right after the
+ * menu is constructed, so a re-opened table shows its current state) - the real counterpart
+ * {@code FocalManipulatorMenu}'s own node graph still doesn't have.
  */
 public class ResearchTableMenu extends AbstractContainerMenu {
 
@@ -72,6 +81,10 @@ public class ResearchTableMenu extends AbstractContainerMenu {
 		for (int col = 0; col < 9; col++) {
 			addSlot(new Slot(playerInventory, col, 77 + col * 18, 248));
 		}
+
+		if (playerInventory.player instanceof ServerPlayer serverPlayer) {
+			syncToPlayer(serverPlayer);
+		}
 	}
 
 	public TileResearchTable getTile() {
@@ -80,7 +93,8 @@ public class ResearchTableMenu extends AbstractContainerMenu {
 
 	@Override
 	public boolean clickMenuButton(Player player, int id) {
-		return switch (id) {
+		boolean result = switch (id) {
+			case 0 -> startTheory(player);
 			case 1 -> confirmSelection();
 			case 2 -> draw(player, 2);
 			case 3 -> draw(player, 3);
@@ -89,6 +103,28 @@ public class ResearchTableMenu extends AbstractContainerMenu {
 			case 9 -> abandon();
 			default -> super.clickMenuButton(player, id);
 		};
+		if (result && player instanceof ServerPlayer serverPlayer) {
+			syncToPlayer(serverPlayer);
+		}
+		return result;
+	}
+
+	/** Sends the tile's current {@code data} (or an empty tag if there's no theory in progress) to the
+	 * given player - see this class's own doc comment for why. */
+	private void syncToPlayer(ServerPlayer player) {
+		if (tile == null) return;
+		try {
+			CompoundTag tag = tile.data != null ? tile.data.serialize() : new CompoundTag();
+			PacketDistributor.sendToPlayer(player, new ClientboundResearchDataPacket(tile.getBlockPos(), tag));
+		} catch (Exception e) {
+			thaumcraft.Thaumcraft.LOGGER.debug("Couldn't sync research table data to {}", player.getGameProfile().getName(), e);
+		}
+	}
+
+	private boolean startTheory(Player player) {
+		if (tile == null || tile.data != null) return false;
+		tile.startNewTheory(player, Set.of());
+		return true;
 	}
 
 	private boolean confirmSelection() {

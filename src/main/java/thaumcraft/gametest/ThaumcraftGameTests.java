@@ -4359,4 +4359,25 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(tile.data == null, "abandoning should clear the theory");
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void researchTableMenuButtonZeroStartsARealTheoryAndSyncsWithoutCrashing(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(3, 2, 3);
+		BlockPos absPos = helper.absolutePos(pos);
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.researchTable.get());
+		thaumcraft.common.tiles.crafting.TileResearchTable tile = helper.getBlockEntity(pos);
+		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+
+		// constructing the menu (real MenuProvider path, matches how the block actually opens it) already
+		// sends an initial sync - a mock player with no real client connection should never let that crash
+		// menu construction itself, same "cosmetic packet failure never takes down the real feature"
+		// precedent every other network handler in this port already established.
+		thaumcraft.common.container.ResearchTableMenu menu = new thaumcraft.common.container.ResearchTableMenu(0, player.getInventory(), tile);
+		helper.assertTrue(tile.data == null, "no theory should exist before button 0 is clicked");
+
+		helper.assertTrue(menu.clickMenuButton(player, 0), "button 0 should start a real theory (each mutating action re-syncs, which must not crash against a mock player either)");
+		helper.assertTrue(tile.data != null, "starting a theory via the menu button should leave a real theory in progress");
+		helper.assertTrue(!menu.clickMenuButton(player, 0), "button 0 should refuse to start a second theory while one is already in progress");
+		helper.succeed();
+	}
 }

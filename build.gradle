@@ -113,6 +113,8 @@ sourceSets {
             include 'thaumcraft/common/tiles/crafting/TileResearchTable.java'
             include 'thaumcraft/common/blocks/crafting/BlockResearchTable.java'
             include 'thaumcraft/common/container/ResearchTableMenu.java'
+            include 'thaumcraft/common/lib/network/ClientboundResearchDataPacket.java'
+            include 'thaumcraft/client/ClientResearchTableCache.java'
             include 'thaumcraft/api/research/ResearchAddendum.java'
             include 'thaumcraft/api/research/ResearchCategories.java'
             include 'thaumcraft/api/research/ResearchCategory.java'
@@ -221,6 +223,7 @@ sourceSets {
             include 'thaumcraft/common/registry/ThaumcraftMenus.java'
             include 'thaumcraft/client/gui/GuiArcaneWorkbench.java'
             include 'thaumcraft/client/gui/GuiFocalManipulator.java'
+            include 'thaumcraft/client/gui/GuiResearchTable.java'
 
             include 'thaumcraft/common/items/casters/ItemCaster.java'
             include 'thaumcraft/common/items/casters/ItemFocus.java'

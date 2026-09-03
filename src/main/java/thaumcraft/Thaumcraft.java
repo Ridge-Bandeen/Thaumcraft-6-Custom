@@ -248,6 +248,14 @@ public class Thaumcraft {
                 thaumcraft.common.lib.network.ServerboundSaveFocusGraphPacket.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> thaumcraft.common.lib.network.ServerFocalManipulatorHandlers
                         .handleSaveFocusGraph(payload, (net.minecraft.server.level.ServerPlayer) context.player())));
+
+        // ResearchTableMenu's own real per-action sync - see ClientboundResearchDataPacket's own doc
+        // comment. thaumcraft.client.ClientResearchTableCache is client-only-safe the same way
+        // ClientFxHandlers is (see that class's own doc comment) - only its method body, never reached on a
+        // dedicated server, touches client-only state.
+        registrar.playToClient(thaumcraft.common.lib.network.ClientboundResearchDataPacket.TYPE,
+                thaumcraft.common.lib.network.ClientboundResearchDataPacket.STREAM_CODEC,
+                (payload, context) -> thaumcraft.client.ClientResearchTableCache.handle(payload));
     }
 
     /** First real living {@code Mob} this port has registered ({@link thaumcraft.common.entities.monster.EntityWisp})
