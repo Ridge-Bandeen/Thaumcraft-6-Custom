@@ -4592,4 +4592,42 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void golemPlacerPlacesARealTamedGolemWithStoredProperties(GameTestHelper helper) {
+		BlockPos floorPos = BlockPos.ZERO;
+		BlockPos floorAbs = helper.absolutePos(floorPos);
+		helper.setBlock(floorPos, net.minecraft.world.level.block.Blocks.STONE);
+
+		thaumcraft.api.golems.parts.GolemMaterial iron = findPartByKey(thaumcraft.api.golems.parts.GolemMaterial.getMaterials(), m -> m.key, "IRON");
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setMaterial(iron);
+
+		ItemStack placer = new ItemStack(ItemsTC.golemPlacer.get());
+		placer.set(thaumcraft.api.items.ThaumcraftDataComponents.GOLEM_PLACER_DATA.get(),
+				new thaumcraft.api.items.ThaumcraftDataComponents.GolemPlacerData(props.toLong(), 500));
+
+		ServerPlayer player = spawnCasterAt(helper, floorAbs.above(2));
+		player.getAbilities().instabuild = false; // mock players default to creative, which skips item consumption
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, placer);
+
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(floorAbs), net.minecraft.core.Direction.UP, floorAbs, false);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(player, hand, hit);
+		net.minecraft.world.InteractionResult result = player.getItemInHand(hand).getItem().useOn(context);
+
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.SUCCESS, "placing against a solid block should succeed, got: " + result);
+		helper.assertTrue(player.getItemInHand(hand).isEmpty(), "the single placer stack should be fully consumed");
+
+		List<thaumcraft.common.golems.EntityThaumcraftGolem> found = helper.getLevel().getEntitiesOfClass(
+				thaumcraft.common.golems.EntityThaumcraftGolem.class, new AABB(floorAbs).inflate(3));
+		helper.assertTrue(found.size() == 1, "exactly one golem should have been spawned, found " + found.size());
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = found.get(0);
+
+		helper.assertTrue(golem.isOwnedBy(player), "the golem should be tamed/owned by the placing player");
+		helper.assertTrue(golem.getProperties().getMaterial() == iron, "the spawned golem should have the properties stored on the placer item");
+
+		helper.succeed();
+	}
 }

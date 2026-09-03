@@ -157,6 +157,32 @@ public final class ThaumcraftDataComponents {
 		public static final Codec<AssembledFocus> CODEC = FOCUS_PACKAGE_CODEC.xmap(AssembledFocus::new, AssembledFocus::focusPackage);
 	}
 
+	/**
+	 * A golem placer's stored assembled properties + accumulated rank XP - was the {@code "props"} (long) +
+	 * {@code "xp"} (int) NBT tags on the original {@code ItemGolemPlacer} stack (see
+	 * {@code thaumcraft.common.golems.ItemGolemPlacer} and {@code GolemProperties}/{@code EntityThaumcraftGolem}
+	 * for the packed shape being carried). A small wrapper record rather than two separate components - the
+	 * two values are only ever meaningful together (rank XP without the properties that define the golem's
+	 * rank curve is meaningless), same one-unit-of-data reasoning as {@link #MIRROR_LINK}.
+	 */
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<GolemPlacerData>> GOLEM_PLACER_DATA = DATA_COMPONENTS.register("golem_placer_data",
+			() -> DataComponentType.<GolemPlacerData>builder()
+					.persistent(GolemPlacerData.CODEC)
+					.networkSynchronized(GolemPlacerData.STREAM_CODEC)
+					.build());
+
+	public record GolemPlacerData(long props, int xp) {
+		public static final Codec<GolemPlacerData> CODEC = RecordCodecBuilder.create(inst -> inst.group(
+				Codec.LONG.fieldOf("props").forGetter(GolemPlacerData::props),
+				Codec.INT.fieldOf("xp").forGetter(GolemPlacerData::xp)
+			).apply(inst, GolemPlacerData::new));
+
+		public static final StreamCodec<RegistryFriendlyByteBuf, GolemPlacerData> STREAM_CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_LONG, GolemPlacerData::props,
+				ByteBufCodecs.VAR_INT, GolemPlacerData::xp,
+				GolemPlacerData::new);
+	}
+
 	private ThaumcraftDataComponents() {
 	}
 }

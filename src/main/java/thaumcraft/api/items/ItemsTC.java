@@ -179,6 +179,12 @@ public final class ItemsTC {
 	public static final DeferredItem<Item> moduleAggression =
 			ITEMS.registerSimpleItem("module_aggression");
 
+	/** Places a real, tamed {@code EntityThaumcraftGolem} - see that item's own doc comment. Registered as
+	 * "golem" (not "golem_placer") to reuse the original's own already-present {@code golem.json}/
+	 * {@code golem.png} item assets as-is. */
+	public static final DeferredItem<thaumcraft.common.golems.ItemGolemPlacer> golemPlacer =
+			ITEMS.registerItem("golem", thaumcraft.common.golems.ItemGolemPlacer::new);
+
 	public static final DeferredItem<ItemCurio> curio =
 			ITEMS.registerItem("curio", ItemCurio::new);
 

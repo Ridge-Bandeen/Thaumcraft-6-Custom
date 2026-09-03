@@ -1,119 +1,108 @@
 package thaumcraft.common.golems;
-import java.util.Iterator;
+
 import java.util.List;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.IEntityLivingData;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTBase;
-import net.minecraft.nbt.NBTTagLong;
-import net.minecraft.util.EnumActionResult;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.translation.I18n;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Item.TooltipContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import thaumcraft.api.golems.EnumGolemTrait;
-import thaumcraft.api.golems.IGolemProperties;
 import thaumcraft.api.golems.ISealDisplayer;
-import thaumcraft.api.golems.parts.GolemArm;
-import thaumcraft.api.golems.parts.GolemHead;
-import thaumcraft.api.golems.parts.GolemMaterial;
-import thaumcraft.common.config.ConfigItems;
-import thaumcraft.common.items.ItemTCBase;
+import thaumcraft.api.golems.IGolemProperties;
+import thaumcraft.api.items.ThaumcraftDataComponents;
+import thaumcraft.api.items.ThaumcraftDataComponents.GolemPlacerData;
+import thaumcraft.common.registry.ThaumcraftEntities;
 
+/**
+ * Replaces the old (1.12.2) {@code ItemGolemPlacer} - places a real, assembled {@link EntityThaumcraftGolem}
+ * against a solid block, tamed to the placing player. Its assembled {@link IGolemProperties} + accumulated
+ * rank XP (was raw {@code "props"}/{@code "xp"} NBT tags on the stack) now live in a real
+ * {@link ThaumcraftDataComponents#GOLEM_PLACER_DATA} component - see that field's own doc comment.
+ *
+ * Ownership is handed off via vanilla {@link net.minecraft.world.entity.TamableAnimal#tame}, not the
+ * original's own {@code setOwned}/{@code setOwnerId}/{@code setValidSpawn} trio - see
+ * {@code EntityThaumcraftGolem}'s own doc comment for why it extends {@code TamableAnimal} directly.
+ *
+ * Real, documented cuts: {@code getSubItems}'s 4 hardcoded creative-tab starter variants (basic golem, a
+ * SMART-headed one, an iron CLAWS fighter, a brass DARTS ranger) aren't wired up - this port hasn't built
+ * creative-tab content population for any item yet, see {@link thaumcraft.api.items.ItemGenericEssentiaContainer}'s
+ * own {@code createAspectVariants} doc comment for the same still-open gap. A bare placer (default/all-zero
+ * properties, i.e. a WOOD/BASIC/BASIC/WALKER/NONE golem) is still real and obtainable via
+ * {@code /give}/creative search. Implements the real (if currently inert - no seal-rendering hook exists
+ * yet) {@link ISealDisplayer} marker, matching the original.
+ */
+public class ItemGolemPlacer extends Item implements ISealDisplayer {
 
-public class ItemGolemPlacer extends ItemTCBase implements ISealDisplayer
-{
-    public ItemGolemPlacer() {
-        super("golem");
-    }
-    
-    @Override
-    public void getSubItems(CreativeTabs tab, NonNullList<ItemStack> items) {
-        if (tab == ConfigItems.TABTC || tab == CreativeTabs.SEARCH) {
-            ItemStack is = new ItemStack(this, 1, 0);
-            is.setTagInfo("props", new NBTTagLong(0L));
-            items.add(is.copy());
-            IGolemProperties props = new GolemProperties();
-            props.setHead(GolemHead.getHeads()[1]);
-            props.setArms(GolemArm.getArms()[1]);
-            is.setTagInfo("props", new NBTTagLong(props.toLong()));
-            items.add(is.copy());
-            props = new GolemProperties();
-            props.setMaterial(GolemMaterial.getMaterials()[1]);
-            props.setHead(GolemHead.getHeads()[1]);
-            props.setArms(GolemArm.getArms()[2]);
-            is.setTagInfo("props", new NBTTagLong(props.toLong()));
-            items.add(is.copy());
-            props = new GolemProperties();
-            props.setMaterial(GolemMaterial.getMaterials()[4]);
-            props.setHead(GolemHead.getHeads()[1]);
-            props.setArms(GolemArm.getArms()[3]);
-            is.setTagInfo("props", new NBTTagLong(props.toLong()));
-            items.add(is.copy());
-        }
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void addInformation(ItemStack stack, World worldIn, List<String> tooltip, ITooltipFlag flagIn) {
-        if (stack.hasTagCompound() && stack.getTagCompound().hasKey("props")) {
-            IGolemProperties props = GolemProperties.fromLong(stack.getTagCompound().getLong("props"));
-            if (props.hasTrait(EnumGolemTrait.SMART)) {
-                if (props.getRank() >= 10) {
-                    tooltip.add("§6" + I18n.translateToLocal("golem.rank") + " " + props.getRank());
-                }
-                else {
-                    int rx = stack.getTagCompound().getInteger("xp");
-                    int xn = (props.getRank() + 1) * (props.getRank() + 1) * 1000;
-                    tooltip.add("§6" + I18n.translateToLocal("golem.rank") + " " + props.getRank() + " §2(" + rx + "/" + xn + ")");
-                }
-            }
-            tooltip.add("§a" + props.getMaterial().getLocalizedName());
-            for (EnumGolemTrait tag : props.getTraits()) {
-                tooltip.add("§9-" + tag.getLocalizedName());
-            }
-        }
-        super.addInformation(stack, worldIn, tooltip, flagIn);
-    }
-    
-    public EnumActionResult onItemUseFirst(EntityPlayer player, World world, BlockPos pos, EnumFacing side, float hitX, float hitY, float hitZ, EnumHand hand) {
-        IBlockState bs = world.getBlockState(pos);
-        if (!bs.getMaterial().isSolid()) {
-            return EnumActionResult.FAIL;
-        }
-        if (world.isRemote) {
-            return EnumActionResult.PASS;
-        }
-        pos = pos.offset(side);
-        bs = world.getBlockState(pos);
-        if (!player.canPlayerEdit(pos, side, player.getHeldItem(hand))) {
-            return EnumActionResult.FAIL;
-        }
-        EntityThaumcraftGolem golem = new EntityThaumcraftGolem(world);
-        golem.setPositionAndRotation(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
-        if (golem != null && world.spawnEntity(golem)) {
-            golem.setOwned(true);
-            golem.setValidSpawn();
-            golem.setOwnerId(player.getUniqueID());
-            if (player.getHeldItem(hand).hasTagCompound() && player.getHeldItem(hand).getTagCompound().hasKey("props")) {
-                golem.setProperties(GolemProperties.fromLong(player.getHeldItem(hand).getTagCompound().getLong("props")));
-            }
-            if (player.getHeldItem(hand).hasTagCompound() && player.getHeldItem(hand).getTagCompound().hasKey("xp")) {
-                golem.rankXp = player.getHeldItem(hand).getTagCompound().getInteger("xp");
-            }
-            golem.onInitialSpawn(world.getDifficultyForLocation(pos), null);
-            if (!player.capabilities.isCreativeMode) {
-                player.getHeldItem(hand).shrink(1);
-            }
-        }
-        return EnumActionResult.SUCCESS;
-    }
+	public ItemGolemPlacer(Properties properties) {
+		super(properties);
+	}
+
+	@Override
+	public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+		GolemPlacerData data = stack.get(ThaumcraftDataComponents.GOLEM_PLACER_DATA.get());
+		if (data != null) {
+			IGolemProperties props = GolemProperties.fromLong(data.props());
+			if (props.hasTrait(EnumGolemTrait.SMART)) {
+				if (props.getRank() >= 10) {
+					tooltip.add(Component.translatable("golem.rank").append(" " + props.getRank()).withStyle(ChatFormatting.GOLD));
+				} else {
+					int xn = (props.getRank() + 1) * (props.getRank() + 1) * 1000;
+					tooltip.add(Component.translatable("golem.rank").append(" " + props.getRank() + " (" + data.xp() + "/" + xn + ")").withStyle(ChatFormatting.GOLD));
+				}
+			}
+			tooltip.add(props.getMaterial().getLocalizedName().copy().withStyle(ChatFormatting.GREEN));
+			for (EnumGolemTrait trait : props.getTraits()) {
+				tooltip.add(Component.literal("-").append(trait.getLocalizedName()).withStyle(ChatFormatting.BLUE));
+			}
+		}
+		super.appendHoverText(stack, context, tooltip, flag);
+	}
+
+	@Override
+	public InteractionResult useOn(UseOnContext context) {
+		Level level = context.getLevel();
+		BlockPos clicked = context.getClickedPos();
+		BlockState clickedState = level.getBlockState(clicked);
+		if (!clickedState.isSolid()) {
+			return InteractionResult.FAIL;
+		}
+		if (level.isClientSide) {
+			return InteractionResult.SUCCESS;
+		}
+		Player player = context.getPlayer();
+		BlockPos pos = clicked.relative(context.getClickedFace());
+		if (player == null || !player.mayUseItemAt(pos, context.getClickedFace(), context.getItemInHand())) {
+			return InteractionResult.FAIL;
+		}
+
+		EntityThaumcraftGolem golem = ThaumcraftEntities.GOLEM.get().create((ServerLevel) level);
+		if (golem == null) {
+			return InteractionResult.FAIL;
+		}
+		golem.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
+		if (!level.addFreshEntity(golem)) {
+			return InteractionResult.FAIL;
+		}
+		golem.tame(player);
+
+		ItemStack stack = context.getItemInHand();
+		GolemPlacerData data = stack.get(ThaumcraftDataComponents.GOLEM_PLACER_DATA.get());
+		IGolemProperties props = data != null ? GolemProperties.fromLong(data.props()) : new GolemProperties();
+		int xp = data != null ? data.xp() : 0;
+		golem.initializeGolem(props, xp);
+
+		if (!player.getAbilities().instabuild) {
+			stack.shrink(1);
+		}
+		return InteractionResult.SUCCESS;
+	}
 }
