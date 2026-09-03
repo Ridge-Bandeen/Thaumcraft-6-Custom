@@ -237,6 +237,14 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("cultist_portal_lesser"));
 
+	/** See {@code EntityCultistPortalGreater}'s own doc comment. Same {@code sized(1.5f, 3.0f)}/no-renderer
+	 * shape as {@link #CULTIST_PORTAL_LESSER}. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.boss.EntityCultistPortalGreater>> CULTIST_PORTAL_GREATER = ENTITY_TYPES.register("cultist_portal_greater",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.boss.EntityCultistPortalGreater>of(thaumcraft.common.entities.monster.boss.EntityCultistPortalGreater::new, MobCategory.MONSTER)
+					.sized(1.5f, 3.0f)
+					.clientTrackingRange(64)
+					.build("cultist_portal_greater"));
+
 	private ThaumcraftEntities() {
 	}
 }

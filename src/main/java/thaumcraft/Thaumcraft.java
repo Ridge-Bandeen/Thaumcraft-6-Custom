@@ -284,6 +284,7 @@ public class Thaumcraft {
         event.put(ThaumcraftEntities.CULTIST_LEADER.get(), thaumcraft.common.entities.monster.boss.EntityCultistLeader.createAttributes().build());
         event.put(ThaumcraftEntities.INHABITED_ZOMBIE.get(), thaumcraft.common.entities.monster.EntityInhabitedZombie.createAttributes().build());
         event.put(ThaumcraftEntities.CULTIST_PORTAL_LESSER.get(), thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser.createAttributes().build());
+        event.put(ThaumcraftEntities.CULTIST_PORTAL_GREATER.get(), thaumcraft.common.entities.monster.boss.EntityCultistPortalGreater.createAttributes().build());
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {

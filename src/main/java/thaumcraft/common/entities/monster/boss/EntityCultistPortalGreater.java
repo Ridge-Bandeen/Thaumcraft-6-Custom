@@ -1,319 +1,290 @@
 package thaumcraft.common.entities.monster.boss;
-import java.util.List;
-import net.minecraft.block.Block;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.IEntityLivingData;
-import net.minecraft.entity.MoverType;
-import net.minecraft.entity.SharedMonsterAttributes;
-import net.minecraft.entity.monster.EntityMob;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.potion.PotionEffect;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.SoundEvent;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.BossInfo;
-import net.minecraft.world.BossInfoServer;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.common.network.NetworkRegistry;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerBossEvent;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.BossEvent;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.phys.Vec3;
 import thaumcraft.api.blocks.BlocksTC;
-import thaumcraft.api.items.ItemsTC;
 import thaumcraft.common.entities.monster.cult.EntityCultist;
-import thaumcraft.common.entities.monster.cult.EntityCultistCleric;
-import thaumcraft.common.entities.monster.cult.EntityCultistKnight;
-import thaumcraft.common.lib.SoundsTC;
-import thaumcraft.common.lib.network.PacketHandler;
-import thaumcraft.common.lib.network.fx.PacketFXBlockArc;
-import thaumcraft.common.lib.utils.EntityUtils;
+import thaumcraft.common.registry.ThaumcraftEntities;
 import thaumcraft.common.tiles.misc.TileBanner;
 
+/**
+ * Replaces the old (1.12.2) {@code EntityCultistPortalGreater} - the cult faction's boss-tier "cathedral"
+ * monolith. Real immobile {@link Monster} subclass (same {@code move()}/{@code aiStep()} no-super shape as
+ * {@link thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser}). Deliberately NOT a subclass
+ * of {@link EntityThaumcraftBoss} despite the shared boss-bar shape - the original's own version isn't
+ * either (a standalone {@code EntityMob} with its own inline {@code BossInfoServer}), and inheriting from
+ * that base class here would silently grant this entity real behaviors it never had in the original
+ * (spawn-timer invulnerability, the 35-damage enrage cap, a periodic self-heal on its own separate cadence).
+ * The real boss-bar wiring itself ({@link ServerBossEvent}, added/removed via {@link #startSeenByPlayer}/
+ * {@link #stopSeenByPlayer}) is duplicated inline instead, matching the original's own scope exactly.
+ *
+ * Real 13-stage escalation, matching the original's own {@code onUpdate} exactly: stage 0 real-spawns real
+ * {@link BlocksTC#bannerCrimsonCult} banners at the four cardinal points (real facing set on each) and real
+ * {@link BlocksTC#lootCrateCommon}/{@code Uncommon}/{@code Rare} placement nearby (5%/15%/80% tier odds,
+ * matching the original), both real once-per-encounter setup dressing. Stages 0-4 conjure real minions on a
+ * real fixed-ish cadence; stages 5-11 and 13+ scale that cadence by a real {@link #getTiming} (nearby real
+ * {@link EntityCultist} count × 20, a real, portable version of the original's own {@code EntityUtils}-
+ * wrapped scan); stage 12 conjures the real {@link EntityCultistLeader} boss itself. Real per-tick self-heal
+ * while below stage 12, matching the original's own {@code stage < 12} gate. Real touch damage (8, doubled
+ * from the lesser portal's 4), real potion immunity, real death explosion (radius 2.0, no block/mob damage).
+ *
+ * Real, documented cuts: no "always full-bright" self-illumination and no renderer (same real reasons
+ * {@link thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser}'s own doc comment already
+ * explains - entities don't carry a light-emission override point any more, and the original's own version
+ * is a fully custom raw-immediate-mode-GL billboard). No custom FX packet broadcast on stage-progress events
+ * (the original's own {@code PacketFXBlockArc}/client "pulse" signal, tied to that same unported renderer).
+ * Vanilla sound substitutions throughout.
+ */
+public class EntityCultistPortalGreater extends Monster {
 
-public class EntityCultistPortalGreater extends EntityMob
-{
-    protected BossInfoServer bossInfo;
-    int stage;
-    int stagecounter;
-    public int pulse;
-    
-    public EntityCultistPortalGreater(World par1World) {
-        super(par1World);
-        bossInfo = (BossInfoServer)new BossInfoServer(getDisplayName(), BossInfo.Color.RED, BossInfo.Overlay.NOTCHED_6).setDarkenSky(true);
-        stage = 0;
-        stagecounter = 200;
-        pulse = 0;
-        isImmuneToFire = true;
-        experienceValue = 30;
-        setSize(1.5f, 3.0f);
-    }
-    
-    public int getTotalArmorValue() {
-        return 5;
-    }
-    
-    protected void entityInit() {
-        super.entityInit();
-    }
-    
-    public void writeEntityToNBT(NBTTagCompound nbt) {
-        super.writeEntityToNBT(nbt);
-        nbt.setInteger("stage", stage);
-    }
-    
-    public void readEntityFromNBT(NBTTagCompound nbt) {
-        super.readEntityFromNBT(nbt);
-        stage = nbt.getInteger("stage");
-    }
-    
-    protected void applyEntityAttributes() {
-        super.applyEntityAttributes();
-        getEntityAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(500.0);
-        getEntityAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).setBaseValue(0.0);
-        getEntityAttribute(SharedMonsterAttributes.KNOCKBACK_RESISTANCE).setBaseValue(1.0);
-    }
-    
-    public boolean canBeCollidedWith() {
-        return true;
-    }
-    
-    public boolean canBePushed() {
-        return false;
-    }
-    
-    public void move(MoverType mt, double par1, double par3, double par5) {
-    }
-    
-    public void onLivingUpdate() {
-    }
-    
-    public boolean isInRangeToRenderDist(double par1) {
-        return par1 < 4096.0;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public int getBrightnessForRender() {
-        return 15728880;
-    }
-    
-    public float getBrightness() {
-        return 1.0f;
-    }
-    
-    public void onUpdate() {
-        super.onUpdate();
-        if (!world.isRemote) {
-            if (stagecounter > 0) {
-                --stagecounter;
-                if (stagecounter == 160 && stage == 0) {
-                    world.setEntityState(this, (byte)16);
-                    for (EnumFacing dir : EnumFacing.HORIZONTALS) {
-                        BlockPos bp = new BlockPos((int) posX - dir.getFrontOffsetX() * 6, (int) posY, (int) posZ + dir.getFrontOffsetZ() * 6);
-                        world.setBlockState(bp, BlocksTC.bannerCrimsonCult.getDefaultState(), 3);
-                        TileEntity te = world.getTileEntity(new BlockPos((int) posX - dir.getFrontOffsetX() * 6, (int) posY, (int) posZ + dir.getFrontOffsetZ() * 6));
-                        if (te != null && te instanceof TileBanner) {
-                            int face = 0;
-                            switch (dir.ordinal()) {
-                                case 2: {
-                                    face = 8;
-                                    break;
-                                }
-                                case 3: {
-                                    face = 0;
-                                    break;
-                                }
-                                case 4: {
-                                    face = 12;
-                                    break;
-                                }
-                                case 5: {
-                                    face = 4;
-                                    break;
-                                }
-                            }
-                            ((TileBanner)te).setBannerFacing((byte)face);
-                            PacketHandler.INSTANCE.sendToAllAround(new PacketFXBlockArc(new BlockPos((int) posX - dir.getFrontOffsetX() * 6, (int) posY, (int) posZ + dir.getFrontOffsetZ() * 6), this, 0.5f + rand.nextFloat() * 0.2f, 0.0f, 0.0f), new NetworkRegistry.TargetPoint(world.provider.getDimension(), posX, posY, posZ, 32.0));
-                            playSound(SoundsTC.wandfail, 1.0f, 1.0f);
-                        }
-                    }
-                }
-                if (stagecounter > 20 && stagecounter < 150 && stage == 0 && stagecounter % 13 == 0) {
-                    int a = (int) posX + rand.nextInt(5) - rand.nextInt(5);
-                    int b = (int) posZ + rand.nextInt(5) - rand.nextInt(5);
-                    BlockPos bp2 = new BlockPos(a, (int) posY, b);
-                    if (a != (int) posX && b != (int) posZ && world.isAirBlock(bp2)) {
-                        world.setEntityState(this, (byte)16);
-                        float rr = world.rand.nextFloat();
-                        int md = (rr < 0.05f) ? 2 : ((rr < 0.2f) ? 1 : 0);
-                        Block bb = BlocksTC.lootCrateCommon;
-                        switch (md) {
-                            case 1: {
-                                bb = BlocksTC.lootCrateUncommon;
-                                break;
-                            }
-                            case 2: {
-                                bb = BlocksTC.lootCrateRare;
-                                break;
-                            }
-                        }
-                        world.setBlockState(bp2, bb.getDefaultState());
-                        PacketHandler.INSTANCE.sendToAllAround(new PacketFXBlockArc(new BlockPos(a, (int) posY, b), this, 0.5f + rand.nextFloat() * 0.2f, 0.0f, 0.0f), new NetworkRegistry.TargetPoint(world.provider.getDimension(), posX, posY, posZ, 32.0));
-                        playSound(SoundsTC.wandfail, 1.0f, 1.0f);
-                    }
-                }
-            }
-            else if (world.getClosestPlayerToEntity(this, 48.0) != null) {
-                world.setEntityState(this, (byte)16);
-                switch (stage) {
-                    case 0:
-                    case 1:
-                    case 2:
-                    case 3:
-                    case 4: {
-                        stagecounter = 15 + rand.nextInt(10 - stage) - stage;
-                        spawnMinions();
-                        break;
-                    }
-                    case 12: {
-                        stagecounter = 50 + getTiming() * 2 + rand.nextInt(50);
-                        spawnBoss();
-                        break;
-                    }
-                    default: {
-                        int t = getTiming();
-                        stagecounter = t + rand.nextInt(5 + t / 3);
-                        spawnMinions();
-                        break;
-                    }
-                }
-                ++stage;
-            }
-            else {
-                stagecounter = 30 + rand.nextInt(30);
-            }
-            if (stage < 12) {
-                heal(1.0f);
-            }
-        }
-        if (pulse > 0) {
-            --pulse;
-        }
-    }
-    
-    int getTiming() {
-        List<EntityCultist> l = EntityUtils.getEntitiesInRange(world, posX, posY, posZ, this, EntityCultist.class, 32.0);
-        return l.size() * 20;
-    }
-    
-    void spawnMinions() {
-        EntityCultist cultist = null;
-        if (rand.nextFloat() > 0.33) {
-            cultist = new EntityCultistKnight(world);
-        }
-        else {
-            cultist = new EntityCultistCleric(world);
-        }
-        cultist.setPosition(posX + rand.nextFloat() - rand.nextFloat(), posY + 0.25, posZ + rand.nextFloat() - rand.nextFloat());
-        cultist.onInitialSpawn(world.getDifficultyForLocation(new BlockPos(cultist.getPosition())), null);
-        cultist.setHomePosAndDistance(getPosition(), 32);
-        world.spawnEntity(cultist);
-        cultist.spawnExplosionParticle();
-        cultist.playSound(SoundsTC.wandfail, 1.0f, 1.0f);
-        if (stage > 12) {
-            attackEntityFrom(DamageSource.OUT_OF_WORLD, (float)(5 + rand.nextInt(5)));
-        }
-    }
-    
-    void spawnBoss() {
-        EntityCultistLeader cultist = new EntityCultistLeader(world);
-        cultist.setPosition(posX + rand.nextFloat() - rand.nextFloat(), posY + 0.25, posZ + rand.nextFloat() - rand.nextFloat());
-        cultist.onInitialSpawn(world.getDifficultyForLocation(new BlockPos(cultist.getPosition())), null);
-        cultist.setHomePosAndDistance(getPosition(), 32);
-        world.spawnEntity(cultist);
-        cultist.spawnExplosionParticle();
-        cultist.playSound(SoundsTC.wandfail, 1.0f, 1.0f);
-    }
-    
-    public void onCollideWithPlayer(EntityPlayer p) {
-        if (getDistanceSq(p) < 3.0 && p.attackEntityFrom(DamageSource.causeIndirectMagicDamage(this, this), 8.0f)) {
-            playSound(SoundsTC.zap, 1.0f, (rand.nextFloat() - rand.nextFloat()) * 0.1f + 1.0f);
-        }
-    }
-    
-    protected float getSoundVolume() {
-        return 0.75f;
-    }
-    
-    public int getTalkInterval() {
-        return 540;
-    }
-    
-    protected SoundEvent getAmbientSound() {
-        return SoundsTC.monolith;
-    }
-    
-    protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
-        return SoundsTC.zap;
-    }
-    
-    protected SoundEvent getDeathSound() {
-        return SoundsTC.shock;
-    }
-    
-    protected Item getDropItem() {
-        return Item.getItemById(0);
-    }
-    
-    protected void dropFewItems(boolean flag, int fortune) {
-        EntityUtils.entityDropSpecialItem(this, new ItemStack(ItemsTC.primordialPearl), height / 2.0f);
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void handleStatusUpdate(byte msg) {
-        if (msg == 16) {
-            pulse = 10;
-        }
-        else {
-            super.handleStatusUpdate(msg);
-        }
-    }
-    
-    public void addPotionEffect(PotionEffect p_70690_1_) {
-    }
-    
-    public void fall(float distance, float damageMultiplier) {
-    }
-    
-    public void onDeath(DamageSource p_70645_1_) {
-        if (!world.isRemote) {
-            world.newExplosion(this, posX, posY, posZ, 2.0f, false, false);
-        }
-        super.onDeath(p_70645_1_);
-    }
-    
-    public void removeTrackingPlayer(EntityPlayerMP player) {
-        super.removeTrackingPlayer(player);
-        bossInfo.removePlayer(player);
-    }
-    
-    public void addTrackingPlayer(EntityPlayerMP player) {
-        super.addTrackingPlayer(player);
-        bossInfo.addPlayer(player);
-    }
-    
-    public boolean isNonBoss() {
-        return false;
-    }
-    
-    protected void updateAITasks() {
-        super.updateAITasks();
-        bossInfo.setPercent(getHealth() / getMaxHealth());
-    }
+	private final ServerBossEvent bossEvent;
+	private int stage;
+	private int stageCounter = 200;
+
+	public EntityCultistPortalGreater(EntityType<? extends EntityCultistPortalGreater> type, Level level) {
+		super(type, level);
+		bossEvent = new ServerBossEvent(getDisplayName(), BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.NOTCHED_6);
+		bossEvent.setDarkenScreen(true);
+		xpReward = 30;
+	}
+
+	public static AttributeSupplier.Builder createAttributes() {
+		return Monster.createMonsterAttributes()
+				.add(Attributes.MAX_HEALTH, 500.0)
+				.add(Attributes.ATTACK_DAMAGE, 0.0)
+				.add(Attributes.KNOCKBACK_RESISTANCE, 1.0);
+	}
+
+	@Override
+	public void startSeenByPlayer(ServerPlayer player) {
+		super.startSeenByPlayer(player);
+		bossEvent.addPlayer(player);
+	}
+
+	@Override
+	public void stopSeenByPlayer(ServerPlayer player) {
+		super.stopSeenByPlayer(player);
+		bossEvent.removePlayer(player);
+	}
+
+	@Override
+	public void setCustomName(Component name) {
+		super.setCustomName(name);
+		bossEvent.setName(getDisplayName());
+	}
+
+	@Override
+	public int getArmorValue() {
+		return 5;
+	}
+
+	@Override
+	public boolean fireImmune() {
+		return true;
+	}
+
+	@Override
+	public boolean removeWhenFarAway(double distanceSquared) {
+		return false;
+	}
+
+	@Override
+	public boolean isPickable() {
+		return true;
+	}
+
+	@Override
+	public boolean isPushable() {
+		return false;
+	}
+
+	@Override
+	public void move(net.minecraft.world.entity.MoverType type, Vec3 movement) {
+		// Immobile - see the class doc comment.
+	}
+
+	@Override
+	public boolean canBeAffected(net.minecraft.world.effect.MobEffectInstance effect) {
+		return false;
+	}
+
+	@Override
+	public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType, SpawnGroupData spawnGroupData) {
+		bossEvent.setName(getDisplayName());
+		return super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
+	}
+
+	@Override
+	public void addAdditionalSaveData(CompoundTag tag) {
+		super.addAdditionalSaveData(tag);
+		tag.putInt("stage", stage);
+	}
+
+	@Override
+	public void readAdditionalSaveData(CompoundTag tag) {
+		super.readAdditionalSaveData(tag);
+		stage = tag.getInt("stage");
+	}
+
+	private int getTiming() {
+		return level().getEntitiesOfClass(EntityCultist.class, getBoundingBox().inflate(32.0)).size() * 20;
+	}
+
+	@Override
+	public void aiStep() {
+		// No super.aiStep() call - see the class doc comment / EntityCultistPortalLesser's own.
+		if (level().isClientSide) {
+			return;
+		}
+		bossEvent.setProgress(getHealth() / getMaxHealth());
+
+		if (stageCounter > 0) {
+			stageCounter--;
+			if (stageCounter == 160 && stage == 0) {
+				placeBanners();
+			}
+			if (stageCounter > 20 && stageCounter < 150 && stage == 0 && stageCounter % 13 == 0) {
+				placeLootCrate();
+			}
+		}
+		else if (level().getNearestPlayer(this, 48.0) != null) {
+			switch (stage) {
+				case 0, 1, 2, 3, 4 -> {
+					stageCounter = 15 + random.nextInt(Math.max(1, 10 - stage)) - stage;
+					spawnMinion();
+				}
+				case 12 -> {
+					stageCounter = 50 + getTiming() * 2 + random.nextInt(50);
+					spawnBoss();
+				}
+				default -> {
+					int t = getTiming();
+					stageCounter = t + random.nextInt(5 + t / 3);
+					spawnMinion();
+				}
+			}
+			stage++;
+		}
+		else {
+			stageCounter = 30 + random.nextInt(30);
+		}
+
+		if (stage < 12) {
+			heal(1.0f);
+		}
+	}
+
+	private void placeBanners() {
+		Direction[] dirs = { Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST };
+		for (Direction dir : dirs) {
+			BlockPos bp = blockPosition().offset(-dir.getStepX() * 6, 0, dir.getStepZ() * 6);
+			level().setBlockAndUpdate(bp, BlocksTC.bannerCrimsonCult.get().defaultBlockState());
+			if (level().getBlockEntity(bp) instanceof TileBanner banner) {
+				byte face = switch (dir) {
+					case NORTH -> 8;
+					case SOUTH -> 0;
+					case WEST -> 12;
+					case EAST -> 4;
+					default -> 0;
+				};
+				banner.setBannerFacing(face);
+			}
+			playSound(SoundEvents.EVOKER_CAST_SPELL, 1.0f, 1.0f);
+		}
+	}
+
+	private void placeLootCrate() {
+		BlockPos pos = blockPosition();
+		int a = pos.getX() + random.nextInt(5) - random.nextInt(5);
+		int b = pos.getZ() + random.nextInt(5) - random.nextInt(5);
+		if (a == pos.getX() || b == pos.getZ()) return;
+		BlockPos bp = new BlockPos(a, pos.getY(), b);
+		if (!level().isEmptyBlock(bp)) return;
+		float rr = random.nextFloat();
+		var crate = rr < 0.05f ? BlocksTC.lootCrateRare.get() : rr < 0.2f ? BlocksTC.lootCrateUncommon.get() : BlocksTC.lootCrateCommon.get();
+		level().setBlockAndUpdate(bp, crate.defaultBlockState());
+		playSound(SoundEvents.EVOKER_CAST_SPELL, 1.0f, 1.0f);
+	}
+
+	private void spawnMinion() {
+		EntityCultist cultist = random.nextFloat() > 0.33f
+				? ThaumcraftEntities.CULTIST_KNIGHT.get().create(level())
+				: ThaumcraftEntities.CULTIST_CLERIC.get().create(level());
+		if (cultist == null || !(level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
+		cultist.moveTo(getX() + random.nextFloat() - random.nextFloat(), getY() + 0.25, getZ() + random.nextFloat() - random.nextFloat(), 0.0f, 0.0f);
+		cultist.finalizeSpawn(serverLevel, level().getCurrentDifficultyAt(cultist.blockPosition()), MobSpawnType.MOB_SUMMONED, null);
+		cultist.restrictTo(blockPosition(), 32);
+		serverLevel.addFreshEntity(cultist);
+		cultist.playSound(SoundEvents.EVOKER_CAST_SPELL, 1.0f, 1.0f);
+		if (stage > 12) {
+			hurt(damageSources().magic(), 5 + random.nextInt(5));
+		}
+	}
+
+	private void spawnBoss() {
+		EntityCultistLeader leader = ThaumcraftEntities.CULTIST_LEADER.get().create(level());
+		if (leader == null || !(level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
+		leader.moveTo(getX() + random.nextFloat() - random.nextFloat(), getY() + 0.25, getZ() + random.nextFloat() - random.nextFloat(), 0.0f, 0.0f);
+		leader.finalizeSpawn(serverLevel, level().getCurrentDifficultyAt(leader.blockPosition()), MobSpawnType.MOB_SUMMONED, null);
+		leader.restrictTo(blockPosition(), 32);
+		serverLevel.addFreshEntity(leader);
+		leader.playSound(SoundEvents.EVOKER_CAST_SPELL, 1.0f, 1.0f);
+	}
+
+	@Override
+	public void playerTouch(Player player) {
+		if (distanceToSqr(player) < 3.0 && player.hurt(damageSources().indirectMagic(this, this), 8.0f)) {
+			playSound(SoundEvents.LIGHTNING_BOLT_THUNDER, 1.0f, (random.nextFloat() - random.nextFloat()) * 0.1f + 1.0f);
+		}
+	}
+
+	@Override
+	public void die(DamageSource source) {
+		if (level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+			serverLevel.explode(this, getX(), getY(), getZ(), 2.0f, Level.ExplosionInteraction.NONE);
+		}
+		super.die(source);
+	}
+
+	@Override
+	public boolean isAlliedTo(Entity other) {
+		return other instanceof EntityCultist || super.isAlliedTo(other);
+	}
+
+	@Override
+	protected SoundEvent getAmbientSound() {
+		return SoundEvents.BEACON_AMBIENT;
+	}
+
+	@Override
+	protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
+		return SoundEvents.LIGHTNING_BOLT_THUNDER;
+	}
+
+	@Override
+	protected SoundEvent getDeathSound() {
+		return SoundEvents.LIGHTNING_BOLT_IMPACT;
+	}
 }

@@ -6189,4 +6189,61 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cultistPortalGreaterEscalatesPlacesRealDressingAndConjuresRealMinions(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.boss.EntityCultistPortalGreater portal =
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_PORTAL_GREATER.get().create(level);
+		helper.assertTrue(portal != null, "the entity type should really create an instance");
+		portal.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(portal);
+		helper.assertTrue(portal.getArmorValue() == 5, "a real cultist portal greater should really have 5 armor, got " + portal.getArmorValue());
+		helper.assertTrue(portal.fireImmune(), "a real cultist portal greater should really be fire immune");
+
+		spawnCasterAt(helper, abs.above(2));
+
+		// The portal stands one block above the floor (moveTo ... abs.getY() + 1.0), and both banners and
+		// loot crates place at the portal's own Y level (blockPosition()), not the floor's - check there.
+		BlockPos portalPos = portal.blockPosition();
+		boolean sawBanner = false;
+		boolean sawCrate = false;
+		boolean sawMinion = false;
+		for (int i = 0; i < 600 && !(sawBanner && sawCrate && sawMinion); i++) {
+			portal.aiStep();
+			if (!sawBanner) {
+				sawBanner = level.getBlockState(portalPos.offset(-6, 0, 0)).is(thaumcraft.api.blocks.BlocksTC.bannerCrimsonCult.get())
+						|| level.getBlockState(portalPos.offset(6, 0, 0)).is(thaumcraft.api.blocks.BlocksTC.bannerCrimsonCult.get())
+						|| level.getBlockState(portalPos.offset(0, 0, -6)).is(thaumcraft.api.blocks.BlocksTC.bannerCrimsonCult.get())
+						|| level.getBlockState(portalPos.offset(0, 0, 6)).is(thaumcraft.api.blocks.BlocksTC.bannerCrimsonCult.get());
+			}
+			if (!sawCrate) {
+				for (int dx = -5; dx <= 5 && !sawCrate; dx++) {
+					for (int dz = -5; dz <= 5 && !sawCrate; dz++) {
+						net.minecraft.world.level.block.Block b = level.getBlockState(portalPos.offset(dx, 0, dz)).getBlock();
+						sawCrate = b == thaumcraft.api.blocks.BlocksTC.lootCrateCommon.get()
+								|| b == thaumcraft.api.blocks.BlocksTC.lootCrateUncommon.get()
+								|| b == thaumcraft.api.blocks.BlocksTC.lootCrateRare.get();
+					}
+				}
+			}
+			if (!sawMinion) {
+				sawMinion = !level.getEntitiesOfClass(thaumcraft.common.entities.monster.cult.EntityCultist.class, new AABB(abs).inflate(3)).isEmpty();
+			}
+		}
+		helper.assertTrue(sawBanner, "a real cultist portal greater should really place real crimson cult banners at the four cardinal points");
+		helper.assertTrue(sawCrate, "a real cultist portal greater should really place a real loot crate nearby");
+		helper.assertTrue(sawMinion, "a real cultist portal greater should really conjure real cultist minions as it escalates");
+
+		net.minecraft.world.level.block.state.BlockState before = level.getBlockState(abs);
+		portal.hurt(level.damageSources().generic(), 100000.0f);
+		helper.assertTrue(!portal.isAlive(), "a real lethal hit should really kill the cultist portal greater");
+		helper.assertTrue(level.getBlockState(abs).is(before.getBlock()), "the real death explosion should really not damage nearby blocks");
+
+		helper.succeed();
+	}
 }
