@@ -5041,4 +5041,51 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealPickupCollectsMatchingDroppedItemsForReal(GameTestHelper helper) {
+		BlockPos floorPos = BlockPos.ZERO;
+		BlockPos floorAbs = helper.absolutePos(floorPos);
+		helper.setBlock(floorPos, net.minecraft.world.level.block.Blocks.STONE);
+
+		ServerPlayer owner = spawnCasterAt(helper, floorAbs.above(3));
+		thaumcraft.common.golems.seals.SealPickup seal = new thaumcraft.common.golems.seals.SealPickup();
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), floorAbs, net.minecraft.core.Direction.UP, seal, owner),
+				"placing a fresh seal should succeed");
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(floorAbs, net.minecraft.core.Direction.UP);
+		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
+
+		net.minecraft.world.entity.item.ItemEntity dropped = new net.minecraft.world.entity.item.ItemEntity(
+				helper.getLevel(), floorAbs.getX() + 0.5, floorAbs.getY() + 1.0, floorAbs.getZ() + 0.5,
+				new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 3));
+		dropped.setOnGround(true);
+		helper.getLevel().addFreshEntity(dropped);
+
+		boolean foundTask = false;
+		thaumcraft.api.golems.tasks.Task pickupTask = null;
+		for (int i = 0; i < 20 && !foundTask; i++) {
+			sealEntity.tickSealEntity(helper.getLevel());
+			for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
+				if (t.getEntity() == dropped) {
+					foundTask = true;
+					pickupTask = t;
+				}
+			}
+		}
+		helper.assertTrue(foundTask, "tickSealEntity should have created a real pickup task for the dropped item");
+
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, floorAbs);
+		golem.initializeGolem(new thaumcraft.common.golems.GolemProperties(), 0);
+
+		thaumcraft.common.golems.ai.AIGotoEntity goal = new thaumcraft.common.golems.ai.AIGotoEntity(golem);
+		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the pickup task");
+		helper.assertTrue(golem.getTask() == pickupTask, "the golem should have reserved the real pickup task");
+
+		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
+		helper.assertTrue(!dropped.isAlive(), "completing the pickup task should have really removed the dropped item entity");
+		helper.assertTrue(golem.isCarrying(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT)),
+				"the golem should now really be carrying the picked-up item");
+
+		helper.succeed();
+	}
 }
