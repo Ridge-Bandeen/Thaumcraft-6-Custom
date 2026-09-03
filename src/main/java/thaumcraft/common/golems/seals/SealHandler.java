@@ -1,10 +1,12 @@
 package thaumcraft.common.golems.seals;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import thaumcraft.api.golems.GolemHelper;
@@ -20,14 +22,32 @@ import thaumcraft.api.golems.tasks.Task;
  * the non-API-contract operations {@link ISeal}/{@link ISealEntity} implementations and this port's own
  * {@code ItemSealPlacer}/golem AI need on top of the 5-method public API surface.
  *
- * Real, documented cut: placed seals are NOT persisted across a server restart yet - {@code GolemHelper}'s
- * seal-entity map is purely in-memory for the current server session, same as the original's own
- * {@code ConcurrentHashMap} field (that map was never itself written to a save file either - the original
- * relied on a separate, still-unported persistence path this port hasn't scoped yet). Real follow-up work,
- * not silently different from the original's own actual (also incomplete without that separate path)
- * behavior.
+ * Placed seals now persist across a server restart for real - see {@link SealSavedData}'s own doc comment
+ * for the mechanism (the same real {@code SavedData} approach {@code AuraWorld}/{@code AuraHandler} already
+ * established for aura data). {@link #loadForLevel} is called from {@code Thaumcraft.onLevelLoad}, the same
+ * hook {@code AuraHandler.loadForLevel} uses.
  */
 public final class SealHandler {
+
+	private static final Map<ResourceKey<Level>, SealSavedData> SAVE_DATA = new HashMap<>();
+
+	/** Called from {@code Thaumcraft.onLevelLoad} (main thread) - loads this dimension's saved seals into
+	 * {@link GolemHelper}'s real, live map and remembers which {@link SealSavedData} instance to mark dirty
+	 * on future placements/removals. */
+	public static void loadForLevel(ServerLevel level) {
+		SealSavedData data = level.getDataStorage().computeIfAbsent(SealSavedData.FACTORY, SealSavedData.id());
+		data.setDimension(level.dimension());
+		SAVE_DATA.put(level.dimension(), data);
+		Map<SealPos, ISealEntity> map = GolemHelper.getSealEntities(level.dimension());
+		for (ISealEntity entity : data.getLoaded()) {
+			map.putIfAbsent(entity.getSealPos(), entity);
+		}
+	}
+
+	private static void markDirty(ResourceKey<Level> dim) {
+		SealSavedData data = SAVE_DATA.get(dim);
+		if (data != null) data.setDirty();
+	}
 
 	/** Registers every real seal TYPE this port ships - {@code Thaumcraft#commonSetup} must call this, not a
 	 * static initializer (same registry-timing rule {@code GolemProperties#init}/{@code ThaumcraftObjectTags#init}
@@ -58,6 +78,7 @@ public final class SealHandler {
 		map.put(sp, entity);
 		if (!level.isClientSide) {
 			entity.syncToClient(level);
+			markDirty(level.dimension());
 		}
 		return true;
 	}
@@ -70,6 +91,7 @@ public final class SealHandler {
 		map.put(entity.getSealPos(), entity);
 		if (!level.isClientSide) {
 			entity.syncToClient(level);
+			markDirty(level.dimension());
 		}
 		return true;
 	}
@@ -87,6 +109,9 @@ public final class SealHandler {
 			if (task.getSealPos() != null && task.getSealPos().equals(pos)) {
 				task.setSuspended(true);
 			}
+		}
+		if (!level.isClientSide) {
+			markDirty(level.dimension());
 		}
 	}
 

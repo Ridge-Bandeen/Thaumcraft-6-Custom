@@ -297,6 +297,7 @@ public class Thaumcraft {
     public void onLevelLoad(LevelEvent.Load event) {
         if (event.getLevel() instanceof ServerLevel level) {
             AuraHandler.loadForLevel(level);
+            thaumcraft.common.golems.seals.SealHandler.loadForLevel(level);
         }
     }
 

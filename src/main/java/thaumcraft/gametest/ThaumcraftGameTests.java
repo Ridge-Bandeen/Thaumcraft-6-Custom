@@ -4770,4 +4770,33 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void placedSealsRoundTripThroughRealSaveAndLoad(GameTestHelper helper) {
+		BlockPos pos = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer owner = spawnCasterAt(helper, pos.above(2));
+		thaumcraft.api.golems.seals.ISeal seal = new thaumcraft.common.golems.seals.SealGuard();
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(pos, net.minecraft.core.Direction.UP);
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), pos, net.minecraft.core.Direction.UP, seal, owner),
+				"placing a fresh seal should succeed");
+
+		// Same mechanism a real level load uses (Thaumcraft.onLevelLoad) - idempotent, safe to call again
+		// here to guarantee the SealSavedData instance backing this dimension knows its own dimension key.
+		thaumcraft.common.golems.seals.SealHandler.loadForLevel(helper.getLevel());
+		thaumcraft.common.golems.seals.SealSavedData data =
+				helper.getLevel().getDataStorage().computeIfAbsent(thaumcraft.common.golems.seals.SealSavedData.FACTORY, thaumcraft.common.golems.seals.SealSavedData.id());
+
+		net.minecraft.nbt.CompoundTag tag = data.save(new net.minecraft.nbt.CompoundTag(), helper.getLevel().registryAccess());
+		thaumcraft.common.golems.seals.SealSavedData restored = thaumcraft.common.golems.seals.SealSavedData.load(tag, helper.getLevel().registryAccess());
+
+		boolean found = false;
+		for (thaumcraft.api.golems.seals.ISealEntity restoredEntity : restored.getLoaded()) {
+			if (restoredEntity.getSealPos().equals(sealPos) && restoredEntity.getSeal() instanceof thaumcraft.common.golems.seals.SealGuard) {
+				found = true;
+			}
+		}
+		helper.assertTrue(found, "saving and reloading should round-trip the placed seal's real position and type");
+
+		helper.succeed();
+	}
 }

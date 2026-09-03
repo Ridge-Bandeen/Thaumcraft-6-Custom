@@ -152,6 +152,7 @@ sourceSets {
             include 'thaumcraft/common/golems/tasks/TaskHandler.java'
             include 'thaumcraft/common/golems/seals/SealEntity.java'
             include 'thaumcraft/common/golems/seals/SealHandler.java'
+            include 'thaumcraft/common/golems/seals/SealSavedData.java'
             include 'thaumcraft/common/golems/seals/SealGuard.java'
             include 'thaumcraft/common/golems/ItemSealPlacer.java'
             include 'thaumcraft/common/golems/ai/AIGoto.java'
