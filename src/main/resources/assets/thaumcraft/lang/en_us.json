@@ -139,6 +139,7 @@
   "item.thaumcraft.thaumium_boots": "Thaumium Boots",
   "block.thaumcraft.vis_battery": "Vis Battery",
   "block.thaumcraft.dioptra": "Dioptra",
+  "entity.thaumcraft.cultist_leader.name": "Praetor %s",
   "block.thaumcraft.pedestal": "Arcane Pedestal",
   "block.thaumcraft.pedestal_eldritch": "Eldritch Pedestal",
   "block.thaumcraft.infusion_matrix": "Runic Matrix",

@@ -197,9 +197,13 @@ sourceSets {
             include 'thaumcraft/common/entities/monster/cult/EntityCultistKnight.java'
             include 'thaumcraft/client/render/RenderCultistKnight.java'
             include 'thaumcraft/common/items/tools/ItemVoidSword.java'
+            include 'thaumcraft/common/items/tools/ItemCrimsonBlade.java'
             include 'thaumcraft/common/items/armor/ItemCultistBoots.java'
             include 'thaumcraft/common/entities/projectile/EntityGolemOrb.java'
             include 'thaumcraft/common/entities/monster/cult/EntityCultistCleric.java'
+            include 'thaumcraft/common/entities/monster/boss/EntityThaumcraftBoss.java'
+            include 'thaumcraft/common/entities/monster/boss/EntityCultistLeader.java'
+            include 'thaumcraft/client/render/RenderCultistLeader.java'
 
             include 'thaumcraft/api/crafting/ArcaneCraftingInput.java'
             include 'thaumcraft/api/crafting/ArcaneRecipe.java'

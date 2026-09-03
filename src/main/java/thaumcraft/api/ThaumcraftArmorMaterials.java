@@ -150,6 +150,26 @@ public final class ThaumcraftArmorMaterials {
 					0.0F,
 					0.0F));
 
+	/** {@code ThaumcraftMaterials.ARMORMAT_CULTIST_LEADER} from the original (durability multiplier 30 -
+	 * applied per item at each {@code ItemsTC.crimsonPraetor*} registration site, same convention as {@link
+	 * #CULTIST_PLATE}), protection {@code [3,6,7,3]}, enchantability 20, iron equip sound, 1.0 toughness.
+	 * Used by {@link thaumcraft.common.entities.monster.boss.EntityCultistLeader}'s helm/chest/legs. */
+	public static final Holder<ArmorMaterial> CULTIST_PRAETOR = ARMOR_MATERIALS.register("cultist_praetor",
+			() -> new ArmorMaterial(
+					Util.make(new EnumMap<>(ArmorItem.Type.class), m -> {
+						m.put(ArmorItem.Type.BOOTS, 3);
+						m.put(ArmorItem.Type.LEGGINGS, 6);
+						m.put(ArmorItem.Type.CHESTPLATE, 7);
+						m.put(ArmorItem.Type.HELMET, 3);
+						m.put(ArmorItem.Type.BODY, 7);
+					}),
+					20,
+					SoundEvents.ARMOR_EQUIP_IRON,
+					() -> Ingredient.of(Items.IRON_INGOT),
+					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "cultist_praetor"))),
+					1.0F,
+					0.0F));
+
 	private ThaumcraftArmorMaterials() {
 	}
 }

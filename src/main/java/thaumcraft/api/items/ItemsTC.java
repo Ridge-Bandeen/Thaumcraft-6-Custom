@@ -458,6 +458,18 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemVoidSword> voidSword = ITEMS.registerItem("void_sword",
 			props -> new thaumcraft.common.items.tools.ItemVoidSword(TIER_VOID, props.attributes(SwordItem.createAttributes(TIER_VOID, 3, -2.4F))));
 
+	/** {@code ItemCrimsonBlade.toolMatCrimsonVoid} from the original ("CVOID": 200 uses, 8.0 mining speed,
+	 * +3.5 attack damage, 20 enchantability) - same real repair-ingredient substitution as {@link
+	 * #TIER_VOID} (a Thaumium ingot instead of the unported void-metal chain's own ingot), same rationale
+	 * (a rare boss-only weapon, not something players repair often). */
+	private static final Tier TIER_CRIMSON_BLADE = new SimpleTier(BlockTags.INCORRECT_FOR_DIAMOND_TOOL, 200, 8.0F, 3.5F, 20,
+			() -> Ingredient.of(ItemsTC.ingotThaumium));
+
+	/** See {@link thaumcraft.common.items.tools.ItemCrimsonBlade}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemCrimsonBlade> crimsonBlade = ITEMS.registerItem("crimson_blade",
+			props -> new thaumcraft.common.items.tools.ItemCrimsonBlade(TIER_CRIMSON_BLADE,
+					props.attributes(SwordItem.createAttributes(TIER_CRIMSON_BLADE, 3, -2.4F)).rarity(net.minecraft.world.item.Rarity.EPIC)));
+
 	/** See {@link thaumcraft.common.items.tools.ItemGrappleGun}'s own doc comment. */
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemGrappleGun> grappleGun =
 			ITEMS.registerItem("grapple_gun", thaumcraft.common.items.tools.ItemGrappleGun::new);
@@ -638,6 +650,21 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.items.armor.ItemCultistBoots> crimsonBoots = ITEMS.registerItem("crimson_boots",
 			props -> new thaumcraft.common.items.armor.ItemCultistBoots(
 					props.durability(ArmorItem.Type.BOOTS.getDurability(15)).rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+
+	/** The Crimson Praetor armor set - {@link thaumcraft.common.entities.monster.boss.EntityCultistLeader}'s
+	 * own equipment (always worn). Plain {@link ArmorItem}, same shape as {@link #crimsonPlateHelm} and
+	 * siblings. See {@link ThaumcraftArmorMaterials#CULTIST_PRAETOR} for the stat/texture rationale. */
+	public static final DeferredItem<Item> crimsonPraetorHelm = ITEMS.registerItem("crimson_praetor_helm",
+			props -> new ArmorItem(ThaumcraftArmorMaterials.CULTIST_PRAETOR, ArmorItem.Type.HELMET,
+					props.durability(ArmorItem.Type.HELMET.getDurability(30)).rarity(net.minecraft.world.item.Rarity.RARE)));
+
+	public static final DeferredItem<Item> crimsonPraetorChest = ITEMS.registerItem("crimson_praetor_chest",
+			props -> new ArmorItem(ThaumcraftArmorMaterials.CULTIST_PRAETOR, ArmorItem.Type.CHESTPLATE,
+					props.durability(ArmorItem.Type.CHESTPLATE.getDurability(30)).rarity(net.minecraft.world.item.Rarity.RARE)));
+
+	public static final DeferredItem<Item> crimsonPraetorLegs = ITEMS.registerItem("crimson_praetor_legs",
+			props -> new ArmorItem(ThaumcraftArmorMaterials.CULTIST_PRAETOR, ArmorItem.Type.LEGGINGS,
+					props.durability(ArmorItem.Type.LEGGINGS.getDurability(30)).rarity(net.minecraft.world.item.Rarity.RARE)));
 
 	/** The Crimson Robe armor set - {@link thaumcraft.common.entities.monster.cult.EntityCultistCleric}'s
 	 * real equipment (always worn, matching the original's own {@code setLoot}). Plain {@link ArmorItem},

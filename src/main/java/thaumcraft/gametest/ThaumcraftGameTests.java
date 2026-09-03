@@ -5989,4 +5989,92 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cultistLeaderIsARealBossThatEnragesHealsAndSupportsItsCult(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.boss.EntityCultistLeader leader =
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_LEADER.get().create(level);
+		helper.assertTrue(leader != null, "the entity type should really create an instance");
+		leader.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(leader);
+		leader.finalizeSpawn(level, level.getCurrentDifficultyAt(abs), net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+
+		helper.assertTrue(leader.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).is(thaumcraft.api.items.ItemsTC.crimsonPraetorHelm.get()),
+				"a real cultist leader should really always wear the crimson praetor helm");
+		helper.assertTrue(leader.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).is(thaumcraft.api.items.ItemsTC.crimsonPraetorChest.get()),
+				"a real cultist leader should really always wear the crimson praetor chest");
+		net.minecraft.world.item.ItemStack weapon = leader.getMainHandItem();
+		helper.assertTrue(weapon.is(thaumcraft.api.items.ItemsTC.voidSword.get()) || weapon.is(thaumcraft.api.items.ItemsTC.crimsonBlade.get()),
+				"a real cultist leader should really wield one of its real possible weapons, got " + weapon);
+		helper.assertTrue(!leader.getDisplayName().getString().isEmpty(), "a real cultist leader should really have a real generated name");
+
+		thaumcraft.common.entities.monster.cult.EntityCultistKnight ally =
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_KNIGHT.get().create(level);
+		helper.assertTrue(leader.isAlliedTo(ally), "a real cultist leader should really be allied to real regular cultists");
+
+		// real enrage cap: a single hit over 35 damage is really capped at 35 and grants real buffs.
+		float healthBefore = leader.getHealth();
+		leader.hurt(level.damageSources().generic(), 50.0f);
+		float lost = healthBefore - leader.getHealth();
+		helper.assertTrue(lost <= 35.01f, "a real single hit over 35 damage should really be capped at 35, lost " + lost);
+		helper.assertTrue(leader.hasEffect(net.minecraft.world.effect.MobEffects.REGENERATION),
+				"a real enraged cultist leader should really gain real Regeneration");
+		helper.assertTrue(leader.hasEffect(net.minecraft.world.effect.MobEffects.DAMAGE_BOOST),
+				"a real enraged cultist leader should really gain real Strength");
+
+		// real periodic self-heal and real ally-buffing, both driven off tickCount % N checks.
+		leader.setHealth(Math.max(1.0f, leader.getMaxHealth() - 20.0f));
+		float beforeHeal = leader.getHealth();
+		leader.tickCount = 30;
+		leader.aiStep();
+		helper.assertTrue(leader.getHealth() > beforeHeal, "a real cultist leader should really self-heal on its own real 30-tick cycle");
+
+		ally.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 2.5, 0.0f, 0.0f);
+		level.addFreshEntity(ally);
+		leader.tickCount = 20;
+		leader.aiStep();
+		helper.assertTrue(ally.hasEffect(net.minecraft.world.effect.MobEffects.REGENERATION),
+				"a real cultist leader should really buff nearby real cultists with real Regeneration");
+
+		// real ranged attack: a real homing golem orb should appear.
+		net.minecraft.world.entity.npc.Villager target = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+		helper.assertTrue(target != null, "the villager entity type should really create an instance");
+		target.moveTo(abs.getX() + 6.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(target);
+		boolean spawnedOrb = false;
+		for (int i = 0; i < 15 && !spawnedOrb; i++) {
+			leader.performRangedAttack(target, 1.0f);
+			spawnedOrb = !level.getEntitiesOfClass(thaumcraft.common.entities.projectile.EntityGolemOrb.class, new AABB(abs).inflate(8)).isEmpty();
+		}
+		helper.assertTrue(spawnedOrb, "a real cultist leader's ranged attack should really spawn a real homing golem orb");
+
+		// real guaranteed death drops. Each single hit is really capped at 35 damage by the boss's own
+		// enrage mechanic (see EntityThaumcraftBoss#hurt), so a 150-max-health boss needs several hits -
+		// and real vanilla post-hit invulnerability frames (Entity#invulnerableTime) would otherwise eat
+		// every hit after the first since they'd all carry the exact same capped amount, so it's reset
+		// before each one, same as real gameplay would after a real tick passes between hits.
+		leader.setHealth(leader.getMaxHealth());
+		for (int i = 0; i < 10 && leader.isAlive(); i++) {
+			leader.invulnerableTime = 0;
+			leader.hurt(level.damageSources().generic(), 2000.0f);
+		}
+		helper.assertTrue(!leader.isAlive(), "repeated real hits should really eventually kill the cultist leader");
+		List<net.minecraft.world.entity.item.ItemEntity> drops =
+				helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new AABB(abs).inflate(4));
+		boolean foundPearl = false;
+		boolean foundLootBag = false;
+		for (net.minecraft.world.entity.item.ItemEntity ie : drops) {
+			if (ie.getItem().is(thaumcraft.api.items.ItemsTC.primordialPearl.get())) foundPearl = true;
+			if (ie.getItem().is(thaumcraft.api.items.ItemsTC.lootBagRare.get())) foundLootBag = true;
+		}
+		helper.assertTrue(foundPearl, "a real dead cultist leader should really always drop a real primordial pearl");
+		helper.assertTrue(foundLootBag, "a real dead cultist leader should really always drop a real rare loot bag");
+
+		helper.succeed();
+	}
 }

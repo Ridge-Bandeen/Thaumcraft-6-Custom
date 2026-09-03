@@ -198,6 +198,14 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("cultist_cleric"));
 
+	/** The cult faction's boss - {@code sized(0.75f, 2.25f)} matches the original's own constructor-time
+	 * {@code setSize(0.75f, 2.25f)} exactly. See {@code EntityCultistLeader}'s own doc comment. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.boss.EntityCultistLeader>> CULTIST_LEADER = ENTITY_TYPES.register("cultist_leader",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.boss.EntityCultistLeader>of(thaumcraft.common.entities.monster.boss.EntityCultistLeader::new, MobCategory.MONSTER)
+					.sized(0.75f, 2.25f)
+					.clientTrackingRange(64)
+					.build("cultist_leader"));
+
 	/** {@link thaumcraft.common.entities.projectile.EntityGolemOrb}'s own type - same {@code noSave()}/
 	 * small-hitbox/fast-update-interval shape as {@link #FOCUS_PROJECTILE} (also a short-lived, server-only
 	 * homing bolt). */

@@ -1,97 +1,50 @@
 package thaumcraft.common.items.tools;
-import java.util.List;
-import net.minecraft.client.renderer.ItemMeshDefinition;
-import net.minecraft.client.renderer.block.model.ModelResourceLocation;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.MobEffects;
-import net.minecraft.item.EnumRarity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ItemSword;
-import net.minecraft.potion.PotionEffect;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.translation.I18n;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.EnumHelper;
-import net.minecraftforge.fml.common.FMLCommonHandler;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SwordItem;
+import net.minecraft.world.item.Tier;
+import net.minecraft.world.level.Level;
 import thaumcraft.api.items.IWarpingGear;
-import thaumcraft.api.items.ItemsTC;
-import thaumcraft.common.config.ConfigItems;
-import thaumcraft.common.items.IThaumcraftItems;
 
+/**
+ * Replaces the old (1.12.2) {@code ItemCrimsonBlade} - {@link thaumcraft.common.entities.monster.boss.EntityCultistLeader}'s
+ * default weapon (the Void Sword is an easy-difficulty-only substitute). Real self-repair and
+ * {@link IWarpingGear} implementer (+2 warp, double {@link ItemVoidSword}'s own +1 - see that class's own
+ * doc comment for the shared shape/rationale, including the same repair-ingredient substitution). Real
+ * on-hit Weakness AND Hunger application (the original's own extra debuff over the Void Sword's Weakness-
+ * only), same PvP-awareness check.
+ */
+public class ItemCrimsonBlade extends SwordItem implements IWarpingGear {
 
-public class ItemCrimsonBlade extends ItemSword implements IWarpingGear, IThaumcraftItems
-{
-    public static Item.ToolMaterial toolMatCrimsonVoid;
-    
-    public ItemCrimsonBlade() {
-        super(ItemCrimsonBlade.toolMatCrimsonVoid);
-        setCreativeTab(ConfigItems.TABTC);
-        setRegistryName("crimson_blade");
-        setUnlocalizedName("crimson_blade");
-        ConfigItems.ITEM_VARIANT_HOLDERS.add(this);
-    }
-    
-    public Item getItem() {
-        return this;
-    }
-    
-    public String[] getVariantNames() {
-        return new String[] { "normal" };
-    }
-    
-    public int[] getVariantMeta() {
-        return new int[] { 0 };
-    }
-    
-    public ItemMeshDefinition getCustomMesh() {
-        return null;
-    }
-    
-    public ModelResourceLocation getCustomModelResourceLocation(String variant) {
-        return new ModelResourceLocation("thaumcraft:" + variant);
-    }
-    
-    public EnumRarity getRarity(ItemStack itemstack) {
-        return EnumRarity.EPIC;
-    }
-    
-    public void onUpdate(ItemStack stack, World world, Entity entity, int p_77663_4_, boolean p_77663_5_) {
-        super.onUpdate(stack, world, entity, p_77663_4_, p_77663_5_);
-        if (stack.isItemDamaged() && entity != null && entity.ticksExisted % 20 == 0 && entity instanceof EntityLivingBase) {
-            stack.damageItem(-1, (EntityLivingBase)entity);
-        }
-    }
-    
-    public boolean hitEntity(ItemStack is, EntityLivingBase target, EntityLivingBase hitter) {
-        if (!target.world.isRemote) {
-            if (!(target instanceof EntityPlayer) || !(hitter instanceof EntityPlayer) || FMLCommonHandler.instance().getMinecraftServerInstance().isPVPEnabled()) {
-                try {
-                    target.addPotionEffect(new PotionEffect(MobEffects.WEAKNESS, 60));
-                    target.addPotionEffect(new PotionEffect(MobEffects.HUNGER, 120));
-                }
-                catch (Exception ex) {}
-            }
-        }
-        return super.hitEntity(is, target, hitter);
-    }
-    
-    public int getWarp(ItemStack itemstack, EntityPlayer player) {
-        return 2;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void addInformation(ItemStack stack, World worldIn, List<String> tooltip, ITooltipFlag flagIn) {
-        tooltip.add(TextFormatting.GOLD + I18n.translateToLocal("enchantment.special.sapgreat"));
-        super.addInformation(stack, worldIn, tooltip, flagIn);
-    }
-    
-    static {
-        ItemCrimsonBlade.toolMatCrimsonVoid = EnumHelper.addToolMaterial("CVOID", 4, 200, 8.0f, 3.5f, 20).setRepairItem(new ItemStack(ItemsTC.ingots, 1, 1));
-    }
+	public ItemCrimsonBlade(Tier tier, Properties properties) {
+		super(tier, properties);
+	}
+
+	@Override
+	public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
+		if (!target.level().isClientSide
+				&& (!(target instanceof Player) || !(attacker instanceof Player) || target.level().getServer().isPvpAllowed())) {
+			target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 60));
+			target.addEffect(new MobEffectInstance(MobEffects.HUNGER, 120));
+		}
+		return super.hurtEnemy(stack, target, attacker);
+	}
+
+	@Override
+	public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
+		super.inventoryTick(stack, level, entity, slotId, isSelected);
+		if (!level.isClientSide && stack.isDamaged() && entity.tickCount % 20 == 0) {
+			stack.setDamageValue(stack.getDamageValue() - 1);
+		}
+	}
+
+	@Override
+	public int getWarp(ItemStack itemstack, Player player) {
+		return 2;
+	}
 }
