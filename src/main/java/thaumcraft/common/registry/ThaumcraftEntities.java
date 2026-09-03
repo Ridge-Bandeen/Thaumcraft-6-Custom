@@ -123,6 +123,15 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("thaumic_slime"));
 
+	/** Real {@link net.minecraft.world.entity.monster.Zombie} subclass - {@code sized(0.6f, 1.95f)} matches
+	 * vanilla's own {@code EntityType.ZOMBIE} sizing exactly (a plain, non-baby humanoid). Same matching
+	 * {@code EntityAttributeCreationEvent} entry requirement. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.EntityBrainyZombie>> BRAINY_ZOMBIE = ENTITY_TYPES.register("brainy_zombie",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.EntityBrainyZombie>of(thaumcraft.common.entities.monster.EntityBrainyZombie::new, MobCategory.MONSTER)
+					.sized(0.6f, 1.95f)
+					.clientTrackingRange(64)
+					.build("brainy_zombie"));
+
 	private ThaumcraftEntities() {
 	}
 }

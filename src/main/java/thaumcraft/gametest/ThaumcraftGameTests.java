@@ -5568,4 +5568,40 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void brainyZombieHasRealToughenedStatsAndRetaliatesWhenHurt(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+
+		thaumcraft.common.entities.monster.EntityBrainyZombie zombie =
+				thaumcraft.common.registry.ThaumcraftEntities.BRAINY_ZOMBIE.get().create(helper.getLevel());
+		helper.assertTrue(zombie != null, "the entity type should really create an instance");
+		zombie.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		helper.getLevel().addFreshEntity(zombie);
+
+		helper.assertTrue(Math.abs(zombie.getMaxHealth() - 25.0f) < 0.01f, "a brainy zombie should really have 25 max health, was " + zombie.getMaxHealth());
+		helper.assertTrue(zombie.getArmorValue() == 3, "a brainy zombie should really have +1 armor over a plain zombie's own baseline 2, got " + zombie.getArmorValue());
+
+		net.minecraft.world.entity.npc.Villager attacker = net.minecraft.world.entity.EntityType.VILLAGER.create(helper.getLevel());
+		helper.assertTrue(attacker != null, "the villager entity type should really create an instance");
+		attacker.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		helper.getLevel().addFreshEntity(attacker);
+
+		// A brand-new HurtByTargetGoal's own real "timestamp" field defaults to 0, same as a freshly-added
+		// entity's own real getLastHurtByMobTimestamp() (derived from tickCount, which also starts at 0) - a
+		// real "0 != 0 is false" false negative unique to an isolated, never-ticked test entity, not a real
+		// gameplay concern (a genuinely live entity's tickCount is never still 0 by the time anything hurts
+		// it). Advancing tickCount past 0 first makes the timestamp real and distinguishable, matching what
+		// always happens for a real, already-ticking entity.
+		zombie.tickCount = 5;
+		zombie.hurt(helper.getLevel().damageSources().mobAttack(attacker), 1.0f);
+		net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal retaliateGoal = new net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal(zombie);
+		helper.assertTrue(retaliateGoal.canUse(), "the real HurtByTargetGoal should recognize the zombie was just hurt by a real living entity");
+		retaliateGoal.start();
+		helper.assertTrue(zombie.getTarget() == attacker, "starting the real goal should have set the real attacker as the zombie's target");
+
+		helper.succeed();
+	}
 }

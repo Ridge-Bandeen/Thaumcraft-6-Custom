@@ -273,6 +273,7 @@ public class Thaumcraft {
         event.put(ThaumcraftEntities.WISP.get(), thaumcraft.common.entities.monster.EntityWisp.createAttributes().build());
         event.put(ThaumcraftEntities.GOLEM.get(), thaumcraft.common.golems.EntityThaumcraftGolem.createAttributes().build());
         event.put(ThaumcraftEntities.THAUMIC_SLIME.get(), thaumcraft.common.entities.monster.EntityThaumicSlime.createAttributes().build());
+        event.put(ThaumcraftEntities.BRAINY_ZOMBIE.get(), thaumcraft.common.entities.monster.EntityBrainyZombie.createAttributes().build());
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {
