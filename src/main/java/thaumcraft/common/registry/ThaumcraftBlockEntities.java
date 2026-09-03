@@ -89,8 +89,10 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.devices.TileCondenser>> CONDENSER = BLOCK_ENTITIES.register("condenser",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.devices.TileCondenser::new, BlocksTC.condenser.get()).build(null));
 
+	/** Also backs {@link BlocksTC#pedestalEldritch} - see that field's own doc comment. Same tile, same
+	 * behavior, purely a themed reskin (matches the original's own "Eldritch" pedestal tier). */
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.crafting.TilePedestal>> PEDESTAL = BLOCK_ENTITIES.register("pedestal",
-			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TilePedestal::new, BlocksTC.pedestal.get()).build(null));
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TilePedestal::new, BlocksTC.pedestal.get(), BlocksTC.pedestalEldritch.get()).build(null));
 
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.crafting.TileInfusionMatrix>> INFUSION_MATRIX = BLOCK_ENTITIES.register("infusion_matrix",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TileInfusionMatrix::new, BlocksTC.infusionMatrix.get()).build(null));

@@ -7,24 +7,35 @@ import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.resources.ResourceLocation;
+import thaumcraft.common.entities.monster.cult.EntityCultist;
+import thaumcraft.common.entities.monster.cult.EntityCultistCleric;
 import thaumcraft.common.entities.monster.cult.EntityCultistKnight;
 
 /**
- * Renders {@link EntityCultistKnight} - the original's own {@code RenderCultist} used a plain vanilla
- * {@code ModelBiped} (no custom geometry) with a {@code LayerBipedArmor} also built from plain {@code
- * ModelBiped}s, i.e. a completely ordinary humanoid renderer. The modern equivalent of "plain humanoid,
- * wide arms" is {@link ModelLayers#PLAYER} (not {@code PLAYER_SLIM} - that's the thin-armed "Alex" variant)
- * for both the body and the {@link HumanoidArmorLayer}'s inner/outer models, plus a real {@link
- * ItemInHandLayer} for the held sword. {@link HumanoidArmorLayer} auto-derives the worn texture from
- * whatever {@code ArmorMaterial} the equipped {@code ArmorItem} declares (see {@code
- * ThaumcraftArmorMaterials#CULTIST_PLATE}/{@code #CULTIST_BOOTS}) - no per-item texture override needed,
- * unlike the original's own {@code getArmorTexture}.
+ * Renders both {@link EntityCultistKnight} and {@link EntityCultistCleric} - the original's own single
+ * {@code RenderCultist} class covered both ranks too (same {@code entity/cultist.png} skin either way,
+ * differentiated only by whichever armor happens to be worn), so this stays generic over {@link
+ * EntityCultist} rather than splitting into two near-identical renderer classes. Kept its original
+ * "Knight"-only name since it shipped that way first (see this arc's own earlier commit) - purely
+ * historical, not a scope limitation any more.
+ *
+ * The original's own {@code RenderCultist} used a plain vanilla {@code ModelBiped} (no custom geometry)
+ * with a {@code LayerBipedArmor} also built from plain {@code ModelBiped}s, i.e. a completely ordinary
+ * humanoid renderer. The modern equivalent of "plain humanoid, wide arms" is {@link ModelLayers#PLAYER}
+ * (not {@code PLAYER_SLIM} - that's the thin-armed "Alex" variant) for both the body and the {@link
+ * HumanoidArmorLayer}'s inner/outer models, plus a real {@link ItemInHandLayer} for the held item.
+ * {@link HumanoidArmorLayer} auto-derives the worn texture from whatever {@code ArmorMaterial} the
+ * equipped {@code ArmorItem} declares (see {@code ThaumcraftArmorMaterials#CULTIST_PLATE}/{@code
+ * #CULTIST_ROBE}/{@code #CULTIST_BOOTS}) - no per-item texture override needed, unlike the original's own
+ * {@code getArmorTexture}.
  *
  * Real, documented cut: the original's own ritualist floaty-line effect (a cleric-only visual, drawn in
- * this same renderer class in the original) isn't ported - that belongs to {@code EntityCultistCleric},
- * a later sub-chunk of this arc, not this knight-only renderer.
+ * this same renderer class in the original via raw {@code Tessellator} calls) isn't ported - this
+ * project's established "no client FX" simplification, same reasoning as every other custom particle/beam
+ * effect cut this session. {@link EntityCultistCleric}'s own real, working ritualist server-side state
+ * (despawn prevention, altar-focus AI) is unaffected - only the visual beam is missing.
  */
-public class RenderCultistKnight extends HumanoidMobRenderer<EntityCultistKnight, HumanoidModel<EntityCultistKnight>> {
+public class RenderCultistKnight<T extends EntityCultist> extends HumanoidMobRenderer<T, HumanoidModel<T>> {
 
 	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/cultist.png");
 
@@ -38,7 +49,7 @@ public class RenderCultistKnight extends HumanoidMobRenderer<EntityCultistKnight
 	}
 
 	@Override
-	public ResourceLocation getTextureLocation(EntityCultistKnight entity) {
+	public ResourceLocation getTextureLocation(T entity) {
 		return TEXTURE;
 	}
 }

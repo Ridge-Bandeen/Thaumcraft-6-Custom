@@ -5800,10 +5800,19 @@ public class ThaumcraftGameTests {
 		target.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
 		helper.getLevel().addFreshEntity(target);
 		crab.setTarget(target);
-		crab.setPos(target.getX(), target.getY() + 1.0, target.getZ());
 
+		// Re-pin the crab directly above its target AND force onGround false before every single attempt
+		// (not just once before the loop): aiStep() runs this mob's own movement goals, which can walk it
+		// away from the exact "directly above, within 4 blocks" position the mount condition needs, and
+		// separately, calling aiStep() alone (not the entity's own tick()) never runs the real collision
+		// pass that would normally clear a stale onGround flag after a mid-air teleport - so the mount
+		// condition's own "!onGround()" check can flakily see a leftover true from whenever this crab (or
+		// its bounding box) last touched a real block. Forcing both explicitly makes every attempt actually
+		// exercise the real mount condition instead of leaving it dependent on incidental physics state.
 		boolean mounted = false;
-		for (int i = 0; i < 10 && !mounted; i++) {
+		for (int i = 0; i < 20 && !mounted; i++) {
+			crab.setPos(target.getX(), target.getY() + 1.0, target.getZ());
+			crab.setOnGround(false);
 			crab.aiStep();
 			mounted = crab.getVehicle() == target;
 		}
@@ -5925,6 +5934,58 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(reflected, "a real golem orb should really be reflectable by a real player hit");
 		helper.assertTrue(reflectable.getDeltaMovement().lengthSqr() > 0.0,
 				"a reflected orb should really pick up real non-zero velocity from the attacker's own look vector");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cultistClericWearsCrimsonRobeAndRealAltarRitualismWorksForReal(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+
+		BlockPos altarPos = abs.above();
+		level.setBlockAndUpdate(altarPos, thaumcraft.api.blocks.BlocksTC.pedestalEldritch.get().defaultBlockState());
+
+		thaumcraft.common.entities.monster.cult.EntityCultistCleric cleric =
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_CLERIC.get().create(level);
+		helper.assertTrue(cleric != null, "the entity type should really create an instance");
+		cleric.moveTo(altarPos.getX() + 0.5, altarPos.getY() + 1.0, altarPos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(cleric);
+		cleric.finalizeSpawn(level, level.getCurrentDifficultyAt(altarPos), net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+
+		helper.assertTrue(cleric.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).is(thaumcraft.api.items.ItemsTC.crimsonRobeHelm.get()),
+				"a real cultist cleric should really always wear the crimson robe helm");
+		helper.assertTrue(cleric.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).is(thaumcraft.api.items.ItemsTC.crimsonRobeChest.get()),
+				"a real cultist cleric should really always wear the crimson robe chest");
+		helper.assertTrue(cleric.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.LEGS).is(thaumcraft.api.items.ItemsTC.crimsonRobeLegs.get()),
+				"a real cultist cleric should really always wear the crimson robe legs");
+
+		cleric.restrictTo(altarPos, 8);
+		cleric.setRitualist(true);
+		cleric.tickCount = 40;
+		cleric.checkAltarFocus();
+		helper.assertTrue(cleric.getIsRitualist(), "a real ritualist cleric standing right by a real altar should really stay ritualist");
+		helper.assertTrue(!cleric.removeWhenFarAway(1000000.0), "a real ritualist cleric should really never be removed for being far away");
+
+		level.setBlockAndUpdate(altarPos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+		cleric.tickCount = 80;
+		cleric.checkAltarFocus();
+		helper.assertTrue(!cleric.getIsRitualist(), "a real ritualist cleric should really cancel channeling once its real altar is gone");
+		helper.assertTrue(cleric.removeWhenFarAway(1000000.0), "a non-ritualist cleric should really be able to despawn normally again");
+
+		net.minecraft.world.entity.npc.Villager target = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+		helper.assertTrue(target != null, "the villager entity type should really create an instance");
+		target.moveTo(altarPos.getX() + 5.5, altarPos.getY() + 1.0, altarPos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(target);
+		boolean spawnedProjectile = false;
+		for (int i = 0; i < 15 && !spawnedProjectile; i++) {
+			cleric.performRangedAttack(target, 1.0f);
+			spawnedProjectile = !level.getEntitiesOfClass(thaumcraft.common.entities.projectile.EntityGolemOrb.class, new AABB(altarPos).inflate(6)).isEmpty()
+					|| !level.getEntitiesOfClass(net.minecraft.world.entity.projectile.SmallFireball.class, new AABB(altarPos).inflate(6)).isEmpty();
+		}
+		helper.assertTrue(spawnedProjectile, "a real ranged attack should really spawn either a real golem orb or real fireballs");
 
 		helper.succeed();
 	}

@@ -189,6 +189,15 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("cultist_knight"));
 
+	/** Second sub-chunk of the cult faction arc's "regular" tier - see {@code EntityCultistCleric}'s own doc
+	 * comment. Same {@code sized(0.6f, 1.8f)} as {@link #CULTIST_KNIGHT} - the original's own constructor
+	 * never called {@code setSize} differently for this subclass either. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.cult.EntityCultistCleric>> CULTIST_CLERIC = ENTITY_TYPES.register("cultist_cleric",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.cult.EntityCultistCleric>of(thaumcraft.common.entities.monster.cult.EntityCultistCleric::new, MobCategory.MONSTER)
+					.sized(0.6f, 1.8f)
+					.clientTrackingRange(64)
+					.build("cultist_cleric"));
+
 	/** {@link thaumcraft.common.entities.projectile.EntityGolemOrb}'s own type - same {@code noSave()}/
 	 * small-hitbox/fast-update-interval shape as {@link #FOCUS_PROJECTILE} (also a short-lived, server-only
 	 * homing bolt). */

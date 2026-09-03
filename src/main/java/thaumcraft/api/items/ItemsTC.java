@@ -562,6 +562,10 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> pedestal =
 			ITEMS.registerSimpleBlockItem("pedestal", BlocksTC.pedestal);
 
+	/** See {@link BlocksTC#pedestalEldritch}'s own doc comment. */
+	public static final DeferredItem<BlockItem> pedestalEldritch =
+			ITEMS.registerSimpleBlockItem("pedestal_eldritch", BlocksTC.pedestalEldritch);
+
 	public static final DeferredItem<BlockItem> infusionMatrix =
 			ITEMS.registerSimpleBlockItem("infusion_matrix", BlocksTC.infusionMatrix);
 
@@ -634,6 +638,22 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.items.armor.ItemCultistBoots> crimsonBoots = ITEMS.registerItem("crimson_boots",
 			props -> new thaumcraft.common.items.armor.ItemCultistBoots(
 					props.durability(ArmorItem.Type.BOOTS.getDurability(15)).rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+
+	/** The Crimson Robe armor set - {@link thaumcraft.common.entities.monster.cult.EntityCultistCleric}'s
+	 * real equipment (always worn, matching the original's own {@code setLoot}). Plain {@link ArmorItem},
+	 * same shape as {@link #crimsonPlateHelm} and siblings. See {@link ThaumcraftArmorMaterials#CULTIST_ROBE}
+	 * for the stat/texture rationale. */
+	public static final DeferredItem<Item> crimsonRobeHelm = ITEMS.registerItem("crimson_robe_helm",
+			props -> new ArmorItem(ThaumcraftArmorMaterials.CULTIST_ROBE, ArmorItem.Type.HELMET,
+					props.durability(ArmorItem.Type.HELMET.getDurability(17)).rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+
+	public static final DeferredItem<Item> crimsonRobeChest = ITEMS.registerItem("crimson_robe_chest",
+			props -> new ArmorItem(ThaumcraftArmorMaterials.CULTIST_ROBE, ArmorItem.Type.CHESTPLATE,
+					props.durability(ArmorItem.Type.CHESTPLATE.getDurability(17)).rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+
+	public static final DeferredItem<Item> crimsonRobeLegs = ITEMS.registerItem("crimson_robe_legs",
+			props -> new ArmorItem(ThaumcraftArmorMaterials.CULTIST_ROBE, ArmorItem.Type.LEGGINGS,
+					props.durability(ArmorItem.Type.LEGGINGS.getDurability(17)).rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
 
 	private ItemsTC() {
 	}

@@ -130,6 +130,26 @@ public final class ThaumcraftArmorMaterials {
 					0.0F,
 					0.0F));
 
+	/** {@code ThaumcraftMaterials.ARMORMAT_CULTIST_ROBE} from the original (durability multiplier 17 -
+	 * applied per item at each {@code ItemsTC.crimsonRobe*} registration site, same convention as {@link
+	 * #CULTIST_PLATE}), protection {@code [2,4,5,2]}, enchantability 13, chain equip sound, no toughness.
+	 * Used by {@link thaumcraft.common.entities.monster.cult.EntityCultistCleric}'s helm/chest/legs drops. */
+	public static final Holder<ArmorMaterial> CULTIST_ROBE = ARMOR_MATERIALS.register("cultist_robe",
+			() -> new ArmorMaterial(
+					Util.make(new EnumMap<>(ArmorItem.Type.class), m -> {
+						m.put(ArmorItem.Type.BOOTS, 2);
+						m.put(ArmorItem.Type.LEGGINGS, 4);
+						m.put(ArmorItem.Type.CHESTPLATE, 5);
+						m.put(ArmorItem.Type.HELMET, 2);
+						m.put(ArmorItem.Type.BODY, 5);
+					}),
+					13,
+					SoundEvents.ARMOR_EQUIP_CHAIN,
+					() -> Ingredient.of(Items.IRON_INGOT),
+					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "cultist_robe"))),
+					0.0F,
+					0.0F));
+
 	private ThaumcraftArmorMaterials() {
 	}
 }

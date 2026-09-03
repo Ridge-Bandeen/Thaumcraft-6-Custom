@@ -396,6 +396,19 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.devices.BlockPedestal::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE).noOcclusion());
 
+	/** The original's own {@code BlocksTC.eldritch} field (checked by {@code AIAltarFocus}, the Cultist
+	 * Cleric's ritualist-channeling AI) was a real bug in the shipped 1.12.2 mod - declared but never once
+	 * assigned to an actual block anywhere in that codebase, making the ritualist check always fail within
+	 * seconds regardless of any altar. Confirmed by direct grep of the original source before writing this.
+	 * This registers what the original almost certainly meant: the same {@code BlockPedestal} class, an
+	 * "Eldritch" reskin, reusing the original's own separately-working {@code pedestalEldritch} naming and
+	 * bundled textures/model (which DO exist as real assets - only the code-side wiring was missing). See
+	 * {@link thaumcraft.common.entities.monster.cult.EntityCultistCleric}'s own doc comment for the AI side
+	 * of this fix. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockPedestal> pedestalEldritch = BLOCKS.registerBlock("pedestal_eldritch",
+			thaumcraft.common.blocks.devices.BlockPedestal::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE).noOcclusion());
+
 	/** See {@link thaumcraft.common.blocks.crafting.BlockInfusionMatrix}'s own doc comment for what's
 	 * simplified about this device this pass. */
 	public static final DeferredBlock<thaumcraft.common.blocks.crafting.BlockInfusionMatrix> infusionMatrix = BLOCKS.registerBlock("infusion_matrix",
