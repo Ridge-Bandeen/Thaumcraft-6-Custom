@@ -188,6 +188,7 @@ sourceSets {
             include 'thaumcraft/common/entities/monster/EntityFireBat.java'
             include 'thaumcraft/common/entities/monster/EntityMindSpider.java'
             include 'thaumcraft/common/entities/monster/EntitySpellBat.java'
+            include 'thaumcraft/common/entities/monster/EntityEldritchCrab.java'
             include 'thaumcraft/common/items/casters/foci/FocusMediumSpellBat.java'
             include 'thaumcraft/common/items/casters/foci/FocusModScatter.java'
             include 'thaumcraft/common/items/casters/foci/FocusModSplitTarget.java'

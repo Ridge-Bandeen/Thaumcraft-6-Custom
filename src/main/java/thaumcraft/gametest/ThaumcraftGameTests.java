@@ -5771,4 +5771,63 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void eldritchCrabHasARealHelmThatBreaksAndRidesItsTarget(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+
+		thaumcraft.common.entities.monster.EntityEldritchCrab crab =
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_CRAB.get().create(helper.getLevel());
+		helper.assertTrue(crab != null, "the entity type should really create an instance");
+		crab.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		helper.getLevel().addFreshEntity(crab);
+		helper.assertTrue(crab instanceof thaumcraft.api.entities.IEldritchMob, "an eldritch crab should really be an eldritch mob");
+
+		crab.setHelm(true);
+		helper.assertTrue(crab.getArmorValue() == 5, "a helmed crab should really have 5 armor, got " + crab.getArmorValue());
+		helper.assertTrue(!crab.canBeAffected(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.POISON, 100)),
+				"a real eldritch crab should really be immune to poison");
+
+		crab.setHealth(crab.getMaxHealth() * 0.4f);
+		crab.hurt(helper.getLevel().damageSources().generic(), 0.1f);
+		helper.assertTrue(!crab.hasHelm(), "the helm should really have broken once health dropped to/below half, health=" + crab.getHealth() + "/" + crab.getMaxHealth());
+		helper.assertTrue(crab.getArmorValue() == 0, "armor should really be gone once the helm breaks, got " + crab.getArmorValue());
+
+		net.minecraft.world.entity.npc.Villager target = net.minecraft.world.entity.EntityType.VILLAGER.create(helper.getLevel());
+		helper.assertTrue(target != null, "the villager entity type should really create an instance");
+		target.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		helper.getLevel().addFreshEntity(target);
+		crab.setTarget(target);
+		crab.setPos(target.getX(), target.getY() + 1.0, target.getZ());
+
+		boolean mounted = false;
+		for (int i = 0; i < 10 && !mounted; i++) {
+			crab.aiStep();
+			mounted = crab.getVehicle() == target;
+		}
+		helper.assertTrue(mounted, "a real eldritch crab positioned above its target should really climb onto it");
+
+		// dropCustomDeathLoot's own "recentlyHit" only tracks real PLAYER hits (not any mob's), so a real
+		// mock player attack is needed here, not the villager used for the riding check above.
+		ServerPlayer killer = spawnCasterAt(helper, abs.above(3));
+		boolean foundPearl = false;
+		for (int i = 0; i < 30 && !foundPearl; i++) {
+			ServerLevel serverLevel = helper.getLevel();
+			thaumcraft.common.entities.monster.EntityEldritchCrab probe =
+					thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_CRAB.get().create(serverLevel);
+			probe.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+			serverLevel.addFreshEntity(probe);
+			probe.hurt(serverLevel.damageSources().playerAttack(killer), 1000.0f);
+			List<net.minecraft.world.entity.item.ItemEntity> after =
+					helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new AABB(abs).inflate(3));
+			for (net.minecraft.world.entity.item.ItemEntity ie : after) {
+				if (ie.getItem().is(net.minecraft.world.item.Items.ENDER_PEARL)) foundPearl = true;
+			}
+		}
+		helper.assertTrue(foundPearl, "killing enough real crabs by a real player attack should eventually drop a real ender pearl");
+
+		helper.succeed();
+	}
 }

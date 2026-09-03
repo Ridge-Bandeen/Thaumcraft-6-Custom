@@ -167,6 +167,16 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("spell_bat"));
 
+	/** Real, documented gap: no custom {@code EntityRenderer}/model yet - no vanilla creature shaped like a
+	 * crab exists to reuse the way {@code EntityThaumicSlime}/{@code EntityBrainyZombie}/{@code EntityMindSpider}
+	 * all did, same real "hand-rolled entity, no free renderer" situation {@link #FIRE_BAT}/{@link #SPELL_BAT}
+	 * already carry. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.EntityEldritchCrab>> ELDRITCH_CRAB = ENTITY_TYPES.register("eldritch_crab",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.EntityEldritchCrab>of(thaumcraft.common.entities.monster.EntityEldritchCrab::new, MobCategory.MONSTER)
+					.sized(0.8f, 0.6f)
+					.clientTrackingRange(64)
+					.build("eldritch_crab"));
+
 	private ThaumcraftEntities() {
 	}
 }
