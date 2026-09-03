@@ -217,6 +217,14 @@ public final class ThaumcraftEntities {
 					.noSave()
 					.build("golem_orb"));
 
+	/** See {@code EntityInhabitedZombie}'s own doc comment. {@code sized(0.6f, 1.95f)} matches vanilla's own
+	 * zombie sizing, same as {@link #BRAINY_ZOMBIE}. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.EntityInhabitedZombie>> INHABITED_ZOMBIE = ENTITY_TYPES.register("inhabited_zombie",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.EntityInhabitedZombie>of(thaumcraft.common.entities.monster.EntityInhabitedZombie::new, MobCategory.MONSTER)
+					.sized(0.6f, 1.95f)
+					.clientTrackingRange(64)
+					.build("inhabited_zombie"));
+
 	private ThaumcraftEntities() {
 	}
 }

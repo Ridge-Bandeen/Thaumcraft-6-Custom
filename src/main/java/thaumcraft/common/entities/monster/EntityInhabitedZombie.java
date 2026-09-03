@@ -1,106 +1,104 @@
 package thaumcraft.common.entities.monster;
-import java.util.List;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityCreature;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.IEntityLivingData;
-import net.minecraft.entity.SharedMonsterAttributes;
-import net.minecraft.entity.ai.EntityAIBase;
-import net.minecraft.entity.ai.EntityAIHurtByTarget;
-import net.minecraft.entity.ai.EntityAINearestAttackableTarget;
-import net.minecraft.entity.item.EntityXPOrb;
-import net.minecraft.entity.monster.EntityZombie;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.inventory.EntityEquipmentSlot;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.EnumParticleTypes;
-import net.minecraft.util.SoundEvent;
-import net.minecraft.util.math.AxisAlignedBB;
+
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.EnumDifficulty;
-import net.minecraft.world.World;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ExperienceOrb;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
 import thaumcraft.api.entities.IEldritchMob;
 import thaumcraft.api.items.ItemsTC;
-import thaumcraft.common.entities.monster.cult.EntityCultist;
-import thaumcraft.common.lib.SoundsTC;
+import thaumcraft.common.registry.ThaumcraftEntities;
 
+/**
+ * Replaces the old (1.12.2) {@code EntityInhabitedZombie} - a real {@link Zombie} subclass wearing
+ * real Crimson Plate scraps (always a helm, plus a real 90%(hard)/60%(else) chance each of chest/legs).
+ * Never calls for reinforcements, same real technique {@code EntityBrainyZombie} already established.
+ *
+ * The real, distinctive mechanic: it doesn't die normally at all - {@link #die} is fully overridden (no
+ * {@code super.die} call, matching the original's own {@code onDeath}/{@code dropFewItems} both being
+ * no-ops) to spawn a real, helmed {@link EntityEldritchCrab} in its place, a real explosion-particle burst
+ * (broadcast to nearby clients via {@link ServerLevel#sendParticles} - the original's own server-side
+ * {@code world.spawnParticle} call, which already does the same real network broadcast, not a "no client
+ * FX" case), and a real manual XP-orb award (only when killed by a real player and {@code doMobLoot} is on,
+ * via the modern {@link ExperienceOrb#award} helper - simpler than the original's own manual per-orb
+ * splitting loop). No other death drops happen at all, matching the original's own {@code getDropItem}/
+ * {@code dropFewItems} overrides exactly.
+ *
+ * Real, documented cuts: no {@code getCanSpawnHere} "don't spawn near another inhabited zombie" restriction
+ * - this whole monster arc has consistently deferred all natural-spawn ({@code SpawnPlacements}) wiring, so
+ * there's no spawn-time hook for this check to run from yet either. Sound substitution, same real reason
+ * {@code EntityEldritchCrab} already documents: the original's own bundled {@code SoundsTC.crabtalk} isn't
+ * registered in this port yet, stands in with a vanilla spider sound (this zombie's real "inhabited by
+ * something crab-shaped" identity, not an arbitrary choice).
+ */
+public class EntityInhabitedZombie extends Zombie implements IEldritchMob {
 
-public class EntityInhabitedZombie extends EntityZombie implements IEldritchMob
-{
-    protected void applyEntityAttributes() {
-        super.applyEntityAttributes();
-        getEntityAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(30.0);
-        getEntityAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).setBaseValue(5.0);
-        getEntityAttribute(EntityInhabitedZombie.SPAWN_REINFORCEMENTS_CHANCE).setBaseValue(0.0);
-    }
-    
-    public EntityInhabitedZombie(World world) {
-        super(world);
-        targetTasks.addTask(1, new EntityAIHurtByTarget(this, true));
-        targetTasks.addTask(3, new EntityAINearestAttackableTarget(this, EntityCultist.class, true));
-    }
-    
-    public void onKillEntity(EntityLivingBase par1EntityLivingBase) {
-    }
-    
-    public IEntityLivingData onInitialSpawn(DifficultyInstance diff, IEntityLivingData data) {
-        float d = (world.getDifficulty() == EnumDifficulty.HARD) ? 0.9f : 0.6f;
-        setItemStackToSlot(EntityEquipmentSlot.HEAD, new ItemStack(ItemsTC.crimsonPlateHelm));
-        if (rand.nextFloat() <= d) {
-            setItemStackToSlot(EntityEquipmentSlot.CHEST, new ItemStack(ItemsTC.crimsonPlateChest));
-        }
-        if (rand.nextFloat() <= d) {
-            setItemStackToSlot(EntityEquipmentSlot.LEGS, new ItemStack(ItemsTC.crimsonPlateLegs));
-        }
-        return super.onInitialSpawn(diff, data);
-    }
-    
-    protected Item getDropItem() {
-        return Item.getItemById(0);
-    }
-    
-    protected void dropFewItems(boolean p_70628_1_, int p_70628_2_) {
-    }
-    
-    protected void onDeathUpdate() {
-        if (!world.isRemote) {
-            EntityEldritchCrab crab = new EntityEldritchCrab(world);
-            crab.setPositionAndRotation(posX, posY + getEyeHeight(), posZ, rotationYaw, rotationPitch);
-            crab.setHelm(true);
-            world.spawnEntity(crab);
-            if ((recentlyHit > 0 || isPlayer()) && canDropLoot() && world.getGameRules().getBoolean("doMobLoot")) {
-                int i = getExperiencePoints(attackingPlayer);
-                while (i > 0) {
-                    int j = EntityXPOrb.getXPSplit(i);
-                    i -= j;
-                    world.spawnEntity(new EntityXPOrb(world, posX, posY, posZ, j));
-                }
-            }
-        }
-        for (int k = 0; k < 20; ++k) {
-            double d2 = rand.nextGaussian() * 0.02;
-            double d3 = rand.nextGaussian() * 0.02;
-            double d4 = rand.nextGaussian() * 0.02;
-            world.spawnParticle(EnumParticleTypes.EXPLOSION_NORMAL, posX + rand.nextFloat() * width * 2.0f - width, posY + rand.nextFloat() * height, posZ + rand.nextFloat() * width * 2.0f - width, d2, d3, d4);
-        }
-        setDead();
-    }
-    
-    public void onDeath(DamageSource p_70645_1_) {
-    }
-    
-    protected SoundEvent getAmbientSound() {
-        return SoundsTC.crabtalk;
-    }
-    
-    protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
-        return SoundEvents.ENTITY_GENERIC_HURT;
-    }
-    
-    public boolean getCanSpawnHere() {
-        List ents = world.getEntitiesWithinAABB(EntityInhabitedZombie.class, new AxisAlignedBB(posX, posY, posZ, posX + 1.0, posY + 1.0, posZ + 1.0).grow(32.0, 16.0, 32.0));
-        return ents.size() <= 0 && super.getCanSpawnHere();
-    }
+	public EntityInhabitedZombie(EntityType<? extends EntityInhabitedZombie> type, Level level) {
+		super(type, level);
+	}
+
+	public static AttributeSupplier.Builder createAttributes() {
+		return Zombie.createAttributes()
+				.add(Attributes.MAX_HEALTH, 30.0)
+				.add(Attributes.ATTACK_DAMAGE, 5.0)
+				.add(Attributes.SPAWN_REINFORCEMENTS_CHANCE, 0.0);
+	}
+
+	@Override
+	public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType, SpawnGroupData spawnGroupData) {
+		float chance = difficulty.getDifficulty() == Difficulty.HARD ? 0.9f : 0.6f;
+		setItemSlot(EquipmentSlot.HEAD, new ItemStack(ItemsTC.crimsonPlateHelm.get()));
+		if (random.nextFloat() <= chance) {
+			setItemSlot(EquipmentSlot.CHEST, new ItemStack(ItemsTC.crimsonPlateChest.get()));
+		}
+		if (random.nextFloat() <= chance) {
+			setItemSlot(EquipmentSlot.LEGS, new ItemStack(ItemsTC.crimsonPlateLegs.get()));
+		}
+		return super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
+	}
+
+	@Override
+	public void die(DamageSource source) {
+		if (level() instanceof ServerLevel serverLevel) {
+			EntityEldritchCrab crab = ThaumcraftEntities.ELDRITCH_CRAB.get().create(serverLevel);
+			if (crab != null) {
+				crab.moveTo(getX(), getY() + getEyeHeight(), getZ(), getYRot(), getXRot());
+				crab.setHelm(true);
+				serverLevel.addFreshEntity(crab);
+			}
+			if (lastHurtByPlayer != null && serverLevel.getGameRules().getBoolean(GameRules.RULE_DOMOBLOOT)) {
+				int xp = getExperienceReward(serverLevel, lastHurtByPlayer);
+				if (xp > 0) {
+					ExperienceOrb.award(serverLevel, position(), xp);
+				}
+			}
+			serverLevel.sendParticles(ParticleTypes.EXPLOSION, getX(), getY() + getBbHeight() / 2.0, getZ(), 20,
+					getBbWidth(), getBbHeight() / 2.0, getBbWidth(), 0.02);
+		}
+		discard();
+	}
+
+	@Override
+	protected SoundEvent getAmbientSound() {
+		return SoundEvents.SPIDER_AMBIENT;
+	}
+
+	@Override
+	protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
+		return SoundEvents.GENERIC_HURT;
+	}
 }

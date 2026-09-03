@@ -99,6 +99,7 @@ public class ThaumcraftClient {
         // Shared renderer, see RenderCultistKnight's own doc comment for why the class name predates this reuse.
         event.registerEntityRenderer(ThaumcraftEntities.CULTIST_CLERIC.get(), thaumcraft.client.render.RenderCultistKnight::new);
         event.registerEntityRenderer(ThaumcraftEntities.CULTIST_LEADER.get(), thaumcraft.client.render.RenderCultistLeader::new);
+        event.registerEntityRenderer(ThaumcraftEntities.INHABITED_ZOMBIE.get(), thaumcraft.client.render.RenderInhabitedZombie::new);
         // No visible model - see RenderFocusProjectile's own doc comment (shared with FOCUS_PROJECTILE/FOCUS_MINE).
         event.registerEntityRenderer(ThaumcraftEntities.GOLEM_ORB.get(), RenderFocusProjectile::new);
     }

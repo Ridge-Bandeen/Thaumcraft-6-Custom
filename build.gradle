@@ -204,6 +204,8 @@ sourceSets {
             include 'thaumcraft/common/entities/monster/boss/EntityThaumcraftBoss.java'
             include 'thaumcraft/common/entities/monster/boss/EntityCultistLeader.java'
             include 'thaumcraft/client/render/RenderCultistLeader.java'
+            include 'thaumcraft/common/entities/monster/EntityInhabitedZombie.java'
+            include 'thaumcraft/client/render/RenderInhabitedZombie.java'
 
             include 'thaumcraft/api/crafting/ArcaneCraftingInput.java'
             include 'thaumcraft/api/crafting/ArcaneRecipe.java'

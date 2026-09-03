@@ -6077,4 +6077,37 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void inhabitedZombieSpawnsARealHelmedEldritchCrabInsteadOfDyingNormally(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.EntityInhabitedZombie zombie =
+				thaumcraft.common.registry.ThaumcraftEntities.INHABITED_ZOMBIE.get().create(level);
+		helper.assertTrue(zombie != null, "the entity type should really create an instance");
+		zombie.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(zombie);
+		zombie.finalizeSpawn(level, level.getCurrentDifficultyAt(abs), net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+
+		helper.assertTrue(zombie.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).is(thaumcraft.api.items.ItemsTC.crimsonPlateHelm.get()),
+				"a real inhabited zombie should really always wear the crimson plate helm");
+
+		ServerPlayer killer = spawnCasterAt(helper, abs.above(3));
+		zombie.hurt(level.damageSources().playerAttack(killer), 1000.0f);
+		helper.assertTrue(!zombie.isAlive(), "a real lethal hit should really kill the inhabited zombie");
+
+		List<thaumcraft.common.entities.monster.EntityEldritchCrab> crabs =
+				level.getEntitiesOfClass(thaumcraft.common.entities.monster.EntityEldritchCrab.class, new AABB(abs).inflate(3));
+		helper.assertTrue(crabs.size() == 1, "exactly one real eldritch crab should really have spawned in its place, found " + crabs.size());
+		helper.assertTrue(crabs.get(0).hasHelm(), "the real spawned crab should really already have its own helm");
+
+		List<net.minecraft.world.entity.ExperienceOrb> orbs =
+				level.getEntitiesOfClass(net.minecraft.world.entity.ExperienceOrb.class, new AABB(abs).inflate(3));
+		helper.assertTrue(!orbs.isEmpty(), "killing it with a real player attack should really award real XP orbs");
+
+		helper.succeed();
+	}
 }
