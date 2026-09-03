@@ -4987,4 +4987,58 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealBreakerMinesBlacklistedBlocksAndRespectsARealWhitelist(GameTestHelper helper) {
+		BlockPos anchorPos = BlockPos.ZERO;
+		BlockPos anchorAbs = helper.absolutePos(anchorPos);
+		helper.setBlock(anchorPos, net.minecraft.world.level.block.Blocks.STONE);
+
+		BlockPos targetPos = anchorPos.above();
+		BlockPos targetAbs = helper.absolutePos(targetPos);
+		helper.setBlock(targetPos, net.minecraft.world.level.block.Blocks.COBBLESTONE);
+
+		ServerPlayer owner = spawnCasterAt(helper, anchorAbs.above(3));
+		thaumcraft.common.golems.seals.SealBreaker seal = new thaumcraft.common.golems.seals.SealBreaker();
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), anchorAbs, net.minecraft.core.Direction.UP, seal, owner),
+				"placing a fresh seal should succeed");
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(anchorAbs, net.minecraft.core.Direction.UP);
+		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
+
+		boolean foundTask = false;
+		thaumcraft.api.golems.tasks.Task breakTask = null;
+		for (int i = 0; i < 60 && !foundTask; i++) {
+			sealEntity.tickSealEntity(helper.getLevel());
+			for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
+				if (t.getPos().equals(targetAbs)) {
+					foundTask = true;
+					breakTask = t;
+				}
+			}
+		}
+		helper.assertTrue(foundTask, "an empty blacklist should match nothing, so the cobblestone should get a real break task");
+
+		thaumcraft.api.golems.parts.GolemArm breakerArm = findPartByKey(thaumcraft.api.golems.parts.GolemArm.getArms(), a -> a.key, "BREAKERS");
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setArms(breakerArm);
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, anchorAbs);
+		golem.initializeGolem(props, 0);
+
+		thaumcraft.common.golems.ai.AIGotoBlock goal = new thaumcraft.common.golems.ai.AIGotoBlock(golem);
+		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the break task");
+		helper.assertTrue(golem.getTask() == breakTask, "the golem should have reserved the real break task");
+
+		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
+		helper.assertTrue(helper.getLevel().getBlockState(targetAbs).isAir(), "completing the break task should have really broken the cobblestone");
+
+		// A real whitelist that only matches dirt should refuse a cobblestone target.
+		helper.setBlock(targetPos, net.minecraft.world.level.block.Blocks.COBBLESTONE);
+		seal.setBlacklist(false);
+		seal.setFilterSlot(0, new ItemStack(net.minecraft.world.item.Items.DIRT));
+		thaumcraft.api.golems.tasks.Task whitelistCheck = new thaumcraft.api.golems.tasks.Task(sealPos, targetAbs);
+		helper.assertTrue(!seal.canGolemPerformTask(golem, whitelistCheck),
+				"a whitelist that only matches dirt should refuse a cobblestone target");
+
+		helper.succeed();
+	}
 }
