@@ -444,6 +444,20 @@ public final class ItemsTC {
 	public static final DeferredItem<Item> thaumiumSword = ITEMS.registerItem("thaumium_sword",
 			props -> new SwordItem(TIER_THAUMIUM, props.attributes(SwordItem.createAttributes(TIER_THAUMIUM, 3, -2.4F))));
 
+	/** {@code ThaumcraftMaterials.TOOLMAT_VOID} from the original: harvest level 4 (diamond-tier-and-up),
+	 * 150 uses, 8.0 mining speed, +3 attack damage, 10 enchantability. The original repaired with a "void
+	 * ingot" ({@code ItemsTC.ingots} meta 1) - that whole void-metal ore chain isn't ported yet (see {@link
+	 * thaumcraft.common.items.tools.ItemVoidSword}'s own doc comment for the rest of the simplifications on
+	 * this item), so this repairs with a Thaumium ingot instead as a real, documented, low-stakes
+	 * substitution - {@link thaumcraft.common.items.tools.ItemVoidSword} is a rare mob drop, not something
+	 * players craft/repair often. */
+	private static final Tier TIER_VOID = new SimpleTier(BlockTags.INCORRECT_FOR_DIAMOND_TOOL, 150, 8.0F, 3.0F, 10,
+			() -> Ingredient.of(ItemsTC.ingotThaumium));
+
+	/** See {@link thaumcraft.common.items.tools.ItemVoidSword}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemVoidSword> voidSword = ITEMS.registerItem("void_sword",
+			props -> new thaumcraft.common.items.tools.ItemVoidSword(TIER_VOID, props.attributes(SwordItem.createAttributes(TIER_VOID, 3, -2.4F))));
+
 	/** See {@link thaumcraft.common.items.tools.ItemGrappleGun}'s own doc comment. */
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemGrappleGun> grappleGun =
 			ITEMS.registerItem("grapple_gun", thaumcraft.common.items.tools.ItemGrappleGun::new);
@@ -599,6 +613,27 @@ public final class ItemsTC {
 	/** Diagnostic tool - see {@link thaumcraft.common.items.tools.ItemResonator}'s own doc comment. */
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemResonator> resonator =
 			ITEMS.registerItem("resonator", props -> new thaumcraft.common.items.tools.ItemResonator(props.rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+
+	/** The Crimson Plate armor set - {@link thaumcraft.common.entities.monster.cult.EntityCultistKnight}'s
+	 * real equipment drops (5% drop chance each, set on the entity itself, matching the original). Plain
+	 * {@link ArmorItem} - no custom subclass needed, same as {@link #thaumiumHelm} and siblings. See
+	 * {@link ThaumcraftArmorMaterials#CULTIST_PLATE} for the stat/texture rationale. */
+	public static final DeferredItem<Item> crimsonPlateHelm = ITEMS.registerItem("crimson_plate_helm",
+			props -> new ArmorItem(ThaumcraftArmorMaterials.CULTIST_PLATE, ArmorItem.Type.HELMET,
+					props.durability(ArmorItem.Type.HELMET.getDurability(18)).rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+
+	public static final DeferredItem<Item> crimsonPlateChest = ITEMS.registerItem("crimson_plate_chest",
+			props -> new ArmorItem(ThaumcraftArmorMaterials.CULTIST_PLATE, ArmorItem.Type.CHESTPLATE,
+					props.durability(ArmorItem.Type.CHESTPLATE.getDurability(18)).rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+
+	public static final DeferredItem<Item> crimsonPlateLegs = ITEMS.registerItem("crimson_plate_legs",
+			props -> new ArmorItem(ThaumcraftArmorMaterials.CULTIST_PLATE, ArmorItem.Type.LEGGINGS,
+					props.durability(ArmorItem.Type.LEGGINGS.getDurability(18)).rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+
+	/** See {@link thaumcraft.common.items.armor.ItemCultistBoots}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemCultistBoots> crimsonBoots = ITEMS.registerItem("crimson_boots",
+			props -> new thaumcraft.common.items.armor.ItemCultistBoots(
+					props.durability(ArmorItem.Type.BOOTS.getDurability(15)).rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
 
 	private ItemsTC() {
 	}

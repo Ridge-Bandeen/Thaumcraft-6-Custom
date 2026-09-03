@@ -177,6 +177,18 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("eldritch_crab"));
 
+	/** First of the "cult faction" arc - see {@code EntityCultist}'s own doc comment. Real {@code
+	 * net.minecraft.world.entity.monster.Monster} subclass, {@code sized(0.6f, 1.8f)} matches the original's
+	 * own constructor-time {@code setSize(0.6f, 1.8f)} exactly. Only this "regular" melee tier is registered
+	 * so far - the original never registered a bare {@code EntityCultist} as its own spawnable type either
+	 * (only its subclasses), matching this port's own {@code EntityCultist}/{@code EntityCultistKnight}
+	 * split. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.cult.EntityCultistKnight>> CULTIST_KNIGHT = ENTITY_TYPES.register("cultist_knight",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.cult.EntityCultistKnight>of(thaumcraft.common.entities.monster.cult.EntityCultistKnight::new, MobCategory.MONSTER)
+					.sized(0.6f, 1.8f)
+					.clientTrackingRange(64)
+					.build("cultist_knight"));
+
 	private ThaumcraftEntities() {
 	}
 }

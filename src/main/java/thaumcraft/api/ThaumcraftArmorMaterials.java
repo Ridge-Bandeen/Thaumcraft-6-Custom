@@ -90,6 +90,46 @@ public final class ThaumcraftArmorMaterials {
 					1.0F,
 					0.0F));
 
+	/** {@code ThaumcraftMaterials.ARMORMAT_CULTIST_PLATE} from the original (durability multiplier 18 -
+	 * applied per item at each {@code ItemsTC.crimsonPlate*} registration site via {@code
+	 * ArmorItem.Type.X.getDurability(18)}, same convention {@link #THAUMIUM}'s own doc comment explains;
+	 * a modern {@code ArmorMaterial} record has no durability field of its own), protection {@code
+	 * [2,5,6,2]}, enchantability 13, iron equip sound, no toughness. Used by {@link
+	 * thaumcraft.common.entities.monster.cult.EntityCultistKnight}'s helm/chest/legs drops. */
+	public static final Holder<ArmorMaterial> CULTIST_PLATE = ARMOR_MATERIALS.register("cultist_plate",
+			() -> new ArmorMaterial(
+					Util.make(new EnumMap<>(ArmorItem.Type.class), m -> {
+						m.put(ArmorItem.Type.BOOTS, 2);
+						m.put(ArmorItem.Type.LEGGINGS, 5);
+						m.put(ArmorItem.Type.CHESTPLATE, 6);
+						m.put(ArmorItem.Type.HELMET, 2);
+						m.put(ArmorItem.Type.BODY, 6);
+					}),
+					13,
+					SoundEvents.ARMOR_EQUIP_IRON,
+					() -> Ingredient.of(Items.IRON_INGOT),
+					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "cultist_plate"))),
+					0.0F,
+					0.0F));
+
+	/** The original's own {@code ItemCultistBoots} reused plain vanilla {@code ItemArmor.ArmorMaterial.IRON}
+	 * wholesale (same durability/protection/enchantability/sound/toughness as real iron boots) while only
+	 * overriding its own {@code getArmorTexture} for a custom look. A modern {@code ArmorMaterial} bakes the
+	 * texture into the material itself, so matching both "iron-identical stats" and "custom texture" needs
+	 * its own registry entry mirroring vanilla iron's real, well-known boots stats (durability multiplier
+	 * 15 - applied at the {@code ItemsTC.crimsonBoots} registration site, same as {@link #CULTIST_PLATE} -
+	 * protection 2, enchantability 9, iron equip sound, no toughness) rather than reusing {@code
+	 * Items.IRON_BOOTS}' material directly. */
+	public static final Holder<ArmorMaterial> CULTIST_BOOTS = ARMOR_MATERIALS.register("cultist_boots",
+			() -> new ArmorMaterial(
+					Util.make(new EnumMap<>(ArmorItem.Type.class), m -> m.put(ArmorItem.Type.BOOTS, 2)),
+					9,
+					SoundEvents.ARMOR_EQUIP_IRON,
+					() -> Ingredient.of(Items.IRON_INGOT),
+					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "cultist_boots"))),
+					0.0F,
+					0.0F));
+
 	private ThaumcraftArmorMaterials() {
 	}
 }

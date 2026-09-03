@@ -5830,4 +5830,57 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cultistKnightWearsCrimsonPlateAndAlliesWithItsOwnKind(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+
+		thaumcraft.common.entities.monster.cult.EntityCultistKnight knight =
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_KNIGHT.get().create(helper.getLevel());
+		helper.assertTrue(knight != null, "the entity type should really create an instance");
+		knight.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		helper.getLevel().addFreshEntity(knight);
+		knight.finalizeSpawn(helper.getLevel(), helper.getLevel().getCurrentDifficultyAt(abs),
+				net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+
+		helper.assertTrue(knight.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).is(thaumcraft.api.items.ItemsTC.crimsonPlateHelm.get()),
+				"a real cultist knight should really always wear the crimson plate helm");
+		helper.assertTrue(knight.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).is(thaumcraft.api.items.ItemsTC.crimsonPlateChest.get()),
+				"a real cultist knight should really always wear the crimson plate chest");
+		helper.assertTrue(knight.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.LEGS).is(thaumcraft.api.items.ItemsTC.crimsonPlateLegs.get()),
+				"a real cultist knight should really always wear the crimson plate legs");
+		net.minecraft.world.item.ItemStack weapon = knight.getMainHandItem();
+		helper.assertTrue(weapon.is(net.minecraft.world.item.Items.IRON_SWORD) || weapon.is(thaumcraft.api.items.ItemsTC.voidSword.get())
+						|| weapon.is(thaumcraft.api.items.ItemsTC.thaumiumSword.get()),
+				"a real cultist knight should really always be holding one of its real possible weapons, got " + weapon);
+
+		helper.assertTrue(knight.getNavigation() instanceof net.minecraft.world.entity.ai.navigation.GroundPathNavigation ground && ground.canOpenDoors(),
+				"a real cultist knight should really be able to open doors while pathfinding");
+
+		thaumcraft.common.entities.monster.cult.EntityCultistKnight other =
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_KNIGHT.get().create(helper.getLevel());
+		helper.assertTrue(knight.isAlliedTo(other), "two real cultist knights should really be allied to each other");
+		ServerPlayer player = spawnCasterAt(helper, abs.above(3));
+		helper.assertTrue(!knight.isAlliedTo(player), "a real cultist knight should really not be allied to a real player");
+
+		boolean foundNugget = false;
+		for (int i = 0; i < 15 && !foundNugget; i++) {
+			ServerLevel serverLevel = helper.getLevel();
+			thaumcraft.common.entities.monster.cult.EntityCultistKnight probe =
+					thaumcraft.common.registry.ThaumcraftEntities.CULTIST_KNIGHT.get().create(serverLevel);
+			probe.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+			serverLevel.addFreshEntity(probe);
+			probe.hurt(serverLevel.damageSources().generic(), 1000.0f);
+			List<net.minecraft.world.entity.item.ItemEntity> after =
+					helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new AABB(abs).inflate(3));
+			for (net.minecraft.world.entity.item.ItemEntity ie : after) {
+				if (ie.getItem().is(net.minecraft.world.item.Items.GOLD_NUGGET)) foundNugget = true;
+			}
+		}
+		helper.assertTrue(foundNugget, "killing enough real cultist knights should eventually drop a real gold nugget");
+
+		helper.succeed();
+	}
 }

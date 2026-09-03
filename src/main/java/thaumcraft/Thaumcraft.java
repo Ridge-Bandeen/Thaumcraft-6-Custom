@@ -279,6 +279,7 @@ public class Thaumcraft {
         event.put(ThaumcraftEntities.MIND_SPIDER.get(), thaumcraft.common.entities.monster.EntityMindSpider.createAttributes().build());
         event.put(ThaumcraftEntities.SPELL_BAT.get(), thaumcraft.common.entities.monster.EntitySpellBat.createAttributes().build());
         event.put(ThaumcraftEntities.ELDRITCH_CRAB.get(), thaumcraft.common.entities.monster.EntityEldritchCrab.createAttributes().build());
+        event.put(ThaumcraftEntities.CULTIST_KNIGHT.get(), thaumcraft.common.entities.monster.cult.EntityCultistKnight.createAttributes().build());
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {
