@@ -102,6 +102,8 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.INHABITED_ZOMBIE.get(), thaumcraft.client.render.RenderInhabitedZombie::new);
         // No visible model - see RenderFocusProjectile's own doc comment (shared with FOCUS_PROJECTILE/FOCUS_MINE).
         event.registerEntityRenderer(ThaumcraftEntities.GOLEM_ORB.get(), RenderFocusProjectile::new);
+        // First real BlockEntityRenderer this whole port has needed - see its own doc comment.
+        event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.BANNER.get(), thaumcraft.client.render.TileBannerRenderer::new);
     }
 
     /** One real "additional" model per {@link GolemMaterial} (the trunk/limbs silhouette every golem has),

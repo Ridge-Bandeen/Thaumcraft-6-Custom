@@ -6151,4 +6151,42 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void bannerAndLootCrateBlocksAreRealAndFunctional(GameTestHelper helper) {
+		BlockPos bannerPos = new BlockPos(1, 1, 1);
+		BlockPos bannerAbs = helper.absolutePos(bannerPos);
+		helper.setBlock(new BlockPos(1, 0, 1), net.minecraft.world.level.block.Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+
+		level.setBlockAndUpdate(bannerAbs, thaumcraft.api.blocks.BlocksTC.bannerCrimsonCult.get().defaultBlockState());
+		helper.assertTrue(level.getBlockEntity(bannerAbs) instanceof thaumcraft.common.tiles.misc.TileBanner,
+				"a real placed banner should really have a real TileBanner block entity");
+		thaumcraft.common.tiles.misc.TileBanner banner = (thaumcraft.common.tiles.misc.TileBanner) level.getBlockEntity(bannerAbs);
+		helper.assertTrue(banner.getAspect() == null, "a real freshly placed banner should really start with no real aspect tagged");
+
+		ItemStack phial = thaumcraft.common.items.consumables.ItemPhial.makeFilledPhial(thaumcraft.api.aspects.Aspect.FIRE);
+		ServerPlayer player = spawnCasterAt(helper, bannerAbs.above(2));
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, phial);
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				net.minecraft.world.phys.Vec3.atCenterOf(bannerAbs), net.minecraft.core.Direction.NORTH, bannerAbs, false);
+		level.getBlockState(bannerAbs).useItemOn(phial, level, player, net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+		helper.assertTrue(banner.getAspect() == thaumcraft.api.aspects.Aspect.FIRE,
+				"right-clicking a real banner with a real filled phial should really tag it with a real aspect");
+
+		player.setShiftKeyDown(true);
+		level.getBlockState(bannerAbs).useWithoutItem(level, player, hit);
+		helper.assertTrue(banner.getAspect() == null, "sneak-right-clicking a real tagged banner should really clear its real aspect");
+
+		BlockPos cratePos = new BlockPos(1, 0, -3);
+		BlockPos crateAbs = helper.absolutePos(cratePos);
+		helper.setBlock(new BlockPos(1, -1, -3), net.minecraft.world.level.block.Blocks.STONE);
+		level.setBlockAndUpdate(crateAbs, thaumcraft.api.blocks.BlocksTC.lootCrateCommon.get().defaultBlockState());
+		level.destroyBlock(crateAbs, true, player);
+		List<net.minecraft.world.entity.item.ItemEntity> drops =
+				level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new AABB(crateAbs).inflate(2));
+		helper.assertTrue(!drops.isEmpty(), "breaking a real loot crate should really drop real tiered loot");
+
+		helper.succeed();
+	}
 }

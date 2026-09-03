@@ -409,6 +409,24 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.devices.BlockPedestal::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE).noOcclusion());
 
+	/** See {@link thaumcraft.common.blocks.misc.BlockBannerTC}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockBannerTC> bannerCrimsonCult = BLOCKS.registerBlock("banner_crimson_cult",
+			thaumcraft.common.blocks.misc.BlockBannerTC::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(1.0f).sound(SoundType.WOOD).noOcclusion().noCollission());
+
+	/** See {@link thaumcraft.common.blocks.misc.BlockLoot}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockLoot> lootCrateCommon = BLOCKS.registerBlock("loot_crate_common",
+			thaumcraft.common.blocks.misc.BlockLoot::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(0.15f, 0.0f).sound(SoundType.WOOD).noOcclusion());
+
+	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockLoot> lootCrateUncommon = BLOCKS.registerBlock("loot_crate_uncommon",
+			thaumcraft.common.blocks.misc.BlockLoot::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(0.15f, 0.0f).sound(SoundType.WOOD).noOcclusion());
+
+	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockLoot> lootCrateRare = BLOCKS.registerBlock("loot_crate_rare",
+			thaumcraft.common.blocks.misc.BlockLoot::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(0.15f, 0.0f).sound(SoundType.WOOD).noOcclusion());
+
 	/** See {@link thaumcraft.common.blocks.crafting.BlockInfusionMatrix}'s own doc comment for what's
 	 * simplified about this device this pass. */
 	public static final DeferredBlock<thaumcraft.common.blocks.crafting.BlockInfusionMatrix> infusionMatrix = BLOCKS.registerBlock("infusion_matrix",

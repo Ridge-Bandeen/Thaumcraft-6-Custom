@@ -578,6 +578,21 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> pedestalEldritch =
 			ITEMS.registerSimpleBlockItem("pedestal_eldritch", BlocksTC.pedestalEldritch);
 
+	/** See {@link BlocksTC#bannerCrimsonCult}'s own doc comment. */
+	public static final DeferredItem<BlockItem> bannerCrimsonCult =
+			ITEMS.registerSimpleBlockItem("banner_crimson_cult", BlocksTC.bannerCrimsonCult);
+
+	/** See {@link BlocksTC#lootCrateCommon}/{@link thaumcraft.common.blocks.misc.BlockLoot}'s own doc
+	 * comment. */
+	public static final DeferredItem<BlockItem> lootCrateCommon =
+			ITEMS.registerSimpleBlockItem("loot_crate_common", BlocksTC.lootCrateCommon);
+
+	public static final DeferredItem<BlockItem> lootCrateUncommon =
+			ITEMS.registerSimpleBlockItem("loot_crate_uncommon", BlocksTC.lootCrateUncommon);
+
+	public static final DeferredItem<BlockItem> lootCrateRare =
+			ITEMS.registerSimpleBlockItem("loot_crate_rare", BlocksTC.lootCrateRare);
+
 	public static final DeferredItem<BlockItem> infusionMatrix =
 			ITEMS.registerSimpleBlockItem("infusion_matrix", BlocksTC.infusionMatrix);
 

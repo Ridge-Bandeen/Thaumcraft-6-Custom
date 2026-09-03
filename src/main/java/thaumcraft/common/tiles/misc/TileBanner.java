@@ -1,79 +1,81 @@
 package thaumcraft.common.tiles.misc;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import thaumcraft.api.aspects.Aspect;
-import thaumcraft.common.blocks.basic.BlockBannerTC;
-import thaumcraft.common.tiles.TileThaumcraft;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 
+/**
+ * Replaces the old (1.12.2) {@code TileBanner} - the real backing tile of {@link
+ * thaumcraft.common.blocks.misc.BlockBannerTC}. Real facing (0/4/8/12 = the four cardinal directions, same
+ * encoding the original used), real wall-vs-floor state, and a real optional {@link Aspect} tag settable
+ * via right-clicking with a Phial (see that block's own doc comment).
+ */
+public class TileBanner extends BlockEntity {
 
-public class TileBanner extends TileThaumcraft
-{
-    private byte facing;
-    private Aspect aspect;
-    private boolean onWall;
-    
-    public TileBanner() {
-        facing = 0;
-        aspect = null;
-        onWall = false;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public AxisAlignedBB getRenderBoundingBox() {
-        return new AxisAlignedBB(getPos().getX(), getPos().getY() - 1, getPos().getZ(), getPos().getX() + 1, getPos().getY() + 2, getPos().getZ() + 1);
-    }
-    
-    public byte getBannerFacing() {
-        return facing;
-    }
-    
-    public void setBannerFacing(byte face) {
-        facing = face;
-        markDirty();
-    }
-    
-    public boolean getWall() {
-        return onWall;
-    }
-    
-    public void setWall(boolean b) {
-        onWall = b;
-        markDirty();
-    }
-    
-    @Override
-    public void readSyncNBT(NBTTagCompound nbttagcompound) {
-        facing = nbttagcompound.getByte("facing");
-        String as = nbttagcompound.getString("aspect");
-        if (as != null && as.length() > 0) {
-            setAspect(Aspect.getAspect(as));
-        }
-        else {
-            aspect = null;
-        }
-        onWall = nbttagcompound.getBoolean("wall");
-    }
-    
-    @Override
-    public NBTTagCompound writeSyncNBT(NBTTagCompound nbttagcompound) {
-        nbttagcompound.setByte("facing", facing);
-        nbttagcompound.setString("aspect", (getAspect() == null) ? "" : getAspect().getTag());
-        nbttagcompound.setBoolean("wall", onWall);
-        return nbttagcompound;
-    }
-    
-    public Aspect getAspect() {
-        return aspect;
-    }
-    
-    public void setAspect(Aspect aspect) {
-        this.aspect = aspect;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public int getColor() {
-        return (getBlockType() == null || !(getBlockType() instanceof BlockBannerTC) || ((BlockBannerTC) getBlockType()).dye == null) ? -1 : ((BlockBannerTC) getBlockType()).dye.getColorValue();
-    }
+	private byte facing;
+	private boolean onWall;
+	private Aspect aspect;
+
+	public TileBanner(BlockPos pos, BlockState state) {
+		super(ThaumcraftBlockEntities.BANNER.get(), pos, state);
+	}
+
+	public byte getBannerFacing() {
+		return facing;
+	}
+
+	public void setBannerFacing(byte facing) {
+		this.facing = facing;
+		setChanged();
+	}
+
+	public boolean getWall() {
+		return onWall;
+	}
+
+	public void setWall(boolean wall) {
+		this.onWall = wall;
+		setChanged();
+	}
+
+	public Aspect getAspect() {
+		return aspect;
+	}
+
+	public void setAspect(Aspect aspect) {
+		this.aspect = aspect;
+		setChanged();
+	}
+
+	@Override
+	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.loadAdditional(tag, registries);
+		facing = tag.getByte("facing");
+		onWall = tag.getBoolean("wall");
+		aspect = tag.contains("aspect") ? Aspect.getAspect(tag.getString("aspect")) : null;
+	}
+
+	@Override
+	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.saveAdditional(tag, registries);
+		tag.putByte("facing", facing);
+		tag.putBoolean("wall", onWall);
+		if (aspect != null) {
+			tag.putString("aspect", aspect.getTag());
+		}
+	}
+
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
 }

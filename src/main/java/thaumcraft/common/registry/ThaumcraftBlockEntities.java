@@ -94,6 +94,10 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.crafting.TilePedestal>> PEDESTAL = BLOCK_ENTITIES.register("pedestal",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TilePedestal::new, BlocksTC.pedestal.get(), BlocksTC.pedestalEldritch.get()).build(null));
 
+	/** See {@link thaumcraft.common.tiles.misc.TileBanner}'s own doc comment. */
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.misc.TileBanner>> BANNER = BLOCK_ENTITIES.register("banner",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.misc.TileBanner::new, BlocksTC.bannerCrimsonCult.get()).build(null));
+
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.crafting.TileInfusionMatrix>> INFUSION_MATRIX = BLOCK_ENTITIES.register("infusion_matrix",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TileInfusionMatrix::new, BlocksTC.infusionMatrix.get()).build(null));
 
