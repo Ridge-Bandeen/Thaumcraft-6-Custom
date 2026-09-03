@@ -5190,4 +5190,104 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealFillDepositsACarriedItemIntoAContainer(GameTestHelper helper) {
+		BlockPos chestPos = BlockPos.ZERO;
+		BlockPos chestAbs = helper.absolutePos(chestPos);
+		helper.setBlock(chestPos, net.minecraft.world.level.block.Blocks.CHEST);
+
+		ServerPlayer owner = spawnCasterAt(helper, chestAbs.above(3));
+		thaumcraft.common.golems.seals.SealFill seal = new thaumcraft.common.golems.seals.SealFill();
+		seal.setBlacklist(false);
+		seal.setFilterSlot(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT));
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), chestAbs, net.minecraft.core.Direction.UP, seal, owner),
+				"placing a fresh seal should succeed");
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(chestAbs, net.minecraft.core.Direction.UP);
+		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
+
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, chestAbs);
+		golem.initializeGolem(new thaumcraft.common.golems.GolemProperties(), 0);
+		golem.holdItem(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 5));
+
+		boolean foundTask = false;
+		thaumcraft.api.golems.tasks.Task fillTask = null;
+		for (int i = 0; i < 25 && !foundTask; i++) {
+			sealEntity.tickSealEntity(helper.getLevel());
+			for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
+				if (sealPos.equals(t.getSealPos())) {
+					foundTask = true;
+					fillTask = t;
+				}
+			}
+		}
+		helper.assertTrue(foundTask, "tickSealEntity should have created a real standing fill task");
+
+		thaumcraft.common.golems.ai.AIGotoBlock goal = new thaumcraft.common.golems.ai.AIGotoBlock(golem);
+		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the fill task");
+		helper.assertTrue(golem.getTask() == fillTask, "the golem should have reserved the real fill task");
+
+		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
+		helper.assertTrue(!golem.isCarrying(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT)),
+				"completing the fill task should have the golem no longer carrying the iron ingots");
+
+		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(chestPos);
+		boolean delivered = false;
+		for (int i = 0; i < chest.getContainerSize(); i++) {
+			if (chest.getItem(i).is(net.minecraft.world.item.Items.IRON_INGOT)) delivered = true;
+		}
+		helper.assertTrue(delivered, "the deposited iron ingots should really be in the chest");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealEmptyPullsAMatchingItemIntoGolemCarry(GameTestHelper helper) {
+		BlockPos chestPos = BlockPos.ZERO;
+		BlockPos chestAbs = helper.absolutePos(chestPos);
+		helper.setBlock(chestPos, net.minecraft.world.level.block.Blocks.CHEST);
+		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(chestPos);
+		chest.setItem(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 5));
+
+		ServerPlayer owner = spawnCasterAt(helper, chestAbs.above(3));
+		thaumcraft.common.golems.seals.SealEmpty seal = new thaumcraft.common.golems.seals.SealEmpty();
+		seal.setBlacklist(false);
+		seal.setFilterSlot(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT));
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), chestAbs, net.minecraft.core.Direction.UP, seal, owner),
+				"placing a fresh seal should succeed");
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(chestAbs, net.minecraft.core.Direction.UP);
+		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
+
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, chestAbs);
+		golem.initializeGolem(new thaumcraft.common.golems.GolemProperties(), 0);
+
+		boolean foundTask = false;
+		thaumcraft.api.golems.tasks.Task emptyTask = null;
+		for (int i = 0; i < 25 && !foundTask; i++) {
+			sealEntity.tickSealEntity(helper.getLevel());
+			for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
+				if (sealPos.equals(t.getSealPos())) {
+					foundTask = true;
+					emptyTask = t;
+				}
+			}
+		}
+		helper.assertTrue(foundTask, "tickSealEntity should have created a real empty task for the matching stocked ingots");
+
+		thaumcraft.common.golems.ai.AIGotoBlock goal = new thaumcraft.common.golems.ai.AIGotoBlock(golem);
+		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the empty task");
+		helper.assertTrue(golem.getTask() == emptyTask, "the golem should have reserved the real empty task");
+
+		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
+		helper.assertTrue(golem.isCarrying(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT)),
+				"completing the empty task should have the golem really carrying the pulled iron ingots");
+
+		boolean stillInChest = false;
+		for (int i = 0; i < chest.getContainerSize(); i++) {
+			if (chest.getItem(i).is(net.minecraft.world.item.Items.IRON_INGOT)) stillInChest = true;
+		}
+		helper.assertTrue(!stillInChest, "the pulled iron ingots should really have been removed from the chest");
+
+		helper.succeed();
+	}
 }

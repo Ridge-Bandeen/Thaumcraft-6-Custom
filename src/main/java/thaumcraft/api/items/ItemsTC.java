@@ -226,6 +226,14 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.golems.ItemSealPlacer> sealProvide =
 			ITEMS.registerItem("seal_provider", props -> new thaumcraft.common.golems.ItemSealPlacer(props, thaumcraft.common.golems.seals.SealProvide::new));
 
+	/** Places a real {@code SealFill} - see that class's own doc comment. */
+	public static final DeferredItem<thaumcraft.common.golems.ItemSealPlacer> sealFill =
+			ITEMS.registerItem("seal_fill", props -> new thaumcraft.common.golems.ItemSealPlacer(props, thaumcraft.common.golems.seals.SealFill::new));
+
+	/** Places a real {@code SealEmpty} - see that class's own doc comment. */
+	public static final DeferredItem<thaumcraft.common.golems.ItemSealPlacer> sealEmpty =
+			ITEMS.registerItem("seal_empty", props -> new thaumcraft.common.golems.ItemSealPlacer(props, thaumcraft.common.golems.seals.SealEmpty::new));
+
 	public static final DeferredItem<ItemCurio> curio =
 			ITEMS.registerItem("curio", ItemCurio::new);
 

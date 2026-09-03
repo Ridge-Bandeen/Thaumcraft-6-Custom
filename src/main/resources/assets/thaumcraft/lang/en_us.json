@@ -309,6 +309,8 @@
   "item.thaumcraft.seal_pickup": "Golem Seal: Pickup",
   "item.thaumcraft.seal_stock": "Golem Seal: Stock",
   "item.thaumcraft.seal_provider": "Golem Seal: Provider",
+  "item.thaumcraft.seal_fill": "Golem Seal: Fill",
+  "item.thaumcraft.seal_empty": "Golem Seal: Empty",
   "item.mechanism_complex.name": "Complex Arcane Mechanism",
   "item.fabric.name": "Enchanted Fabric",
   "item.mind.clockwork.name": "Clockwork Mind",
