@@ -93,6 +93,32 @@ public class ThaumcraftClient {
         // Alumentum renders as a real spinning item icon (vanilla's own snowball/egg renderer), unlike
         // the invisible focus-carrier entities above.
         event.registerEntityRenderer(ThaumcraftEntities.ALUMENTUM.get(), ThrownItemRenderer::new);
+        // Real vanilla-item spinning-icon renderer too, matching Alumentum above - the original's own
+        // EntityBottleTaint really is an EntityThrowable, no bespoke model.
+        event.registerEntityRenderer(ThaumcraftEntities.BOTTLE_TAINT.get(), ThrownItemRenderer::new);
+        // Real vanilla ItemEntityRenderer, unmodified - EntityFollowingItem really is a plain ItemEntity
+        // subtype in this port (see its own doc comment), so it just gets the exact same real rendering any
+        // dropped item does, for free.
+        event.registerEntityRenderer(ThaumcraftEntities.FOLLOWING_ITEM.get(), net.minecraft.client.renderer.entity.ItemEntityRenderer::new);
+        // No renderer registered at all until now - a real, latent crash risk (any entity type without one
+        // throws the first time the client actually tries to render an instance), not just a missing model.
+        // The original's own WISP/FLUX_RIFT renderers are both pure billboard/quad or raw-shader client FX
+        // with no real 3D model at all (checked directly, not assumed) - same permanent "no client FX"
+        // territory this port has kept all session, so these two get the same safe no-visible-model
+        // placeholder as FOCUS_PROJECTILE above, not a temporary gap.
+        event.registerEntityRenderer(ThaumcraftEntities.WISP.get(), RenderFocusProjectile::new);
+        event.registerEntityRenderer(ThaumcraftEntities.FLUX_RIFT.get(), RenderFocusProjectile::new);
+        // Same real "no renderer registered at all" crash-risk fix, but these five DO have a real bespoke
+        // 3D model in the original (ModelGrappler/ModelFireBat/ModelEldritchCrab) - temporary placeholders,
+        // real models are real follow-up work, not a permanent cut like the four above.
+        event.registerEntityRenderer(ThaumcraftEntities.GRAPPLE.get(), RenderFocusProjectile::new);
+        event.registerEntityRenderer(ThaumcraftEntities.FIRE_BAT.get(), RenderFocusProjectile::new);
+        event.registerEntityRenderer(ThaumcraftEntities.SPELL_BAT.get(), RenderFocusProjectile::new);
+        event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_CRAB.get(), RenderFocusProjectile::new);
+        // Real, permanent cut, same reasoning as WISP/FLUX_RIFT above - both original portal renderers
+        // extend Render directly and hand-draw an animated Tessellator billboard, no 3D model at all.
+        event.registerEntityRenderer(ThaumcraftEntities.CULTIST_PORTAL_LESSER.get(), RenderFocusProjectile::new);
+        event.registerEntityRenderer(ThaumcraftEntities.CULTIST_PORTAL_GREATER.get(), RenderFocusProjectile::new);
         event.registerEntityRenderer(ThaumcraftEntities.GOLEM.get(), RenderThaumcraftGolem::new);
         event.registerEntityRenderer(ThaumcraftEntities.THAUMIC_SLIME.get(), thaumcraft.client.render.RenderThaumicSlime::new);
         event.registerEntityRenderer(ThaumcraftEntities.BRAINY_ZOMBIE.get(), thaumcraft.client.render.RenderBrainyZombie::new);
