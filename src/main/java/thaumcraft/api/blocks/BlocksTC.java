@@ -503,6 +503,14 @@ public final class BlocksTC {
 			props -> new thaumcraft.common.blocks.world.taint.BlockTaint(props, thaumcraft.common.blocks.world.taint.BlockTaint.Variant.GEYSER),
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(SoundType.STONE).randomTicks());
 
+	/** Real target of {@link thaumcraft.common.blocks.world.taint.BlockTaint}'s own rock-variant {@code
+	 * die()} - see {@link thaumcraft.common.blocks.basic.BlockStonePorous}'s own doc comment. {@code
+	 * .noLootTable()} since drops are hand-rolled in Java (a real weighted-random pick can't be expressed as
+	 * a static loot table here - see that class's own doc comment for why). */
+	public static final DeferredBlock<thaumcraft.common.blocks.basic.BlockStonePorous> stonePorous = BLOCKS.registerBlock("stone_porous",
+			thaumcraft.common.blocks.basic.BlockStonePorous::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(1.0f, 5.0f).sound(SoundType.STONE).noLootTable());
+
 	/** Real, from-scratch finite-fluid block - see {@link thaumcraft.common.blocks.world.taint.BlockFluxGoo}'s
 	 * own doc comment for why this is a plain {@code Block}, not a real vanilla {@code Fluid}/{@code
 	 * FluidType}. {@code .noCollission()} matches the original's own {@code isSideSolid} always returning

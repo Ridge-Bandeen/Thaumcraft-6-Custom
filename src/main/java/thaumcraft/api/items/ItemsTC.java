@@ -724,6 +724,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> fluxGoo =
 			ITEMS.registerSimpleBlockItem("flux_goo", BlocksTC.fluxGoo);
 
+	public static final DeferredItem<BlockItem> stonePorous =
+			ITEMS.registerSimpleBlockItem("stone_porous", BlocksTC.stonePorous);
+
 	private ItemsTC() {
 	}
 }

@@ -43,10 +43,10 @@ import thaumcraft.common.registry.ThaumcraftMobEffects;
  * walk-chance (rarer than {@link BlockTaintFibre}'s own - matches the original's {@code nextInt(250)} vs.
  * fibre's {@code nextInt(750)}), and a real rock-only bonus Flux Crystal drop chance.
  *
- * Real, documented cuts vs the original: {@code die()}'s own rock target ({@code stonePorous}) isn't ported
- * yet - falls back to real vanilla cobblestone; crust/geyser now really die into real {@link BlockFluxGoo}
- * (real once that block itself became real - see its own doc comment). No silk-touch-preserves-itself
- * branch, same real simplification {@code BlockLoot} already established for the cult arc's loot crates.
+ * {@code die()}'s own rock target really is {@link thaumcraft.common.blocks.basic.BlockStonePorous} now
+ * (real once that block itself became real too); crust/geyser really die into real {@link BlockFluxGoo}
+ * (same reasoning). No silk-touch-preserves-itself branch, same real simplification {@code BlockLoot}
+ * already established for the cult arc's loot crates.
  */
 public class BlockTaint extends Block implements ITaintBlock {
 
@@ -69,7 +69,7 @@ public class BlockTaint extends Block implements ITaintBlock {
 	@Override
 	public void die(Level level, BlockPos pos, BlockState state) {
 		switch (variant) {
-			case ROCK -> level.setBlockAndUpdate(pos, Blocks.COBBLESTONE.defaultBlockState());
+			case ROCK -> level.setBlockAndUpdate(pos, BlocksTC.stonePorous.get().defaultBlockState());
 			case SOIL -> level.setBlockAndUpdate(pos, Blocks.DIRT.defaultBlockState());
 			case CRUST, GEYSER -> level.setBlockAndUpdate(pos, BlocksTC.fluxGoo.get().defaultBlockState());
 		}

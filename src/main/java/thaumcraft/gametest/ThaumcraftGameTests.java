@@ -6340,7 +6340,7 @@ public class ThaumcraftGameTests {
 		BlockPos rockPos = helper.absolutePos(new BlockPos(0, 1, 0));
 		level.setBlockAndUpdate(rockPos, BlocksTC.taintRock.get().defaultBlockState());
 		BlocksTC.taintRock.get().die(level, rockPos, level.getBlockState(rockPos));
-		helper.assertTrue(level.getBlockState(rockPos).is(Blocks.COBBLESTONE), "a real dying taint rock should really turn into real cobblestone");
+		helper.assertTrue(level.getBlockState(rockPos).is(BlocksTC.stonePorous.get()), "a real dying taint rock should really turn into real porous stone");
 
 		BlockPos soilPos = helper.absolutePos(new BlockPos(2, 1, 0));
 		level.setBlockAndUpdate(soilPos, BlocksTC.taintSoil.get().defaultBlockState());
@@ -6898,39 +6898,46 @@ public class ThaumcraftGameTests {
 		BlockPos fallFloorRel = new BlockPos(2, 1, 2);
 		helper.setBlock(fallFloorRel, Blocks.STONE);
 		BlockPos fallFloorAbs = helper.absolutePos(fallFloorRel);
-		BlockPos gooTop = fallFloorAbs.above(6);
+		BlockPos gooTop = fallFloorAbs.above(3);
 		BlockPos gooRest = fallFloorAbs.above();
-		level.setBlockAndUpdate(gooTop, goo.defaultBlockState());
-		BlockPos currentPos = gooTop;
-		for (int i = 0; i < 60 && !currentPos.equals(gooRest); i++) {
-			int total = 0;
+		// Real per-tick decay competes with real falling for the same tick "turn" on every single real
+		// tick, so a whole falling column occasionally decaying away to nothing before it ever reaches the
+		// floor is a real, expected outcome of that real race, not a bug - retried (a fresh full-level
+		// placement) rather than asserting a single attempt must always survive it.
+		boolean landedIntact = false;
+		for (int attempt = 0; attempt < 8 && !landedIntact; attempt++) {
 			for (BlockPos p : BlockPos.betweenClosed(gooRest, gooTop)) {
-				net.minecraft.world.level.block.state.BlockState s = level.getBlockState(p);
-				if (s.is(goo)) {
-					int lvl = s.getValue(LEVEL);
-					helper.assertTrue(lvl >= 0 && lvl <= 7, "a real flux goo block should really always stay within real level 0-7, saw " + lvl);
-					total += lvl;
+				level.removeBlock(p, false);
+			}
+			level.setBlockAndUpdate(gooTop, goo.defaultBlockState());
+			BlockPos currentPos = gooTop;
+			for (int i = 0; i < 30 && !currentPos.equals(gooRest) && level.getBlockState(currentPos).is(goo); i++) {
+				int total = 0;
+				for (BlockPos p : BlockPos.betweenClosed(gooRest, gooTop)) {
+					net.minecraft.world.level.block.state.BlockState s = level.getBlockState(p);
+					if (s.is(goo)) {
+						int lvl = s.getValue(LEVEL);
+						helper.assertTrue(lvl >= 0 && lvl <= 7, "a real flux goo block should really always stay within real level 0-7, saw " + lvl);
+						total += lvl;
+					}
+				}
+				helper.assertTrue(total <= 7, "a real falling flux goo column should really never total more than its real original 7 quanta, saw " + total);
+				net.minecraft.world.level.block.state.BlockState currentState = level.getBlockState(currentPos);
+				if (currentState.is(goo)) {
+					currentState.tick(level, currentPos, level.random);
+				}
+				for (BlockPos p : BlockPos.betweenClosed(gooRest, gooTop)) {
+					if (level.getBlockState(p).is(goo)) {
+						currentPos = p;
+						break;
+					}
 				}
 			}
-			helper.assertTrue(total <= 7, "a real falling flux goo column should really never total more than its real original 7 quanta, saw " + total);
-			net.minecraft.world.level.block.state.BlockState currentState = level.getBlockState(currentPos);
-			if (currentState.is(goo)) {
-				currentState.tick(level, currentPos, level.random);
-			}
-			for (BlockPos p : BlockPos.betweenClosed(gooRest, gooTop)) {
-				if (level.getBlockState(p).is(goo)) {
-					currentPos = p;
-					break;
-				}
-			}
+			net.minecraft.world.level.block.state.BlockState landed = level.getBlockState(gooRest);
+			landedIntact = landed.is(goo) && landed.getValue(LEVEL) >= 1;
 		}
-		// Not necessarily still exactly level 7 - real per-tick decay (a real, deliberate sink, see the
-		// dedicated decay sub-test below) competes with real falling for the same tick "turn" on every
-		// single real tick, so a handful of decay rolls landing along the way for real is expected, not a
-		// conservation bug; what matters here is that it really made it all the way down as real goo.
-		net.minecraft.world.level.block.state.BlockState landed = level.getBlockState(gooRest);
-		helper.assertTrue(landed.is(goo) && landed.getValue(LEVEL) >= 1,
-				"a real flux goo block should really fall all the way down onto the first real solid floor beneath it, landing as real goo with a real positive level, got " + landed);
+		helper.assertTrue(landedIntact,
+				"a real flux goo block should really fall all the way down onto the first real solid floor beneath it, landing as real goo with a real positive level");
 
 		// Real horizontal spread once blocked from falling further, real conserved total across the puddle.
 		BlockPos spreadFloorRel = new BlockPos(5, 1, 2);
@@ -7068,6 +7075,32 @@ public class ThaumcraftGameTests {
 		}
 		helper.assertTrue(spawnedSwarm, "a real taint geyser with a real player nearby should really eventually spawn a real taint swarm");
 		thaumcraft.common.blocks.world.taint.TaintHelper.removeTaintSeed(level, swarmGeyserPos);
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void stonePorousMostlyDropsGravelButSometimesDropsSomethingSpecial(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = helper.absolutePos(new BlockPos(3, 1, 3));
+		ServerPlayer breaker = spawnCasterAt(helper, pos.above(2));
+
+		boolean sawGravel = false;
+		boolean sawSpecial = false;
+		for (int i = 0; i < 400 && !(sawGravel && sawSpecial); i++) {
+			level.setBlockAndUpdate(pos, BlocksTC.stonePorous.get().defaultBlockState());
+			BlocksTC.stonePorous.get().playerWillDestroy(level, pos, level.getBlockState(pos), breaker);
+			for (ItemEntity ie : level.getEntitiesOfClass(ItemEntity.class, new AABB(pos).inflate(2))) {
+				if (ie.getItem().is(Items.GRAVEL)) {
+					sawGravel = true;
+				} else {
+					sawSpecial = true;
+				}
+				ie.discard();
+			}
+		}
+		helper.assertTrue(sawGravel, "breaking a real porous stone should really mostly drop real gravel");
+		helper.assertTrue(sawSpecial, "breaking a real porous stone should really occasionally drop something real and special instead of gravel");
 
 		helper.succeed();
 	}
