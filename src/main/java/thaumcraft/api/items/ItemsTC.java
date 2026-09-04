@@ -697,6 +697,10 @@ public final class ItemsTC {
 			props -> new ArmorItem(ThaumcraftArmorMaterials.CULTIST_ROBE, ArmorItem.Type.LEGGINGS,
 					props.durability(ArmorItem.Type.LEGGINGS.getDurability(17)).rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
 
+	/** See {@link BlocksTC#taintFibre}'s own doc comment. */
+	public static final DeferredItem<BlockItem> taintFibre =
+			ITEMS.registerSimpleBlockItem("taint_fibre", BlocksTC.taintFibre);
+
 	private ItemsTC() {
 	}
 }

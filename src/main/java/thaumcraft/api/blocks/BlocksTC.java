@@ -473,6 +473,17 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.devices.BlockMirror::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(0.1f).sound(SoundType.GLASS).noOcclusion());
 
+	/** See {@link thaumcraft.common.blocks.world.taint.BlockTaintFibre}'s own doc comment - the first piece
+	 * of the taint-terrain arc. {@code randomTicks()} matches the original's own {@code setTickRandomly(true)};
+	 * {@code lightLevel(BlockTaintFibre::lightLevel)} is the real modern replacement for the original's own
+	 * per-instance {@code getLightValue} override (no such override point exists any more - only this
+	 * builder-time function). */
+	public static final DeferredBlock<thaumcraft.common.blocks.world.taint.BlockTaintFibre> taintFibre = BLOCKS.registerBlock("taint_fibre",
+			thaumcraft.common.blocks.world.taint.BlockTaintFibre::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(1.0f).sound(SoundType.SLIME_BLOCK)
+					.noOcclusion().randomTicks()
+					.lightLevel(thaumcraft.common.blocks.world.taint.BlockTaintFibre::lightLevel));
+
 	private BlocksTC() {
 	}
 }

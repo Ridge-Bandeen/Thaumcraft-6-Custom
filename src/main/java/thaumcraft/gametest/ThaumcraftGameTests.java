@@ -6246,4 +6246,89 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void taintFibreConnectsSpreadsAndDiesWithoutARealSeed(GameTestHelper helper) {
+		BlockPos floorPos = BlockPos.ZERO;
+		BlockPos floorAbs = helper.absolutePos(floorPos);
+		// A 3x3 floor, not just one block - TaintHelper.spreadFibres picks a random position within +-1 of
+		// the fibre in every axis, and only a position adjacent to a real solid block is ever eligible.
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				helper.setBlock(floorPos.offset(dx, 0, dz), net.minecraft.world.level.block.Blocks.STONE);
+			}
+		}
+		ServerLevel level = helper.getLevel();
+
+		BlockPos fibrePos = floorAbs.above();
+		level.setBlockAndUpdate(fibrePos, thaumcraft.common.blocks.world.taint.BlockTaintFibre.computeState(
+				thaumcraft.api.blocks.BlocksTC.taintFibre.get().defaultBlockState(), level, fibrePos));
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(fibrePos);
+		helper.assertTrue(state.getValue(thaumcraft.common.blocks.world.taint.BlockTaintFibre.DOWN),
+				"a real taint fibre placed on solid ground should really connect downward");
+		helper.assertTrue(!state.getValue(thaumcraft.common.blocks.world.taint.BlockTaintFibre.UP),
+				"a real taint fibre with nothing above it should really not connect upward");
+
+		// Real death: with no real tracked seed nearby, a random tick should really kill it.
+		for (int i = 0; i < 50 && level.getBlockState(fibrePos).is(thaumcraft.api.blocks.BlocksTC.taintFibre.get()); i++) {
+			level.getBlockState(fibrePos).randomTick(level, fibrePos, level.random);
+		}
+		helper.assertTrue(!level.getBlockState(fibrePos).is(thaumcraft.api.blocks.BlocksTC.taintFibre.get()),
+				"a real taint fibre with no real seed nearby should really die off within a handful of random ticks");
+
+		// Real seed tracking + real spreading, now that a seed is really registered nearby.
+		level.setBlockAndUpdate(fibrePos, thaumcraft.common.blocks.world.taint.BlockTaintFibre.computeState(
+				thaumcraft.api.blocks.BlocksTC.taintFibre.get().defaultBlockState(), level, fibrePos));
+		thaumcraft.common.blocks.world.taint.TaintHelper.addTaintSeed(level, fibrePos);
+		helper.assertTrue(thaumcraft.common.blocks.world.taint.TaintHelper.isNearTaintSeed(level, fibrePos),
+				"a real tracked taint seed should really be detected nearby");
+		boolean spread = false;
+		for (int i = 0; i < 300 && !spread; i++) {
+			thaumcraft.common.blocks.world.taint.TaintHelper.spreadFibres(level, fibrePos, true);
+			for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+				if (level.getBlockState(fibrePos.relative(dir)).is(thaumcraft.api.blocks.BlocksTC.taintFibre.get())) {
+					spread = true;
+					break;
+				}
+			}
+		}
+		helper.assertTrue(spread, "a real taint fibre near a real tracked seed should really eventually spread to a real adjacent position");
+		thaumcraft.common.blocks.world.taint.TaintHelper.removeTaintSeed(level, fibrePos);
+		helper.assertTrue(!thaumcraft.common.blocks.world.taint.TaintHelper.isNearTaintSeed(level, fibrePos),
+				"removing a real tracked seed should really stop it being detected nearby");
+
+		// Real Flux Taint effect on a real living entity walking across a mature fibre (a villager, not a
+		// mock player - mock players are structurally immune, see this file's own established precedent).
+		net.minecraft.world.entity.npc.Villager villager = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+		helper.assertTrue(villager != null, "the villager entity type should really create an instance");
+		villager.moveTo(fibrePos.getX() + 0.5, fibrePos.getY() + 1.0, fibrePos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(villager);
+		net.minecraft.world.level.block.state.BlockState fibreState = level.getBlockState(fibrePos);
+		for (int i = 0; i < 3000 && !villager.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT); i++) {
+			fibreState.getBlock().stepOn(level, fibrePos, fibreState, villager);
+		}
+		helper.assertTrue(villager.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT),
+				"a real living entity repeatedly walking a real taint fibre should really eventually catch real Flux Taint");
+
+		// Real growth-tier light levels.
+		net.minecraft.world.level.block.state.BlockState growth3 = thaumcraft.api.blocks.BlocksTC.taintFibre.get().defaultBlockState()
+				.setValue(thaumcraft.common.blocks.world.taint.BlockTaintFibre.GROWTH3, true);
+		helper.assertTrue(thaumcraft.common.blocks.world.taint.BlockTaintFibre.lightLevel(growth3) == 12,
+				"a real fully-grown (GROWTH3) fibre should really emit real light level 12");
+
+		// Real fortune-flavored Flux Crystal drop on a mature fibre broken by a real player.
+		ServerPlayer breaker = spawnCasterAt(helper, fibrePos.above(2));
+		boolean droppedCrystal = false;
+		for (int i = 0; i < 100 && !droppedCrystal; i++) {
+			thaumcraft.api.blocks.BlocksTC.taintFibre.get().playerWillDestroy(level, fibrePos, growth3, breaker);
+			for (net.minecraft.world.entity.item.ItemEntity ie : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new AABB(fibrePos).inflate(2))) {
+				if (ie.getItem().is(thaumcraft.api.items.ItemsTC.crystalEssence.get())) {
+					droppedCrystal = true;
+				}
+			}
+		}
+		helper.assertTrue(droppedCrystal, "breaking a real mature taint fibre should really eventually drop a real Flux Crystal Essence");
+
+		helper.succeed();
+	}
 }

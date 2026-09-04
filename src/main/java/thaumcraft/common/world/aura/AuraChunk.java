@@ -3,8 +3,9 @@ import net.minecraft.world.level.ChunkPos;
 
 /**
  * Replaces the old (1.12.2) {@code AuraChunk}. Dropped the {@code WeakReference<Chunk>}/{@code isModified()}
- * bookkeeping that supported NBT persistence - this version doesn't persist aura state across a server
- * restart yet (see {@link AuraHandler}'s class doc).
+ * bookkeeping that supported NBT persistence - that per-chunk dirty-tracking isn't needed any more since
+ * persistence now happens at the whole-{@link AuraWorld} level (a real {@code SavedData}, saved/loaded as
+ * one unit - see that class's own doc comment and {@link AuraHandler}'s).
  */
 public class AuraChunk
 {

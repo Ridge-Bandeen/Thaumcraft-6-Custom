@@ -210,6 +210,9 @@ sourceSets {
             include 'thaumcraft/common/blocks/misc/BlockBannerTC.java'
             include 'thaumcraft/common/blocks/misc/BlockLoot.java'
             include 'thaumcraft/common/entities/monster/boss/EntityCultistPortalGreater.java'
+            include 'thaumcraft/common/blocks/world/taint/ITaintBlock.java'
+            include 'thaumcraft/common/blocks/world/taint/TaintHelper.java'
+            include 'thaumcraft/common/blocks/world/taint/BlockTaintFibre.java'
             include 'thaumcraft/common/tiles/misc/TileBanner.java'
             include 'thaumcraft/client/render/TileBannerRenderer.java'
 

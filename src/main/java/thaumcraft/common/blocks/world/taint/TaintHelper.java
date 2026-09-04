@@ -1,163 +1,133 @@
 package thaumcraft.common.blocks.world.taint;
+
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import net.minecraft.block.BlockFlower;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.init.Blocks;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import net.minecraftforge.common.IPlantable;
-import thaumcraft.api.ThaumcraftMaterials;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.SaplingBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import thaumcraft.api.aura.AuraHelper;
 import thaumcraft.api.blocks.BlocksTC;
-import thaumcraft.common.blocks.IBlockFacing;
-import thaumcraft.common.config.ModConfig;
-import thaumcraft.common.entities.monster.tainted.EntityTaintSeed;
-import thaumcraft.common.lib.utils.BlockUtils;
-import thaumcraft.common.lib.utils.EntityUtils;
-import thaumcraft.common.lib.utils.Utils;
-import thaumcraft.common.world.aura.AuraHandler;
 
+/**
+ * Replaces the old (1.12.2) {@code TaintHelper} - the shared "is this position near an active taint seed,
+ * and what should it grow into" logic every taint block calls into. Genuinely unblocked now (it wasn't
+ * during this port's own earlier scoping pass): the real vis/flux gating (via {@code AuraHelper#drainFlux}/
+ * {@link thaumcraft.common.world.aura.AuraHandler#getFluxSaturation}, now real) is exactly what made this
+ * look stuck before the Aura system existed for real.
+ *
+ * Real seed-position tracking ({@link #addTaintSeed}/{@link #removeTaintSeed}/{@link #isNearTaintSeed}/
+ * {@link #isAtTaintSeedEdge}), matching the original's own per-dimension {@code ArrayList<BlockPos>} cache
+ * exactly. One real, documented simplification: the original's own {@code isNearTaintSeed} also self-pruned
+ * stale entries by checking whether a real {@code EntityTaintSeed} still existed at that position - that
+ * entity isn't ported yet (a later sub-chunk of this same taint-terrain arc), so that self-pruning check is
+ * dropped for now. Whatever calls {@link #addTaintSeed} is responsible for calling {@link #removeTaintSeed}
+ * when the seed goes away; nothing does that automatically yet.
+ *
+ * {@link #spreadFibres} is a real, working port of the original's own core growth case - converting a
+ * random nearby eligible position (air/replaceable/flower/plantable, adjacent to a real solid block, not
+ * already fully surrounded by taint) into {@link BlocksTC#taintFibre}, draining a small real amount of flux.
+ * Real, documented cuts vs the original: no leaf -&gt; {@code taintFeature} conversion, no hemmed-in-taint
+ * -&gt; {@code taintLog}/{@code taintCrust}/{@code taintSoil}/{@code taintRock} conversions, and no {@code
+ * EntityTaintSeed} spawning at the seed-zone's own edge - all of those target blocks/entities aren't ported
+ * yet (later sub-chunks of this same arc). No config system exists in this port yet either, so the original's
+ * own {@code ModConfig.CONFIG_WORLD.taintSpreadRate}/{@code taintSpreadArea} are hardcoded here to the exact
+ * same default values the original itself shipped with (100.0/32).
+ */
+public class TaintHelper {
 
-public class TaintHelper
-{
-    private static ConcurrentHashMap<Integer, ArrayList<BlockPos>> taintSeeds;
-    
-    public static void addTaintSeed(World world, BlockPos pos) {
-        ArrayList<BlockPos> locs = TaintHelper.taintSeeds.get(world.provider.getDimension());
-        if (locs == null) {
-            locs = new ArrayList<BlockPos>();
-        }
-        locs.add(pos);
-        TaintHelper.taintSeeds.put(world.provider.getDimension(), locs);
-    }
-    
-    public static void removeTaintSeed(World world, BlockPos pos) {
-        ArrayList<BlockPos> locs = TaintHelper.taintSeeds.get(world.provider.getDimension());
-        if (locs != null && !locs.isEmpty()) {
-            locs.remove(pos);
-        }
-    }
-    
-    public static boolean isNearTaintSeed(World world, BlockPos pos) {
-        double area = ModConfig.CONFIG_WORLD.taintSpreadArea * ModConfig.CONFIG_WORLD.taintSpreadArea;
-        ArrayList<BlockPos> locs = TaintHelper.taintSeeds.get(world.provider.getDimension());
-        if (locs != null && !locs.isEmpty()) {
-            for (BlockPos p : locs) {
-                if (p.distanceSq(pos) <= area) {
-                    if (EntityUtils.getEntitiesInRange(world, p, null, (Class<? extends Entity>)EntityTaintSeed.class, 1.0).size() <= 0) {
-                        removeTaintSeed(world, p);
-                        return false;
-                    }
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    
-    public static boolean isAtTaintSeedEdge(World world, BlockPos pos) {
-        double area = ModConfig.CONFIG_WORLD.taintSpreadArea * ModConfig.CONFIG_WORLD.taintSpreadArea;
-        double fringe = ModConfig.CONFIG_WORLD.taintSpreadArea * 0.8 * (ModConfig.CONFIG_WORLD.taintSpreadArea * 0.8);
-        ArrayList<BlockPos> locs = TaintHelper.taintSeeds.get(world.provider.getDimension());
-        if (locs != null && !locs.isEmpty()) {
-            for (BlockPos p : locs) {
-                double d = p.distanceSq(pos);
-                if (d < area && d > fringe) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    
-    public static void spreadFibres(World world, BlockPos pos) {
-        spreadFibres(world, pos, false);
-    }
-    
-    public static void spreadFibres(World world, BlockPos pos, boolean ignore) {
-        if (!ignore && ModConfig.CONFIG_MISC.wussMode) {
-            return;
-        }
-        float mod = 0.001f + AuraHandler.getFluxSaturation(world, pos) * 2.0f;
-        if (!ignore && world.rand.nextFloat() > ModConfig.CONFIG_WORLD.taintSpreadRate / 100.0f * mod) {
-            return;
-        }
-        if (isNearTaintSeed(world, pos)) {
-            int xx = pos.getX() + world.rand.nextInt(3) - 1;
-            int yy = pos.getY() + world.rand.nextInt(3) - 1;
-            int zz = pos.getZ() + world.rand.nextInt(3) - 1;
-            BlockPos t = new BlockPos(xx, yy, zz);
-            if (t.equals(pos)) {
-                return;
-            }
-            IBlockState bs = world.getBlockState(t);
-            Material bm = bs.getBlock().getMaterial(bs);
-            float bh = bs.getBlock().getBlockHardness(bs, world, t);
-            if (bh < 0.0f || bh > 10.0f) {
-                return;
-            }
-            if (!bs.getBlock().isLeaves(bs, world, t) && !bm.isLiquid() && (world.isAirBlock(t) || bs.getBlock().isReplaceable(world, t) || bs.getBlock() instanceof BlockFlower || bs.getBlock() instanceof IPlantable) && BlockUtils.isAdjacentToSolidBlock(world, t) && !BlockTaintFibre.isOnlyAdjacentToTaint(world, t)) {
-                world.setBlockState(t, BlocksTC.taintFibre.getDefaultState());
-                world.addBlockEvent(t, BlocksTC.taintFibre, 1, 0);
-                AuraHelper.drainFlux(world, t, 0.01f, false);
-                return;
-            }
-            if (bs.getBlock().isLeaves(bs, world, t)) {
-                EnumFacing face = null;
-                if (world.rand.nextFloat() < 0.6 && (face = BlockUtils.getFaceBlockTouching(world, t, BlocksTC.taintLog)) != null) {
-                    world.setBlockState(t, BlocksTC.taintFeature.getDefaultState().withProperty((IProperty)IBlockFacing.FACING, (Comparable)face.getOpposite()));
-                }
-                else {
-                    world.setBlockState(t, BlocksTC.taintFibre.getDefaultState());
-                    world.addBlockEvent(t, BlocksTC.taintFibre, 1, 0);
-                    AuraHelper.drainFlux(world, t, 0.01f, false);
-                }
-                return;
-            }
-            if (BlockTaintFibre.isHemmedByTaint(world, t) && bs.getBlockHardness(world, t) < 5.0f) {
-                if (Utils.isWoodLog(world, t) && bs.getMaterial() != ThaumcraftMaterials.MATERIAL_TAINT) {
-                    world.setBlockState(t, BlocksTC.taintLog.getDefaultState().withProperty(BlockTaintLog.AXIS, (Comparable)BlockUtils.getBlockAxis(world, t)));
-                    return;
-                }
-                if (bs.getBlock() == Blocks.RED_MUSHROOM_BLOCK || bs.getBlock() == Blocks.BROWN_MUSHROOM_BLOCK || bm == Material.GOURD || bm == Material.CACTUS || bm == Material.CORAL || bm == Material.SPONGE || bm == Material.WOOD) {
-                    world.setBlockState(t, BlocksTC.taintCrust.getDefaultState());
-                    world.addBlockEvent(t, BlocksTC.taintCrust, 1, 0);
-                    AuraHelper.drainFlux(world, t, 0.01f, false);
-                    return;
-                }
-                if (bm == Material.SAND || bm == Material.GROUND || bm == Material.GRASS || bm == Material.CLAY) {
-                    world.setBlockState(t, BlocksTC.taintSoil.getDefaultState());
-                    world.addBlockEvent(t, BlocksTC.taintSoil, 1, 0);
-                    AuraHelper.drainFlux(world, t, 0.01f, false);
-                    return;
-                }
-                if (bm == Material.ROCK) {
-                    world.setBlockState(t, BlocksTC.taintRock.getDefaultState());
-                    world.addBlockEvent(t, BlocksTC.taintRock, 1, 0);
-                    AuraHelper.drainFlux(world, t, 0.01f, false);
-                    return;
-                }
-            }
-            if ((bs.getBlock() == BlocksTC.taintSoil || bs.getBlock() == BlocksTC.taintRock) && world.isAirBlock(t.up()) && AuraHelper.getFlux(world, t) >= 5.0f && world.rand.nextFloat() < ModConfig.CONFIG_WORLD.taintSpreadRate / 100.0f * 0.33 && isAtTaintSeedEdge(world, t)) {
-                EntityTaintSeed e = new EntityTaintSeed(world);
-                e.setLocationAndAngles(t.getX() + 0.5f, t.up().getY(), t.getZ() + 0.5f, (float)world.rand.nextInt(360), 0.0f);
-                if (e.getCanSpawnHere()) {
-                    AuraHelper.drainFlux(world, t, 5.0f, false);
-                    world.spawnEntity(e);
-                }
-            }
-        }
-    }
-    
-    static {
-        TaintHelper.taintSeeds = new ConcurrentHashMap<Integer, ArrayList<BlockPos>>();
-    }
+	private static final float TAINT_SPREAD_RATE = 100.0f;
+	private static final int TAINT_SPREAD_AREA = 32;
+
+	private static final ConcurrentHashMap<ResourceKey<Level>, List<BlockPos>> taintSeeds = new ConcurrentHashMap<>();
+
+	public static void addTaintSeed(Level level, BlockPos pos) {
+		taintSeeds.computeIfAbsent(level.dimension(), key -> new ArrayList<>()).add(pos);
+	}
+
+	public static void removeTaintSeed(Level level, BlockPos pos) {
+		List<BlockPos> locs = taintSeeds.get(level.dimension());
+		if (locs != null) {
+			locs.remove(pos);
+		}
+	}
+
+	public static boolean isNearTaintSeed(Level level, BlockPos pos) {
+		double area = (double) TAINT_SPREAD_AREA * TAINT_SPREAD_AREA;
+		List<BlockPos> locs = taintSeeds.get(level.dimension());
+		if (locs != null) {
+			for (BlockPos p : locs) {
+				if (p.distSqr(pos) <= area) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	public static boolean isAtTaintSeedEdge(Level level, BlockPos pos) {
+		double area = (double) TAINT_SPREAD_AREA * TAINT_SPREAD_AREA;
+		double fringe = TAINT_SPREAD_AREA * 0.8 * (TAINT_SPREAD_AREA * 0.8);
+		List<BlockPos> locs = taintSeeds.get(level.dimension());
+		if (locs != null) {
+			for (BlockPos p : locs) {
+				double d = p.distSqr(pos);
+				if (d < area && d > fringe) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	public static void spreadFibres(Level level, BlockPos pos) {
+		spreadFibres(level, pos, false);
+	}
+
+	public static void spreadFibres(Level level, BlockPos pos, boolean ignore) {
+		float mod = 0.001f + thaumcraft.common.world.aura.AuraHandler.getFluxSaturation(level, pos) * 2.0f;
+		if (!ignore && level.random.nextFloat() > TAINT_SPREAD_RATE / 100.0f * mod) {
+			return;
+		}
+		if (!isNearTaintSeed(level, pos)) {
+			return;
+		}
+		int xx = pos.getX() + level.random.nextInt(3) - 1;
+		int yy = pos.getY() + level.random.nextInt(3) - 1;
+		int zz = pos.getZ() + level.random.nextInt(3) - 1;
+		BlockPos t = new BlockPos(xx, yy, zz);
+		if (t.equals(pos)) {
+			return;
+		}
+		BlockState bs = level.getBlockState(t);
+		float bh = bs.getDestroySpeed(level, t);
+		if (bh < 0.0f || bh > 10.0f) {
+			return;
+		}
+		boolean eligible = bs.isAir() || bs.canBeReplaced() || bs.getBlock() instanceof SaplingBlock
+				|| bs.getBlock() instanceof net.minecraft.world.level.block.BushBlock;
+		if (eligible && !bs.liquid() && isAdjacentToSolidBlock(level, t) && !BlockTaintFibre.isOnlyAdjacentToTaint(level, t)) {
+			// setBlockAndUpdate with a bare defaultBlockState() never computes this fresh placement's own
+			// connections against its already-existing neighbors - see BlockTaintFibre#computeState's own
+			// doc comment - so it's computed explicitly here first.
+			level.setBlockAndUpdate(t, BlockTaintFibre.computeState(BlocksTC.taintFibre.get().defaultBlockState(), level, t));
+			AuraHelper.drainFlux(level, t, 0.01f, false);
+		}
+	}
+
+	/** Real, portable version of the original's own {@code BlockUtils#isAdjacentToSolidBlock} - the one
+	 * piece of that unported utility class this arc actually needed. */
+	static boolean isAdjacentToSolidBlock(Level level, BlockPos pos) {
+		for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+			BlockPos n = pos.relative(dir);
+			BlockState state = level.getBlockState(n);
+			if (!state.isAir() && state.isFaceSturdy(level, n, dir.getOpposite())) {
+				return true;
+			}
+		}
+		return false;
+	}
 }

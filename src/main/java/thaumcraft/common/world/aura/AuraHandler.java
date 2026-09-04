@@ -29,12 +29,15 @@ import thaumcraft.Thaumcraft;
  * touched before its {@code LevelEvent.Load} fires (e.g. very first tick) - {@code computeIfAbsent} means
  * that fallback is never allowed to clobber one already loaded from disk.
  *
+ * High flux really does spawn a real {@code EntityFluxRift} now, via {@link #onHighFlux} - {@link
+ * AuraThread} calls it from the background simulation thread, which hands the actual spawn off to the main
+ * server thread via {@code MinecraftServer#execute} rather than touching the level off-thread.
+ *
  * Still deliberately simplified versus the original, worth revisiting later:
  * <ul>
  * <li>No per-biome variation on generation - every chunk seeds with the same flat baseline (+ noise). The
  * original weighted this by {@code BiomeDictionary} tags (a whole extra file, {@code BiomeHandler}) that
  * isn't ported.</li>
- * <li>High flux no longer spawns a flux rift (that needs {@code EntityFluxRift}, not ported) - just logged.</li>
  * <li>Chunks are created lazily on first read/write instead of via a world-gen hook, which sidesteps
  * needing to port that wiring for now - functionally equivalent from a "does this block have vis"
  * standpoint, just not primed ahead of time.</li>
@@ -112,6 +115,14 @@ public class AuraHandler
 
     public static int getAuraBase(Level level, BlockPos pos) {
         return getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4).getBase();
+    }
+
+    /** How flux-saturated this chunk currently is (flux / base), matching the original's own real formula
+     * - used by {@link thaumcraft.common.blocks.world.taint.TaintHelper#spreadFibres} to scale taint's own
+     * spread rate up in already-corrupted areas. */
+    public static float getFluxSaturation(Level level, BlockPos pos) {
+        AuraChunk ac = getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4);
+        return ac.getBase() > 0 ? ac.getFlux() / ac.getBase() : 0.0f;
     }
 
     public static boolean shouldPreserveAura(Level level, Player player, BlockPos pos) {
