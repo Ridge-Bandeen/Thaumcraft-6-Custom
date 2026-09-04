@@ -2759,6 +2759,124 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
+	// Real infusion recipe content: Lamp Growth / Lamp Fertility - the first two of the original's own ~76
+	// real infusion recipes ported past the bare demo, chosen because every real ingredient (lamp_arcane,
+	// crystal_essence, and plain vanilla items) already exists in this port - most of the rest are still
+	// blocked on whole unported item families (crystal-cluster blocks, Baubles-slot items, elemental tools,
+	// void-robe armor, focus tiers 2/3, fortress masks, and more).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionMatrixCraftsLampGrowthFromLampArcane(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos matrixPos = new BlockPos(4, 4, 4);
+		BlockPos centralPos = matrixPos.below(2);
+		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		helper.setBlock(centralPos, BlocksTC.pedestal.get());
+		thaumcraft.common.tiles.crafting.TilePedestal central = helper.getBlockEntity(centralPos);
+		central.setItem(new ItemStack(BlocksTC.lampArcane.get()));
+
+		BlockPos[] componentPositions = {
+				matrixPos.offset(2, 0, 0), matrixPos.offset(-2, 0, 0), matrixPos.offset(0, 0, 2),
+				matrixPos.offset(0, 0, -2), matrixPos.offset(2, 0, 2), matrixPos.offset(-2, 0, -2)
+		};
+		ItemStack[] componentItems = {
+				new ItemStack(Items.GOLD_INGOT), new ItemStack(Items.WHITE_DYE), new ItemStack(ItemsTC.crystalEssence.get()),
+				new ItemStack(Items.GOLD_INGOT), new ItemStack(Items.WHITE_DYE), new ItemStack(ItemsTC.crystalEssence.get())
+		};
+		for (int i = 0; i < componentPositions.length; i++) {
+			helper.setBlock(componentPositions[i], BlocksTC.pedestal.get());
+			thaumcraft.common.tiles.crafting.TilePedestal ped = helper.getBlockEntity(componentPositions[i]);
+			ped.setItem(componentItems[i]);
+		}
+
+		BlockPos jarHerba = matrixPos.offset(3, 0, 0);
+		BlockPos jarLux = matrixPos.offset(-3, 0, 0);
+		BlockPos jarVictus = matrixPos.offset(0, 0, 3);
+		BlockPos jarInstrumentum = matrixPos.offset(0, 0, -3);
+		helper.setBlock(jarHerba, BlocksTC.jarNormal.get());
+		helper.setBlock(jarLux, BlocksTC.jarNormal.get());
+		helper.setBlock(jarVictus, BlocksTC.jarNormal.get());
+		helper.setBlock(jarInstrumentum, BlocksTC.jarNormal.get());
+		((thaumcraft.common.tiles.essentia.TileJarFillable) helper.getBlockEntity(jarHerba)).addToContainer(Aspect.PLANT, 30);
+		((thaumcraft.common.tiles.essentia.TileJarFillable) helper.getBlockEntity(jarLux)).addToContainer(Aspect.LIGHT, 30);
+		((thaumcraft.common.tiles.essentia.TileJarFillable) helper.getBlockEntity(jarVictus)).addToContainer(Aspect.LIFE, 30);
+		((thaumcraft.common.tiles.essentia.TileJarFillable) helper.getBlockEntity(jarInstrumentum)).addToContainer(Aspect.TOOL, 30);
+
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+		ServerPlayer player = spawnCasterAt(helper, matrixAbs);
+
+		helper.assertTrue(matrix.activate(level, player), "activation should succeed with a central pedestal in place");
+		helper.assertTrue(matrix.activate(level, player), "the second activation (with a real, valid lamp_growth recipe on the pedestals) should start crafting");
+		helper.assertTrue(matrix.crafting, "the matrix should be mid-craft after a successful craftingStart");
+
+		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
+		for (int i = 0; i < 400 && matrix.crafting; i++) {
+			thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(level, matrixAbs, matrixState, matrix);
+		}
+
+		helper.assertTrue(!matrix.crafting, "the craft should have completed (or definitively failed) within 400 ticks");
+		helper.assertTrue(central.getItem().is(BlocksTC.lampGrowth.get().asItem()), "the central pedestal should hold a real lamp_growth, found: " + central.getItem());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionMatrixCraftsLampFertilityFromLampArcane(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos matrixPos = new BlockPos(4, 4, 4);
+		BlockPos centralPos = matrixPos.below(2);
+		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		helper.setBlock(centralPos, BlocksTC.pedestal.get());
+		thaumcraft.common.tiles.crafting.TilePedestal central = helper.getBlockEntity(centralPos);
+		central.setItem(new ItemStack(BlocksTC.lampArcane.get()));
+
+		BlockPos[] componentPositions = {
+				matrixPos.offset(2, 0, 0), matrixPos.offset(-2, 0, 0), matrixPos.offset(0, 0, 2),
+				matrixPos.offset(0, 0, -2), matrixPos.offset(2, 0, 2), matrixPos.offset(-2, 0, -2)
+		};
+		ItemStack[] componentItems = {
+				new ItemStack(Items.GOLD_INGOT), new ItemStack(Items.WHEAT), new ItemStack(ItemsTC.crystalEssence.get()),
+				new ItemStack(Items.GOLD_INGOT), new ItemStack(Items.CARROT), new ItemStack(ItemsTC.crystalEssence.get())
+		};
+		for (int i = 0; i < componentPositions.length; i++) {
+			helper.setBlock(componentPositions[i], BlocksTC.pedestal.get());
+			thaumcraft.common.tiles.crafting.TilePedestal ped = helper.getBlockEntity(componentPositions[i]);
+			ped.setItem(componentItems[i]);
+		}
+
+		BlockPos jarBestia = matrixPos.offset(3, 0, 0);
+		BlockPos jarLux = matrixPos.offset(-3, 0, 0);
+		BlockPos jarVictus = matrixPos.offset(0, 0, 3);
+		BlockPos jarDesiderium = matrixPos.offset(0, 0, -3);
+		helper.setBlock(jarBestia, BlocksTC.jarNormal.get());
+		helper.setBlock(jarLux, BlocksTC.jarNormal.get());
+		helper.setBlock(jarVictus, BlocksTC.jarNormal.get());
+		helper.setBlock(jarDesiderium, BlocksTC.jarNormal.get());
+		((thaumcraft.common.tiles.essentia.TileJarFillable) helper.getBlockEntity(jarBestia)).addToContainer(Aspect.BEAST, 30);
+		((thaumcraft.common.tiles.essentia.TileJarFillable) helper.getBlockEntity(jarLux)).addToContainer(Aspect.LIGHT, 30);
+		((thaumcraft.common.tiles.essentia.TileJarFillable) helper.getBlockEntity(jarVictus)).addToContainer(Aspect.LIFE, 30);
+		((thaumcraft.common.tiles.essentia.TileJarFillable) helper.getBlockEntity(jarDesiderium)).addToContainer(Aspect.DESIRE, 30);
+
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+		ServerPlayer player = spawnCasterAt(helper, matrixAbs);
+
+		helper.assertTrue(matrix.activate(level, player), "activation should succeed with a central pedestal in place");
+		helper.assertTrue(matrix.activate(level, player), "the second activation (with a real, valid lamp_fertility recipe on the pedestals) should start crafting");
+		helper.assertTrue(matrix.crafting, "the matrix should be mid-craft after a successful craftingStart");
+
+		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
+		for (int i = 0; i < 400 && matrix.crafting; i++) {
+			thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(level, matrixAbs, matrixState, matrix);
+		}
+
+		helper.assertTrue(!matrix.crafting, "the craft should have completed (or definitively failed) within 400 ticks");
+		helper.assertTrue(central.getItem().is(BlocksTC.lampFertility.get().asItem()), "the central pedestal should hold a real lamp_fertility, found: " + central.getItem());
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
 	// Infusion Stabilizer - a pure drop-in for TileInfusionMatrix#getSurroundings, which already checks
 	// any block generically via instanceof IInfusionStabiliser(Ext). No block entity, no changes needed
 	// to the matrix itself - see BlockStabilizer's own doc comment.

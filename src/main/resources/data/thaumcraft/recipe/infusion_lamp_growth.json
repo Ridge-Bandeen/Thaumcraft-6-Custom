@@ -1,0 +1,20 @@
+{
+  "type": "thaumcraft:infusion",
+  "instability": 4,
+  "aspects": {
+    "herba": 20,
+    "lux": 15,
+    "victus": 15,
+    "instrumentum": 15
+  },
+  "central": { "item": "thaumcraft:lamp_arcane" },
+  "components": [
+    { "item": "minecraft:gold_ingot" },
+    { "item": "minecraft:white_dye" },
+    { "item": "thaumcraft:crystal_essence" },
+    { "item": "minecraft:gold_ingot" },
+    { "item": "minecraft:white_dye" },
+    { "item": "thaumcraft:crystal_essence" }
+  ],
+  "result": { "id": "thaumcraft:lamp_growth" }
+}

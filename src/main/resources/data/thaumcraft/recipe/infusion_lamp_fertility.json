@@ -1,0 +1,20 @@
+{
+  "type": "thaumcraft:infusion",
+  "instability": 4,
+  "aspects": {
+    "bestia": 20,
+    "lux": 15,
+    "victus": 15,
+    "desiderium": 15
+  },
+  "central": { "item": "thaumcraft:lamp_arcane" },
+  "components": [
+    { "item": "minecraft:gold_ingot" },
+    { "item": "minecraft:wheat" },
+    { "item": "thaumcraft:crystal_essence" },
+    { "item": "minecraft:gold_ingot" },
+    { "item": "minecraft:carrot" },
+    { "item": "thaumcraft:crystal_essence" }
+  ],
+  "result": { "id": "thaumcraft:lamp_fertility" }
+}
