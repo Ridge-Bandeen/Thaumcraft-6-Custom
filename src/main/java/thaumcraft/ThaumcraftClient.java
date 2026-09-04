@@ -150,6 +150,8 @@ public class ThaumcraftClient {
         // No renderer yet - the original's own real crossbow_advanced.obj mesh needs a genuine custom
         // OBJ-mesh renderer, see EntityTurretCrossbowAdvanced's own doc comment for why.
         event.registerEntityRenderer(ThaumcraftEntities.TURRET_CROSSBOW_ADVANCED.get(), RenderFocusProjectile::new);
+        // Real geometry now - see ModelArcaneBore/RenderArcaneBore's own doc comments.
+        event.registerEntityRenderer(ThaumcraftEntities.ARCANE_BORE.get(), thaumcraft.client.render.RenderArcaneBore::new);
         // First real BlockEntityRenderer this whole port has needed - see its own doc comment.
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.BANNER.get(), thaumcraft.client.render.TileBannerRenderer::new);
     }

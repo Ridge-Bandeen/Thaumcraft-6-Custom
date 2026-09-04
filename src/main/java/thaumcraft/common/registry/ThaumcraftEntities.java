@@ -322,6 +322,14 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("turret_crossbow_advanced"));
 
+	/** See {@code EntityArcaneBore}'s own doc comment. {@code sized(0.9f, 0.9f)} matches the original's own
+	 * constructor-time {@code setSize(0.9f, 0.9f)} exactly. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.construct.EntityArcaneBore>> ARCANE_BORE = ENTITY_TYPES.register("arcane_bore",
+			() -> EntityType.Builder.<thaumcraft.common.entities.construct.EntityArcaneBore>of(thaumcraft.common.entities.construct.EntityArcaneBore::new, MobCategory.MISC)
+					.sized(0.9f, 0.9f)
+					.clientTrackingRange(64)
+					.build("arcane_bore"));
+
 	private ThaumcraftEntities() {
 	}
 }

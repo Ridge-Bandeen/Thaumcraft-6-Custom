@@ -738,6 +738,9 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.entities.construct.ItemTurretPlacer> turretPlacerAdvanced =
 			ITEMS.registerItem("turret_placer_advanced",
 					props -> new thaumcraft.common.entities.construct.ItemTurretPlacer(props, () -> thaumcraft.common.registry.ThaumcraftEntities.TURRET_CROSSBOW_ADVANCED.get()));
+	public static final DeferredItem<thaumcraft.common.entities.construct.ItemTurretPlacer> turretPlacerBore =
+			ITEMS.registerItem("turret_placer_bore",
+					props -> new thaumcraft.common.entities.construct.ItemTurretPlacer(props, () -> thaumcraft.common.registry.ThaumcraftEntities.ARCANE_BORE.get()));
 
 	private ItemsTC() {
 	}

@@ -1666,5 +1666,7 @@
   "entity.thaumcraft.turret_crossbow.name": "Automated Crossbow",
   "item.thaumcraft.turret_placer_basic": "Automated Crossbow",
   "entity.thaumcraft.turret_crossbow_advanced.name": "Advanced Automated Crossbow",
-  "item.thaumcraft.turret_placer_advanced": "Advanced Automated Crossbow"
+  "item.thaumcraft.turret_placer_advanced": "Advanced Automated Crossbow",
+  "entity.thaumcraft.arcane_bore.name": "Arcane Bore",
+  "item.thaumcraft.turret_placer_bore": "Arcane Bore"
 }

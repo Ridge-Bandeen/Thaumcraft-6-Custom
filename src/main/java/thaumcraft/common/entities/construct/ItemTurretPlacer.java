@@ -31,15 +31,18 @@ import net.minecraft.world.phys.AABB;
  * Real, documented scope cut: the original's own {@code "turret"} item carried 3 metadata subtypes (basic/
  * advanced/bore, spawning {@code EntityTurretCrossbow}/{@code EntityTurretCrossbowAdvanced}/{@code
  * EntityArcaneBore} respectively) - this port instead registers one plain item per real variant (matching
- * this port's own established "no metadata subtypes" convention), all sharing this one class parameterized
- * by {@link #entityType} - {@code turretPlacerBore} is real, deliberate follow-up work for whenever
- * {@code EntityArcaneBore} itself is ported.
+ * this port's own established "no metadata subtypes" convention), all three sharing this one class
+ * parameterized by {@link #entityType} (widened to {@link EntityOwnedConstruct} rather than {@link
+ * EntityTurretCrossbow} specifically, since {@code EntityArcaneBore} is a sibling of that class, not a
+ * subclass of it). {@code EntityArcaneBore} additionally needs a real facing at placement time - handled via
+ * the {@code instanceof} check right after spawning, same real one-off special case the original's own
+ * {@code switch} on damage value needed for its own bore branch.
  */
 public class ItemTurretPlacer extends Item {
 
-	private final Supplier<EntityType<? extends EntityTurretCrossbow>> entityType;
+	private final Supplier<EntityType<? extends EntityOwnedConstruct>> entityType;
 
-	public ItemTurretPlacer(Properties properties, Supplier<EntityType<? extends EntityTurretCrossbow>> entityType) {
+	public ItemTurretPlacer(Properties properties, Supplier<EntityType<? extends EntityOwnedConstruct>> entityType) {
 		super(properties);
 		this.entityType = entityType;
 	}
@@ -81,11 +84,14 @@ public class ItemTurretPlacer extends Item {
 		level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
 		level.setBlockAndUpdate(above, Blocks.AIR.defaultBlockState());
 
-		EntityTurretCrossbow turret = entityType.get().create((ServerLevel) level);
+		EntityOwnedConstruct turret = entityType.get().create((ServerLevel) level);
 		if (turret == null) {
 			return InteractionResult.PASS;
 		}
 		turret.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
+		if (turret instanceof EntityArcaneBore bore) {
+			bore.setFacing(player.getDirection());
+		}
 		if (!level.addFreshEntity(turret)) {
 			return InteractionResult.PASS;
 		}

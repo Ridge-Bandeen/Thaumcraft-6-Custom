@@ -255,16 +255,23 @@ public class ToolEvents {
 	}
 
 	private static void rollSpecialMining(List<ItemEntity> drops, int level, RandomSource rand) {
-		float chance = (1 + level) * 0.125f;
 		drops.replaceAll(drop -> {
-			ItemStack template = SPECIAL_MINING.get(drop.getItem().getItem());
-			if (template == null || rand.nextFloat() > chance) {
-				return drop;
-			}
-			ItemStack replacement = template.copyWithCount(template.getCount() * drop.getItem().getCount());
-			drop.setItem(replacement);
+			drop.setItem(rollSpecialMiningResult(drop.getItem(), level, rand));
 			return drop;
 		});
+	}
+
+	/** REFINING's real target-table roll, on a single drop rather than a whole {@code BlockDropsEvent} list -
+	 * real, shared entry point for {@code EntityArcaneBore}'s own dig() (which harvests directly via
+	 * {@link net.minecraft.world.level.block.state.BlockState#getDrops}, not a real player-driven
+	 * {@link BlockDropsEvent}, so it can't reuse {@link #onBlockDrops} itself). Same real
+	 * {@code (1 + level) * 0.125f} chance formula either way. */
+	public static ItemStack rollSpecialMiningResult(ItemStack drop, int level, RandomSource rand) {
+		ItemStack template = SPECIAL_MINING.get(drop.getItem());
+		if (template == null || rand.nextFloat() > (1 + level) * 0.125f) {
+			return drop;
+		}
+		return template.copyWithCount(template.getCount() * drop.getCount());
 	}
 
 	@SubscribeEvent

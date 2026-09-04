@@ -7346,4 +7346,135 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Construct arc, chunk 3: EntityArcaneBore - see its own doc comment.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void turretPlacerBorePlacesARealTamedBoreFacingThePlacer(GameTestHelper helper) {
+		BlockPos floorPos = new BlockPos(2, 1, 2);
+		BlockPos floorAbs = helper.absolutePos(floorPos);
+		helper.setBlock(floorPos, net.minecraft.world.level.block.Blocks.STONE);
+
+		ServerPlayer player = spawnCasterAt(helper, floorAbs.above(2));
+		player.getAbilities().instabuild = false;
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, new ItemStack(ItemsTC.turretPlacerBore.get()));
+
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(floorAbs), net.minecraft.core.Direction.UP, floorAbs, false);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(player, hand, hit);
+		net.minecraft.world.InteractionResult result = player.getItemInHand(hand).getItem().useOn(context);
+
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.SUCCESS, "placing against a solid block should succeed, got: " + result);
+		helper.assertTrue(player.getItemInHand(hand).isEmpty(), "the single placer stack should be fully consumed");
+
+		List<thaumcraft.common.entities.construct.EntityArcaneBore> found = helper.getLevel().getEntitiesOfClass(
+				thaumcraft.common.entities.construct.EntityArcaneBore.class, new AABB(floorAbs).inflate(3));
+		helper.assertTrue(found.size() == 1, "exactly one bore should have been spawned, found " + found.size());
+		thaumcraft.common.entities.construct.EntityArcaneBore bore = found.get(0);
+		helper.assertTrue(bore.isOwnedBy(player) && bore.isTame(), "the placed bore should really be tamed/owned by the placing player");
+		helper.assertTrue(bore.getFacing() == player.getDirection(), "the placed bore should really face the same direction the placing player was facing");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void arcaneBoreDigsARealBlockWithARealHeldPickaxeAndEjectsIntoAnAdjacentChest(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos borePos = new BlockPos(2, 2, 2);
+		BlockPos boreAbs = helper.absolutePos(borePos);
+
+		// A real solid floor directly beneath the bore (so it really settles exactly at borePos, not one
+		// block lower the way a non-solid rail would let it fall - see the turret's own rail test for that
+		// same real lesson), powered by a real redstone block touching it from below so the bore's own real
+		// "am I switched on" check (a real neighbor-signal read on the block below its own feet) reads true.
+		helper.setBlock(borePos.below(), net.minecraft.world.level.block.Blocks.STONE);
+		helper.setBlock(borePos.below().below(), net.minecraft.world.level.block.Blocks.REDSTONE_BLOCK);
+		// A real chest right beside the bore's own position to catch the real ejected drop.
+		helper.setBlock(borePos.north(), net.minecraft.world.level.block.Blocks.CHEST);
+		// A real stone block directly ahead (south) of the bore, well within real digging range.
+		BlockPos targetPos = borePos.south();
+		BlockPos targetAbs = helper.absolutePos(targetPos);
+		helper.setBlock(targetPos, net.minecraft.world.level.block.Blocks.STONE);
+
+		thaumcraft.common.entities.construct.EntityArcaneBore bore =
+				thaumcraft.common.registry.ThaumcraftEntities.ARCANE_BORE.get().create(level);
+		helper.assertTrue(bore != null, "the arcane bore entity type should really be able to create an instance");
+		bore.moveTo(boreAbs.getX() + 0.5, boreAbs.getY(), boreAbs.getZ() + 0.5, 0.0f, 0.0f);
+		bore.setFacing(net.minecraft.core.Direction.SOUTH);
+		bore.setValidSpawn();
+		level.addFreshEntity(bore);
+		bore.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE));
+		bore.setCharge(100.0f);
+
+		boolean dug = false;
+		for (int i = 0; i < 100 && !dug; i++) {
+			bore.tick();
+			dug = level.getBlockState(targetAbs).isAir();
+		}
+		helper.assertTrue(dug, "a real charged, pickaxe-holding bore standing on a real inactive activator rail should really dig out the real block ahead of it");
+		helper.assertTrue(bore.getCharge() < 100.0f, "digging should really have spent some of the bore's own real vis charge");
+
+		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(borePos.north());
+		boolean sawCobble = false;
+		for (int slot = 0; slot < chest.getContainerSize(); slot++) {
+			if (chest.getItem(slot).is(net.minecraft.world.item.Items.COBBLESTONE)) {
+				sawCobble = true;
+			}
+		}
+		helper.assertTrue(sawCobble, "the real mined stone's real cobblestone drop should really have been ejected into the real adjacent chest");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void arcaneBoreSwapsItsPickaxeViaInteractAndSneakPickupReturnsThePlacer(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos borePos = new BlockPos(2, 2, 2);
+		BlockPos boreAbs = helper.absolutePos(borePos);
+
+		thaumcraft.common.entities.construct.EntityArcaneBore bore =
+				thaumcraft.common.registry.ThaumcraftEntities.ARCANE_BORE.get().create(level);
+		helper.assertTrue(bore != null, "the arcane bore entity type should really be able to create an instance");
+		bore.moveTo(boreAbs.getX() + 0.5, boreAbs.getY(), boreAbs.getZ() + 0.5, 0.0f, 0.0f);
+		bore.setValidSpawn();
+		level.addFreshEntity(bore);
+
+		ServerPlayer owner = spawnCasterAt(helper, boreAbs.above(2));
+		bore.tame(owner);
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+
+		// Real pickaxe-for-empty-hand swap: the owner hands over a real pickaxe, the bore's own (empty)
+		// hand comes back to them.
+		ItemStack pickaxe = new ItemStack(net.minecraft.world.item.Items.IRON_PICKAXE);
+		owner.setItemInHand(hand, pickaxe);
+		net.minecraft.world.InteractionResult swapResult = bore.mobInteract(owner, hand);
+		helper.assertTrue(swapResult == net.minecraft.world.InteractionResult.SUCCESS, "offering a real pickaxe should really succeed, got: " + swapResult);
+		helper.assertTrue(bore.getMainHandItem().is(net.minecraft.world.item.Items.IRON_PICKAXE), "the bore's own main hand should really now hold the real offered pickaxe");
+		helper.assertTrue(owner.getItemInHand(hand).isEmpty(), "the owner's own hand should really now be empty (the bore had nothing to hand back yet)");
+
+		// Real sneak-pickup: drops the held pickaxe and a real bore placer item, then discards itself.
+		owner.setShiftKeyDown(true);
+		net.minecraft.world.InteractionResult pickupResult = bore.mobInteract(owner, hand);
+		helper.assertTrue(pickupResult == net.minecraft.world.InteractionResult.SUCCESS, "sneak-interacting as the real owner should really pick the bore back up, got: " + pickupResult);
+		helper.assertTrue(!bore.isAlive(), "the bore should really discard itself once picked back up");
+
+		List<ItemEntity> drops = level.getEntitiesOfClass(ItemEntity.class, new AABB(boreAbs).inflate(2));
+		boolean sawPickaxe = false;
+		boolean sawPlacer = false;
+		for (ItemEntity drop : drops) {
+			if (drop.getItem().is(net.minecraft.world.item.Items.IRON_PICKAXE)) {
+				sawPickaxe = true;
+			}
+			if (drop.getItem().is(ItemsTC.turretPlacerBore.get())) {
+				sawPlacer = true;
+			}
+		}
+		helper.assertTrue(sawPickaxe, "picking the bore back up should really drop its real held pickaxe");
+		helper.assertTrue(sawPlacer, "picking the bore back up should really drop a real bore placer item");
+
+		helper.succeed();
+	}
 }

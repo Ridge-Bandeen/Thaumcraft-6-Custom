@@ -1,584 +1,545 @@
 package thaumcraft.common.entities.construct;
-import com.mojang.authlib.GameProfile;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
+
 import java.util.List;
-import java.util.UUID;
-import net.minecraft.block.BlockRailBase;
-import net.minecraft.block.BlockRailPowered;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.MoverType;
-import net.minecraft.entity.SharedMonsterAttributes;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.init.Enchantments;
-import net.minecraft.item.ItemNameTag;
-import net.minecraft.item.ItemPickaxe;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.network.EnumPacketDirection;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.datasync.DataParameter;
-import net.minecraft.network.datasync.DataSerializers;
-import net.minecraft.network.datasync.EntityDataManager;
-import net.minecraft.scoreboard.Team;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldServer;
-import net.minecraftforge.common.util.FakePlayer;
-import net.minecraftforge.common.util.FakePlayerFactory;
-import net.minecraftforge.event.world.BlockEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.network.NetworkRegistry;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import net.minecraftforge.items.IItemHandler;
-import thaumcraft.Thaumcraft;
-import thaumcraft.api.ThaumcraftInvHelper;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.Containers;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseRailBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.PoweredRailBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
 import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.api.items.ItemsTC;
-import thaumcraft.common.lib.SoundsTC;
 import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
-import thaumcraft.common.lib.network.FakeNetHandlerPlayServer;
-import thaumcraft.common.lib.network.PacketHandler;
-import thaumcraft.common.lib.network.fx.PacketFXBoreDig;
-import thaumcraft.common.lib.utils.BlockUtils;
-import thaumcraft.common.lib.utils.InventoryUtils;
-import thaumcraft.common.lib.utils.Utils;
+import thaumcraft.common.lib.events.ToolEvents;
 import thaumcraft.common.world.aura.AuraHandler;
 
+/**
+ * Replaces the old (1.12.2) {@code EntityArcaneBore} - a real, vis-powered stationary mining laser. Faces
+ * one fixed {@link #getFacing()} direction (set at placement time), digs one block roughly every {@link
+ * #digDelay} ticks along that direction while {@link #isActive()} and a real pickaxe with room left in its
+ * durability sits in its main hand, spending real {@link #charge} drawn from the local aura via {@link
+ * AuraHandler#drainVis} - see {@link #tick()}'s own real per-branch shape (search for a target, wait out the
+ * dig delay, apply the dig, otherwise idle-look) for the faithfully-ported original control flow.
+ *
+ * <p><b>Real harvest-with-a-real-tool, dramatically simpler than the original's own approach</b>: the
+ * original needed a whole {@code FakePlayer}/{@code BlockEvent.HarvestDropsEvent}-capture dance (a real
+ * 1.12.2-era workaround - there was no clean "give me this block's real loot for this specific tool" API
+ * back then) just to get fortune/silk-touch-correct drops without a real player breaking the block. Modern
+ * {@link BlockState#getDrops(LootParams.Builder)} already reads a real {@link LootContextParams#TOOL} straight
+ * out of the loot table itself - so {@link #dig()} just builds one real {@link LootParams.Builder} carrying
+ * the bore's own real held pickaxe and lets the block's own loot table do the (silk-touch/fortune-correct)
+ * rest, no fake player or event-capture needed at all.
+ *
+ * <p>{@link EnumInfusionEnchantment#SOUNDING}'s own real "acts like extra Fortune" bonus (the original just
+ * fed {@code Math.max(realFortune, soundingLevel)} into its own harvest call) is reproduced by temporarily
+ * enchanting a throwaway *copy* of the held tool up to that combined level before it's used as the loot
+ * {@code TOOL} param - the real held item itself is never touched. {@link EnumInfusionEnchantment#REFINING}'s
+ * own real "ore -> essentia cluster" substitution now reuses {@link ToolEvents#rollSpecialMiningResult} directly
+ * (see that method's own doc comment) rather than a separate copy of the same table.
+ *
+ * <p>Item ejection into a real adjacent inventory (checked via NeoForge's own {@link Capabilities.ItemHandler#BLOCK}
+ * capability, the modern replacement for the original's own {@code ThaumcraftInvHelper}/{@code InventoryUtils}
+ * pair - neither of those is ported, not worth pulling in for this one real use) falls back to a plain real
+ * {@link Containers#dropItemStack} at the bore's own position when no adjacent inventory takes it (or none
+ * exists) - a real, minor simplification of the original's own directional "eject toward the open face with
+ * outward velocity" flourish.
+ *
+ * <p>Real, documented cuts: no dedicated GUI - the original's own version only ever held one real pickaxe
+ * slot, and a right-click (holding a real pickaxe, or empty-handed to retrieve one) now swaps it directly via
+ * {@link #mobInteract}, same real "no GUI, a simpler direct interaction already covers the one real slot"
+ * reasoning {@link EntityTurretCrossbow}'s own dispenser-auto-reload cut established. No real mining-beam VFX
+ * (see {@code ModelArcaneBore}'s own doc comment - a genuine bespoke Tessellator effect, real separate follow-
+ * up). Three of the original's own death-drop entries ({@code morphicResonator}, {@code crystalAir}, {@code
+ * crystalEarth}) aren't ported yet, dropped from the table rather than blocking this chunk on them.
+ */
+public class EntityArcaneBore extends EntityOwnedConstruct {
 
-@Mod.EventBusSubscriber
-public class EntityArcaneBore extends EntityOwnedConstruct
-{
-    BlockPos digTarget;
-    BlockPos digTargetPrev;
-    float digCost;
-    int paused;
-    int maxPause;
-    long soundDelay;
-    Object beam1;
-    double beamLength;
-    private static HashMap<Integer, ArrayList<ItemStack>> drops;
-    int breakCounter;
-    int digDelay;
-    int digDelayMax;
-    float radInc;
-    public int spiral;
-    public float currentRadius;
-    private float charge;
-    private static DataParameter<EnumFacing> FACING;
-    private static DataParameter<Boolean> ACTIVE;
-    public boolean clientDigging;
-    
-    public EntityArcaneBore(World worldIn) {
-        super(worldIn);
-        digTarget = null;
-        digTargetPrev = null;
-        digCost = 0.25f;
-        paused = 100;
-        maxPause = 100;
-        soundDelay = 0L;
-        beam1 = null;
-        beamLength = 0.0;
-        breakCounter = 0;
-        digDelay = 0;
-        digDelayMax = 0;
-        radInc = 0.0f;
-        spiral = 0;
-        currentRadius = 0.0f;
-        charge = 0.0f;
-        clientDigging = false;
-        setSize(0.9f, 0.9f);
-    }
-    
-    public EntityArcaneBore(World worldIn, BlockPos pos, EnumFacing facing) {
-        this(worldIn);
-        setFacing(facing);
-        setPositionAndRotation(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
-    }
-    
-    protected void applyEntityAttributes() {
-        super.applyEntityAttributes();
-        getEntityAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(50.0);
-        getEntityAttribute(SharedMonsterAttributes.FOLLOW_RANGE).setBaseValue(32.0);
-    }
-    
-    @Override
-    public void onUpdate() {
-        super.onUpdate();
-        if (!world.isRemote) {
-            rotationYaw = rotationYawHead;
-            if (ticksExisted % 50 == 0) {
-                heal(1.0f);
-            }
-            if (ticksExisted % 10 == 0 && getCharge() < 10.0f) {
-                rechargeVis();
-            }
-            int k = MathHelper.floor(posX);
-            int l = MathHelper.floor(posY);
-            int i1 = MathHelper.floor(posZ);
-            if (BlockRailBase.isRailBlock(world, new BlockPos(k, l - 1, i1))) {
-                --l;
-            }
-            BlockPos blockpos = new BlockPos(k, l, i1);
-            IBlockState iblockstate = world.getBlockState(blockpos);
-            if (BlockRailBase.isRailBlock(iblockstate)) {
-                if (iblockstate.getBlock() == BlocksTC.activatorRail) {
-                    boolean ac = (boolean)iblockstate.getValue((IProperty)BlockRailPowered.POWERED);
-                    setActive(!ac);
-                }
-            }
-            else if (!isRiding()) {
-                setActive(world.isBlockPowered(new BlockPos(this).down()));
-            }
-            if (validInventory()) {
-                try {
-                    getHeldItemMainhand().updateAnimation(world, this, 0, true);
-                }
-                catch (Exception ex) {}
-            }
-        }
-        if (!isActive()) {
-            digTarget = null;
-            getLookHelper().setLookPosition(posX + getFacing().getFrontOffsetX(), posY, posZ + getFacing().getFrontOffsetZ(), 10.0f, 33.0f);
-        }
-        if (digTarget != null && getCharge() >= digCost && !world.isRemote) {
-            getLookHelper().setLookPosition(digTarget.getX() + 0.5, digTarget.getY(), digTarget.getZ() + 0.5, 10.0f, 90.0f);
-            if (digDelay-- <= 0 && dig()) {
-                setCharge((byte)(getCharge() - digCost));
-                if (soundDelay < System.currentTimeMillis()) {
-                    soundDelay = System.currentTimeMillis() + 1200L + world.rand.nextInt(100);
-                    playSound(SoundsTC.rumble, 0.25f, 0.9f + world.rand.nextFloat() * 0.2f);
-                }
-            }
-        }
-        if (!world.isRemote && digTarget == null && isActive() && validInventory()) {
-            findNextBlockToDig();
-            if (digTarget != null) {
-                world.setEntityState(this, (byte)16);
-                PacketHandler.INSTANCE.sendToAllAround(new PacketFXBoreDig(digTarget, this, digDelayMax), new NetworkRegistry.TargetPoint(world.provider.getDimension(), digTarget.getX(), digTarget.getY(), digTarget.getZ(), 32.0));
-            }
-            else {
-                world.setEntityState(this, (byte)17);
-                getLookHelper().setLookPosition(posX + getFacing().getFrontOffsetX() * 2, posY + getFacing().getFrontOffsetY() * 2 + getEyeHeight(), posZ + getFacing().getFrontOffsetZ() * 2, 10.0f, 33.0f);
-            }
-        }
-    }
-    
-    public boolean validInventory() {
-        boolean b = getHeldItemMainhand() != null && !getHeldItemMainhand().isEmpty() && (getHeldItemMainhand().getItem() instanceof ItemPickaxe || getHeldItemMainhand().getItem().getToolClasses(getHeldItemMainhand()).contains("pickaxe"));
-        if (b && getHeldItemMainhand().getItemDamage() + 1 >= getHeldItemMainhand().getMaxDamage()) {
-            b = false;
-        }
-        return b;
-    }
-    
-    public int getDigRadius() {
-        int r = 0;
-        if (getHeldItemMainhand() != null && !getHeldItemMainhand().isEmpty() && (getHeldItemMainhand().getItem() instanceof ItemPickaxe || getHeldItemMainhand().getItem().getToolClasses(getHeldItemMainhand()).contains("pickaxe"))) {
-            r = getHeldItemMainhand().getItem().getItemEnchantability() / 3;
-            r += EnumInfusionEnchantment.getInfusionEnchantmentLevel(getHeldItemMainhand(), EnumInfusionEnchantment.DESTRUCTIVE) * 2;
-        }
-        return (r <= 1) ? 2 : r;
-    }
-    
-    public int getDigDepth() {
-        int r = getDigRadius() * 8;
-        r += EnumInfusionEnchantment.getInfusionEnchantmentLevel(getHeldItemMainhand(), EnumInfusionEnchantment.BURROWING) * 16;
-        return r;
-    }
-    
-    public int getFortune() {
-        int r = 0;
-        if (validInventory()) {
-            r = EnchantmentHelper.getEnchantmentLevel(Enchantments.FORTUNE, getHeldItemMainhand());
-            int r2 = EnumInfusionEnchantment.getInfusionEnchantmentLevel(getHeldItemMainhand(), EnumInfusionEnchantment.SOUNDING);
-            r = Math.max(r, r2);
-        }
-        return r;
-    }
-    
-    public int getDigSpeed(IBlockState blockState) {
-        int speed = 0;
-        if (validInventory()) {
-            speed += (int)(getHeldItemMainhand().getItem().getDestroySpeed(getHeldItemMainhand(), blockState) / 2.0f);
-            speed += EnchantmentHelper.getEnchantmentLevel(Enchantments.EFFICIENCY, getHeldItemMainhand());
-        }
-        return speed;
-    }
-    
-    public int getRefining() {
-        int refining = 0;
-        if (getHeldItemMainhand() != null && !getHeldItemMainhand().isEmpty()) {
-            refining = EnumInfusionEnchantment.getInfusionEnchantmentLevel(getHeldItemMainhand(), EnumInfusionEnchantment.REFINING);
-        }
-        return refining;
-    }
-    
-    public boolean hasSilkTouch() {
-        return getHeldItemMainhand() != null && !getHeldItemMainhand().isEmpty() && EnchantmentHelper.getEnchantmentLevel(Enchantments.SILK_TOUCH, getHeldItemMainhand()) > 0;
-    }
-    
-    private boolean canSilkTouch(BlockPos pos, IBlockState state) {
-        return hasSilkTouch() && state.getBlock().canSilkHarvest(world, pos, state, null);
-    }
-    
-    @SubscribeEvent
-    public static void harvestBlockEvent(BlockEvent.HarvestDropsEvent event) {
-        if (event.getHarvester() != null && event.getHarvester().getName().equals("FakeThaumcraftBore")) {
-            ArrayList<ItemStack> droplist = new ArrayList<ItemStack>();
-            if (EntityArcaneBore.drops.containsKey(event.getHarvester().arrowHitTimer) && EntityArcaneBore.drops.get(event.getHarvester().arrowHitTimer) != null) {
-                droplist = EntityArcaneBore.drops.get(event.getHarvester().arrowHitTimer);
-            }
-            for (ItemStack s : event.getDrops()) {
-                if (event.getHarvester().world.rand.nextFloat() <= event.getDropChance()) {
-                    droplist.add(s);
-                }
-            }
-            EntityArcaneBore.drops.put(event.getHarvester().arrowHitTimer, droplist);
-            event.getDrops().clear();
-        }
-    }
-    
-    private boolean dig() {
-        boolean b = false;
-        if (digTarget != null && !world.isAirBlock(digTarget)) {
-            IBlockState digBs = world.getBlockState(digTarget);
-            if (!digBs.getBlock().isAir(digBs, world, digTarget)) {
-                boolean silktouch = false;
-                int fortune = getFortune();
-                if (canSilkTouch(digTarget, digBs)) {
-                    silktouch = true;
-                    fortune = 0;
-                }
-                FakePlayer fp = FakePlayerFactory.get((WorldServer) world, new GameProfile(null, "FakeThaumcraftBore"));
-                fp.connection = new FakeNetHandlerPlayServer(fp.mcServer, new NetworkManager(EnumPacketDirection.CLIENTBOUND), fp);
-                fp.arrowHitTimer = getEntityId();
-                fp.xpCooldown = 1;
-                fp.setLocationAndAngles(posX, posY, posZ, rotationYaw, rotationPitch);
-                fp.setHeldItem(EnumHand.MAIN_HAND, getHeldItemMainhand());
-                if (BlockUtils.harvestBlock(getEntityWorld(), fp, digTarget, false, false, fortune, false)) {
-                    ArrayList<ItemStack> items = EntityArcaneBore.drops.get(getEntityId());
-                    if (items == null) {
-                        items = new ArrayList<ItemStack>();
-                    }
-                    List<EntityItem> targets = world.getEntitiesWithinAABB(EntityItem.class, new AxisAlignedBB(digTarget.getX(), digTarget.getY(), digTarget.getZ(), digTarget.getX() + 1, digTarget.getY() + 1, digTarget.getZ() + 1).grow(1.5, 1.5, 1.5));
-                    if (targets.size() > 0) {
-                        for (EntityItem e : targets) {
-                            items.add(e.getItem().copy());
-                            e.setDead();
-                        }
-                    }
-                    int refining = getRefining();
-                    if (items.size() > 0) {
-                        for (ItemStack is : items) {
-                            ItemStack dropped = is.copy();
-                            if (!silktouch && refining > 0) {
-                                dropped = Utils.findSpecialMiningResult(is, (refining + 1) * 0.125f, world.rand);
-                            }
-                            if (dropped != null && !dropped.isEmpty()) {
-                                boolean e2 = false;
-                                for (EnumFacing f : EnumFacing.VALUES) {
-                                    BlockPos p = getPosition().offset(f);
-                                    IItemHandler inventory = ThaumcraftInvHelper.getItemHandlerAt(getEntityWorld(), p, f);
-                                    if (inventory != null) {
-                                        InventoryUtils.ejectStackAt(getEntityWorld(), getPosition(), f, dropped);
-                                        e2 = true;
-                                        break;
-                                    }
-                                }
-                                if (e2) {
-                                    continue;
-                                }
-                                InventoryUtils.ejectStackAt(getEntityWorld(), getPosition(), getFacing().getOpposite(), dropped);
-                            }
-                        }
-                    }
-                    breakCounter += fp.xpCooldown;
-                    items.clear();
-                }
-            }
-            if (getHeldItemMainhand() != null && !getHeldItemMainhand().isEmpty()) {
-                if (breakCounter >= 50) {
-                    breakCounter -= 50;
-                    getHeldItemMainhand().damageItem(1, this);
-                }
-                if (getHeldItemMainhand().getCount() <= 0) {
-                    setHeldItem(getActiveHand(), ItemStack.EMPTY);
-                }
-            }
-            else {
-                breakCounter = 0;
-            }
-            b = world.setBlockToAir(digTarget);
-        }
-        digTarget = null;
-        return b;
-    }
-    
-    private void findNextBlockToDig() {
-        if (digTargetPrev == null || getDistanceSqToCenter(digTargetPrev) > (getDigRadius() + 1) * (getDigRadius() + 1)) {
-            digTargetPrev = new BlockPos(this);
-        }
-        if (radInc == 0.0f) {
-            radInc = 1.0f;
-        }
-        int digRadius = getDigRadius();
-        int digDepth = getDigDepth();
-        int x = digTargetPrev.getX();
-        int z = digTargetPrev.getZ();
-        int y = digTargetPrev.getY();
-        int x2 = x + getFacing().getFrontOffsetX() * digDepth;
-        int y2 = y + getFacing().getFrontOffsetY() * digDepth;
-        int z2 = z + getFacing().getFrontOffsetZ() * digDepth;
-        BlockPos end = new BlockPos(x2, y2, z2);
-        RayTraceResult mop = world.rayTraceBlocks(new Vec3d(digTargetPrev).addVector(0.5, 0.5, 0.5), new Vec3d(end).addVector(0.5, 0.5, 0.5), false, true, false);
-        if (mop != null) {
-            Vec3d digger = new Vec3d(posX + getFacing().getFrontOffsetX(), posY + getEyeHeight() + getFacing().getFrontOffsetY(), posZ + getFacing().getFrontOffsetZ());
-            mop = world.rayTraceBlocks(digger, new Vec3d(mop.getBlockPos()).addVector(0.5, 0.5, 0.5), false, true, false);
-            if (mop != null) {
-                IBlockState blockState = world.getBlockState(mop.getBlockPos());
-                if (blockState.getBlockHardness(world, mop.getBlockPos()) > -1.0f && blockState.getCollisionBoundingBox(world, mop.getBlockPos()) != null) {
-                    digDelay = Math.max(10 - getDigSpeed(blockState), (int)(blockState.getBlockHardness(world, mop.getBlockPos()) * 2.0f) - getDigSpeed(blockState) * 2);
-                    if (digDelay < 1) {
-                        digDelay = 1;
-                    }
-                    digDelayMax = digDelay;
-                    if (!mop.getBlockPos().equals(getPosition()) && !mop.getBlockPos().equals(getPosition().down())) {
-                        digTarget = mop.getBlockPos();
-                        return;
-                    }
-                }
-            }
-        }
-        while (x == digTargetPrev.getX() && z == digTargetPrev.getZ() && y == digTargetPrev.getY()) {
-            if (Math.abs(currentRadius) > digRadius) {
-                currentRadius = (float)digRadius;
-            }
-            spiral += (int)(3.0f + Math.max(0.0f, (10.0f - Math.abs(currentRadius)) * 2.0f));
-            if (spiral >= 360) {
-                spiral -= 360;
-                currentRadius += radInc;
-                if (currentRadius > digRadius || currentRadius < -digRadius) {
-                    currentRadius = 0.0f;
-                }
-            }
-            Vec3d vsource = new Vec3d((int) posX + 0.5 + getFacing().getFrontOffsetX(), posY + getFacing().getFrontOffsetY() + getEyeHeight(), (int) posZ + 0.5 + getFacing().getFrontOffsetZ());
-            Vec3d vtar = new Vec3d(0.0, currentRadius, 0.0);
-            vtar = Utils.rotateAroundZ(vtar, spiral / 180.0f * 3.1415927f);
-            vtar = Utils.rotateAroundY(vtar, 1.5707964f * getFacing().getFrontOffsetX());
-            vtar = Utils.rotateAroundX(vtar, 1.5707964f * getFacing().getFrontOffsetY());
-            Vec3d vres = vsource.addVector(vtar.x, vtar.y, vtar.z);
-            x = MathHelper.floor(vres.x);
-            y = MathHelper.floor(vres.y);
-            z = MathHelper.floor(vres.z);
-        }
-        digTargetPrev = new BlockPos(x, y, z);
-    }
-    
-    public boolean attackEntityFrom(DamageSource source, float amount) {
-        try {
-            if (source.getTrueSource() != null && isOwner((EntityLivingBase)source.getTrueSource())) {
-                EnumFacing f = EnumFacing.getDirectionFromEntityLiving(getPosition(), (EntityLivingBase)source.getTrueSource());
-                if (f != EnumFacing.DOWN) {
-                    setFacing(f);
-                }
-                return false;
-            }
-        }
-        catch (Exception ex) {}
-        rotationYaw += (float)(getRNG().nextGaussian() * 45.0);
-        rotationPitch += (float)(getRNG().nextGaussian() * 20.0);
-        return super.attackEntityFrom(source, amount);
-    }
-    
-    protected void rechargeVis() {
-        setCharge(getCharge() + AuraHandler.drainVis(world, getPosition(), 10.0f, false));
-    }
-    
-    public boolean canBePushed() {
-        return true;
-    }
-    
-    public boolean canBeCollidedWith() {
-        return true;
-    }
-    
-    @Override
-    public void onDeath(DamageSource cause) {
-        super.onDeath(cause);
-        if (!world.isRemote) {
-            dropStuff();
-        }
-    }
-    
-    protected void dropStuff() {
-        if (getHeldItemMainhand() != null && !getHeldItemMainhand().isEmpty()) {
-            entityDropItem(getHeldItemMainhand(), 0.5f);
-        }
-    }
-    
-    @Override
-    protected boolean processInteract(EntityPlayer player, EnumHand hand) {
-        if (player.getHeldItem(hand).getItem() instanceof ItemNameTag) {
-            return false;
-        }
-        if (!world.isRemote && isOwner(player) && !isDead) {
-            if (player.isSneaking()) {
-                playSound(SoundsTC.zap, 1.0f, 1.0f);
-                dropStuff();
-                entityDropItem(new ItemStack(ItemsTC.turretPlacer, 1, 2), 0.5f);
-                setDead();
-                player.swingArm(hand);
-            }
-            else {
-                player.openGui(Thaumcraft.instance, 14, world, getEntityId(), 0, 0);
-            }
-            return true;
-        }
-        return super.processInteract(player, hand);
-    }
-    
-    public void knockBack(Entity p_70653_1_, float p_70653_2_, double p_70653_3_, double p_70653_5_) {
-        super.knockBack(p_70653_1_, p_70653_2_, p_70653_3_ / 10.0, p_70653_5_ / 10.0);
-        if (motionY > 0.1) {
-            motionY = 0.1;
-        }
-    }
-    
-    @Override
-    protected void entityInit() {
-        super.entityInit();
-        getDataManager().register(EntityArcaneBore.FACING, EnumFacing.DOWN);
-        dataManager.register(EntityArcaneBore.ACTIVE, false);
-    }
-    
-    public boolean isActive() {
-        return (boolean) dataManager.get((DataParameter)EntityArcaneBore.ACTIVE);
-    }
-    
-    public void setActive(boolean attacking) {
-        dataManager.set(EntityArcaneBore.ACTIVE, attacking);
-    }
-    
-    @Override
-    public void readEntityFromNBT(NBTTagCompound nbt) {
-        super.readEntityFromNBT(nbt);
-        setCharge(nbt.getFloat("charge"));
-        setFacing(EnumFacing.VALUES[nbt.getByte("faceing")]);
-        setActive(nbt.getBoolean("active"));
-    }
-    
-    @Override
-    public void writeEntityToNBT(NBTTagCompound nbt) {
-        super.writeEntityToNBT(nbt);
-        nbt.setFloat("charge", getCharge());
-        nbt.setByte("faceing", (byte) getFacing().getIndex());
-        nbt.setBoolean("active", isActive());
-    }
-    
-    public EnumFacing getFacing() {
-        return (EnumFacing) getDataManager().get((DataParameter)EntityArcaneBore.FACING);
-    }
-    
-    public void setFacing(EnumFacing face) {
-        getDataManager().set(EntityArcaneBore.FACING, face);
-    }
-    
-    public float getCharge() {
-        return charge;
-    }
-    
-    public void setCharge(float c) {
-        charge = c;
-    }
-    
-    public void move(MoverType mt, double x, double y, double z) {
-        super.move(mt, x / 5.0, y, z / 5.0);
-    }
-    
-    public void onKillCommand() {
-        attackEntityFrom(DamageSource.OUT_OF_WORLD, 400.0f);
-    }
-    
-    protected void dropFewItems(boolean p_70628_1_, int treasure) {
-        float b = treasure * 0.15f;
-        if (rand.nextFloat() < 0.2f + b) {
-            entityDropItem(new ItemStack(ItemsTC.mind), 0.5f);
-        }
-        if (rand.nextFloat() < 0.2f + b) {
-            entityDropItem(new ItemStack(ItemsTC.morphicResonator), 0.5f);
-        }
-        if (rand.nextFloat() < 0.2f + b) {
-            entityDropItem(new ItemStack(BlocksTC.crystalAir), 0.5f);
-        }
-        if (rand.nextFloat() < 0.2f + b) {
-            entityDropItem(new ItemStack(BlocksTC.crystalEarth), 0.5f);
-        }
-        if (rand.nextFloat() < 0.5f + b) {
-            entityDropItem(new ItemStack(ItemsTC.mechanismSimple), 0.5f);
-        }
-        if (rand.nextFloat() < 0.5f + b) {
-            entityDropItem(new ItemStack(ItemsTC.plate), 0.5f);
-        }
-        if (rand.nextFloat() < 0.5f + b) {
-            entityDropItem(new ItemStack(BlocksTC.plankGreatwood), 0.5f);
-        }
-    }
-    
-    public int getVerticalFaceSpeed() {
-        return 10;
-    }
-    
-    @Override
-    public Team getTeam() {
-        if (isOwned()) {
-            EntityLivingBase entitylivingbase = getOwnerEntity();
-            if (entitylivingbase != null) {
-                return entitylivingbase.getTeam();
-            }
-        }
-        return super.getTeam();
-    }
-    
-    public float getEyeHeight() {
-        return 0.8125f;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void handleStatusUpdate(byte par1) {
-        if (par1 == 16) {
-            clientDigging = true;
-        }
-        else if (par1 == 17) {
-            clientDigging = false;
-        }
-        else {
-            super.handleStatusUpdate(par1);
-        }
-    }
-    
-    static {
-        EntityArcaneBore.drops = new HashMap<Integer, ArrayList<ItemStack>>();
-        FACING = EntityDataManager.createKey(EntityArcaneBore.class, DataSerializers.FACING);
-        ACTIVE = EntityDataManager.createKey(EntityArcaneBore.class, DataSerializers.BOOLEAN);
-    }
+	private static final EntityDataAccessor<Direction> DATA_FACING =
+			SynchedEntityData.defineId(EntityArcaneBore.class, EntityDataSerializers.DIRECTION);
+	private static final EntityDataAccessor<Boolean> DATA_ACTIVE =
+			SynchedEntityData.defineId(EntityArcaneBore.class, EntityDataSerializers.BOOLEAN);
+
+	private static final float DIG_COST = 0.25f;
+
+	private BlockPos digTarget;
+	private BlockPos digTargetPrev;
+	private float charge;
+	private long soundDelay;
+	private int breakCounter;
+	private int digDelay;
+	private int digDelayMax;
+	private float radInc;
+	private int spiral;
+	private float currentRadius;
+	/** Client-only: whether the real idle mining-beam visual should be showing right now - driven by {@link
+	 * #handleEntityEvent}, matching the original's own status-byte 16/17 pair exactly. */
+	public boolean clientDigging;
+
+	public EntityArcaneBore(EntityType<? extends EntityArcaneBore> type, Level level) {
+		super(type, level);
+	}
+
+	public static AttributeSupplier.Builder createAttributes() {
+		return Mob.createMobAttributes()
+				.add(Attributes.MAX_HEALTH, 50.0)
+				.add(Attributes.FOLLOW_RANGE, 32.0)
+				.add(Attributes.MOVEMENT_SPEED, 0.0);
+	}
+
+	@Override
+	protected void registerGoals() {
+		// Left empty - the original never had any real EntityAITasks either; every real behavior here runs
+		// straight out of tick(), matching the original's own onUpdate() shape exactly.
+	}
+
+	@Override
+	protected void defineSynchedData(SynchedEntityData.Builder builder) {
+		super.defineSynchedData(builder);
+		builder.define(DATA_FACING, Direction.DOWN);
+		builder.define(DATA_ACTIVE, false);
+	}
+
+	public Direction getFacing() {
+		return entityData.get(DATA_FACING);
+	}
+
+	public void setFacing(Direction facing) {
+		entityData.set(DATA_FACING, facing);
+	}
+
+	public boolean isActive() {
+		return entityData.get(DATA_ACTIVE);
+	}
+
+	public void setActive(boolean active) {
+		entityData.set(DATA_ACTIVE, active);
+	}
+
+	public float getCharge() {
+		return charge;
+	}
+
+	public void setCharge(float charge) {
+		this.charge = charge;
+	}
+
+	protected void rechargeVis() {
+		setCharge(getCharge() + AuraHandler.drainVis(level(), blockPosition(), 10.0f, false));
+	}
+
+	/** A real, non-worn-out pickaxe sitting in the main hand - the bore's own real "am I allowed to dig right
+	 * now" gate, matching the original's {@code validInventory}. */
+	public boolean validInventory() {
+		ItemStack tool = getMainHandItem();
+		if (tool.isEmpty() || !tool.is(ItemTags.PICKAXES)) {
+			return false;
+		}
+		return !tool.isDamageableItem() || tool.getDamageValue() + 1 < tool.getMaxDamage();
+	}
+
+	public int getDigRadius() {
+		int r = 0;
+		ItemStack tool = getMainHandItem();
+		if (!tool.isEmpty() && tool.is(ItemTags.PICKAXES)) {
+			r = tool.getItem().getEnchantmentValue() / 3;
+			r += EnumInfusionEnchantment.getInfusionEnchantmentLevel(tool, EnumInfusionEnchantment.DESTRUCTIVE) * 2;
+		}
+		return r <= 1 ? 2 : r;
+	}
+
+	public int getDigDepth() {
+		int r = getDigRadius() * 8;
+		r += EnumInfusionEnchantment.getInfusionEnchantmentLevel(getMainHandItem(), EnumInfusionEnchantment.BURROWING) * 16;
+		return r;
+	}
+
+	public int getDigSpeed(BlockState state) {
+		int speed = 0;
+		if (validInventory()) {
+			ItemStack tool = getMainHandItem();
+			speed += (int) (tool.getDestroySpeed(state) / 2.0f);
+			speed += EnchantmentHelper.getItemEnchantmentLevel(enchantment(Enchantments.EFFICIENCY), tool);
+		}
+		return speed;
+	}
+
+	public int getFortune() {
+		return validInventory() ? EnchantmentHelper.getItemEnchantmentLevel(enchantment(Enchantments.FORTUNE), getMainHandItem()) : 0;
+	}
+
+	public int getRefining() {
+		return EnumInfusionEnchantment.getInfusionEnchantmentLevel(getMainHandItem(), EnumInfusionEnchantment.REFINING);
+	}
+
+	public boolean hasSilkTouch() {
+		return !getMainHandItem().isEmpty() && EnchantmentHelper.getItemEnchantmentLevel(enchantment(Enchantments.SILK_TOUCH), getMainHandItem()) > 0;
+	}
+
+	private Holder<Enchantment> enchantment(net.minecraft.resources.ResourceKey<Enchantment> key) {
+		return level().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(key);
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+		if (!level().isClientSide) {
+			setYRot(yHeadRot);
+			if (tickCount % 50 == 0) {
+				heal(1.0f);
+			}
+			if (tickCount % 10 == 0 && getCharge() < 10.0f) {
+				rechargeVis();
+			}
+			BlockPos feet = blockPosition();
+			BlockPos checkPos = BaseRailBlock.isRail(level(), feet.below()) ? feet.below() : feet;
+			BlockState railState = level().getBlockState(checkPos);
+			if (BaseRailBlock.isRail(railState)) {
+				if (railState.is(BlocksTC.activatorRail.get())) {
+					boolean powered = railState.getValue(PoweredRailBlock.POWERED);
+					setActive(!powered);
+				}
+			} else if (getVehicle() == null) {
+				setActive(level().hasNeighborSignal(blockPosition().below()));
+			}
+		}
+		if (!isActive()) {
+			digTarget = null;
+			getLookControl().setLookAt(getX() + getFacing().getStepX(), getY(), getZ() + getFacing().getStepZ(), 10.0f, 33.0f);
+		}
+		if (digTarget != null && getCharge() >= DIG_COST && !level().isClientSide) {
+			getLookControl().setLookAt(digTarget.getX() + 0.5, digTarget.getY(), digTarget.getZ() + 0.5, 10.0f, 90.0f);
+			if (digDelay-- <= 0 && dig()) {
+				setCharge(getCharge() - DIG_COST);
+				if (soundDelay < System.currentTimeMillis()) {
+					soundDelay = System.currentTimeMillis() + 1200L + level().random.nextInt(100);
+					playSound(SoundEvents.STONE_BREAK, 0.25f, 0.9f + level().random.nextFloat() * 0.2f);
+				}
+			}
+		}
+		if (!level().isClientSide && digTarget == null && isActive() && validInventory()) {
+			findNextBlockToDig();
+			if (digTarget != null) {
+				level().broadcastEntityEvent(this, (byte) 16);
+			} else {
+				level().broadcastEntityEvent(this, (byte) 17);
+				getLookControl().setLookAt(getX() + getFacing().getStepX() * 2, getY() + getFacing().getStepY() * 2 + getEyeHeight(),
+						getZ() + getFacing().getStepZ() * 2, 10.0f, 33.0f);
+			}
+		}
+	}
+
+	@Override
+	public void handleEntityEvent(byte id) {
+		if (id == 16) {
+			clientDigging = true;
+		} else if (id == 17) {
+			clientDigging = false;
+		} else {
+			super.handleEntityEvent(id);
+		}
+	}
+
+	private boolean dig() {
+		if (digTarget == null) {
+			return false;
+		}
+		BlockState state = level().getBlockState(digTarget);
+		if (state.isAir() || !(level() instanceof ServerLevel serverLevel)) {
+			digTarget = null;
+			return false;
+		}
+
+		ItemStack tool = getMainHandItem();
+		boolean silkTouch = hasSilkTouch();
+		int refining = getRefining();
+
+		ItemStack toolForLoot = tool.copy();
+		int soundingBonus = EnumInfusionEnchantment.getInfusionEnchantmentLevel(tool, EnumInfusionEnchantment.SOUNDING);
+		if (soundingBonus > 0) {
+			Holder<Enchantment> fortune = enchantment(Enchantments.FORTUNE);
+			int combined = Math.max(EnchantmentHelper.getItemEnchantmentLevel(fortune, tool), soundingBonus);
+			toolForLoot.enchant(fortune, combined);
+		}
+
+		List<ItemStack> drops = state.getDrops(new LootParams.Builder(serverLevel)
+				.withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(digTarget))
+				.withParameter(LootContextParams.TOOL, toolForLoot)
+				.withOptionalParameter(LootContextParams.BLOCK_ENTITY, level().getBlockEntity(digTarget)));
+
+		for (ItemStack drop : drops) {
+			ItemStack dropped = (!silkTouch && refining > 0) ? ToolEvents.rollSpecialMiningResult(drop, refining, random) : drop;
+			ejectStack(dropped);
+		}
+
+		if (!tool.isEmpty()) {
+			breakCounter++;
+			if (breakCounter >= 50) {
+				breakCounter -= 50;
+				tool.hurtAndBreak(1, this, EquipmentSlot.MAINHAND);
+			}
+		} else {
+			breakCounter = 0;
+		}
+
+		level().removeBlock(digTarget, false);
+		level().levelEvent(2001, digTarget, Block.getId(state));
+		digTarget = null;
+		return true;
+	}
+
+	/** Tries every adjacent real inventory (via {@link Capabilities.ItemHandler#BLOCK}) for the first one that
+	 * takes it, otherwise a plain real drop at the bore's own position - see this class's own doc comment. */
+	private void ejectStack(ItemStack stack) {
+		if (stack.isEmpty()) {
+			return;
+		}
+		for (Direction face : Direction.values()) {
+			BlockPos neighbor = blockPosition().relative(face);
+			IItemHandler handler = level().getCapability(Capabilities.ItemHandler.BLOCK, neighbor, face.getOpposite());
+			if (handler != null) {
+				stack = ItemHandlerHelper.insertItemStacked(handler, stack, false);
+				break;
+			}
+		}
+		if (!stack.isEmpty()) {
+			Containers.dropItemStack(level(), getX(), getY(), getZ(), stack);
+		}
+	}
+
+	/** Real port of the original's own {@code findNextBlockToDig} - first tries a straight raytrace out to
+	 * {@link #getDigDepth()} along {@link #getFacing()} (re-cast a second time from the bore's own eyes, same
+	 * real double-raytrace the original did), then falls back to a real spiral search around that axis within
+	 * {@link #getDigRadius()} - same real trig walk ({@link #spiral}/{@link #currentRadius}/{@link #radInc})
+	 * advancing {@link #digTargetPrev} one step per call when nothing diggable is found yet. */
+	private void findNextBlockToDig() {
+		if (digTargetPrev == null || distanceToSqr(Vec3.atCenterOf(digTargetPrev)) > (getDigRadius() + 1) * (double) (getDigRadius() + 1)) {
+			digTargetPrev = blockPosition();
+		}
+		if (radInc == 0.0f) {
+			radInc = 1.0f;
+		}
+		int digRadius = getDigRadius();
+		int digDepth = getDigDepth();
+		Direction facing = getFacing();
+		int x = digTargetPrev.getX();
+		int y = digTargetPrev.getY();
+		int z = digTargetPrev.getZ();
+		BlockPos end = digTargetPrev.offset(facing.getStepX() * digDepth, facing.getStepY() * digDepth, facing.getStepZ() * digDepth);
+
+		BlockHitResult hit = level().clip(new ClipContext(Vec3.atCenterOf(digTargetPrev), Vec3.atCenterOf(end),
+				ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+		if (hit.getType() != HitResult.Type.MISS) {
+			Vec3 eye = new Vec3(getX() + facing.getStepX(), getY() + getEyeHeight() + facing.getStepY(), getZ() + facing.getStepZ());
+			BlockHitResult eyeHit = level().clip(new ClipContext(eye, Vec3.atCenterOf(hit.getBlockPos()),
+					ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+			if (eyeHit.getType() != HitResult.Type.MISS) {
+				BlockPos candidate = eyeHit.getBlockPos();
+				BlockState state = level().getBlockState(candidate);
+				float hardness = state.getDestroySpeed(level(), candidate);
+				if (hardness > -1.0f && !state.getCollisionShape(level(), candidate).isEmpty()) {
+					digDelay = Math.max(10 - getDigSpeed(state), (int) (hardness * 2.0f) - getDigSpeed(state) * 2);
+					if (digDelay < 1) {
+						digDelay = 1;
+					}
+					digDelayMax = digDelay;
+					if (!candidate.equals(blockPosition()) && !candidate.equals(blockPosition().below())) {
+						digTarget = candidate;
+						return;
+					}
+				}
+			}
+		}
+
+		while (x == digTargetPrev.getX() && z == digTargetPrev.getZ() && y == digTargetPrev.getY()) {
+			if (Math.abs(currentRadius) > digRadius) {
+				currentRadius = digRadius;
+			}
+			spiral += (int) (3.0f + Math.max(0.0f, (10.0f - Math.abs(currentRadius)) * 2.0f));
+			if (spiral >= 360) {
+				spiral -= 360;
+				currentRadius += radInc;
+				if (currentRadius > digRadius || currentRadius < -digRadius) {
+					currentRadius = 0.0f;
+				}
+			}
+			Vec3 source = new Vec3((int) getX() + 0.5 + facing.getStepX(), getY() + facing.getStepY() + getEyeHeight(), (int) getZ() + 0.5 + facing.getStepZ());
+			Vec3 target = new Vec3(0.0, currentRadius, 0.0);
+			target = rotateAroundZ(target, spiral / 180.0f * (float) Math.PI);
+			target = rotateAroundY(target, 1.5707964f * facing.getStepX());
+			target = rotateAroundX(target, 1.5707964f * facing.getStepY());
+			Vec3 result = source.add(target.x, target.y, target.z);
+			x = (int) Math.floor(result.x);
+			y = (int) Math.floor(result.y);
+			z = (int) Math.floor(result.z);
+		}
+		digTargetPrev = new BlockPos(x, y, z);
+	}
+
+	// Real, self-contained port of the original's own Utils.rotateAroundX/Y/Z (plain vector rotation math,
+	// no other dependency on that whole still-unported grab-bag class needed for just these three).
+	private static Vec3 rotateAroundX(Vec3 v, float angle) {
+		double cos = Math.cos(angle);
+		double sin = Math.sin(angle);
+		return new Vec3(v.x, v.y * cos - v.z * sin, v.y * sin + v.z * cos);
+	}
+
+	private static Vec3 rotateAroundY(Vec3 v, float angle) {
+		double cos = Math.cos(angle);
+		double sin = Math.sin(angle);
+		return new Vec3(v.x * cos + v.z * sin, v.y, v.x * -sin + v.z * cos);
+	}
+
+	private static Vec3 rotateAroundZ(Vec3 v, float angle) {
+		double cos = Math.cos(angle);
+		double sin = Math.sin(angle);
+		return new Vec3(v.x * cos - v.y * sin, v.x * sin + v.y * cos, v.z);
+	}
+
+	@Override
+	public boolean hurt(DamageSource source, float amount) {
+		if (source.getEntity() instanceof Player player && isOwnedBy(player)) {
+			double dx = player.getX() - getX();
+			double dy = player.getY() - getY();
+			double dz = player.getZ() - getZ();
+			Direction dir = Direction.getNearest(dx, dy, dz);
+			if (dir != Direction.DOWN) {
+				setFacing(dir);
+			}
+			return false;
+		}
+		setYRot(getYRot() + (float) (random.nextGaussian() * 45.0));
+		setXRot(getXRot() + (float) (random.nextGaussian() * 20.0));
+		return super.hurt(source, amount);
+	}
+
+	@Override
+	public void knockback(double strength, double x, double z) {
+		super.knockback(strength, x / 10.0, z / 10.0);
+		Vec3 delta = getDeltaMovement();
+		if (delta.y > 0.1) {
+			setDeltaMovement(delta.x, 0.1, delta.z);
+		}
+	}
+
+	@Override
+	public void move(MoverType type, Vec3 movement) {
+		super.move(type, new Vec3(movement.x / 5.0, movement.y, movement.z / 5.0));
+	}
+
+	@Override
+	public void die(DamageSource cause) {
+		super.die(cause);
+		if (!level().isClientSide) {
+			dropStuff();
+		}
+	}
+
+	protected void dropStuff() {
+		if (!getMainHandItem().isEmpty()) {
+			spawnAtLocation(getMainHandItem(), 0.5f);
+		}
+	}
+
+	/** Real replacement for the original's own dedicated GUI (real, documented cut - see this class's own
+	 * doc comment): a real pickaxe swaps in directly, an empty hand pulls the current one back out, both a
+	 * plain real item exchange with the owner's own hand. Sneaking still picks the whole bore back up. */
+	@Override
+	public InteractionResult mobInteract(Player player, InteractionHand hand) {
+		if (!isAlive()) {
+			return InteractionResult.PASS;
+		}
+		if (!level().isClientSide && isOwnedBy(player)) {
+			if (player.isShiftKeyDown()) {
+				playSound(SoundEvents.AMETHYST_BLOCK_CHIME, 1.0f, 1.0f);
+				dropStuff();
+				spawnAtLocation(new ItemStack(ItemsTC.turretPlacerBore.get()), 0.5f);
+				discard();
+				player.swing(hand);
+				return InteractionResult.SUCCESS;
+			}
+			ItemStack offered = player.getItemInHand(hand);
+			if (offered.isEmpty() || offered.is(ItemTags.PICKAXES)) {
+				ItemStack current = getMainHandItem();
+				setItemInHand(InteractionHand.MAIN_HAND, offered.copy());
+				player.setItemInHand(hand, current);
+				playSound(SoundEvents.ARMOR_EQUIP_GENERIC.value(), 1.0f, 1.0f);
+				return InteractionResult.SUCCESS;
+			}
+		}
+		return super.mobInteract(player, hand);
+	}
+
+	@Override
+	protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
+		if (random.nextFloat() < 0.2f) {
+			spawnAtLocation(new ItemStack(ItemsTC.mindClockwork.get()));
+		}
+		if (random.nextFloat() < 0.5f) {
+			spawnAtLocation(new ItemStack(ItemsTC.mechanismSimple.get()));
+		}
+		if (random.nextFloat() < 0.5f) {
+			spawnAtLocation(new ItemStack(ItemsTC.plateBrass.get()));
+		}
+		if (random.nextFloat() < 0.5f) {
+			spawnAtLocation(new ItemStack(BlocksTC.plankGreatwood.get()));
+		}
+	}
+
+	@Override
+	public void addAdditionalSaveData(CompoundTag tag) {
+		super.addAdditionalSaveData(tag);
+		tag.putFloat("charge", getCharge());
+		tag.putByte("facing", (byte) getFacing().get3DDataValue());
+		tag.putBoolean("active", isActive());
+	}
+
+	@Override
+	public void readAdditionalSaveData(CompoundTag tag) {
+		super.readAdditionalSaveData(tag);
+		setCharge(tag.getFloat("charge"));
+		setFacing(Direction.from3DDataValue(tag.getByte("facing")));
+		setActive(tag.getBoolean("active"));
+	}
+
+	/** Real port of the original's own {@code getEyeHeight() = 0.8125F} fixed override - same final-method
+	 * workaround as {@link EntityTurretCrossbow#getDefaultDimensions}. */
+	@Override
+	public net.minecraft.world.entity.EntityDimensions getDefaultDimensions(net.minecraft.world.entity.Pose pose) {
+		return super.getDefaultDimensions(pose).withEyeHeight(0.8125f);
+	}
 }
