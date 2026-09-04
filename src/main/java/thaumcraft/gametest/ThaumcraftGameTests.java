@@ -18,6 +18,8 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.Level;
+import thaumcraft.common.entities.construct.EntityTurretCrossbow;
+import thaumcraft.common.registry.ThaumcraftEntities;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -7101,6 +7103,121 @@ public class ThaumcraftGameTests {
 		}
 		helper.assertTrue(sawGravel, "breaking a real porous stone should really mostly drop real gravel");
 		helper.assertTrue(sawSpecial, "breaking a real porous stone should really occasionally drop something real and special instead of gravel");
+
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Construct arc, chunk 1: EntityOwnedConstruct/EntityTurretCrossbow/ItemTurretPlacer/activatorRail -
+	// see those classes' own doc comments.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void turretPlacerBasicPlacesARealTamedTurret(GameTestHelper helper) {
+		BlockPos floorPos = new BlockPos(2, 1, 2);
+		BlockPos floorAbs = helper.absolutePos(floorPos);
+		helper.setBlock(floorPos, net.minecraft.world.level.block.Blocks.STONE);
+
+		ServerPlayer player = spawnCasterAt(helper, floorAbs.above(2));
+		player.getAbilities().instabuild = false; // mock players default to creative, which skips item consumption
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, new ItemStack(ItemsTC.turretPlacerBasic.get()));
+
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(floorAbs), net.minecraft.core.Direction.UP, floorAbs, false);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(player, hand, hit);
+		net.minecraft.world.InteractionResult result = player.getItemInHand(hand).getItem().useOn(context);
+
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.SUCCESS, "placing against a solid block should succeed, got: " + result);
+		helper.assertTrue(player.getItemInHand(hand).isEmpty(), "the single placer stack should be fully consumed");
+
+		List<EntityTurretCrossbow> found = helper.getLevel().getEntitiesOfClass(EntityTurretCrossbow.class, new AABB(floorAbs).inflate(3));
+		helper.assertTrue(found.size() == 1, "exactly one turret should have been spawned, found " + found.size());
+		EntityTurretCrossbow turret = found.get(0);
+		helper.assertTrue(turret.isOwnedBy(player) && turret.isTame(), "the placed turret should really be tamed/owned by the placing player");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void turretCrossbowAutoReloadsAndFiresAtHostiles(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos dispenserPos = new BlockPos(2, 1, 2);
+		BlockPos dispenserAbs = helper.absolutePos(dispenserPos);
+		helper.setBlock(dispenserPos, net.minecraft.world.level.block.Blocks.DISPENSER);
+		net.minecraft.world.level.block.entity.DispenserBlockEntity dispenser =
+				(net.minecraft.world.level.block.entity.DispenserBlockEntity) helper.getBlockEntity(dispenserPos);
+		dispenser.setItem(0, new ItemStack(net.minecraft.world.item.Items.ARROW, 16));
+
+		EntityTurretCrossbow turret = ThaumcraftEntities.TURRET_CROSSBOW.get().create(level);
+		helper.assertTrue(turret != null, "the turret entity type should really be able to create an instance");
+		turret.moveTo(dispenserAbs.getX() + 0.5, dispenserAbs.getY() + 1.0, dispenserAbs.getZ() + 0.5, 0.0f, 0.0f);
+		turret.setValidSpawn();
+		level.addFreshEntity(turret);
+
+		ServerPlayer caster = spawnCasterAt(helper, dispenserAbs.above(4));
+		Zombie zombie = spawnZombieFacedBy(helper, caster, dispenserAbs.above(1));
+		zombie.setPos(dispenserAbs.getX() + 0.5, dispenserAbs.getY() + 1.0, dispenserAbs.getZ() + 4.5);
+
+		boolean loaded = false;
+		boolean fired = false;
+		for (int i = 0; i < 200 && !fired; i++) {
+			turret.tick();
+			if (!loaded && !turret.getMainHandItem().isEmpty()) {
+				loaded = true;
+			}
+			if (!level.getEntitiesOfClass(net.minecraft.world.entity.projectile.Arrow.class, new AABB(dispenserAbs).inflate(6)).isEmpty()) {
+				fired = true;
+			}
+		}
+
+		helper.assertTrue(loaded, "the turret should really auto-reload from the real dispenser placed directly beneath it");
+		helper.assertTrue(fired, "the turret should really fire a real arrow at the real hostile zombie within range");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void turretCrossbowFreezesOnPoweredActivatorRailAndSneakPickupReturnsThePlacer(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos railPos = new BlockPos(2, 1, 2);
+		BlockPos railAbs = helper.absolutePos(railPos);
+		// A real powered rail computes its own POWERED property from a real redstone signal - forcing the
+		// blockstate property directly gets silently recomputed back to false on the very next block
+		// update, so this really powers it the same way a player would: a real redstone block as the
+		// support block directly beneath the rail.
+		helper.setBlock(railPos, net.minecraft.world.level.block.Blocks.REDSTONE_BLOCK);
+		BlockPos railOnTop = railPos.above();
+		helper.setBlock(railOnTop, thaumcraft.api.blocks.BlocksTC.activatorRail.get().defaultBlockState());
+
+		EntityTurretCrossbow turret = ThaumcraftEntities.TURRET_CROSSBOW.get().create(level);
+		helper.assertTrue(turret != null, "the turret entity type should really be able to create an instance");
+		BlockPos railOnTopAbs = helper.absolutePos(railOnTop);
+		turret.moveTo(railOnTopAbs.getX() + 0.5, railOnTopAbs.getY() + 1.0, railOnTopAbs.getZ() + 0.5, 0.0f, 0.0f);
+		turret.setValidSpawn();
+		level.addFreshEntity(turret);
+
+		boolean froze = false;
+		for (int i = 0; i < 20 && !froze; i++) {
+			turret.tick();
+			froze = turret.isNoAi();
+		}
+		helper.assertTrue(froze, "a turret standing on a real powered activator rail should really freeze its own AI");
+
+		ServerPlayer owner = spawnCasterAt(helper, railAbs.above(3));
+		turret.tame(owner);
+		owner.setShiftKeyDown(true);
+		net.minecraft.world.InteractionResult result = turret.mobInteract(owner, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.SUCCESS, "sneak-interacting as the real owner should really pick the turret back up, got: " + result);
+		helper.assertTrue(!turret.isAlive(), "the turret should really discard itself once picked back up");
+		List<ItemEntity> drops = level.getEntitiesOfClass(ItemEntity.class, new AABB(railOnTopAbs).inflate(2));
+		boolean sawPlacer = false;
+		for (ItemEntity drop : drops) {
+			if (drop.getItem().is(ItemsTC.turretPlacerBasic.get())) {
+				sawPlacer = true;
+			}
+		}
+		helper.assertTrue(sawPlacer, "picking the turret back up should really drop a real turret placer item");
 
 		helper.succeed();
 	}

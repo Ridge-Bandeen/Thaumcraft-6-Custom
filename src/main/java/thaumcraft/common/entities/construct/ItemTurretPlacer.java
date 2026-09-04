@@ -1,75 +1,97 @@
 package thaumcraft.common.entities.construct;
+
 import java.util.List;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.util.EnumActionResult;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import thaumcraft.common.items.ItemTCBase;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import thaumcraft.common.registry.ThaumcraftEntities;
 
-public class ItemTurretPlacer extends ItemTCBase
-{
-    public ItemTurretPlacer() {
-        super("turret", "basic", "advanced", "bore");
-    }
-    
-    public EnumActionResult onItemUseFirst(EntityPlayer player, World world, BlockPos pos, EnumFacing side, float hitX, float hitY, float hitZ, EnumHand hand) {
-        if (side == EnumFacing.DOWN) {
-            return EnumActionResult.PASS;
-        }
-        boolean flag = world.getBlockState(pos).getBlock().isReplaceable(world, pos);
-        BlockPos blockpos = flag ? pos : pos.offset(side);
-        if (!player.canPlayerEdit(blockpos, side, player.getHeldItem(hand))) {
-            return EnumActionResult.PASS;
-        }
-        BlockPos blockpos2 = blockpos.up();
-        boolean flag2 = !world.isAirBlock(blockpos) && !world.getBlockState(blockpos).getBlock().isReplaceable(world, blockpos);
-        flag2 |= (!world.isAirBlock(blockpos2) && !world.getBlockState(blockpos2).getBlock().isReplaceable(world, blockpos2));
-        if (flag2) {
-            return EnumActionResult.PASS;
-        }
-        double d0 = blockpos.getX();
-        double d2 = blockpos.getY();
-        double d3 = blockpos.getZ();
-        List<Entity> list = world.getEntitiesWithinAABBExcludingEntity(null, new AxisAlignedBB(d0, d2, d3, d0 + 1.0, d2 + 2.0, d3 + 1.0));
-        if (!list.isEmpty()) {
-            return EnumActionResult.PASS;
-        }
-        if (!world.isRemote) {
-            world.setBlockToAir(blockpos);
-            world.setBlockToAir(blockpos2);
-            EntityOwnedConstruct turret = null;
-            switch (player.getHeldItem(hand).getItemDamage()) {
-                case 0: {
-                    turret = new EntityTurretCrossbow(world, blockpos);
-                    break;
-                }
-                case 1: {
-                    turret = new EntityTurretCrossbowAdvanced(world, blockpos);
-                    break;
-                }
-                case 2: {
-                    turret = new EntityArcaneBore(world, blockpos, player.getHorizontalFacing());
-                    break;
-                }
-            }
-            if (turret != null) {
-                world.spawnEntity(turret);
-                turret.setOwned(true);
-                turret.setValidSpawn();
-                turret.setOwnerId(player.getUniqueID());
-                world.playSound(null, turret.posX, turret.posY, turret.posZ, SoundEvents.ENTITY_ARMORSTAND_PLACE, SoundCategory.BLOCKS, 0.75f, 0.8f);
-            }
-            player.getHeldItem(hand).shrink(1);
-            return EnumActionResult.SUCCESS;
-        }
-        return EnumActionResult.PASS;
-    }
+/**
+ * Replaces the old (1.12.2) {@code ItemTurretPlacer} - places a real {@link EntityTurretCrossbow}
+ * (2-tall-clearance, non-{@code DOWN}-face, no-entities-in-the-way checks all ported exactly) tamed to the
+ * placing player. Ownership is handed off via vanilla {@link net.minecraft.world.entity.TamableAnimal#tame},
+ * not the original's own {@code setOwned}/{@code setOwnerId} pair, same reasoning as {@code ItemGolemPlacer}'s
+ * own doc comment; {@link EntityOwnedConstruct#setValidSpawn()} is still called explicitly since {@code tame}
+ * doesn't know about that flag.
+ *
+ * Real, documented scope cut: the original's own {@code "turret"} item carried 3 metadata subtypes (basic/
+ * advanced/bore, spawning {@code EntityTurretCrossbow}/{@code EntityTurretCrossbowAdvanced}/{@code
+ * EntityArcaneBore} respectively) - only the basic tier is ported so far (the other two entities aren't
+ * ported yet), so this is a single plain item rather than a 3-subtype split, matching this port's own
+ * established "one item per real variant, no metadata subtypes" convention; {@code turretPlacerAdvanced}/
+ * {@code turretPlacerBore} are real, deliberate follow-up work for whenever their own entities land.
+ */
+public class ItemTurretPlacer extends Item {
+
+	public ItemTurretPlacer(Properties properties) {
+		super(properties);
+	}
+
+	@Override
+	public InteractionResult useOn(UseOnContext context) {
+		Direction side = context.getClickedFace();
+		if (side == Direction.DOWN) {
+			return InteractionResult.PASS;
+		}
+		Level level = context.getLevel();
+		BlockPos clicked = context.getClickedPos();
+		BlockState clickedState = level.getBlockState(clicked);
+		BlockPos pos = clickedState.canBeReplaced() ? clicked : clicked.relative(side);
+
+		Player player = context.getPlayer();
+		ItemStack stack = context.getItemInHand();
+		if (player == null || !player.mayUseItemAt(pos, side, stack)) {
+			return InteractionResult.PASS;
+		}
+
+		BlockPos above = pos.above();
+		boolean blocked = !level.isEmptyBlock(pos) && !level.getBlockState(pos).canBeReplaced();
+		blocked |= !level.isEmptyBlock(above) && !level.getBlockState(above).canBeReplaced();
+		if (blocked) {
+			return InteractionResult.PASS;
+		}
+
+		AABB box = new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1.0, pos.getY() + 2.0, pos.getZ() + 1.0);
+		List<Entity> occupants = level.getEntities((Entity) null, box);
+		if (!occupants.isEmpty()) {
+			return InteractionResult.PASS;
+		}
+
+		if (level.isClientSide) {
+			return InteractionResult.SUCCESS;
+		}
+
+		level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+		level.setBlockAndUpdate(above, Blocks.AIR.defaultBlockState());
+
+		EntityTurretCrossbow turret = ThaumcraftEntities.TURRET_CROSSBOW.get().create((ServerLevel) level);
+		if (turret == null) {
+			return InteractionResult.PASS;
+		}
+		turret.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
+		if (!level.addFreshEntity(turret)) {
+			return InteractionResult.PASS;
+		}
+		turret.tame(player);
+		turret.setValidSpawn();
+		level.playSound(null, turret.getX(), turret.getY(), turret.getZ(), SoundEvents.ARMOR_STAND_PLACE, SoundSource.BLOCKS, 0.75f, 0.8f);
+
+		if (!player.getAbilities().instabuild) {
+			stack.shrink(1);
+		}
+		return InteractionResult.SUCCESS;
+	}
 }

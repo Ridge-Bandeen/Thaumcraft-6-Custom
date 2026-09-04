@@ -157,6 +157,7 @@
   "block.thaumcraft.taint_log": "Taintwood Log",
   "block.thaumcraft.flux_goo": "Flux Goo",
   "block.thaumcraft.stone_porous": "Porous Stone",
+  "block.thaumcraft.activator_rail": "Arcane Activator Rail",
   "block.thaumcraft.infusion_matrix": "Runic Matrix",
   "block.thaumcraft.stabilizer": "Stabilizer",
   "block.thaumcraft.inlay": "Redstone Inlay",
@@ -1661,5 +1662,7 @@
   "got.endoftheworld": "You have visited the End.",
   "research.m_hellandback.text": "Visit a hellish place.",
   "research.m_endoftheworld.text": "Find the end of everything.",
-  "fail.crimsonrites": "This book contains nothing but crazed ravings."
+  "fail.crimsonrites": "This book contains nothing but crazed ravings.",
+  "entity.thaumcraft.turret_crossbow.name": "Automated Crossbow",
+  "item.thaumcraft.turret_placer_basic": "Automated Crossbow"
 }

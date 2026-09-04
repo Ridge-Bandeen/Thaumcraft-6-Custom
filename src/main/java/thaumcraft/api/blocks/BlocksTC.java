@@ -503,6 +503,17 @@ public final class BlocksTC {
 			props -> new thaumcraft.common.blocks.world.taint.BlockTaint(props, thaumcraft.common.blocks.world.taint.BlockTaint.Variant.GEYSER),
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(SoundType.STONE).randomTicks());
 
+	/** Real re-skinned copy of vanilla's own {@link net.minecraft.world.level.block.PoweredRailBlock}
+	 * (constructed the exact same real way vanilla's own {@code Blocks.ACTIVATOR_RAIL} is, {@code
+	 * isActivator=true}) - the original registered its own separate block here purely so its own arcane
+	 * crafting recipe chain could gate a rail behind Thaumcraft progression, not because rails themselves
+	 * needed any new mechanic. Real target of {@link
+	 * thaumcraft.common.entities.construct.EntityTurretCrossbow}/{@code EntityArcaneBore}'s own real
+	 * "toggle my AI off while powered" check. */
+	public static final DeferredBlock<net.minecraft.world.level.block.PoweredRailBlock> activatorRail = BLOCKS.registerBlock("activator_rail",
+			props -> new net.minecraft.world.level.block.PoweredRailBlock(props, true),
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).noCollission().strength(0.7f).sound(SoundType.METAL));
+
 	/** Real target of {@link thaumcraft.common.blocks.world.taint.BlockTaint}'s own rock-variant {@code
 	 * die()} - see {@link thaumcraft.common.blocks.basic.BlockStonePorous}'s own doc comment. {@code
 	 * .noLootTable()} since drops are hand-rolled in Java (a real weighted-random pick can't be expressed as

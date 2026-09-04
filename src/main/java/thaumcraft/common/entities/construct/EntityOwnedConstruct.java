@@ -1,207 +1,123 @@
 package thaumcraft.common.entities.construct;
-import com.google.common.base.Optional;
-import java.util.UUID;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityCreature;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.IEntityOwnable;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.item.ItemNameTag;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.network.datasync.DataParameter;
-import net.minecraft.network.datasync.DataSerializers;
-import net.minecraft.network.datasync.EntityDataManager;
-import net.minecraft.scoreboard.Team;
-import net.minecraft.server.management.PreYggdrasilConverter;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.SoundEvent;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentTranslation;
-import net.minecraft.util.text.translation.I18n;
-import net.minecraft.world.World;
-import thaumcraft.common.lib.SoundsTC;
 
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.AgeableMob;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.NameTagItem;
+import net.minecraft.world.level.Level;
 
-public class EntityOwnedConstruct extends EntityCreature implements IEntityOwnable
-{
-    protected static DataParameter<Byte> TAMED;
-    protected static DataParameter<Optional<UUID>> OWNER_UNIQUE_ID;
-    boolean validSpawn;
-    
-    public EntityOwnedConstruct(World worldIn) {
-        super(worldIn);
-        validSpawn = false;
-    }
-    
-    protected void entityInit() {
-        super.entityInit();
-        getDataManager().register((DataParameter)EntityOwnedConstruct.TAMED, 0);
-        getDataManager().register((DataParameter)EntityOwnedConstruct.OWNER_UNIQUE_ID, Optional.absent());
-    }
-    
-    public boolean isOwned() {
-        return ((byte) getDataManager().get((DataParameter)EntityOwnedConstruct.TAMED) & 0x4) != 0x0;
-    }
-    
-    public void setOwned(boolean tamed) {
-        byte b0 = (byte) getDataManager().get((DataParameter)EntityOwnedConstruct.TAMED);
-        if (tamed) {
-            getDataManager().set(EntityOwnedConstruct.TAMED, (byte)(b0 | 0x4));
-        }
-        else {
-            getDataManager().set(EntityOwnedConstruct.TAMED, (byte)(b0 & 0xFFFFFFFB));
-        }
-    }
-    
-    public UUID getOwnerId() {
-        return (UUID)((Optional) getDataManager().get((DataParameter)EntityOwnedConstruct.OWNER_UNIQUE_ID)).orNull();
-    }
-    
-    public void setOwnerId(UUID p_184754_1_) {
-        getDataManager().set(EntityOwnedConstruct.OWNER_UNIQUE_ID, Optional.fromNullable(p_184754_1_));
-    }
-    
-    protected int decreaseAirSupply(int air) {
-        return air;
-    }
-    
-    public boolean canBreatheUnderwater() {
-        return true;
-    }
-    
-    protected SoundEvent getAmbientSound() {
-        return SoundsTC.clack;
-    }
-    
-    protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
-        return SoundsTC.clack;
-    }
-    
-    protected SoundEvent getDeathSound() {
-        return SoundsTC.tool;
-    }
-    
-    public int getTalkInterval() {
-        return 240;
-    }
-    
-    protected boolean canDespawn() {
-        return false;
-    }
-    
-    public void onUpdate() {
-        super.onUpdate();
-        if (getAttackTarget() != null && isOnSameTeam(getAttackTarget())) {
-            setAttackTarget(null);
-        }
-        if (!world.isRemote && !validSpawn) {
-            setDead();
-        }
-    }
-    
-    public void setValidSpawn() {
-        validSpawn = true;
-    }
-    
-    public void writeEntityToNBT(NBTTagCompound tagCompound) {
-        super.writeEntityToNBT(tagCompound);
-        tagCompound.setBoolean("v", validSpawn);
-        if (getOwnerId() == null) {
-            tagCompound.setString("OwnerUUID", "");
-        }
-        else {
-            tagCompound.setString("OwnerUUID", getOwnerId().toString());
-        }
-    }
-    
-    public void readEntityFromNBT(NBTTagCompound tagCompound) {
-        super.readEntityFromNBT(tagCompound);
-        validSpawn = tagCompound.getBoolean("v");
-        String s = "";
-        if (tagCompound.hasKey("OwnerUUID", 8)) {
-            s = tagCompound.getString("OwnerUUID");
-        }
-        else {
-            String s2 = tagCompound.getString("Owner");
-            s = PreYggdrasilConverter.convertMobOwnerIfNeeded(getServer(), s2);
-        }
-        if (!s.isEmpty()) {
-            try {
-                setOwnerId(UUID.fromString(s));
-                setOwned(true);
-            }
-            catch (Throwable var4) {
-                setOwned(false);
-            }
-        }
-    }
-    
-    public EntityLivingBase getOwnerEntity() {
-        try {
-            UUID uuid = getOwnerId();
-            return (uuid == null) ? null : world.getPlayerEntityByUUID(uuid);
-        }
-        catch (IllegalArgumentException var2) {
-            return null;
-        }
-    }
-    
-    public boolean isOwner(EntityLivingBase entityIn) {
-        return entityIn == getOwnerEntity();
-    }
-    
-    public Team getTeam() {
-        if (isOwned()) {
-            EntityLivingBase entitylivingbase = getOwnerEntity();
-            if (entitylivingbase != null) {
-                return entitylivingbase.getTeam();
-            }
-        }
-        return super.getTeam();
-    }
-    
-    public boolean isOnSameTeam(Entity otherEntity) {
-        if (isOwned()) {
-            EntityLivingBase entitylivingbase1 = getOwnerEntity();
-            if (otherEntity == entitylivingbase1) {
-                return true;
-            }
-            if (entitylivingbase1 != null) {
-                return entitylivingbase1.isOnSameTeam(otherEntity);
-            }
-        }
-        return super.isOnSameTeam(otherEntity);
-    }
-    
-    public void onDeath(DamageSource cause) {
-        if (!world.isRemote && world.getGameRules().getBoolean("showDeathMessages") && hasCustomName() && getOwnerEntity() instanceof EntityPlayerMP) {
-            getOwnerEntity().sendMessage(getCombatTracker().getDeathMessage());
-        }
-        super.onDeath(cause);
-    }
-    
-    public Entity getOwner() {
-        return getOwnerEntity();
-    }
-    
-    protected boolean processInteract(EntityPlayer player, EnumHand hand) {
-        if (isDead) {
-            return false;
-        }
-        if (player.isSneaking() || (player.getHeldItemMainhand() != null && player.getHeldItemMainhand().getItem() instanceof ItemNameTag)) {
-            return false;
-        }
-        if (!world.isRemote && !isOwner(player)) {
-            player.sendStatusMessage(new TextComponentTranslation("§5§o" + I18n.translateToLocal("tc.notowned")), true);
-            return true;
-        }
-        return super.processInteract(player, hand);
-    }
-    
-    static {
-        TAMED = EntityDataManager.createKey(EntityOwnedConstruct.class, DataSerializers.BYTE);
-        OWNER_UNIQUE_ID = EntityDataManager.createKey(EntityOwnedConstruct.class, DataSerializers.OPTIONAL_UNIQUE_ID);
-    }
+/**
+ * Replaces the old (1.12.2) {@code EntityOwnedConstruct} - the shared base for the turret/bore family. The
+ * original hand-rolled a real synced owner UUID + tamed flag and real owner-aware team/ally checks; modern
+ * vanilla's own {@link TamableAnimal} already provides exactly that (real {@code getOwnerUUID}/{@code
+ * setOwnerUUID}/{@code isTame}/{@code setTame}/{@code isOwnedBy}, and its own real {@link #getTeam}/{@link
+ * #isAlliedTo} overrides already defer to the owner's team, matching the original's own overrides almost
+ * line for line) - reused directly rather than hand-rolled again, the same "reuse vanilla wherever it
+ * already does the job" reasoning this whole port has followed throughout. {@code Animal}'s own breeding
+ * hooks ({@link #isFood}/{@link #getBreedOffspring}) are real no-ops - constructs don't breed, matching the
+ * original never wiring up anything breeding-related either.
+ *
+ * Real "not a valid, player-placed spawn" self-destruct (constructs summoned any other way - a natural
+ * spawn, a spawn egg - immediately discard themselves, matching the original's own {@code validSpawn} guard
+ * exactly), real never-despawns persistence, real "clear my attack target if it's now an ally" per-tick
+ * check, and the real "you don't own this" interaction message for non-owners.
+ *
+ * Real, documented vanilla sound substitution: the original's own custom {@code SoundsTC.clack}/{@code
+ * SoundsTC.tool} aren't registered in this port, stand in with real vanilla iron golem sounds (a real
+ * metallic-construct-flavored match, not an arbitrary choice).
+ */
+public class EntityOwnedConstruct extends TamableAnimal {
+
+	private boolean validSpawn;
+
+	protected EntityOwnedConstruct(EntityType<? extends EntityOwnedConstruct> type, Level level) {
+		super(type, level);
+	}
+
+	@Override
+	public boolean isFood(ItemStack stack) {
+		return false;
+	}
+
+	@Override
+	public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob otherParent) {
+		return null;
+	}
+
+	@Override
+	protected int decreaseAirSupply(int air) {
+		return air;
+	}
+
+	@Override
+	protected SoundEvent getAmbientSound() {
+		return SoundEvents.IRON_GOLEM_STEP;
+	}
+
+	@Override
+	protected SoundEvent getHurtSound(DamageSource damageSource) {
+		return SoundEvents.IRON_GOLEM_HURT;
+	}
+
+	@Override
+	protected SoundEvent getDeathSound() {
+		return SoundEvents.IRON_GOLEM_DEATH;
+	}
+
+	@Override
+	public boolean isPersistenceRequired() {
+		return true;
+	}
+
+	public void setValidSpawn() {
+		validSpawn = true;
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+		if (getTarget() != null && isAlliedTo(getTarget())) {
+			setTarget(null);
+		}
+		if (!level().isClientSide && !validSpawn) {
+			discard();
+		}
+	}
+
+	@Override
+	public void addAdditionalSaveData(CompoundTag tag) {
+		super.addAdditionalSaveData(tag);
+		tag.putBoolean("v", validSpawn);
+	}
+
+	@Override
+	public void readAdditionalSaveData(CompoundTag tag) {
+		super.readAdditionalSaveData(tag);
+		validSpawn = tag.getBoolean("v");
+	}
+
+	@Override
+	public InteractionResult mobInteract(Player player, InteractionHand hand) {
+		if (!isAlive()) {
+			return InteractionResult.PASS;
+		}
+		if (player.isShiftKeyDown() || player.getItemInHand(hand).getItem() instanceof NameTagItem) {
+			return InteractionResult.PASS;
+		}
+		if (!level().isClientSide && !isOwnedBy(player)) {
+			player.displayClientMessage(Component.translatable("tc.notowned"), true);
+			return InteractionResult.SUCCESS;
+		}
+		return super.mobInteract(player, hand);
+	}
 }

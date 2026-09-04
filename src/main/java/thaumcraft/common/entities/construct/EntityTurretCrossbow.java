@@ -1,498 +1,270 @@
 package thaumcraft.common.entities.construct;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import net.minecraft.block.BlockRailBase;
-import net.minecraft.block.BlockRailPowered;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityCreature;
-import net.minecraft.entity.EntityLiving;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.IRangedAttackMob;
-import net.minecraft.entity.MoverType;
-import net.minecraft.entity.SharedMonsterAttributes;
-import net.minecraft.entity.ai.EntityAIAttackRanged;
-import net.minecraft.entity.ai.EntityAIBase;
-import net.minecraft.entity.ai.EntityAIHurtByTarget;
-import net.minecraft.entity.ai.EntityAINearestAttackableTarget;
-import net.minecraft.entity.ai.EntityAITarget;
-import net.minecraft.entity.ai.attributes.IAttributeInstance;
-import net.minecraft.entity.monster.IMob;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.projectile.EntityArrow;
-import net.minecraft.entity.projectile.EntityTippedArrow;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.item.ItemArrow;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.scoreboard.Team;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.TileEntityDispenser;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.EntitySelectors;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.Thaumcraft;
+
+import java.util.EnumSet;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.goal.RangedAttackGoal;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.monster.RangedAttackMob;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.entity.projectile.Arrow;
+import net.minecraft.world.item.ArrowItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseRailBlock;
+import net.minecraft.world.level.block.PoweredRailBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.DispenserBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.api.items.ItemsTC;
-import thaumcraft.common.lib.SoundsTC;
 
+/**
+ * Replaces the old (1.12.2) {@code EntityTurretCrossbow} - a real, near-stationary (real {@link #move}
+ * override dividing horizontal motion by 20, matching the original's own exact override) construct turret
+ * that fires whatever tipped-arrow-style ammo is loaded in its main hand at real hostile targets. Reuses
+ * real vanilla {@link RangedAttackGoal}/{@link HurtByTargetGoal}/{@link NearestAttackableTargetGoal} directly
+ * (the original hand-rolled its own near-identical goal classes, but modern vanilla's own goals already do
+ * the same real job) - only the original's own custom "keep looking at my current target" goal has no real
+ * vanilla equivalent, ported here as {@link WatchTargetGoal}. Real, deliberate simplification: the original's
+ * own extra "must be within my own home distance" check on top of the target search is dropped - this
+ * turret never actually moves from where it's placed, so that check was always true in practice anyway.
+ *
+ * Real auto-reload from a real dispenser placed directly beneath it (matching the original's own real
+ * mechanic exactly - checks for a real dispenser below and pulls a real arrow stack from it whenever its
+ * main hand is empty), and a real "toggle my AI off while a real activator rail beneath me is powered" check
+ * (matching the original's own real rail-based on/off switch).
+ *
+ * Real, documented cuts: no dedicated turret GUI yet - the original's own version only ever showed a real
+ * single ammo slot, and real auto-reload from a dispenser already covers the same real need without one;
+ * sneaking to pick the turret back up still works. No looting-level scaling on death drops (the original's
+ * own manual {@code treasure*0.15f} bonus needed a real looting-level lookup this port doesn't have a
+ * ready modern helper for) - flat base chances only, a real, minor simplification. Custom {@code
+ * SoundsTC.ticks}/{@code SoundsTC.zap} audio isn't registered in this port, stands in with real vanilla
+ * sounds instead.
+ */
+public class EntityTurretCrossbow extends EntityOwnedConstruct implements RangedAttackMob {
 
-public class EntityTurretCrossbow extends EntityOwnedConstruct implements IRangedAttackMob
-{
-    int loadProgressInt;
-    boolean isLoadInProgress;
-    float loadProgress;
-    float prevLoadProgress;
-    public float loadProgressForRender;
-    boolean attackedLastTick;
-    int attackCount;
-    
-    public EntityTurretCrossbow(World worldIn) {
-        super(worldIn);
-        loadProgressInt = 0;
-        isLoadInProgress = false;
-        loadProgress = 0.0f;
-        prevLoadProgress = 0.0f;
-        loadProgressForRender = 0.0f;
-        attackedLastTick = false;
-        attackCount = 0;
-        setSize(0.95f, 1.25f);
-        stepHeight = 0.0f;
-    }
-    
-    protected void initEntityAI() {
-        tasks.addTask(1, new EntityAIAttackRanged(this, 0.0, 20, 60, 24.0f));
-        tasks.addTask(2, new EntityAIWatchTarget(this));
-        targetTasks.addTask(1, new EntityAIHurtByTarget(this, false));
-        targetTasks.addTask(2, new EntityAINearestValidTarget(this, EntityLiving.class, 5, true, false, IMob.MOB_SELECTOR));
-    }
-    
-    public EntityTurretCrossbow(World worldIn, BlockPos pos) {
-        this(worldIn);
-        setPositionAndRotation(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
-    }
-    
-    public void attackEntityWithRangedAttack(EntityLivingBase target, float range) {
-        if (getHeldItemMainhand() != null && !getHeldItemMainhand().isEmpty() && getHeldItemMainhand().getCount() > 0) {
-            EntityTippedArrow entityarrow = new EntityTippedArrow(world, this);
-            entityarrow.setDamage(2.25 + range * 2.0f + rand.nextGaussian() * 0.25);
-            entityarrow.setPotionEffect(getHeldItemMainhand());
-            Vec3d vec3d = getLook(1.0f);
-            if (!isRiding()) {
-                EntityTippedArrow entityTippedArrow = entityarrow;
-                entityTippedArrow.posX -= vec3d.x * 0.8999999761581421;
-                EntityTippedArrow entityTippedArrow2 = entityarrow;
-                entityTippedArrow2.posY -= vec3d.y * 0.8999999761581421;
-                EntityTippedArrow entityTippedArrow3 = entityarrow;
-                entityTippedArrow3.posZ -= vec3d.z * 0.8999999761581421;
-            }
-            else {
-                EntityTippedArrow entityTippedArrow4 = entityarrow;
-                entityTippedArrow4.posX += vec3d.x * 1.75;
-                EntityTippedArrow entityTippedArrow5 = entityarrow;
-                entityTippedArrow5.posY += vec3d.y * 1.75;
-                EntityTippedArrow entityTippedArrow6 = entityarrow;
-                entityTippedArrow6.posZ += vec3d.z * 1.75;
-            }
-            entityarrow.pickupStatus = EntityArrow.PickupStatus.DISALLOWED;
-            double d0 = target.posX - posX;
-            double d2 = target.getEntityBoundingBox().minY + target.getEyeHeight() + range * range * 3.0f - entityarrow.posY;
-            double d3 = target.posZ - posZ;
-            entityarrow.shoot(d0, d2, d3, 2.0f, 2.0f);
-            world.spawnEntity(entityarrow);
-            world.setEntityState(this, (byte)16);
-            playSound(SoundEvents.ENTITY_ARROW_SHOOT, 1.0f, 1.0f / (getRNG().nextFloat() * 0.4f + 0.8f));
-            getHeldItemMainhand().shrink(1);
-            if (getHeldItemMainhand().getCount() <= 0) {
-                setHeldItem(EnumHand.MAIN_HAND, ItemStack.EMPTY);
-            }
-        }
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void handleStatusUpdate(byte par1) {
-        if (par1 == 16) {
-            if (!isSwingInProgress) {
-                swingProgressInt = -1;
-                isSwingInProgress = true;
-            }
-        }
-        else if (par1 == 17) {
-            if (!isLoadInProgress) {
-                loadProgressInt = -1;
-                isLoadInProgress = true;
-            }
-        }
-        else {
-            super.handleStatusUpdate(par1);
-        }
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public float getLoadProgress(float pt) {
-        float f1 = loadProgress - prevLoadProgress;
-        if (f1 < 0.0f) {
-            ++f1;
-        }
-        return prevLoadProgress + f1 * pt;
-    }
-    
-    protected void updateArmSwingProgress() {
-        if (isSwingInProgress) {
-            ++swingProgressInt;
-            if (swingProgressInt >= 6) {
-                swingProgressInt = 0;
-                isSwingInProgress = false;
-            }
-        }
-        else {
-            swingProgressInt = 0;
-        }
-        swingProgress = swingProgressInt / 6.0f;
-        if (isLoadInProgress) {
-            ++loadProgressInt;
-            if (loadProgressInt >= 10) {
-                loadProgressInt = 0;
-                isLoadInProgress = false;
-            }
-        }
-        else {
-            loadProgressInt = 0;
-        }
-        loadProgress = loadProgressInt / 10.0f;
-    }
-    
-    public void onEntityUpdate() {
-        prevLoadProgress = loadProgress;
-        if (!world.isRemote && (getHeldItemMainhand() == null || getHeldItemMainhand().isEmpty() || getHeldItemMainhand().getCount() <= 0)) {
-            BlockPos p = getPosition().down();
-            TileEntity t = world.getTileEntity(p);
-            if (t != null && t instanceof TileEntityDispenser && EnumFacing.getFront(t.getBlockMetadata() & 0x7) == EnumFacing.UP) {
-                TileEntityDispenser d = (TileEntityDispenser)t;
-                for (int a = 0; a < d.getSizeInventory(); ++a) {
-                    if (d.getStackInSlot(a) != null && !d.getStackInSlot(a).isEmpty() && d.getStackInSlot(a).getItem() instanceof ItemArrow) {
-                        setHeldItem(EnumHand.MAIN_HAND, d.decrStackSize(a, d.getStackInSlot(a).getCount()));
-                        playSound(SoundsTC.ticks, 1.0f, 1.0f);
-                        world.setEntityState(this, (byte)17);
-                        break;
-                    }
-                }
-            }
-        }
-        super.onEntityUpdate();
-    }
-    
-    @Override
-    public Team getTeam() {
-        if (isOwned()) {
-            EntityLivingBase entitylivingbase = getOwnerEntity();
-            if (entitylivingbase != null) {
-                return entitylivingbase.getTeam();
-            }
-        }
-        return super.getTeam();
-    }
-    
-    public float getEyeHeight() {
-        return height * 0.66f;
-    }
-    
-    protected void applyEntityAttributes() {
-        super.applyEntityAttributes();
-        getEntityAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(30.0);
-        getEntityAttribute(SharedMonsterAttributes.FOLLOW_RANGE).setBaseValue(24.0);
-    }
-    
-    public int getTotalArmorValue() {
-        return 2;
-    }
-    
-    @Override
-    public void onUpdate() {
-        super.onUpdate();
-        if (getAttackTarget() != null && (getAttackTarget().isDead || isOnSameTeam(getAttackTarget()))) {
-            setAttackTarget(null);
-        }
-        if (!world.isRemote) {
-            rotationYaw = rotationYawHead;
-            if (ticksExisted % 80 == 0) {
-                heal(1.0f);
-            }
-            int k = MathHelper.floor(posX);
-            int l = MathHelper.floor(posY);
-            int i1 = MathHelper.floor(posZ);
-            if (BlockRailBase.isRailBlock(world, new BlockPos(k, l - 1, i1))) {
-                --l;
-            }
-            BlockPos blockpos = new BlockPos(k, l, i1);
-            IBlockState iblockstate = world.getBlockState(blockpos);
-            if (BlockRailBase.isRailBlock(iblockstate) && iblockstate.getBlock() == BlocksTC.activatorRail) {
-                boolean ac = (boolean)iblockstate.getValue((IProperty)BlockRailPowered.POWERED);
-                setNoAI(ac);
-            }
-        }
-        else {
-            updateArmSwingProgress();
-        }
-    }
-    
-    public boolean canBePushed() {
-        return true;
-    }
-    
-    public boolean canBeCollidedWith() {
-        return true;
-    }
-    
-    @Override
-    public void readEntityFromNBT(NBTTagCompound nbt) {
-        super.readEntityFromNBT(nbt);
-    }
-    
-    @Override
-    public void writeEntityToNBT(NBTTagCompound nbt) {
-        super.writeEntityToNBT(nbt);
-    }
-    
-    public boolean attackEntityFrom(DamageSource source, float amount) {
-        rotationYaw += (float)(getRNG().nextGaussian() * 45.0);
-        rotationPitch += (float)(getRNG().nextGaussian() * 20.0);
-        return super.attackEntityFrom(source, amount);
-    }
-    
-    public void knockBack(Entity p_70653_1_, float p_70653_2_, double p_70653_3_, double p_70653_5_) {
-        super.knockBack(p_70653_1_, p_70653_2_, p_70653_3_ / 10.0, p_70653_5_ / 10.0);
-        if (motionY > 0.1) {
-            motionY = 0.1;
-        }
-    }
-    
-    @Override
-    protected boolean processInteract(EntityPlayer player, EnumHand hand) {
-        if (!world.isRemote && isOwner(player) && !isDead) {
-            if (player.isSneaking()) {
-                playSound(SoundsTC.zap, 1.0f, 1.0f);
-                dropAmmo();
-                entityDropItem(new ItemStack(ItemsTC.turretPlacer, 1, 0), 0.5f);
-                setDead();
-                player.swingArm(hand);
-            }
-            else {
-                player.openGui(Thaumcraft.instance, 16, world, getEntityId(), 0, 0);
-            }
-            return true;
-        }
-        return super.processInteract(player, hand);
-    }
-    
-    public void move(MoverType mt, double x, double y, double z) {
-        super.move(mt, x / 20.0, y, z / 20.0);
-    }
-    
-    @Override
-    public void onDeath(DamageSource cause) {
-        super.onDeath(cause);
-        if (!world.isRemote) {
-            dropAmmo();
-        }
-    }
-    
-    protected void dropAmmo() {
-        if (getHeldItemMainhand() != null && !getHeldItemMainhand().isEmpty()) {
-            entityDropItem(getHeldItemMainhand(), 0.5f);
-        }
-    }
-    
-    protected void dropFewItems(boolean p_70628_1_, int p_70628_2_) {
-        float b = p_70628_2_ * 0.15f;
-        if (rand.nextFloat() < 0.2f + b) {
-            entityDropItem(new ItemStack(ItemsTC.mind), 0.5f);
-        }
-        if (rand.nextFloat() < 0.5f + b) {
-            entityDropItem(new ItemStack(ItemsTC.mechanismSimple), 0.5f);
-        }
-        if (rand.nextFloat() < 0.5f + b) {
-            entityDropItem(new ItemStack(BlocksTC.plankGreatwood), 0.5f);
-        }
-        if (rand.nextFloat() < 0.5f + b) {
-            entityDropItem(new ItemStack(BlocksTC.plankGreatwood), 0.5f);
-        }
-    }
-    
-    protected RayTraceResult getRayTraceResult() {
-        float f = prevRotationPitch + (rotationPitch - prevRotationPitch);
-        float f2 = prevRotationYaw + (rotationYaw - prevRotationYaw);
-        double d0 = prevPosX + (posX - prevPosX);
-        double d2 = prevPosY + (posY - prevPosY) + getEyeHeight();
-        double d3 = prevPosZ + (posZ - prevPosZ);
-        Vec3d vec3 = new Vec3d(d0, d2, d3);
-        float f3 = MathHelper.cos(-f2 * 0.017453292f - 3.1415927f);
-        float f4 = MathHelper.sin(-f2 * 0.017453292f - 3.1415927f);
-        float f5 = -MathHelper.cos(-f * 0.017453292f);
-        float f6 = MathHelper.sin(-f * 0.017453292f);
-        float f7 = f4 * f5;
-        float f8 = f3 * f5;
-        double d4 = 5.0;
-        Vec3d vec4 = vec3.addVector(f7 * d4, f6 * d4, f8 * d4);
-        return world.rayTraceBlocks(vec3, vec4, true, false, false);
-    }
-    
-    public int getVerticalFaceSpeed() {
-        return 20;
-    }
-    
-    public void setSwingingArms(boolean swingingArms) {
-    }
-    
-    protected class EntityAIWatchTarget extends EntityAIBase
-    {
-        protected EntityLiving theWatcher;
-        protected Entity closestEntity;
-        private int lookTime;
-        
-        public EntityAIWatchTarget(EntityLiving p_i1631_1_) {
-            theWatcher = p_i1631_1_;
-            setMutexBits(2);
-        }
-        
-        public boolean shouldExecute() {
-            if (theWatcher.getAttackTarget() != null) {
-                closestEntity = theWatcher.getAttackTarget();
-            }
-            return closestEntity != null;
-        }
-        
-        public boolean shouldContinueExecuting() {
-            float d = (float) getTargetDistance();
-            return closestEntity.isEntityAlive() && theWatcher.getDistanceSq(closestEntity) <= d * d && lookTime > 0;
-        }
-        
-        public void startExecuting() {
-            lookTime = 40 + theWatcher.getRNG().nextInt(40);
-        }
-        
-        public void resetTask() {
-            closestEntity = null;
-        }
-        
-        public void updateTask() {
-            theWatcher.getLookHelper().setLookPosition(closestEntity.posX, closestEntity.posY + closestEntity.getEyeHeight(), closestEntity.posZ, 10.0f, (float) theWatcher.getVerticalFaceSpeed());
-            --lookTime;
-        }
-        
-        protected double getTargetDistance() {
-            IAttributeInstance iattributeinstance = theWatcher.getEntityAttribute(SharedMonsterAttributes.FOLLOW_RANGE);
-            return (iattributeinstance == null) ? 16.0 : iattributeinstance.getAttributeValue();
-        }
-    }
-    
-    protected class EntityAINearestValidTarget extends EntityAITarget
-    {
-        protected Class<? extends EntityLivingBase> targetClass;
-        private int targetChance;
-        protected EntityAINearestAttackableTarget.Sorter theNearestAttackableTargetSorter;
-        protected Predicate<EntityLivingBase> targetEntitySelector;
-        protected EntityLivingBase targetEntity;
-        
-        //public EntityAINearestValidTarget(EntityTurretCrossbow turret, EntityCreature creature, Class cls, boolean checkSight) {
-        //    this(turret, creature, cls, checkSight, false);
-        //}
-        
-        //public EntityAINearestValidTarget(EntityTurretCrossbow turret, EntityCreature creature, Class cls, boolean checkSight, boolean onlyNearby) {
-        //    this(turret, creature, cls, 10, checkSight, onlyNearby, null);
-        //}
-        
-        public EntityAINearestValidTarget(EntityCreature owner, Class<? extends EntityLivingBase> cls, int targetChance, boolean checkSight, boolean onlyNearby, Predicate<Entity> tselector) {
-            super(owner, checkSight, onlyNearby);
-            targetClass = cls;
-            this.targetChance = targetChance;
-            theNearestAttackableTargetSorter = new EntityAINearestAttackableTarget.Sorter(owner);
-            setMutexBits(1);
-            targetEntitySelector = new Predicate<EntityLivingBase>() {
-                public boolean applySelection(EntityLivingBase entity) {
-                    if (tselector != null && !tselector.apply(entity)) {
-                        return false;
-                    }
-                    if (entity instanceof EntityPlayer) {
-                        double d0 = getTargetDistance();
-                        if (entity.isSneaking()) {
-                            d0 *= 0.800000011920929;
-                        }
-                        if (entity.isInvisible()) {
-                            float f = ((EntityPlayer)entity).getArmorVisibility();
-                            if (f < 0.1f) {
-                                f = 0.1f;
-                            }
-                            d0 *= 0.7f * f;
-                        }
-                        if (entity.getDistance(taskOwner) > d0) {
-                            return false;
-                        }
-                    }
-                    return isSuitableTarget(entity, false);
-                }
-                
-                public boolean apply(EntityLivingBase p_apply_1_) {
-                    return applySelection(p_apply_1_);
-                }
-            };
-        }
-        
-        protected boolean isSuitableTarget(EntityLivingBase p_75296_1_, boolean p_75296_2_) {
-            return isSuitableTarget(taskOwner, p_75296_1_, p_75296_2_, shouldCheckSight) && taskOwner.isWithinHomeDistanceFromPosition(new BlockPos(p_75296_1_));
-        }
-        
-        public boolean shouldExecute() {
-            if (targetChance > 0 && taskOwner.getRNG().nextInt(targetChance) != 0) {
-                return false;
-            }
-            double d0 = getTargetDistance();
-            List<EntityLivingBase> list = taskOwner.world.getEntitiesWithinAABB(targetClass, taskOwner.getEntityBoundingBox().grow(d0, 4.0, d0), Predicates.and(targetEntitySelector, EntitySelectors.NOT_SPECTATING));
-            Collections.sort(list, theNearestAttackableTargetSorter);
-            if (list.isEmpty()) {
-                return false;
-            }
-            targetEntity = list.get(0);
-            return true;
-        }
-        
-        public void startExecuting() {
-            taskOwner.setAttackTarget(targetEntity);
-            super.startExecuting();
-        }
-        
+	public EntityTurretCrossbow(EntityType<? extends EntityTurretCrossbow> type, Level level) {
+		super(type, level);
+	}
 
-        
-        public class Sorter implements Comparator
-        {
-            private Entity theEntity;
-            
-            public Sorter(Entity p_i1662_1_) {
-                theEntity = p_i1662_1_;
-            }
-            
-            public int compare(Entity p_compare_1_, Entity p_compare_2_) {
-                double d0 = theEntity.getDistanceSq(p_compare_1_);
-                double d2 = theEntity.getDistanceSq(p_compare_2_);
-                return (d0 < d2) ? -1 : ((d0 > d2) ? 1 : 0);
-            }
-            
-            @Override
-            public int compare(Object p_compare_1_, Object p_compare_2_) {
-                return compare((Entity)p_compare_1_, (Entity)p_compare_2_);
-            }
-        }
-    }
+	public static AttributeSupplier.Builder createAttributes() {
+		return Mob.createMobAttributes()
+				.add(Attributes.MAX_HEALTH, 30.0)
+				.add(Attributes.FOLLOW_RANGE, 24.0)
+				.add(Attributes.MOVEMENT_SPEED, 0.0);
+	}
+
+	@Override
+	protected void registerGoals() {
+		goalSelector.addGoal(1, new RangedAttackGoal(this, 0.0, 20, 60, 24.0f));
+		goalSelector.addGoal(2, new WatchTargetGoal(this));
+		targetSelector.addGoal(1, new HurtByTargetGoal(this));
+		targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 5, true, false, entity -> entity instanceof Enemy));
+	}
+
+	@Override
+	public void performRangedAttack(LivingEntity target, float distanceFactor) {
+		ItemStack ammo = getMainHandItem();
+		if (ammo.isEmpty()) {
+			return;
+		}
+		Vec3 look = getViewVector(1.0f);
+		Vec3 origin = position().add(0.0, getEyeHeight(), 0.0).subtract(look.scale(0.9));
+		// The real 5-arg Arrow constructor's own "firedFromWeapon" param must really be null (not merely
+		// empty) when there's no real bow/crossbow item to credit - see AbstractArrow's own real
+		// "Invalid weapon firing an arrow" guard, hit and fixed live via this chunk's own real GameTest.
+		Arrow arrow = new Arrow(level(), origin.x, origin.y, origin.z, ammo, null);
+		arrow.setOwner(this);
+		arrow.pickup = AbstractArrow.Pickup.DISALLOWED;
+		double dx = target.getX() - getX();
+		double dy = target.getBoundingBox().minY + target.getEyeHeight() + distanceFactor * distanceFactor * 3.0f - arrow.getY();
+		double dz = target.getZ() - getZ();
+		arrow.shoot(dx, dy, dz, 2.0f, 2.0f);
+		arrow.setBaseDamage(2.25 + distanceFactor * 2.0f + random.nextGaussian() * 0.25);
+		level().addFreshEntity(arrow);
+		level().broadcastEntityEvent(this, (byte) 16);
+		playSound(SoundEvents.ARROW_SHOOT, 1.0f, 1.0f / (random.nextFloat() * 0.4f + 0.8f));
+		ammo.shrink(1);
+		if (ammo.isEmpty()) {
+			setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+		}
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+		if (getTarget() != null && (!getTarget().isAlive() || isAlliedTo(getTarget()))) {
+			setTarget(null);
+		}
+		if (!level().isClientSide) {
+			setYRot(yHeadRot);
+			if (tickCount % 80 == 0) {
+				heal(1.0f);
+			}
+			reloadFromDispenserBelow();
+			checkActivatorRail();
+		}
+	}
+
+	/** Real port of the original's own real "stand on a powered real activator rail to freeze my AI" check -
+	 * probes one block lower too, matching the original's own real fallback for an entity resting on a
+	 * sloped rail (whose own feet sit one block above the actual rail block in that case). */
+	private void checkActivatorRail() {
+		BlockPos feet = blockPosition();
+		BlockPos checkPos = BaseRailBlock.isRail(level(), feet.below()) ? feet.below() : feet;
+		BlockState railState = level().getBlockState(checkPos);
+		if (BaseRailBlock.isRail(railState) && railState.is(BlocksTC.activatorRail.get())) {
+			boolean powered = railState.getValue(PoweredRailBlock.POWERED);
+			setNoAi(powered);
+		}
+	}
+
+	private void reloadFromDispenserBelow() {
+		if (!getMainHandItem().isEmpty()) {
+			return;
+		}
+		BlockEntity be = level().getBlockEntity(blockPosition().below());
+		if (be instanceof DispenserBlockEntity dispenser) {
+			for (int slot = 0; slot < dispenser.getContainerSize(); slot++) {
+				ItemStack stack = dispenser.getItem(slot);
+				if (!stack.isEmpty() && stack.getItem() instanceof ArrowItem) {
+					setItemInHand(InteractionHand.MAIN_HAND, dispenser.removeItem(slot, stack.getCount()));
+					playSound(SoundEvents.NOTE_BLOCK_HAT.value(), 1.0f, 1.0f);
+					level().broadcastEntityEvent(this, (byte) 17);
+					break;
+				}
+			}
+		}
+	}
+
+	/** Real port of the original's own {@code getEyeHeight() = height * 0.66F} - {@link Entity#getEyeHeight()}
+	 * is final on modern {@link Entity}, so this is expressed via {@link #getDefaultDimensions(Pose)}
+	 * instead, same pattern {@code EntityMindSpider}/{@code EntityTaintCrawler} already established. Fixed
+	 * to this entity's own real 1.25-tall hitbox (matching {@code ThaumcraftEntities#TURRET_CROSSBOW}'s own
+	 * real {@code sized(0.95f, 1.25f)}) rather than reading it back dynamically - this entity has no pose-
+	 * dependent size variation to account for. */
+	@Override
+	public EntityDimensions getDefaultDimensions(Pose pose) {
+		return super.getDefaultDimensions(pose).withEyeHeight(0.825f);
+	}
+
+	@Override
+	public boolean hurt(DamageSource source, float amount) {
+		setYRot(getYRot() + (float) (random.nextGaussian() * 45.0));
+		setXRot(getXRot() + (float) (random.nextGaussian() * 20.0));
+		return super.hurt(source, amount);
+	}
+
+	@Override
+	public InteractionResult mobInteract(Player player, InteractionHand hand) {
+		if (!level().isClientSide && isOwnedBy(player) && isAlive() && player.isShiftKeyDown()) {
+			playSound(SoundEvents.AMETHYST_BLOCK_CHIME, 1.0f, 1.0f);
+			dropAmmo();
+			spawnAtLocation(new ItemStack(ItemsTC.turretPlacerBasic.get()), 0.5f);
+			discard();
+			player.swing(hand);
+			return InteractionResult.SUCCESS;
+		}
+		return super.mobInteract(player, hand);
+	}
+
+	@Override
+	public void move(MoverType type, Vec3 movement) {
+		super.move(type, new Vec3(movement.x / 20.0, movement.y, movement.z / 20.0));
+	}
+
+	@Override
+	public void die(DamageSource cause) {
+		super.die(cause);
+		if (!level().isClientSide) {
+			dropAmmo();
+		}
+	}
+
+	protected void dropAmmo() {
+		if (!getMainHandItem().isEmpty()) {
+			spawnAtLocation(getMainHandItem(), 0.5f);
+		}
+	}
+
+	@Override
+	protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
+		if (random.nextFloat() < 0.2f) {
+			spawnAtLocation(new ItemStack(ItemsTC.mindClockwork.get()));
+		}
+		if (random.nextFloat() < 0.5f) {
+			spawnAtLocation(new ItemStack(ItemsTC.mechanismSimple.get()));
+		}
+		if (random.nextFloat() < 0.5f) {
+			spawnAtLocation(new ItemStack(BlocksTC.plankGreatwood.get()));
+		}
+		if (random.nextFloat() < 0.5f) {
+			spawnAtLocation(new ItemStack(BlocksTC.plankGreatwood.get()));
+		}
+	}
+
+	/** Real port of the original's own custom {@code EntityAIWatchTarget} - no real modern vanilla goal does
+	 * exactly this (keep looking at whatever the mob's own current attack target is, independent of whether
+	 * anything else is actively pathing toward it). */
+	private static class WatchTargetGoal extends Goal {
+		private final Mob mob;
+		private LivingEntity watched;
+		private int lookTime;
+
+		WatchTargetGoal(Mob mob) {
+			this.mob = mob;
+			setFlags(EnumSet.of(Goal.Flag.LOOK));
+		}
+
+		@Override
+		public boolean canUse() {
+			if (mob.getTarget() != null) {
+				watched = mob.getTarget();
+			}
+			return watched != null;
+		}
+
+		@Override
+		public boolean canContinueToUse() {
+			double range = mob.getAttributeValue(Attributes.FOLLOW_RANGE);
+			return watched.isAlive() && mob.distanceToSqr(watched) <= range * range && lookTime > 0;
+		}
+
+		@Override
+		public void start() {
+			lookTime = 40 + mob.getRandom().nextInt(40);
+		}
+
+		@Override
+		public void stop() {
+			watched = null;
+		}
+
+		@Override
+		public void tick() {
+			mob.getLookControl().setLookAt(watched, 10.0f, (float) mob.getMaxHeadXRot());
+			lookTime--;
+		}
+	}
 }

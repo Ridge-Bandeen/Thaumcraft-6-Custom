@@ -303,6 +303,16 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("taint_seed_prime"));
 
+	/** First of the "construct" faction - see {@code EntityOwnedConstruct}'s/{@code EntityTurretCrossbow}'s
+	 * own doc comments. {@code sized(0.95f, 1.25f)} matches the original's own constructor-time {@code
+	 * setSize(0.95f, 1.25f)} exactly. Same matching {@code EntityAttributeCreationEvent} entry requirement
+	 * as every other real {@link net.minecraft.world.entity.Mob} above. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.construct.EntityTurretCrossbow>> TURRET_CROSSBOW = ENTITY_TYPES.register("turret_crossbow",
+			() -> EntityType.Builder.<thaumcraft.common.entities.construct.EntityTurretCrossbow>of(thaumcraft.common.entities.construct.EntityTurretCrossbow::new, MobCategory.MISC)
+					.sized(0.95f, 1.25f)
+					.clientTrackingRange(64)
+					.build("turret_crossbow"));
+
 	private ThaumcraftEntities() {
 	}
 }
