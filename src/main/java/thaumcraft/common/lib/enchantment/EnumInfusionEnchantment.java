@@ -33,6 +33,15 @@ import thaumcraft.api.items.ThaumcraftDataComponents;
  * need those classes ({@link #SWIFT}/{@link #AGILE}/{@link #INFESTED} are plain armor-slot-restricted), so
  * this doesn't cut anything reachable yet - it only matters once a future bauble-restricted enchantment or
  * real Curios items exist.
+ *
+ * <p><b>Real finding, not a porting gap</b>: {@link #SWIFT}/{@link #AGILE}/{@link #INFESTED}/{@link
+ * #VISBATTERY}/{@link #VISCHARGE} have no gameplay effect anywhere in this port - confirmed by checking the
+ * ORIGINAL 1.12.2 codebase directly (a real {@code git grep} across the whole original source tree, not
+ * assumed): none of these five are referenced by name anywhere outside this one enum. They're real,
+ * craftable, storable enchantment levels with no wired-up effect in the original mod either - the {@code
+ * "?"} placeholder research key on {@code VISBATTERY}/{@code VISCHARGE} is the same real tell. Nothing to
+ * port here; the data component still stores a level for them correctly if a future recipe or feature ever
+ * wants one.
  */
 public enum EnumInfusionEnchantment {
 	COLLECTOR(ImmutableSet.of("axe", "pickaxe", "shovel", "weapon"), 1, "INFUSIONENCHANTMENT"),
