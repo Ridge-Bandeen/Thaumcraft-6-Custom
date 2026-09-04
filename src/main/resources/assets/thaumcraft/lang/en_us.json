@@ -1664,5 +1664,7 @@
   "research.m_endoftheworld.text": "Find the end of everything.",
   "fail.crimsonrites": "This book contains nothing but crazed ravings.",
   "entity.thaumcraft.turret_crossbow.name": "Automated Crossbow",
-  "item.thaumcraft.turret_placer_basic": "Automated Crossbow"
+  "item.thaumcraft.turret_placer_basic": "Automated Crossbow",
+  "entity.thaumcraft.turret_crossbow_advanced.name": "Advanced Automated Crossbow",
+  "item.thaumcraft.turret_placer_advanced": "Advanced Automated Crossbow"
 }

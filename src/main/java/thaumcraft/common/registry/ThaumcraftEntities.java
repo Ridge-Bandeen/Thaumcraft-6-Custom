@@ -313,6 +313,15 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("turret_crossbow"));
 
+	/** See {@code EntityTurretCrossbowAdvanced}'s own doc comment. {@code sized(0.95f, 1.5f)} matches the
+	 * original's own constructor-time {@code setSize(0.95f, 1.5f)} exactly - taller than {@link
+	 * #TURRET_CROSSBOW}'s own 1.25 for the extra armor plating. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.construct.EntityTurretCrossbowAdvanced>> TURRET_CROSSBOW_ADVANCED = ENTITY_TYPES.register("turret_crossbow_advanced",
+			() -> EntityType.Builder.<thaumcraft.common.entities.construct.EntityTurretCrossbowAdvanced>of(thaumcraft.common.entities.construct.EntityTurretCrossbowAdvanced::new, MobCategory.MISC)
+					.sized(0.95f, 1.5f)
+					.clientTrackingRange(64)
+					.build("turret_crossbow_advanced"));
+
 	private ThaumcraftEntities() {
 	}
 }

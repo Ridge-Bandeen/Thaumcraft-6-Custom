@@ -730,10 +730,14 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> activatorRail =
 			ITEMS.registerSimpleBlockItem("activator_rail", BlocksTC.activatorRail);
 
-	/** See {@link thaumcraft.common.entities.construct.ItemTurretPlacer}'s own doc comment for why this is a
-	 * single plain item rather than the original's own 3-subtype {@code "turret"} item. */
+	/** See {@link thaumcraft.common.entities.construct.ItemTurretPlacer}'s own doc comment for why these are
+	 * plain, separate items rather than the original's own 3-subtype {@code "turret"} item. */
 	public static final DeferredItem<thaumcraft.common.entities.construct.ItemTurretPlacer> turretPlacerBasic =
-			ITEMS.registerItem("turret_placer_basic", thaumcraft.common.entities.construct.ItemTurretPlacer::new);
+			ITEMS.registerItem("turret_placer_basic",
+					props -> new thaumcraft.common.entities.construct.ItemTurretPlacer(props, () -> thaumcraft.common.registry.ThaumcraftEntities.TURRET_CROSSBOW.get()));
+	public static final DeferredItem<thaumcraft.common.entities.construct.ItemTurretPlacer> turretPlacerAdvanced =
+			ITEMS.registerItem("turret_placer_advanced",
+					props -> new thaumcraft.common.entities.construct.ItemTurretPlacer(props, () -> thaumcraft.common.registry.ThaumcraftEntities.TURRET_CROSSBOW_ADVANCED.get()));
 
 	private ItemsTC() {
 	}

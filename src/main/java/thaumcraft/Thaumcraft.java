@@ -292,6 +292,7 @@ public class Thaumcraft {
         event.put(ThaumcraftEntities.TAINT_SEED.get(), thaumcraft.common.entities.monster.tainted.EntityTaintSeed.createAttributes().build());
         event.put(ThaumcraftEntities.TAINT_SEED_PRIME.get(), thaumcraft.common.entities.monster.tainted.EntityTaintSeedPrime.createAttributes().build());
         event.put(ThaumcraftEntities.TURRET_CROSSBOW.get(), thaumcraft.common.entities.construct.EntityTurretCrossbow.createAttributes().build());
+        event.put(ThaumcraftEntities.TURRET_CROSSBOW_ADVANCED.get(), thaumcraft.common.entities.construct.EntityTurretCrossbowAdvanced.createAttributes().build());
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {

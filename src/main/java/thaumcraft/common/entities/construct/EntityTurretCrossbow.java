@@ -227,7 +227,7 @@ public class EntityTurretCrossbow extends EntityOwnedConstruct implements Ranged
 	/** Real port of the original's own custom {@code EntityAIWatchTarget} - no real modern vanilla goal does
 	 * exactly this (keep looking at whatever the mob's own current attack target is, independent of whether
 	 * anything else is actively pathing toward it). */
-	private static class WatchTargetGoal extends Goal {
+	protected static class WatchTargetGoal extends Goal {
 		private final Mob mob;
 		private LivingEntity watched;
 		private int lookTime;

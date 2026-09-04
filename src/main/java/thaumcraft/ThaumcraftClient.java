@@ -83,6 +83,7 @@ public class ThaumcraftClient {
         event.register(ThaumcraftMenus.RESEARCH_TABLE.get(), thaumcraft.client.gui.GuiResearchTable::new);
         event.register(ThaumcraftMenus.GOLEM_BUILDER.get(), thaumcraft.client.gui.GuiGolemBuilder::new);
         event.register(ThaumcraftMenus.SEAL_CONFIG.get(), thaumcraft.client.gui.SealConfigScreen::new);
+        event.register(ThaumcraftMenus.TURRET_CONFIG.get(), thaumcraft.client.gui.TurretConfigScreen::new);
     }
 
     @SubscribeEvent
@@ -146,6 +147,9 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.GOLEM_ORB.get(), RenderFocusProjectile::new);
         // Real geometry now - see ModelCrossbow/RenderTurretCrossbow's own doc comments.
         event.registerEntityRenderer(ThaumcraftEntities.TURRET_CROSSBOW.get(), thaumcraft.client.render.RenderTurretCrossbow::new);
+        // No renderer yet - the original's own real crossbow_advanced.obj mesh needs a genuine custom
+        // OBJ-mesh renderer, see EntityTurretCrossbowAdvanced's own doc comment for why.
+        event.registerEntityRenderer(ThaumcraftEntities.TURRET_CROSSBOW_ADVANCED.get(), RenderFocusProjectile::new);
         // First real BlockEntityRenderer this whole port has needed - see its own doc comment.
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.BANNER.get(), thaumcraft.client.render.TileBannerRenderer::new);
     }

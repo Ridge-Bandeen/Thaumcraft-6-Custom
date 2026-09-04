@@ -7221,4 +7221,129 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Construct arc, chunk 2: EntityTurretCrossbowAdvanced/TurretConfigMenu - see those classes' own doc
+	// comments.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void turretPlacerAdvancedPlacesARealTamedAdvancedTurret(GameTestHelper helper) {
+		BlockPos floorPos = new BlockPos(2, 1, 2);
+		BlockPos floorAbs = helper.absolutePos(floorPos);
+		helper.setBlock(floorPos, net.minecraft.world.level.block.Blocks.STONE);
+
+		ServerPlayer player = spawnCasterAt(helper, floorAbs.above(2));
+		player.getAbilities().instabuild = false;
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, new ItemStack(ItemsTC.turretPlacerAdvanced.get()));
+
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(floorAbs), net.minecraft.core.Direction.UP, floorAbs, false);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(player, hand, hit);
+		net.minecraft.world.InteractionResult result = player.getItemInHand(hand).getItem().useOn(context);
+
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.SUCCESS, "placing against a solid block should succeed, got: " + result);
+		helper.assertTrue(player.getItemInHand(hand).isEmpty(), "the single placer stack should be fully consumed");
+
+		List<thaumcraft.common.entities.construct.EntityTurretCrossbowAdvanced> found = helper.getLevel().getEntitiesOfClass(
+				thaumcraft.common.entities.construct.EntityTurretCrossbowAdvanced.class, new AABB(floorAbs).inflate(3));
+		helper.assertTrue(found.size() == 1, "exactly one advanced turret should have been spawned, found " + found.size());
+		thaumcraft.common.entities.construct.EntityTurretCrossbowAdvanced turret = found.get(0);
+		helper.assertTrue(turret.isOwnedBy(player) && turret.isTame(), "the placed advanced turret should really be tamed/owned by the placing player");
+		helper.assertTrue(turret.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH) == 40.0,
+				"the advanced turret should really have its own 40-health attribute, not the base turret's 30");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void turretCrossbowAdvancedRespectsOwnershipAndTheFriendlyFireFlag(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos originAbs = helper.absolutePos(new BlockPos(2, 2, 2));
+
+		ServerPlayer owner = spawnCasterAt(helper, originAbs.above(3));
+
+		thaumcraft.common.entities.construct.EntityTurretCrossbowAdvanced turret =
+				thaumcraft.common.registry.ThaumcraftEntities.TURRET_CROSSBOW_ADVANCED.get().create(level);
+		helper.assertTrue(turret != null, "the advanced turret entity type should really be able to create an instance");
+		turret.moveTo(originAbs.getX() + 0.5, originAbs.getY(), originAbs.getZ() + 0.5, 0.0f, 0.0f);
+		turret.setValidSpawn();
+		level.addFreshEntity(turret);
+		turret.tame(owner);
+		turret.setTargetAnimal(true);
+		turret.setTargetFriendly(false);
+
+		net.minecraft.world.entity.animal.Wolf wolf = net.minecraft.world.entity.EntityType.WOLF.create(level);
+		helper.assertTrue(wolf != null, "a real wolf should really be creatable");
+		wolf.moveTo(originAbs.getX() + 2.5, originAbs.getY(), originAbs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(wolf);
+		wolf.tame(owner);
+
+		for (int i = 0; i < 100; i++) {
+			turret.tick();
+		}
+		helper.assertTrue(turret.getTarget() != wolf, "an advanced turret shouldn't target its own owner's other tamed pet with friendly-fire off");
+
+		turret.setTargetFriendly(true);
+		turret.setTarget(null);
+		boolean targetedFriendly = false;
+		for (int i = 0; i < 100 && !targetedFriendly; i++) {
+			turret.tick();
+			targetedFriendly = turret.getTarget() == wolf;
+		}
+		helper.assertTrue(targetedFriendly, "flipping friendly-fire on should let the turret target its own owner's other pet");
+
+		// Real port of the original's own onUpdate check: a player target dropped the moment PVP is
+		// disabled server-side, even mid-fight (forced directly here since a fresh target-selector pass
+		// would never pick a non-friendly player target while PVP is off in the first place). Every
+		// target-filter flag is cleared first so the real target-selector goal's own next evaluation can't
+		// immediately re-target the still-nearby wolf and clobber the manually-forced player target before
+		// this tick's own PVP check ever gets to look at it.
+		turret.setTargetAnimal(false);
+		turret.setTargetFriendly(false);
+		boolean originalPvp = level.getServer().isPvpAllowed();
+		level.getServer().setPvpAllowed(false);
+		try {
+			ServerPlayer stranger = spawnCasterAt(helper, originAbs.above(5));
+			turret.setTarget(stranger);
+			turret.tick();
+			helper.assertTrue(turret.getTarget() == null, "a real player target should really be dropped the moment PVP turns off server-side");
+		} finally {
+			level.getServer().setPvpAllowed(originalPvp);
+		}
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void turretConfigMenuOnlyLetsTheRealOwnerFlipTargetingFlags(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos abs = helper.absolutePos(new BlockPos(2, 2, 2));
+
+		ServerPlayer owner = spawnCasterAt(helper, abs.above(2));
+		ServerPlayer stranger = spawnCasterAt(helper, abs.above(4));
+
+		thaumcraft.common.entities.construct.EntityTurretCrossbowAdvanced turret =
+				thaumcraft.common.registry.ThaumcraftEntities.TURRET_CROSSBOW_ADVANCED.get().create(level);
+		helper.assertTrue(turret != null, "the advanced turret entity type should really be able to create an instance");
+		turret.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0.0f, 0.0f);
+		turret.setValidSpawn();
+		level.addFreshEntity(turret);
+		turret.tame(owner);
+
+		thaumcraft.common.container.TurretConfigMenu menu = new thaumcraft.common.container.TurretConfigMenu(1, owner.getInventory(), turret);
+		boolean before = turret.getTargetAnimal();
+
+		boolean strangerResult = menu.clickMenuButton(stranger, thaumcraft.common.container.TurretConfigMenu.BUTTON_TARGET_ANIMAL);
+		helper.assertTrue(!strangerResult && turret.getTargetAnimal() == before, "a non-owner shouldn't be able to flip the turret's targeting flags");
+
+		boolean ownerResult = menu.clickMenuButton(owner, thaumcraft.common.container.TurretConfigMenu.BUTTON_TARGET_ANIMAL);
+		helper.assertTrue(ownerResult && turret.getTargetAnimal() != before, "the real owner should be able to flip a targeting flag");
+
+		menu.broadcastChanges();
+		helper.assertTrue(menu.isTargetAnimal() == turret.getTargetAnimal(), "the menu's own synced flag readout should match the live turret after broadcastChanges");
+
+		helper.succeed();
+	}
 }

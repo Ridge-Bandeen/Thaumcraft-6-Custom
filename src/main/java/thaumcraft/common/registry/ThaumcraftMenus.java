@@ -32,6 +32,11 @@ public final class ThaumcraftMenus {
 	public static final Supplier<MenuType<thaumcraft.common.container.SealConfigMenu>> SEAL_CONFIG = MENUS.register("seal_config",
 			() -> IMenuTypeExtension.create(thaumcraft.common.container.SealConfigMenu::new));
 
+	/** Like {@link #GOLEM_BUILDER} above, the client constructor ignores the buffer entirely - {@code
+	 * TurretConfigMenu}'s own shape never varies per instance, see its own doc comment. */
+	public static final Supplier<MenuType<thaumcraft.common.container.TurretConfigMenu>> TURRET_CONFIG = MENUS.register("turret_config",
+			() -> IMenuTypeExtension.create(thaumcraft.common.container.TurretConfigMenu::new));
+
 	private ThaumcraftMenus() {
 	}
 }

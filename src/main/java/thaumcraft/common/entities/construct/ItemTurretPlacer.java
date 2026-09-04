@@ -1,6 +1,7 @@
 package thaumcraft.common.entities.construct;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -9,6 +10,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -17,10 +19,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import thaumcraft.common.registry.ThaumcraftEntities;
 
 /**
- * Replaces the old (1.12.2) {@code ItemTurretPlacer} - places a real {@link EntityTurretCrossbow}
+ * Replaces the old (1.12.2) {@code ItemTurretPlacer} - places a real {@link EntityOwnedConstruct} turret
  * (2-tall-clearance, non-{@code DOWN}-face, no-entities-in-the-way checks all ported exactly) tamed to the
  * placing player. Ownership is handed off via vanilla {@link net.minecraft.world.entity.TamableAnimal#tame},
  * not the original's own {@code setOwned}/{@code setOwnerId} pair, same reasoning as {@code ItemGolemPlacer}'s
@@ -29,15 +30,18 @@ import thaumcraft.common.registry.ThaumcraftEntities;
  *
  * Real, documented scope cut: the original's own {@code "turret"} item carried 3 metadata subtypes (basic/
  * advanced/bore, spawning {@code EntityTurretCrossbow}/{@code EntityTurretCrossbowAdvanced}/{@code
- * EntityArcaneBore} respectively) - only the basic tier is ported so far (the other two entities aren't
- * ported yet), so this is a single plain item rather than a 3-subtype split, matching this port's own
- * established "one item per real variant, no metadata subtypes" convention; {@code turretPlacerAdvanced}/
- * {@code turretPlacerBore} are real, deliberate follow-up work for whenever their own entities land.
+ * EntityArcaneBore} respectively) - this port instead registers one plain item per real variant (matching
+ * this port's own established "no metadata subtypes" convention), all sharing this one class parameterized
+ * by {@link #entityType} - {@code turretPlacerBore} is real, deliberate follow-up work for whenever
+ * {@code EntityArcaneBore} itself is ported.
  */
 public class ItemTurretPlacer extends Item {
 
-	public ItemTurretPlacer(Properties properties) {
+	private final Supplier<EntityType<? extends EntityTurretCrossbow>> entityType;
+
+	public ItemTurretPlacer(Properties properties, Supplier<EntityType<? extends EntityTurretCrossbow>> entityType) {
 		super(properties);
+		this.entityType = entityType;
 	}
 
 	@Override
@@ -77,7 +81,7 @@ public class ItemTurretPlacer extends Item {
 		level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
 		level.setBlockAndUpdate(above, Blocks.AIR.defaultBlockState());
 
-		EntityTurretCrossbow turret = ThaumcraftEntities.TURRET_CROSSBOW.get().create((ServerLevel) level);
+		EntityTurretCrossbow turret = entityType.get().create((ServerLevel) level);
 		if (turret == null) {
 			return InteractionResult.PASS;
 		}
