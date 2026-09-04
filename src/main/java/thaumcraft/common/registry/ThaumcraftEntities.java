@@ -245,6 +245,15 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("cultist_portal_greater"));
 
+	/** First of the "tainted creature" faction - see {@code EntityTaintCrawler}'s own doc comment.
+	 * {@code sized(0.5f, 0.4f)} matches the original's own constructor-time {@code setSize(0.5f, 0.4f)}
+	 * exactly (a real vanilla-silverfish-shaped hitbox). */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.tainted.EntityTaintCrawler>> TAINT_CRAWLER = ENTITY_TYPES.register("taint_crawler",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.tainted.EntityTaintCrawler>of(thaumcraft.common.entities.monster.tainted.EntityTaintCrawler::new, MobCategory.MONSTER)
+					.sized(0.5f, 0.4f)
+					.clientTrackingRange(64)
+					.build("taint_crawler"));
+
 	private ThaumcraftEntities() {
 	}
 }

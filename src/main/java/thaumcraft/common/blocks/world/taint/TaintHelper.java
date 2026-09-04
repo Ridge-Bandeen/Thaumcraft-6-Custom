@@ -119,8 +119,10 @@ public class TaintHelper {
 	}
 
 	/** Real, portable version of the original's own {@code BlockUtils#isAdjacentToSolidBlock} - the one
-	 * piece of that unported utility class this arc actually needed. */
-	static boolean isAdjacentToSolidBlock(Level level, BlockPos pos) {
+	 * piece of that unported utility class this arc actually needed. Public - {@code EntityTaintCrawler}
+	 * (a different package) reuses it directly for its own real "grow a fibre where I'm standing" tick,
+	 * the same way the original's own crawler called the same shared utility. */
+	public static boolean isAdjacentToSolidBlock(Level level, BlockPos pos) {
 		for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
 			BlockPos n = pos.relative(dir);
 			BlockState state = level.getBlockState(n);

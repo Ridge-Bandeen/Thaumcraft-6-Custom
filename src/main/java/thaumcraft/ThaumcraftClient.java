@@ -100,6 +100,7 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.CULTIST_CLERIC.get(), thaumcraft.client.render.RenderCultistKnight::new);
         event.registerEntityRenderer(ThaumcraftEntities.CULTIST_LEADER.get(), thaumcraft.client.render.RenderCultistLeader::new);
         event.registerEntityRenderer(ThaumcraftEntities.INHABITED_ZOMBIE.get(), thaumcraft.client.render.RenderInhabitedZombie::new);
+        event.registerEntityRenderer(ThaumcraftEntities.TAINT_CRAWLER.get(), thaumcraft.client.render.RenderTaintCrawler::new);
         // No visible model - see RenderFocusProjectile's own doc comment (shared with FOCUS_PROJECTILE/FOCUS_MINE).
         event.registerEntityRenderer(ThaumcraftEntities.GOLEM_ORB.get(), RenderFocusProjectile::new);
         // First real BlockEntityRenderer this whole port has needed - see its own doc comment.

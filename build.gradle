@@ -218,6 +218,8 @@ sourceSets {
             include 'thaumcraft/common/blocks/world/taint/BlockTaintLog.java'
             include 'thaumcraft/common/tiles/misc/TileBanner.java'
             include 'thaumcraft/client/render/TileBannerRenderer.java'
+            include 'thaumcraft/common/entities/monster/tainted/EntityTaintCrawler.java'
+            include 'thaumcraft/client/render/RenderTaintCrawler.java'
 
             include 'thaumcraft/api/crafting/ArcaneCraftingInput.java'
             include 'thaumcraft/api/crafting/ArcaneRecipe.java'

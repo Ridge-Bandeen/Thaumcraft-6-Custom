@@ -6565,4 +6565,71 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void taintCrawlerGrowsFibresAlliesWithTaintAndInflictsFluxTaint(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		level.getServer().setDifficulty(net.minecraft.world.Difficulty.HARD, true);
+
+		// Real "grows a real taint fibre under its own feet" tick, on a real 3x3 stone floor.
+		BlockPos floorRel = new BlockPos(2, 1, 2);
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				helper.setBlock(floorRel.offset(dx, 0, dz), Blocks.STONE);
+			}
+		}
+		BlockPos crawlerPos = helper.absolutePos(floorRel).above();
+		thaumcraft.common.entities.monster.tainted.EntityTaintCrawler crawler =
+				thaumcraft.common.registry.ThaumcraftEntities.TAINT_CRAWLER.get().create(level);
+		helper.assertTrue(crawler != null, "the entity type should really create an instance");
+		crawler.moveTo(crawlerPos.getX() + 0.5, crawlerPos.getY(), crawlerPos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(crawler);
+		boolean grewFibre = false;
+		for (int i = 0; i < 45 && !grewFibre; i++) {
+			crawler.tick();
+			grewFibre = level.getBlockState(crawlerPos).is(BlocksTC.taintFibre.get());
+		}
+		helper.assertTrue(grewFibre, "a real taint crawler should really grow a real taint fibre under its own feet within 40 real ticks");
+
+		// Real allied-with-other-tainted-mobs check.
+		thaumcraft.common.entities.monster.tainted.EntityTaintCrawler other =
+				thaumcraft.common.registry.ThaumcraftEntities.TAINT_CRAWLER.get().create(level);
+		other.moveTo(crawlerPos.getX() + 1.5, crawlerPos.getY(), crawlerPos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(other);
+		helper.assertTrue(crawler.isAlliedTo(other), "a real taint crawler should really be allied to another real tainted mob");
+
+		// Real Flux Taint infliction chance on a real successful melee hit (difficulty forced to HARD above
+		// for the highest, most-reliable chance).
+		net.minecraft.world.entity.npc.Villager victim = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+		helper.assertTrue(victim != null, "the villager entity type should really create an instance");
+		victim.moveTo(crawlerPos.getX() + 0.5, crawlerPos.getY(), crawlerPos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(victim);
+		boolean tainted = false;
+		for (int i = 0; i < 200 && !tainted; i++) {
+			victim.setHealth(victim.getMaxHealth());
+			victim.removeEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT);
+			crawler.doHurtTarget(victim);
+			tainted = victim.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT);
+		}
+		helper.assertTrue(tainted, "a real taint crawler landing repeated real hits on hard difficulty should really eventually inflict real Flux Taint");
+
+		// Real bonus Flux Crystal drop chance on death.
+		ServerPlayer killer = spawnCasterAt(helper, crawlerPos.above(3));
+		boolean droppedCrystal = false;
+		for (int i = 0; i < 100 && !droppedCrystal; i++) {
+			thaumcraft.common.entities.monster.tainted.EntityTaintCrawler probe =
+					thaumcraft.common.registry.ThaumcraftEntities.TAINT_CRAWLER.get().create(level);
+			probe.moveTo(crawlerPos.getX() + 0.5, crawlerPos.getY(), crawlerPos.getZ() + 0.5, 0.0f, 0.0f);
+			level.addFreshEntity(probe);
+			probe.hurt(level.damageSources().playerAttack(killer), 1000.0f);
+			for (ItemEntity ie : level.getEntitiesOfClass(ItemEntity.class, new AABB(crawlerPos).inflate(3))) {
+				if (ie.getItem().is(ItemsTC.crystalEssence.get())) {
+					droppedCrystal = true;
+				}
+			}
+		}
+		helper.assertTrue(droppedCrystal, "a real taint crawler should really eventually drop a real bonus Flux Crystal Essence on death");
+
+		helper.succeed();
+	}
 }
