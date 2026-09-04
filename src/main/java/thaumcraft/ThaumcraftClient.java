@@ -108,13 +108,15 @@ public class ThaumcraftClient {
         // placeholder as FOCUS_PROJECTILE above, not a temporary gap.
         event.registerEntityRenderer(ThaumcraftEntities.WISP.get(), RenderFocusProjectile::new);
         event.registerEntityRenderer(ThaumcraftEntities.FLUX_RIFT.get(), RenderFocusProjectile::new);
-        // Same real "no renderer registered at all" crash-risk fix, but these five DO have a real bespoke
-        // 3D model in the original (ModelGrappler/ModelFireBat/ModelEldritchCrab) - temporary placeholders,
-        // real models are real follow-up work, not a permanent cut like the four above.
-        event.registerEntityRenderer(ThaumcraftEntities.GRAPPLE.get(), RenderFocusProjectile::new);
-        event.registerEntityRenderer(ThaumcraftEntities.FIRE_BAT.get(), RenderFocusProjectile::new);
-        event.registerEntityRenderer(ThaumcraftEntities.SPELL_BAT.get(), RenderFocusProjectile::new);
-        event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_CRAB.get(), RenderFocusProjectile::new);
+        // Real geometry now - see RenderGrapple's own doc comment (the rope/tether visual is dropped, the
+        // hook itself is real).
+        event.registerEntityRenderer(ThaumcraftEntities.GRAPPLE.get(), thaumcraft.client.render.RenderGrapple::new);
+        // Real geometry now - both share ModelFireBat, see that class's own doc comment (matches the
+        // original's own real one-model-two-renderers shape).
+        event.registerEntityRenderer(ThaumcraftEntities.FIRE_BAT.get(), thaumcraft.client.render.RenderFireBat::new);
+        event.registerEntityRenderer(ThaumcraftEntities.SPELL_BAT.get(), thaumcraft.client.render.RenderSpellBat::new);
+        // Real geometry now - see RenderEldritchCrab's own doc comment.
+        event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_CRAB.get(), thaumcraft.client.render.RenderEldritchCrab::new);
         // Real, permanent cut, same reasoning as WISP/FLUX_RIFT above - both original portal renderers
         // extend Render directly and hand-draw an animated Tessellator billboard, no 3D model at all.
         event.registerEntityRenderer(ThaumcraftEntities.CULTIST_PORTAL_LESSER.get(), RenderFocusProjectile::new);
@@ -134,12 +136,12 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.TAINT_CRAWLER.get(), thaumcraft.client.render.RenderTaintCrawler::new);
         // No visible model - see RenderFocusProjectile's own doc comment (shared with FOCUS_PROJECTILE/FOCUS_MINE/GOLEM_ORB).
         event.registerEntityRenderer(ThaumcraftEntities.TAINT_SWARM.get(), RenderFocusProjectile::new);
-        // No renderer yet - see ThaumcraftEntities.TAINTACLE's own doc comment (shared with TAINTACLE_SMALL/
-        // TAINT_SEED/TAINT_SEED_PRIME, all bespoke-modeled in the original, none built for this port yet).
-        event.registerEntityRenderer(ThaumcraftEntities.TAINTACLE.get(), RenderFocusProjectile::new);
-        event.registerEntityRenderer(ThaumcraftEntities.TAINTACLE_SMALL.get(), RenderFocusProjectile::new);
-        event.registerEntityRenderer(ThaumcraftEntities.TAINT_SEED.get(), RenderFocusProjectile::new);
-        event.registerEntityRenderer(ThaumcraftEntities.TAINT_SEED_PRIME.get(), RenderFocusProjectile::new);
+        // Real geometry now - see RenderTaintacle/RenderTaintSeed's own doc comments (real per-registration
+        // shadow size/chain length, matching the original's own real per-registration shape).
+        event.registerEntityRenderer(ThaumcraftEntities.TAINTACLE.get(), context -> new thaumcraft.client.render.RenderTaintacle(context, 0.6f, 10));
+        event.registerEntityRenderer(ThaumcraftEntities.TAINTACLE_SMALL.get(), context -> new thaumcraft.client.render.RenderTaintacle(context, 0.2f, 6));
+        event.registerEntityRenderer(ThaumcraftEntities.TAINT_SEED.get(), context -> new thaumcraft.client.render.RenderTaintSeed(context, 0.4f));
+        event.registerEntityRenderer(ThaumcraftEntities.TAINT_SEED_PRIME.get(), context -> new thaumcraft.client.render.RenderTaintSeed(context, 0.6f));
         // No visible model - see RenderFocusProjectile's own doc comment (shared with FOCUS_PROJECTILE/FOCUS_MINE).
         event.registerEntityRenderer(ThaumcraftEntities.GOLEM_ORB.get(), RenderFocusProjectile::new);
         // First real BlockEntityRenderer this whole port has needed - see its own doc comment.
