@@ -141,6 +141,7 @@
   "block.thaumcraft.dioptra": "Dioptra",
   "entity.thaumcraft.cultist_leader.name": "Praetor %s",
   "entity.thaumcraft.taint_crawler.name": "Tainted Crawler",
+  "entity.thaumcraft.taint_swarm.name": "Taint Swarm",
   "block.thaumcraft.pedestal": "Arcane Pedestal",
   "block.thaumcraft.pedestal_eldritch": "Eldritch Pedestal",
   "block.thaumcraft.taint_fibre": "Fibrous Taint",

@@ -286,6 +286,7 @@ public class Thaumcraft {
         event.put(ThaumcraftEntities.CULTIST_PORTAL_LESSER.get(), thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser.createAttributes().build());
         event.put(ThaumcraftEntities.CULTIST_PORTAL_GREATER.get(), thaumcraft.common.entities.monster.boss.EntityCultistPortalGreater.createAttributes().build());
         event.put(ThaumcraftEntities.TAINT_CRAWLER.get(), thaumcraft.common.entities.monster.tainted.EntityTaintCrawler.createAttributes().build());
+        event.put(ThaumcraftEntities.TAINT_SWARM.get(), thaumcraft.common.entities.monster.tainted.EntityTaintSwarm.createAttributes().build());
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {

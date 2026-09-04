@@ -6605,10 +6605,15 @@ public class ThaumcraftGameTests {
 		victim.moveTo(crawlerPos.getX() + 0.5, crawlerPos.getY(), crawlerPos.getZ() + 0.5, 0.0f, 0.0f);
 		level.addFreshEntity(victim);
 		boolean tainted = false;
-		for (int i = 0; i < 200 && !tainted; i++) {
+		for (int i = 0; i < 400 && !tainted; i++) {
 			victim.setHealth(victim.getMaxHealth());
 			victim.removeEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT);
 			crawler.doHurtTarget(victim);
+			// Real vanilla post-hit invulnerability only decays via a real tick - doHurtTarget alone never
+			// advances it, so without this every call after the very first real landed hit would silently
+			// no-op forever (the exact same real mechanic that made the swarm self-destruct test flaky before
+			// switching it to tick() too - see that test's own comment).
+			victim.tick();
 			tainted = victim.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT);
 		}
 		helper.assertTrue(tainted, "a real taint crawler landing repeated real hits on hard difficulty should really eventually inflict real Flux Taint");
@@ -6629,6 +6634,77 @@ public class ThaumcraftGameTests {
 			}
 		}
 		helper.assertTrue(droppedCrystal, "a real taint crawler should really eventually drop a real bonus Flux Crystal Essence on death");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void taintSwarmSelfDestructsWhenSummonedAndAttacksWithoutKnockback(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos center = helper.absolutePos(new BlockPos(3, 2, 3));
+
+		// Real ally-with-other-tainted-mobs and real unpushable check.
+		thaumcraft.common.entities.monster.tainted.EntityTaintSwarm swarm =
+				thaumcraft.common.registry.ThaumcraftEntities.TAINT_SWARM.get().create(level);
+		helper.assertTrue(swarm != null, "the entity type should really create an instance");
+		swarm.moveTo(center.getX() + 0.5, center.getY(), center.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(swarm);
+		helper.assertTrue(!swarm.isPushable(), "a real taint swarm should really be unpushable");
+		thaumcraft.common.entities.monster.tainted.EntityTaintCrawler crawler =
+				thaumcraft.common.registry.ThaumcraftEntities.TAINT_CRAWLER.get().create(level);
+		helper.assertTrue(crawler != null, "the entity type should really create an instance");
+		crawler.moveTo(center.getX() + 1.5, center.getY(), center.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(crawler);
+		helper.assertTrue(swarm.isAlliedTo(crawler), "a real taint swarm should really be allied to another real tainted mob");
+
+		// Real self-destruct: summoned, with no target, it keeps hurting itself for real damage every tick -
+		// real vanilla post-hit invulnerability only decays via a real tick(), not aiStep() alone, so this
+		// calls the real tick() (which itself calls aiStep()) rather than aiStep() directly - the same real
+		// mechanic the original itself relied on to throttle its own unconditional per-tick self-damage call
+		// to roughly one real hit per ~10 ticks, not one per call.
+		swarm.setSummoned(true);
+		for (int i = 0; i < 400 && swarm.isAlive(); i++) {
+			swarm.tick();
+		}
+		helper.assertTrue(!swarm.isAlive(), "a real summoned taint swarm with no real target should really self-destruct within a real handful of hits");
+
+		// Real attack: applies Weakness and explicitly restores the target's own pre-hit velocity (no real
+		// knockback), matching the original's own manual motion preservation.
+		thaumcraft.common.entities.monster.tainted.EntityTaintSwarm attacker =
+				thaumcraft.common.registry.ThaumcraftEntities.TAINT_SWARM.get().create(level);
+		attacker.moveTo(center.getX() + 0.5, center.getY(), center.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(attacker);
+		net.minecraft.world.entity.npc.Villager victim = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+		helper.assertTrue(victim != null, "the villager entity type should really create an instance");
+		victim.moveTo(center.getX() + 0.5, center.getY(), center.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(victim);
+		attacker.setTarget(victim);
+		net.minecraft.world.phys.Vec3 preHitMotion = victim.getDeltaMovement();
+		boolean weakened = false;
+		for (int i = 0; i < 400 && !weakened; i++) {
+			attacker.aiStep();
+			weakened = victim.hasEffect(net.minecraft.world.effect.MobEffects.WEAKNESS);
+		}
+		helper.assertTrue(weakened, "a real taint swarm attacking a real target should really eventually apply real Weakness");
+		helper.assertTrue(victim.getDeltaMovement().equals(preHitMotion),
+				"a real taint swarm's attack should really not knock its target back at all");
+
+		// Real bonus Flux Crystal Essence drop chance on death.
+		ServerPlayer killer = spawnCasterAt(helper, center.above(2));
+		boolean droppedCrystal = false;
+		for (int i = 0; i < 100 && !droppedCrystal; i++) {
+			thaumcraft.common.entities.monster.tainted.EntityTaintSwarm probe =
+					thaumcraft.common.registry.ThaumcraftEntities.TAINT_SWARM.get().create(level);
+			probe.moveTo(center.getX() + 0.5, center.getY(), center.getZ() + 0.5, 0.0f, 0.0f);
+			level.addFreshEntity(probe);
+			probe.hurt(level.damageSources().playerAttack(killer), 1000.0f);
+			for (ItemEntity ie : level.getEntitiesOfClass(ItemEntity.class, new AABB(center).inflate(3))) {
+				if (ie.getItem().is(ItemsTC.crystalEssence.get())) {
+					droppedCrystal = true;
+				}
+			}
+		}
+		helper.assertTrue(droppedCrystal, "a real taint swarm should really eventually drop a real bonus Flux Crystal Essence on death");
 
 		helper.succeed();
 	}

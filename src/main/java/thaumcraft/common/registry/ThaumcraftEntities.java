@@ -254,6 +254,17 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("taint_crawler"));
 
+	/** See {@code EntityTaintSwarm}'s own doc comment. {@code sized(2.0f, 2.0f)} matches the original's own
+	 * constructor-time {@code setSize(2.0f, 2.0f)} exactly. No real renderer either - the original's own
+	 * version is 100% client-side particle FX with a literal no-op {@code doRender}, same real "no visible
+	 * model" shape {@link #FOCUS_PROJECTILE}/{@link #GOLEM_ORB} already reuse {@code RenderFocusProjectile}
+	 * for. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.tainted.EntityTaintSwarm>> TAINT_SWARM = ENTITY_TYPES.register("taint_swarm",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.tainted.EntityTaintSwarm>of(thaumcraft.common.entities.monster.tainted.EntityTaintSwarm::new, MobCategory.MONSTER)
+					.sized(2.0f, 2.0f)
+					.clientTrackingRange(64)
+					.build("taint_swarm"));
+
 	private ThaumcraftEntities() {
 	}
 }
