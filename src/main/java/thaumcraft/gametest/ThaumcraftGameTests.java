@@ -6331,4 +6331,127 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void taintRockSoilCrustGeyserDieSpreadFallAndPollute(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+
+		// Real per-variant die() transitions.
+		BlockPos rockPos = helper.absolutePos(new BlockPos(0, 1, 0));
+		level.setBlockAndUpdate(rockPos, BlocksTC.taintRock.get().defaultBlockState());
+		BlocksTC.taintRock.get().die(level, rockPos, level.getBlockState(rockPos));
+		helper.assertTrue(level.getBlockState(rockPos).is(Blocks.COBBLESTONE), "a real dying taint rock should really turn into real cobblestone");
+
+		BlockPos soilPos = helper.absolutePos(new BlockPos(2, 1, 0));
+		level.setBlockAndUpdate(soilPos, BlocksTC.taintSoil.get().defaultBlockState());
+		BlocksTC.taintSoil.get().die(level, soilPos, level.getBlockState(soilPos));
+		helper.assertTrue(level.getBlockState(soilPos).is(Blocks.DIRT), "a real dying taint soil should really turn into real dirt");
+
+		BlockPos crustDiePos = helper.absolutePos(new BlockPos(4, 1, 0));
+		level.setBlockAndUpdate(crustDiePos, BlocksTC.taintCrust.get().defaultBlockState());
+		BlocksTC.taintCrust.get().die(level, crustDiePos, level.getBlockState(crustDiePos));
+		helper.assertTrue(level.getBlockState(crustDiePos).isAir(), "a real dying taint crust with no ported stonePorous target should really just vanish");
+
+		BlockPos geyserDiePos = helper.absolutePos(new BlockPos(6, 1, 0));
+		level.setBlockAndUpdate(geyserDiePos, BlocksTC.taintGeyser.get().defaultBlockState());
+		BlocksTC.taintGeyser.get().die(level, geyserDiePos, level.getBlockState(geyserDiePos));
+		helper.assertTrue(level.getBlockState(geyserDiePos).isAir(), "a real dying taint geyser with no ported fluxGoo target should really just vanish");
+
+		// Real rock -> fibre spreading, on a real 3x3 stone floor with a real tracked seed nearby (so the
+		// same-probability die() branch never fires, and TaintHelper's own spread-rate gate is bypassed the
+		// same way the fibre test itself already established, via a direct ignore=true call).
+		BlockPos spreadFloorRel = new BlockPos(0, 1, 3);
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				helper.setBlock(spreadFloorRel.offset(dx, 0, dz), Blocks.STONE);
+			}
+		}
+		BlockPos rockSpreadPos = helper.absolutePos(spreadFloorRel).above();
+		level.setBlockAndUpdate(rockSpreadPos, BlocksTC.taintRock.get().defaultBlockState());
+		thaumcraft.common.blocks.world.taint.TaintHelper.addTaintSeed(level, rockSpreadPos);
+		boolean spread = false;
+		for (int i = 0; i < 300 && !spread; i++) {
+			thaumcraft.common.blocks.world.taint.TaintHelper.spreadFibres(level, rockSpreadPos, true);
+			for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+				if (level.getBlockState(rockSpreadPos.relative(dir)).is(BlocksTC.taintFibre.get())) {
+					spread = true;
+					break;
+				}
+			}
+		}
+		helper.assertTrue(spread, "a real taint rock near a real tracked seed should really eventually spread a real adjacent taint fibre");
+		thaumcraft.common.blocks.world.taint.TaintHelper.removeTaintSeed(level, rockSpreadPos);
+
+		// Real crust falling: floating in open air (so it's really "only adjacent to taint", i.e. air) with
+		// real open air below all the way to a real floor, and a real tracked seed nearby so the shared
+		// probabilistic die() branch never preempts the fall. tryToFall's own fall check is unconditional
+		// once reached, so the very first real random tick should really trigger a real fall.
+		// The shared "empty" structure is only 8x5x8 (x/z: 0-7, y: 0-4) - the GameTest framework really does
+		// wall the test region off with real invisible barrier blocks just outside those bounds, and
+		// isOnlyAdjacentToTaint below counts a real barrier as a real sturdy non-taint neighbor. x=3 keeps a
+		// full ring of real interior air on every side within that real 8-wide footprint.
+		BlockPos crustFloorRel = new BlockPos(3, 1, 6);
+		helper.setBlock(crustFloorRel, Blocks.STONE);
+		BlockPos crustFloor = helper.absolutePos(crustFloorRel);
+		BlockPos crustPos = crustFloor.above(2);
+		level.setBlockAndUpdate(crustPos, BlocksTC.taintCrust.get().defaultBlockState());
+		thaumcraft.common.blocks.world.taint.TaintHelper.addTaintSeed(level, crustPos);
+		net.minecraft.world.level.block.state.BlockState crustState = level.getBlockState(crustPos);
+		crustState.randomTick(level, crustPos, level.random);
+		helper.assertTrue(!level.getBlockState(crustPos).is(BlocksTC.taintCrust.get()),
+				"a real unsupported taint crust should really leave its original position once it starts really falling");
+		java.util.List<net.minecraft.world.entity.item.FallingBlockEntity> fallers =
+				level.getEntitiesOfClass(net.minecraft.world.entity.item.FallingBlockEntity.class, new AABB(crustPos).inflate(2));
+		helper.assertTrue(!fallers.isEmpty(), "a real falling taint crust should really spawn a real vanilla FallingBlockEntity");
+		net.minecraft.world.entity.item.FallingBlockEntity faller = fallers.get(0);
+		for (int i = 0; i < 400 && faller.isAlive(); i++) {
+			faller.tick();
+		}
+		helper.assertTrue(!faller.isAlive(), "a real falling taint crust should really eventually land and discard its real falling-block entity");
+		helper.assertTrue(level.getBlockState(crustFloor.above()).is(BlocksTC.taintCrust.get()),
+				"a real falling taint crust should really land back as a real taint crust block on top of solid ground");
+		thaumcraft.common.blocks.world.taint.TaintHelper.removeTaintSeed(level, crustPos);
+
+		// Real geyser aura pollution when local flux is low, with a real tracked seed nearby for the same
+		// die()-suppression reason as above.
+		BlockPos geyserPos = helper.absolutePos(new BlockPos(5, 1, 1));
+		level.setBlockAndUpdate(geyserPos, BlocksTC.taintGeyser.get().defaultBlockState());
+		thaumcraft.common.blocks.world.taint.TaintHelper.addTaintSeed(level, geyserPos);
+		float fluxBefore = thaumcraft.api.aura.AuraHelper.getFlux(level, geyserPos);
+		helper.assertTrue(fluxBefore < 2.0f, "a fresh test chunk should really start with real low flux");
+		net.minecraft.world.level.block.state.BlockState geyserState = level.getBlockState(geyserPos);
+		for (int i = 0; i < 20; i++) {
+			geyserState.randomTick(level, geyserPos, level.random);
+		}
+		helper.assertTrue(thaumcraft.api.aura.AuraHelper.getFlux(level, geyserPos) > fluxBefore,
+				"a real taint geyser over real low flux should really keep polluting the real local aura");
+		thaumcraft.common.blocks.world.taint.TaintHelper.removeTaintSeed(level, geyserPos);
+
+		// Real rarer Flux Taint walk-chance and real rock-only bonus Flux Crystal drop.
+		net.minecraft.world.entity.npc.Villager walker = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+		helper.assertTrue(walker != null, "the villager entity type should really create an instance");
+		walker.moveTo(rockPos.getX() + 0.5, rockPos.getY() + 1.0, rockPos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(walker);
+		level.setBlockAndUpdate(rockPos, BlocksTC.taintRock.get().defaultBlockState());
+		net.minecraft.world.level.block.state.BlockState rockState = level.getBlockState(rockPos);
+		for (int i = 0; i < 8000 && !walker.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT); i++) {
+			rockState.getBlock().stepOn(level, rockPos, rockState, walker);
+		}
+		helper.assertTrue(walker.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT),
+				"a real living entity repeatedly walking a real taint rock should really eventually catch real Flux Taint");
+
+		ServerPlayer breaker = spawnCasterAt(helper, rockPos.above(2));
+		boolean droppedCrystal = false;
+		for (int i = 0; i < 200 && !droppedCrystal; i++) {
+			BlocksTC.taintRock.get().playerWillDestroy(level, rockPos, rockState, breaker);
+			for (ItemEntity ie : level.getEntitiesOfClass(ItemEntity.class, new AABB(rockPos).inflate(2))) {
+				if (ie.getItem().is(ItemsTC.crystalEssence.get())) {
+					droppedCrystal = true;
+				}
+			}
+		}
+		helper.assertTrue(droppedCrystal, "breaking a real taint rock should really eventually drop a real bonus Flux Crystal Essence");
+
+		helper.succeed();
+	}
 }

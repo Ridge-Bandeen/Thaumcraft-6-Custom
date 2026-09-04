@@ -484,6 +484,25 @@ public final class BlocksTC {
 					.noOcclusion().randomTicks()
 					.lightLevel(thaumcraft.common.blocks.world.taint.BlockTaintFibre::lightLevel));
 
+	/** See {@link thaumcraft.common.blocks.world.taint.BlockTaint}'s own doc comment - one shared class
+	 * backing all four registered variants below, matching the original's own single-class-many-
+	 * registrations shape. */
+	public static final DeferredBlock<thaumcraft.common.blocks.world.taint.BlockTaint> taintRock = BLOCKS.registerBlock("taint_rock",
+			props -> new thaumcraft.common.blocks.world.taint.BlockTaint(props, thaumcraft.common.blocks.world.taint.BlockTaint.Variant.ROCK),
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(SoundType.STONE).randomTicks());
+
+	public static final DeferredBlock<thaumcraft.common.blocks.world.taint.BlockTaint> taintSoil = BLOCKS.registerBlock("taint_soil",
+			props -> new thaumcraft.common.blocks.world.taint.BlockTaint(props, thaumcraft.common.blocks.world.taint.BlockTaint.Variant.SOIL),
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(SoundType.STONE).randomTicks());
+
+	public static final DeferredBlock<thaumcraft.common.blocks.world.taint.BlockTaint> taintCrust = BLOCKS.registerBlock("taint_crust",
+			props -> new thaumcraft.common.blocks.world.taint.BlockTaint(props, thaumcraft.common.blocks.world.taint.BlockTaint.Variant.CRUST),
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(SoundType.STONE).randomTicks());
+
+	public static final DeferredBlock<thaumcraft.common.blocks.world.taint.BlockTaint> taintGeyser = BLOCKS.registerBlock("taint_geyser",
+			props -> new thaumcraft.common.blocks.world.taint.BlockTaint(props, thaumcraft.common.blocks.world.taint.BlockTaint.Variant.GEYSER),
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(SoundType.STONE).randomTicks());
+
 	private BlocksTC() {
 	}
 }

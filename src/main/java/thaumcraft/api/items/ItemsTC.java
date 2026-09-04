@@ -701,6 +701,20 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> taintFibre =
 			ITEMS.registerSimpleBlockItem("taint_fibre", BlocksTC.taintFibre);
 
+	/** See {@link BlocksTC#taintRock}/{@link thaumcraft.common.blocks.world.taint.BlockTaint}'s own doc
+	 * comment. */
+	public static final DeferredItem<BlockItem> taintRock =
+			ITEMS.registerSimpleBlockItem("taint_rock", BlocksTC.taintRock);
+
+	public static final DeferredItem<BlockItem> taintSoil =
+			ITEMS.registerSimpleBlockItem("taint_soil", BlocksTC.taintSoil);
+
+	public static final DeferredItem<BlockItem> taintCrust =
+			ITEMS.registerSimpleBlockItem("taint_crust", BlocksTC.taintCrust);
+
+	public static final DeferredItem<BlockItem> taintGeyser =
+			ITEMS.registerSimpleBlockItem("taint_geyser", BlocksTC.taintGeyser);
+
 	private ItemsTC() {
 	}
 }

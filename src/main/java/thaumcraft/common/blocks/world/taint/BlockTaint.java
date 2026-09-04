@@ -1,222 +1,157 @@
 package thaumcraft.common.blocks.world.taint;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import net.minecraft.block.Block;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.MapColor;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.state.BlockFaceShape;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.potion.PotionEffect;
-import net.minecraft.util.BlockRenderLayer;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import net.minecraftforge.fluids.BlockFluidFinite;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.api.ThaumcraftMaterials;
+
+import com.mojang.serialization.MapCodec;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.EntityTypeTags;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import thaumcraft.api.aspects.Aspect;
+import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.aura.AuraHelper;
 import thaumcraft.api.blocks.BlocksTC;
-import thaumcraft.api.internal.WeightedRandomLoot;
-import thaumcraft.api.potions.PotionFluxTaint;
-import thaumcraft.common.blocks.BlockTC;
-import thaumcraft.common.config.ConfigItems;
-import thaumcraft.common.entities.EntityFallingTaint;
-import thaumcraft.common.entities.monster.tainted.EntityTaintSwarm;
-import thaumcraft.common.lib.SoundsTC;
-import thaumcraft.common.lib.utils.EntityUtils;
-import thaumcraft.common.lib.utils.Utils;
+import thaumcraft.api.items.ItemsTC;
+import thaumcraft.common.registry.ThaumcraftMobEffects;
 
+/**
+ * Replaces the old (1.12.2) {@code BlockTaint} - one real class backing four registered variants ({@link
+ * Variant#ROCK}/{@link Variant#SOIL}/{@link Variant#CRUST}/{@link Variant#GEYSER}), matching the original's
+ * own single-class-many-registrations shape (same real pattern this port already used for {@code BlockLoot}
+ * in the cult arc).
+ *
+ * Real per-variant die() transitions and real per-tick behavior, matching the original: rock keeps spreading
+ * real fibres nearby; crust real-falls (via vanilla's own {@link FallingBlockEntity#fall} - the original
+ * hand-rolled its own {@code EntityFallingTaint} because 1.12 had nothing equivalent bundled; modern
+ * Minecraft's own falling-block entity already does the identical job for real, so no custom entity is
+ * needed at all here); geyser pollutes the aura for real when local flux is low. Real Flux Taint walk-chance
+ * (rarer than {@link BlockTaintFibre}'s own - matches the original's {@code nextInt(250)} vs. fibre's
+ * {@code nextInt(750)}), and a real rock-only bonus Flux Crystal drop chance.
+ *
+ * Real, documented cuts vs the original: {@code die()}'s own rock/crust/geyser targets ({@code
+ * stonePorous}/{@code fluxGoo}) aren't ported yet - rock falls back to real vanilla cobblestone, crust/
+ * geyser fall back to real air (matching the original's own default "anything else -&gt; air" branch). The
+ * geyser's own real "spawn a real {@code EntityTaintSwarm} when a player is nearby" branch is dropped -
+ * that creature isn't ported yet either (a later sub-chunk of the tainted-creature side of this same arc) -
+ * only the aura-pollution alternative branch survives. No silk-touch-preserves-itself branch, same real
+ * simplification {@code BlockLoot} already established for the cult arc's loot crates.
+ */
+public class BlockTaint extends Block implements ITaintBlock {
 
-public class BlockTaint extends BlockTC implements ITaintBlock
-{
-    static Random r;
-    static ArrayList<WeightedRandomLoot> pdrops;
-    
-    public BlockTaint(String name) {
-        super(ThaumcraftMaterials.MATERIAL_TAINT, name);
-        setHardness(10.0f);
-        setResistance(100.0f);
-        setSoundType(SoundsTC.GORE);
-        setTickRandomly(true);
-    }
-    
-    public SoundType getSoundType() {
-        return SoundsTC.GORE;
-    }
-    
-    public BlockFaceShape getBlockFaceShape(IBlockAccess worldIn, IBlockState state, BlockPos pos, EnumFacing face) {
-        return BlockFaceShape.UNDEFINED;
-    }
-    
-    public MapColor getMapColor(IBlockState state, IBlockAccess worldIn, BlockPos pos) {
-        return MapColor.PURPLE;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public BlockRenderLayer getBlockLayer() {
-        return BlockRenderLayer.CUTOUT;
-    }
-    
-    @Override
-    public void die(World world, BlockPos pos, IBlockState state) {
-        if (state.getBlock() == BlocksTC.taintRock) {
-            world.setBlockState(pos, BlocksTC.stonePorous.getDefaultState());
-        }
-        else if (state.getBlock() == BlocksTC.taintSoil) {
-            world.setBlockState(pos, Blocks.DIRT.getDefaultState());
-        }
-        else if (state.getBlock() == BlocksTC.taintCrust) {
-            world.setBlockState(pos, BlocksTC.fluxGoo.getDefaultState());
-        }
-        else if (state.getBlock() == BlocksTC.taintGeyser) {
-            world.setBlockState(pos, BlocksTC.fluxGoo.getDefaultState());
-        }
-        else {
-            world.setBlockToAir(pos);
-        }
-    }
-    
-    public void updateTick(World world, BlockPos pos, IBlockState state, Random random) {
-        if (!world.isRemote) {
-            if (!TaintHelper.isNearTaintSeed(world, pos) && random.nextInt(10) == 0) {
-                die(world, pos, state);
-                return;
-            }
-            if (state.getBlock() == BlocksTC.taintRock) {
-                TaintHelper.spreadFibres(world, pos);
-            }
-            if (state.getBlock() == BlocksTC.taintCrust) {
-                Random r = new Random(pos.toLong());
-                if (tryToFall(world, pos, pos)) {
-                    return;
-                }
-                if (world.isAirBlock(pos.up())) {
-                    boolean doIt = true;
-                    EnumFacing dir = EnumFacing.HORIZONTALS[random.nextInt(4)];
-                    for (int a = 1; a < 4; ++a) {
-                        if (!world.isAirBlock(pos.offset(dir).down(a))) {
-                            doIt = false;
-                            break;
-                        }
-                        if (world.getBlockState(pos.down(a)).getBlock() != this) {
-                            doIt = false;
-                            break;
-                        }
-                    }
-                    if (doIt && tryToFall(world, pos, pos.offset(dir))) {
-                        return;
-                    }
-                }
-            }
-            else if (state.getBlock() == BlocksTC.taintGeyser) {
-                if (world.rand.nextFloat() < 0.2 && world.isAnyPlayerWithinRangeAt(pos.getX() + 0.5f, pos.getY() + 0.5f, pos.getZ() + 0.5f, 32.0) && EntityUtils.getEntitiesInRange(world, pos, null, (Class<? extends Entity>)EntityTaintSwarm.class, 32.0).isEmpty()) {
-                    Entity e = new EntityTaintSwarm(world);
-                    e.setLocationAndAngles(pos.getX() + 0.5f, pos.getY() + 1.25f, pos.getZ() + 0.5f, (float)world.rand.nextInt(360), 0.0f);
-                    world.spawnEntity(e);
-                }
-                else if (AuraHelper.getFlux(world, pos) < 2.0f) {
-                    AuraHelper.polluteAura(world, pos, 0.25f, true);
-                }
-            }
-        }
-    }
-    
-    public boolean canSilkHarvest(World world, BlockPos pos, IBlockState state, EntityPlayer player) {
-        return true;
-    }
-    
-    public void onEntityWalk(World world, BlockPos pos, Entity entity) {
-        if (!world.isRemote && entity instanceof EntityLivingBase && !((EntityLivingBase)entity).isEntityUndead() && world.rand.nextInt(250) == 0) {
-            ((EntityLivingBase)entity).addPotionEffect(new PotionEffect(PotionFluxTaint.instance, 200, 0, false, true));
-        }
-    }
-    
-    public boolean eventReceived(IBlockState state, World worldIn, BlockPos pos, int eventID, int eventParam) {
-        if (eventID == 1) {
-            if (worldIn.isRemote) {
-                worldIn.playSound(null, pos, SoundEvents.BLOCK_CHORUS_FLOWER_DEATH, SoundCategory.BLOCKS, 0.1f, 0.9f + worldIn.rand.nextFloat() * 0.2f);
-            }
-            return true;
-        }
-        return super.eventReceived(state, worldIn, pos, eventID, eventParam);
-    }
-    
-    public static boolean canFallBelow(World world, BlockPos pos) {
-        IBlockState bs = world.getBlockState(pos);
-        Block l = bs.getBlock();
-        for (int xx = -1; xx <= 1; ++xx) {
-            for (int zz = -1; zz <= 1; ++zz) {
-                for (int yy = -1; yy <= 1; ++yy) {
-                    if (Utils.isWoodLog(world, pos.add(xx, yy, zz))) {
-                        return false;
-                    }
-                }
-            }
-        }
-        return l.isAir(bs, world, pos) || ((l != BlocksTC.fluxGoo || (int)bs.getValue((IProperty)BlockFluidFinite.LEVEL) < 4) && (l == Blocks.FIRE || l == BlocksTC.taintFibre || l.isReplaceable(world, pos) || bs.getMaterial() == Material.WATER || bs.getMaterial() == Material.LAVA));
-    }
-    
-    private boolean tryToFall(World world, BlockPos pos, BlockPos pos2) {
-        if (!BlockTaintFibre.isOnlyAdjacentToTaint(world, pos)) {
-            return false;
-        }
-        if (canFallBelow(world, pos2.down()) && pos2.getY() >= 0) {
-            byte b0 = 32;
-            if (world.isAreaLoaded(pos2.add(-b0, -b0, -b0), pos2.add(b0, b0, b0))) {
-                if (!world.isRemote) {
-                    EntityFallingTaint entityfalling = new EntityFallingTaint(world, pos2.getX() + 0.5f, pos2.getY() + 0.5f, pos2.getZ() + 0.5f, world.getBlockState(pos), pos);
-                    world.spawnEntity(entityfalling);
-                    return true;
-                }
-            }
-            else {
-                world.setBlockToAir(pos);
-                BlockPos p2;
-                for (p2 = new BlockPos(pos2); canFallBelow(world, p2.down()) && p2.getY() > 0; p2 = p2.down()) {}
-                if (p2.getY() > 0) {
-                    world.setBlockState(p2, BlocksTC.taintCrust.getDefaultState());
-                }
-            }
-        }
-        return false;
-    }
-    
-    public List<ItemStack> getDrops(IBlockAccess world, BlockPos pos, IBlockState state, int fortune) {
-        if (state.getBlock() == this && state.getBlock() == BlocksTC.taintRock) {
-            int rr = BlockTaint.r.nextInt(15) + fortune;
-            if (rr > 13) {
-                List<ItemStack> ret = new ArrayList<ItemStack>();
-                ret.add(ConfigItems.FLUX_CRYSTAL.copy());
-                return ret;
-            }
-        }
-        return super.getDrops(world, pos, state, fortune);
-    }
-    
-    protected boolean canSilkHarvest() {
-        return false;
-    }
-    
-    public Item getItemDropped(IBlockState state, Random rand, int fortune) {
-        return Item.getItemById(0);
-    }
-    
-    static {
-        BlockTaint.r = new Random(System.currentTimeMillis());
-        BlockTaint.pdrops = null;
-    }
+	public static final MapCodec<BlockTaint> CODEC = simpleCodec(props -> new BlockTaint(props, Variant.ROCK));
+
+	public enum Variant { ROCK, SOIL, CRUST, GEYSER }
+
+	private final Variant variant;
+
+	public BlockTaint(BlockBehaviour.Properties properties, Variant variant) {
+		super(properties);
+		this.variant = variant;
+	}
+
+	@Override
+	protected MapCodec<? extends Block> codec() {
+		return CODEC;
+	}
+
+	@Override
+	public void die(Level level, BlockPos pos, BlockState state) {
+		switch (variant) {
+			case ROCK -> level.setBlockAndUpdate(pos, Blocks.COBBLESTONE.defaultBlockState());
+			case SOIL -> level.setBlockAndUpdate(pos, Blocks.DIRT.defaultBlockState());
+			default -> level.removeBlock(pos, false);
+		}
+	}
+
+	@Override
+	protected boolean isRandomlyTicking(BlockState state) {
+		return true;
+	}
+
+	@Override
+	protected void randomTick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
+		if (!TaintHelper.isNearTaintSeed(level, pos) && random.nextInt(10) == 0) {
+			die(level, pos, state);
+			return;
+		}
+		switch (variant) {
+			case ROCK -> TaintHelper.spreadFibres(level, pos);
+			case CRUST -> tryToFall(level, pos, random);
+			case GEYSER -> {
+				if (AuraHelper.getFlux(level, pos) < 2.0f) {
+					AuraHelper.polluteAura(level, pos, 0.25f, true);
+				}
+			}
+			default -> {
+			}
+		}
+	}
+
+	private void tryToFall(ServerLevel level, BlockPos pos, RandomSource random) {
+		if (!BlockTaintFibre.isOnlyAdjacentToTaint(level, pos)) {
+			return;
+		}
+		if (canFallBelow(level, pos.below())) {
+			FallingBlockEntity.fall(level, pos, level.getBlockState(pos));
+			return;
+		}
+		if (level.isEmptyBlock(pos.above())) {
+			Direction dir = Direction.Plane.HORIZONTAL.getRandomDirection(random);
+			boolean clear = true;
+			for (int a = 1; a < 4 && clear; a++) {
+				BlockPos check = pos.relative(dir).below(a);
+				if (!level.isEmptyBlock(check) && level.getBlockState(pos.below(a)).getBlock() != this) {
+					clear = false;
+				}
+			}
+			if (clear && canFallBelow(level, pos.relative(dir).below())) {
+				FallingBlockEntity.fall(level, pos, level.getBlockState(pos));
+			}
+		}
+	}
+
+	/** Real, portable version of the original's own {@code BlockTaint#canFallBelow} static helper. */
+	public static boolean canFallBelow(LevelReader level, BlockPos pos) {
+		BlockState state = level.getBlockState(pos);
+		Block block = state.getBlock();
+		return state.isAir() || block == Blocks.FIRE || block == BlocksTC.taintFibre.get() || state.canBeReplaced();
+	}
+
+	@Override
+	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		return net.minecraft.world.phys.shapes.Shapes.block();
+	}
+
+	@Override
+	public void stepOn(Level level, BlockPos pos, BlockState state, Entity entity) {
+		if (!level.isClientSide && !entity.getType().is(EntityTypeTags.UNDEAD) && entity instanceof net.minecraft.world.entity.LivingEntity living
+				&& level.random.nextInt(250) == 0) {
+			living.addEffect(new MobEffectInstance(ThaumcraftMobEffects.FLUX_TAINT, 200, 0, false, true));
+		}
+		super.stepOn(level, pos, state, entity);
+	}
+
+	@Override
+	public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+		if (!level.isClientSide && variant == Variant.ROCK && level.random.nextInt(15) > 13) {
+			ItemStack crystal = new ItemStack(ItemsTC.crystalEssence.get());
+			((thaumcraft.common.items.resources.ItemCrystalEssence) crystal.getItem()).setAspects(crystal, new AspectList().add(Aspect.FLUX, 1));
+			popResource(level, pos, crystal);
+		}
+		return super.playerWillDestroy(level, pos, state, player);
+	}
 }
