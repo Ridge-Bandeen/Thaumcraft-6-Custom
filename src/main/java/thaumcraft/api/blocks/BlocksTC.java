@@ -511,6 +511,12 @@ public final class BlocksTC {
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(0.1f).sound(SoundType.WOOL)
 					.noOcclusion().randomTicks().lightLevel(state -> 9));
 
+	/** Real vanilla-substitute sound type ({@code SoundType.WART_BLOCK}, fleshy) - this port hasn't ported
+	 * the original's own custom "gore" {@code SoundEvent} catalog yet. */
+	public static final DeferredBlock<thaumcraft.common.blocks.world.taint.BlockTaintLog> taintLog = BLOCKS.registerBlock("taint_log",
+			thaumcraft.common.blocks.world.taint.BlockTaintLog::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(3.0f, 100.0f).sound(SoundType.WART_BLOCK).randomTicks());
+
 	private BlocksTC() {
 	}
 }

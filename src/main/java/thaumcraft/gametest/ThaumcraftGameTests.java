@@ -6521,4 +6521,48 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void taintLogDiesUnconditionallyWithoutARealSeedAndSpreadsWithOne(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+
+		// Real, distinctive-from-every-other-taint-block behavior: no 10%-chance gate on death, it's a flat
+		// "die if not near a real seed" every single random tick.
+		BlockPos diePos = helper.absolutePos(new BlockPos(2, 1, 2));
+		level.setBlockAndUpdate(diePos, BlocksTC.taintLog.get().defaultBlockState());
+		level.getBlockState(diePos).randomTick(level, diePos, level.random);
+		helper.assertTrue(!level.getBlockState(diePos).is(BlocksTC.taintLog.get()),
+				"a real taint log with no real seed nearby should really die on the very first real random tick, unconditionally");
+
+		// Real spreading, on a real 3x3 stone floor with a real tracked seed nearby.
+		BlockPos spreadFloorRel = new BlockPos(2, 1, 5);
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				helper.setBlock(spreadFloorRel.offset(dx, 0, dz), Blocks.STONE);
+			}
+		}
+		BlockPos spreadLogPos = helper.absolutePos(spreadFloorRel).above();
+		level.setBlockAndUpdate(spreadLogPos, BlocksTC.taintLog.get().defaultBlockState());
+		thaumcraft.common.blocks.world.taint.TaintHelper.addTaintSeed(level, spreadLogPos);
+		boolean spread = false;
+		for (int i = 0; i < 300 && !spread; i++) {
+			thaumcraft.common.blocks.world.taint.TaintHelper.spreadFibres(level, spreadLogPos, true);
+			for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+				if (level.getBlockState(spreadLogPos.relative(dir)).is(BlocksTC.taintFibre.get())) {
+					spread = true;
+					break;
+				}
+			}
+		}
+		helper.assertTrue(spread, "a real taint log near a real tracked seed should really eventually spread a real adjacent taint fibre");
+		helper.assertTrue(level.getBlockState(spreadLogPos).is(BlocksTC.taintLog.get()),
+				"a real taint log near a real tracked seed should really survive - only the shared spreadFibres target changes, not the log itself");
+		thaumcraft.common.blocks.world.taint.TaintHelper.removeTaintSeed(level, spreadLogPos);
+
+		// Real self-drop on break (unlike its taint-block siblings, this one keeps the real default drop -
+		// the original never overrides getItemDropped, only getSilkTouchDrop/damageDropped).
+		assertSelfDrops(helper, new BlockPos(5, 1, 1), BlocksTC.taintLog.get(), ItemsTC.taintLog.get());
+
+		helper.succeed();
+	}
 }
