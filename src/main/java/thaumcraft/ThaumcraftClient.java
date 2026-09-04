@@ -69,6 +69,11 @@ public class ThaumcraftClient {
         // grapple_gun's above - see ItemPrimordialPearl's own doc comment for the 0/1/2 tier meaning.
         event.enqueueWork(() -> ItemProperties.register(ItemsTC.primordialPearl.get(), ResourceLocation.withDefaultNamespace("type"),
                 (stack, level, entity, seed) -> thaumcraft.common.items.curios.ItemPrimordialPearl.typeProperty(stack)));
+
+        // Real translucent render layer for the goo texture's own real alpha - the first custom block this
+        // port has needed one for (every other block so far has been either fully opaque or fully cutout).
+        event.enqueueWork(() -> net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
+                BlocksTC.fluxGoo.get(), net.minecraft.client.renderer.RenderType.translucent()));
     }
 
     @SubscribeEvent

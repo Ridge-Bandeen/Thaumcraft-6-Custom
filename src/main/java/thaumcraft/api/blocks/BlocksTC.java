@@ -503,6 +503,18 @@ public final class BlocksTC {
 			props -> new thaumcraft.common.blocks.world.taint.BlockTaint(props, thaumcraft.common.blocks.world.taint.BlockTaint.Variant.GEYSER),
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(SoundType.STONE).randomTicks());
 
+	/** Real, from-scratch finite-fluid block - see {@link thaumcraft.common.blocks.world.taint.BlockFluxGoo}'s
+	 * own doc comment for why this is a plain {@code Block}, not a real vanilla {@code Fluid}/{@code
+	 * FluidType}. {@code .noCollission()} matches the original's own {@code isSideSolid} always returning
+	 * false; {@code .liquid()} matches its real vanilla {@code Material}-equivalent classification;
+	 * {@code .noLootTable()} matches the original never overriding any drop behavior (fluids don't drop
+	 * themselves when "mined"). */
+	public static final DeferredBlock<thaumcraft.common.blocks.world.taint.BlockFluxGoo> fluxGoo = BLOCKS.registerBlock("flux_goo",
+			thaumcraft.common.blocks.world.taint.BlockFluxGoo::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).sound(SoundType.SLIME_BLOCK)
+					.noCollission().liquid().noLootTable().noOcclusion()
+					.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
+
 	/** {@code lightLevel(9)} is the real modern equivalent of the original's own {@code setLightLevel(0.625f)}
 	 * (a 0-1 brightness fraction the original engine itself converted to a 0-15 int - {@code (int)(0.625*15)}
 	 * really is 9). */

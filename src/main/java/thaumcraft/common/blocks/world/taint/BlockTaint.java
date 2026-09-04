@@ -38,17 +38,15 @@ import thaumcraft.common.registry.ThaumcraftMobEffects;
  * real fibres nearby; crust real-falls (via vanilla's own {@link FallingBlockEntity#fall} - the original
  * hand-rolled its own {@code EntityFallingTaint} because 1.12 had nothing equivalent bundled; modern
  * Minecraft's own falling-block entity already does the identical job for real, so no custom entity is
- * needed at all here); geyser pollutes the aura for real when local flux is low. Real Flux Taint walk-chance
- * (rarer than {@link BlockTaintFibre}'s own - matches the original's {@code nextInt(250)} vs. fibre's
- * {@code nextInt(750)}), and a real rock-only bonus Flux Crystal drop chance.
+ * needed at all here); geyser really spawns a real {@code EntityTaintSwarm} when a real player is nearby (now
+ * that creature is real too), otherwise pollutes the aura for real when local flux is low. Real Flux Taint
+ * walk-chance (rarer than {@link BlockTaintFibre}'s own - matches the original's {@code nextInt(250)} vs.
+ * fibre's {@code nextInt(750)}), and a real rock-only bonus Flux Crystal drop chance.
  *
- * Real, documented cuts vs the original: {@code die()}'s own rock/crust/geyser targets ({@code
- * stonePorous}/{@code fluxGoo}) aren't ported yet - rock falls back to real vanilla cobblestone, crust/
- * geyser fall back to real air (matching the original's own default "anything else -&gt; air" branch). The
- * geyser's own real "spawn a real {@code EntityTaintSwarm} when a player is nearby" branch is dropped -
- * that creature isn't ported yet either (a later sub-chunk of the tainted-creature side of this same arc) -
- * only the aura-pollution alternative branch survives. No silk-touch-preserves-itself branch, same real
- * simplification {@code BlockLoot} already established for the cult arc's loot crates.
+ * Real, documented cuts vs the original: {@code die()}'s own rock target ({@code stonePorous}) isn't ported
+ * yet - falls back to real vanilla cobblestone; crust/geyser now really die into real {@link BlockFluxGoo}
+ * (real once that block itself became real - see its own doc comment). No silk-touch-preserves-itself
+ * branch, same real simplification {@code BlockLoot} already established for the cult arc's loot crates.
  */
 public class BlockTaint extends Block implements ITaintBlock {
 
@@ -73,7 +71,7 @@ public class BlockTaint extends Block implements ITaintBlock {
 		switch (variant) {
 			case ROCK -> level.setBlockAndUpdate(pos, Blocks.COBBLESTONE.defaultBlockState());
 			case SOIL -> level.setBlockAndUpdate(pos, Blocks.DIRT.defaultBlockState());
-			default -> level.removeBlock(pos, false);
+			case CRUST, GEYSER -> level.setBlockAndUpdate(pos, BlocksTC.fluxGoo.get().defaultBlockState());
 		}
 	}
 
@@ -92,7 +90,15 @@ public class BlockTaint extends Block implements ITaintBlock {
 			case ROCK -> TaintHelper.spreadFibres(level, pos);
 			case CRUST -> tryToFall(level, pos, random);
 			case GEYSER -> {
-				if (AuraHelper.getFlux(level, pos) < 2.0f) {
+				if (random.nextFloat() < 0.2f && level.hasNearbyAlivePlayer(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 32.0)
+						&& level.getEntitiesOfClass(thaumcraft.common.entities.monster.tainted.EntityTaintSwarm.class, new net.minecraft.world.phys.AABB(pos).inflate(32.0)).isEmpty()) {
+					thaumcraft.common.entities.monster.tainted.EntityTaintSwarm swarm =
+							thaumcraft.common.registry.ThaumcraftEntities.TAINT_SWARM.get().create(level);
+					if (swarm != null) {
+						swarm.moveTo(pos.getX() + 0.5, pos.getY() + 1.25, pos.getZ() + 0.5, (float) random.nextInt(360), 0.0f);
+						level.addFreshEntity(swarm);
+					}
+				} else if (AuraHelper.getFlux(level, pos) < 2.0f) {
 					AuraHelper.polluteAura(level, pos, 0.25f, true);
 				}
 			}
@@ -124,11 +130,17 @@ public class BlockTaint extends Block implements ITaintBlock {
 		}
 	}
 
-	/** Real, portable version of the original's own {@code BlockTaint#canFallBelow} static helper. */
+	/** Real, portable version of the original's own {@code BlockTaint#canFallBelow} static helper. Real,
+	 * still-documented gap vs the original: the original's own wood-log proximity check (a 3x3x3 scan that
+	 * refuses to fall near any real log, presumably to protect trees) isn't ported. */
 	public static boolean canFallBelow(LevelReader level, BlockPos pos) {
 		BlockState state = level.getBlockState(pos);
 		Block block = state.getBlock();
-		return state.isAir() || block == Blocks.FIRE || block == BlocksTC.taintFibre.get() || state.canBeReplaced();
+		if (block == BlocksTC.fluxGoo.get()) {
+			return state.getValue(BlockFluxGoo.LEVEL) < 4;
+		}
+		return state.isAir() || block == Blocks.FIRE || block == BlocksTC.taintFibre.get() || state.canBeReplaced()
+				|| state.liquid();
 	}
 
 	@Override

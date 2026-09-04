@@ -6350,12 +6350,12 @@ public class ThaumcraftGameTests {
 		BlockPos crustDiePos = helper.absolutePos(new BlockPos(4, 1, 0));
 		level.setBlockAndUpdate(crustDiePos, BlocksTC.taintCrust.get().defaultBlockState());
 		BlocksTC.taintCrust.get().die(level, crustDiePos, level.getBlockState(crustDiePos));
-		helper.assertTrue(level.getBlockState(crustDiePos).isAir(), "a real dying taint crust with no ported stonePorous target should really just vanish");
+		helper.assertTrue(level.getBlockState(crustDiePos).is(BlocksTC.fluxGoo.get()), "a real dying taint crust should really turn into real flux goo");
 
 		BlockPos geyserDiePos = helper.absolutePos(new BlockPos(6, 1, 0));
 		level.setBlockAndUpdate(geyserDiePos, BlocksTC.taintGeyser.get().defaultBlockState());
 		BlocksTC.taintGeyser.get().die(level, geyserDiePos, level.getBlockState(geyserDiePos));
-		helper.assertTrue(level.getBlockState(geyserDiePos).isAir(), "a real dying taint geyser with no ported fluxGoo target should really just vanish");
+		helper.assertTrue(level.getBlockState(geyserDiePos).is(BlocksTC.fluxGoo.get()), "a real dying taint geyser should really turn into real flux goo");
 
 		// Real rock -> fibre spreading, on a real 3x3 stone floor with a real tracked seed nearby (so the
 		// same-probability die() branch never fires, and TaintHelper's own spread-rate gate is bypassed the
@@ -6508,16 +6508,22 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(!level.getBlockState(spreadFeaturePos).is(BlocksTC.taintFeature.get()),
 				"a real taint feature with no real seed nearby should really die off within a handful of random ticks");
 
-		// Real aura pollution whenever a real taint feature is removed for any reason (die() included, since
-		// die() itself removes the block - onRemove fires for that real removal too, same as the original's
-		// own breakBlock firing on any block-identity change, not just player-initiated ones).
+		// Real 33% chance to spawn a real EntityTaintCrawler whenever a real taint feature is removed for
+		// any reason (die() included, since die() itself removes the block - onRemove fires for that real
+		// removal too, same as the original's own breakBlock firing on any block-identity change, not just
+		// player-initiated ones) - now that creature is real too. The real remaining-67%-of-the-time aura
+		// pollution isn't reliably assertable here (see the taint seed test's own note on the real
+		// background AuraThread race), so this checks the crawler-spawn side instead.
 		BlockPos pollutePos = helper.absolutePos(new BlockPos(5, 1, 1));
-		level.setBlockAndUpdate(pollutePos, BlocksTC.taintFeature.get().defaultBlockState()
-				.setValue(thaumcraft.common.blocks.world.taint.BlockTaintFeature.FACING, net.minecraft.core.Direction.UP));
-		float fluxBefore = thaumcraft.api.aura.AuraHelper.getFlux(level, pollutePos);
-		level.removeBlock(pollutePos, false);
-		helper.assertTrue(thaumcraft.api.aura.AuraHelper.getFlux(level, pollutePos) > fluxBefore,
-				"removing a real taint feature should really pollute the real local aura");
+		boolean spawnedCrawler = false;
+		for (int i = 0; i < 40 && !spawnedCrawler; i++) {
+			level.setBlockAndUpdate(pollutePos, BlocksTC.taintFeature.get().defaultBlockState()
+					.setValue(thaumcraft.common.blocks.world.taint.BlockTaintFeature.FACING, net.minecraft.core.Direction.UP));
+			level.removeBlock(pollutePos, false);
+			spawnedCrawler = !level.getEntitiesOfClass(thaumcraft.common.entities.monster.tainted.EntityTaintCrawler.class,
+					new AABB(pollutePos).inflate(2)).isEmpty();
+		}
+		helper.assertTrue(spawnedCrawler, "removing a real taint feature should really eventually spawn a real taint crawler (a real 33% chance each time)");
 
 		helper.succeed();
 	}
@@ -6875,6 +6881,193 @@ public class ThaumcraftGameTests {
 			}
 		}
 		helper.assertTrue(primeDroppedCrystal, "a real taint seed prime should really always drop at least one real Flux Crystal Essence on death");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
+	public static void fluxGooFallsSpreadsDecaysAndAffectsEntities(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		thaumcraft.common.blocks.world.taint.BlockFluxGoo goo = BlocksTC.fluxGoo.get();
+		net.minecraft.world.level.block.state.properties.IntegerProperty LEVEL = thaumcraft.common.blocks.world.taint.BlockFluxGoo.LEVEL;
+
+		// Real conservation while falling: this loop drives the real scheduled-tick flow step by step (a
+		// GameTest doesn't process the real level tick-schedule queue on its own), re-locating the real
+		// single goo block each time since it really moves one block down per successful real tick. The
+		// real total never exceeds the real 7 quanta it started with, anywhere in the column, at any point.
+		BlockPos fallFloorRel = new BlockPos(2, 1, 2);
+		helper.setBlock(fallFloorRel, Blocks.STONE);
+		BlockPos fallFloorAbs = helper.absolutePos(fallFloorRel);
+		BlockPos gooTop = fallFloorAbs.above(6);
+		BlockPos gooRest = fallFloorAbs.above();
+		level.setBlockAndUpdate(gooTop, goo.defaultBlockState());
+		BlockPos currentPos = gooTop;
+		for (int i = 0; i < 60 && !currentPos.equals(gooRest); i++) {
+			int total = 0;
+			for (BlockPos p : BlockPos.betweenClosed(gooRest, gooTop)) {
+				net.minecraft.world.level.block.state.BlockState s = level.getBlockState(p);
+				if (s.is(goo)) {
+					int lvl = s.getValue(LEVEL);
+					helper.assertTrue(lvl >= 0 && lvl <= 7, "a real flux goo block should really always stay within real level 0-7, saw " + lvl);
+					total += lvl;
+				}
+			}
+			helper.assertTrue(total <= 7, "a real falling flux goo column should really never total more than its real original 7 quanta, saw " + total);
+			net.minecraft.world.level.block.state.BlockState currentState = level.getBlockState(currentPos);
+			if (currentState.is(goo)) {
+				currentState.tick(level, currentPos, level.random);
+			}
+			for (BlockPos p : BlockPos.betweenClosed(gooRest, gooTop)) {
+				if (level.getBlockState(p).is(goo)) {
+					currentPos = p;
+					break;
+				}
+			}
+		}
+		// Not necessarily still exactly level 7 - real per-tick decay (a real, deliberate sink, see the
+		// dedicated decay sub-test below) competes with real falling for the same tick "turn" on every
+		// single real tick, so a handful of decay rolls landing along the way for real is expected, not a
+		// conservation bug; what matters here is that it really made it all the way down as real goo.
+		net.minecraft.world.level.block.state.BlockState landed = level.getBlockState(gooRest);
+		helper.assertTrue(landed.is(goo) && landed.getValue(LEVEL) >= 1,
+				"a real flux goo block should really fall all the way down onto the first real solid floor beneath it, landing as real goo with a real positive level, got " + landed);
+
+		// Real horizontal spread once blocked from falling further, real conserved total across the puddle.
+		BlockPos spreadFloorRel = new BlockPos(5, 1, 2);
+		helper.setBlock(spreadFloorRel, Blocks.STONE);
+		BlockPos spreadPos = helper.absolutePos(spreadFloorRel).above();
+		level.setBlockAndUpdate(spreadPos, goo.defaultBlockState());
+		boolean spread = false;
+		for (int i = 0; i < 30 && !spread; i++) {
+			net.minecraft.world.level.block.state.BlockState s = level.getBlockState(spreadPos);
+			if (s.is(goo)) {
+				s.tick(level, spreadPos, level.random);
+			}
+			for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+				if (level.getBlockState(spreadPos.relative(dir)).is(goo)) {
+					spread = true;
+				}
+			}
+		}
+		helper.assertTrue(spread, "a real flux goo block blocked from falling further should really eventually spread into a real horizontal neighbor");
+		int spreadTotal = level.getBlockState(spreadPos).is(goo) ? level.getBlockState(spreadPos).getValue(LEVEL) : 0;
+		for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+			net.minecraft.world.level.block.state.BlockState n = level.getBlockState(spreadPos.relative(dir));
+			if (n.is(goo)) {
+				spreadTotal += n.getValue(LEVEL);
+			}
+		}
+		helper.assertTrue(spreadTotal <= 7, "a real spreading flux goo puddle should really conserve its real original 7 quanta across the whole puddle, saw " + spreadTotal);
+
+		// Real decay: a fully-drained (level 0) goo block should eventually either evaporate (real aura
+		// pollution) or condense into a real taint fibre.
+		BlockPos decayPos = helper.absolutePos(new BlockPos(8, 1, 2));
+		level.setBlockAndUpdate(decayPos, goo.defaultBlockState().setValue(LEVEL, 0));
+		boolean decayed = false;
+		for (int i = 0; i < 200 && !decayed; i++) {
+			net.minecraft.world.level.block.state.BlockState s = level.getBlockState(decayPos);
+			if (s.is(goo)) {
+				s.tick(level, decayPos, level.random);
+			}
+			decayed = !level.getBlockState(decayPos).is(goo);
+		}
+		helper.assertTrue(decayed, "a real fully-drained flux goo block should really eventually decay into something else");
+		net.minecraft.world.level.block.state.BlockState decayedInto = level.getBlockState(decayPos);
+		helper.assertTrue(decayedInto.isAir() || decayedInto.is(BlocksTC.taintFibre.get()),
+				"a real drained flux goo block should really decay into either real air or a real taint fibre, got " + decayedInto);
+
+		// Real slime-spawning: a real deep (level 6-7) puddle with real open air above should eventually
+		// spawn a real, size-2 EntityThaumicSlime.
+		BlockPos slimeFloorRel = new BlockPos(2, 1, 5);
+		helper.setBlock(slimeFloorRel, Blocks.STONE);
+		BlockPos slimePos = helper.absolutePos(slimeFloorRel).above();
+		boolean spawnedSlime = false;
+		for (int i = 0; i < 400 && !spawnedSlime; i++) {
+			// Real-reset to a full, qualifying puddle before every real attempt - flow/decay (both also
+			// real, both competing for the same real tick "turn" as the slime-spawn roll) would otherwise
+			// eventually drain or move this exact position out of the real lvl>=2 qualifying range, leaving
+			// nothing left to actually roll the real 1-in-50 slime-spawn chance against.
+			level.setBlockAndUpdate(slimePos, goo.defaultBlockState());
+			level.getBlockState(slimePos).tick(level, slimePos, level.random);
+			for (net.minecraft.world.entity.monster.Slime slime : level.getEntitiesOfClass(net.minecraft.world.entity.monster.Slime.class, new AABB(slimePos).inflate(2))) {
+				if (slime.getSize() == 2) {
+					spawnedSlime = true;
+				}
+			}
+		}
+		helper.assertTrue(spawnedSlime, "a real deep flux goo puddle should really eventually spawn a real size-2 Thaumic Slime");
+
+		// Real entity contact: motion resistance + a real Vis Exhaustion debuff on ordinary entities, real
+		// growth for a real, smaller Thaumic Slime that touches a real bigger puddle.
+		BlockPos contactPos = helper.absolutePos(new BlockPos(5, 1, 5));
+		level.setBlockAndUpdate(contactPos, goo.defaultBlockState());
+		net.minecraft.world.entity.npc.Villager victim = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+		helper.assertTrue(victim != null, "the villager entity type should really create an instance");
+		victim.moveTo(contactPos.getX() + 0.5, contactPos.getY(), contactPos.getZ() + 0.5, 0.0f, 0.0f);
+		victim.setDeltaMovement(1.0, 0.0, 1.0);
+		level.addFreshEntity(victim);
+		net.minecraft.world.level.block.state.BlockState contactState = level.getBlockState(contactPos);
+		contactState.entityInside(level, contactPos, victim);
+		helper.assertTrue(victim.getDeltaMovement().x < 1.0 && victim.getDeltaMovement().z < 1.0,
+				"a real ordinary entity touching a real full flux goo puddle should really have its real horizontal motion resisted");
+		helper.assertTrue(victim.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.VIS_EXHAUST),
+				"a real ordinary entity touching real flux goo should really catch a real Vis Exhaustion debuff");
+
+		thaumcraft.common.entities.monster.EntityThaumicSlime smallSlime =
+				thaumcraft.common.registry.ThaumcraftEntities.THAUMIC_SLIME.get().create(level);
+		helper.assertTrue(smallSlime != null, "the entity type should really create an instance");
+		smallSlime.setSize(1, true);
+		smallSlime.moveTo(contactPos.getX() + 0.5, contactPos.getY(), contactPos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(smallSlime);
+		boolean grew = false;
+		for (int i = 0; i < 50 && !grew; i++) {
+			level.getBlockState(contactPos).entityInside(level, contactPos, smallSlime);
+			grew = smallSlime.getSize() > 1;
+		}
+		helper.assertTrue(grew, "a real small Thaumic Slime touching a real bigger flux goo puddle should really eventually grow");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
+	public static void fluxGooIsTheRealDieTargetForCrustGeyserFeatureAndLog(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+
+		BlockPos crustPos = helper.absolutePos(new BlockPos(1, 1, 1));
+		level.setBlockAndUpdate(crustPos, BlocksTC.taintCrust.get().defaultBlockState());
+		BlocksTC.taintCrust.get().die(level, crustPos, level.getBlockState(crustPos));
+		helper.assertTrue(level.getBlockState(crustPos).is(BlocksTC.fluxGoo.get()), "a real dying taint crust should really turn into real flux goo now");
+
+		BlockPos geyserPos = helper.absolutePos(new BlockPos(3, 1, 1));
+		level.setBlockAndUpdate(geyserPos, BlocksTC.taintGeyser.get().defaultBlockState());
+		BlocksTC.taintGeyser.get().die(level, geyserPos, level.getBlockState(geyserPos));
+		helper.assertTrue(level.getBlockState(geyserPos).is(BlocksTC.fluxGoo.get()), "a real dying taint geyser should really turn into real flux goo now");
+
+		BlockPos featurePos = helper.absolutePos(new BlockPos(5, 1, 1));
+		level.setBlockAndUpdate(featurePos, BlocksTC.taintFeature.get().defaultBlockState()
+				.setValue(thaumcraft.common.blocks.world.taint.BlockTaintFeature.FACING, net.minecraft.core.Direction.UP));
+		BlocksTC.taintFeature.get().die(level, featurePos, level.getBlockState(featurePos));
+		helper.assertTrue(level.getBlockState(featurePos).is(BlocksTC.fluxGoo.get()), "a real dying taint feature should really turn into real flux goo now");
+
+		BlockPos logPos = helper.absolutePos(new BlockPos(7, 1, 1));
+		level.setBlockAndUpdate(logPos, BlocksTC.taintLog.get().defaultBlockState());
+		BlocksTC.taintLog.get().die(level, logPos, level.getBlockState(logPos));
+		helper.assertTrue(level.getBlockState(logPos).is(BlocksTC.fluxGoo.get()), "a real dying taint log should really turn into real flux goo now");
+
+		// Real geyser -> real EntityTaintSwarm spawn when a real player is nearby (needs a real tracked seed
+		// too, so the shared 10%-chance die() branch never preempts it).
+		BlockPos swarmGeyserPos = helper.absolutePos(new BlockPos(1, 1, 4));
+		level.setBlockAndUpdate(swarmGeyserPos, BlocksTC.taintGeyser.get().defaultBlockState());
+		thaumcraft.common.blocks.world.taint.TaintHelper.addTaintSeed(level, swarmGeyserPos);
+		ServerPlayer nearbyPlayer = spawnCasterAt(helper, swarmGeyserPos.above(2));
+		boolean spawnedSwarm = false;
+		for (int i = 0; i < 300 && !spawnedSwarm; i++) {
+			level.getBlockState(swarmGeyserPos).randomTick(level, swarmGeyserPos, level.random);
+			spawnedSwarm = !level.getEntitiesOfClass(thaumcraft.common.entities.monster.tainted.EntityTaintSwarm.class,
+					new AABB(swarmGeyserPos).inflate(4)).isEmpty();
+		}
+		helper.assertTrue(spawnedSwarm, "a real taint geyser with a real player nearby should really eventually spawn a real taint swarm");
+		thaumcraft.common.blocks.world.taint.TaintHelper.removeTaintSeed(level, swarmGeyserPos);
 
 		helper.succeed();
 	}

@@ -216,6 +216,7 @@ sourceSets {
             include 'thaumcraft/common/blocks/world/taint/BlockTaint.java'
             include 'thaumcraft/common/blocks/world/taint/BlockTaintFeature.java'
             include 'thaumcraft/common/blocks/world/taint/BlockTaintLog.java'
+            include 'thaumcraft/common/blocks/world/taint/BlockFluxGoo.java'
             include 'thaumcraft/common/tiles/misc/TileBanner.java'
             include 'thaumcraft/client/render/TileBannerRenderer.java'
             include 'thaumcraft/common/entities/monster/tainted/EntityTaintCrawler.java'

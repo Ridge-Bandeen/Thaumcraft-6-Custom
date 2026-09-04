@@ -37,15 +37,14 @@ import thaumcraft.api.blocks.BlocksTC;
  * literal {@code AxisAlignedBB} cases (already 0-1 normalized, so no math was needed - just a straight
  * {@link Shapes#box} per {@link Direction}).
  *
- * Real, documented cuts vs the original: {@code die()}'s own {@code fluxGoo} target isn't ported yet (that's
- * the deliberately-deferred finite-fluid outlier of this whole taint-terrain arc), so it falls back to real
- * air, same as {@code BlockTaint}'s own crust/geyser die() cut. The original's own {@code onRemove}-time 33%
- * chance to spawn a real {@code EntityTaintCrawler} is dropped (that creature isn't ported yet either, a
- * later sub-chunk of the tainted-creature side of this arc) - only the real aura-pollution alternative
- * survives, now unconditional. The original's own random 1% chance (rolled every random tick) to convert
- * into a real {@code taintGeyser} when growing on top of a vertical {@code taintLog} is dropped too - that
- * block isn't ported yet either. This block never drops itself as an item either way, matching the
- * original's own real {@code getItemDropped} returning nothing.
+ * {@code die()} now really targets real {@link BlockFluxGoo} (real once that block itself became real), and
+ * {@link #onRemove} really keeps the original's own 33% chance to spawn a real {@code EntityTaintCrawler} on
+ * removal instead of just polluting the aura (real once that creature became real too), and {@link
+ * #randomTick} really keeps the original's own 1% chance to convert into a real {@code taintGeyser} when
+ * growing on top of a real vertical {@code taintLog} (real once that block became real too) - none of these
+ * were real simplifications so much as this class simply being written before its own dependencies were.
+ * This block never drops itself as an item either way, matching the original's own real {@code
+ * getItemDropped} returning nothing.
  */
 public class BlockTaintFeature extends Block implements ITaintBlock {
 
@@ -113,17 +112,31 @@ public class BlockTaintFeature extends Block implements ITaintBlock {
 			return;
 		}
 		TaintHelper.spreadFibres(level, pos);
+		BlockState below = level.getBlockState(pos.below());
+		if (below.is(BlocksTC.taintLog.get()) && below.getValue(net.minecraft.world.level.block.RotatedPillarBlock.AXIS) == Direction.Axis.Y
+				&& random.nextInt(100) == 0) {
+			level.setBlockAndUpdate(pos, BlocksTC.taintGeyser.get().defaultBlockState());
+		}
 	}
 
 	@Override
 	public void die(Level level, BlockPos pos, BlockState state) {
-		level.removeBlock(pos, false);
+		level.setBlockAndUpdate(pos, BlocksTC.fluxGoo.get().defaultBlockState());
 	}
 
 	@Override
 	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-		if (!level.isClientSide && !state.is(newState.getBlock())) {
-			AuraHelper.polluteAura(level, pos, 1.0f, true);
+		if (!level.isClientSide && level instanceof ServerLevel serverLevel && !state.is(newState.getBlock())) {
+			if (level.random.nextFloat() < 0.333f) {
+				thaumcraft.common.entities.monster.tainted.EntityTaintCrawler crawler =
+						thaumcraft.common.registry.ThaumcraftEntities.TAINT_CRAWLER.get().create(serverLevel);
+				if (crawler != null) {
+					crawler.moveTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, (float) level.random.nextInt(360), 0.0f);
+					level.addFreshEntity(crawler);
+				}
+			} else {
+				AuraHelper.polluteAura(level, pos, 1.0f, true);
+			}
 		}
 		super.onRemove(state, level, pos, newState, movedByPiston);
 	}

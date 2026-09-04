@@ -21,11 +21,12 @@ import net.minecraft.world.level.block.state.BlockState;
  * arc: dies unconditionally (no 10%-chance gate) once it's outside a real tracked seed's range, otherwise
  * keeps spreading real fibres via {@link TaintHelper#spreadFibres}.
  *
- * Real, documented cuts vs the original: {@code die()}'s own {@code fluxGoo} target isn't ported yet (same
- * deferred finite-fluid outlier as the rest of this arc), so it falls back to real air. No custom "gore"
- * sound type or fire-spread-speed registration - this port hasn't wired up either the original's own custom
- * {@code SoundEvent} catalog or NeoForge's {@code FlammableBlockRegistry} yet for ANY block (including the
- * already-ported {@code logSilverwood}/{@code logGreatwood}), not a cut specific to this one.
+ * {@code die()} now really targets real {@link BlockFluxGoo} (real once that block itself became real).
+ *
+ * Real, documented cuts vs the original: no custom "gore" sound type or fire-spread-speed registration -
+ * this port hasn't wired up either the original's own custom {@code SoundEvent} catalog or NeoForge's
+ * {@code FlammableBlockRegistry} yet for ANY block (including the already-ported {@code logSilverwood}/
+ * {@code logGreatwood}), not a cut specific to this one.
  */
 public class BlockTaintLog extends RotatedPillarBlock implements ITaintBlock {
 
@@ -42,7 +43,7 @@ public class BlockTaintLog extends RotatedPillarBlock implements ITaintBlock {
 
 	@Override
 	public void die(Level level, BlockPos pos, BlockState state) {
-		level.removeBlock(pos, false);
+		level.setBlockAndUpdate(pos, thaumcraft.api.blocks.BlocksTC.fluxGoo.get().defaultBlockState());
 	}
 
 	@Override
