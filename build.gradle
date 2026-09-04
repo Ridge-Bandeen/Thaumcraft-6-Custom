@@ -221,6 +221,10 @@ sourceSets {
             include 'thaumcraft/common/entities/monster/tainted/EntityTaintCrawler.java'
             include 'thaumcraft/client/render/RenderTaintCrawler.java'
             include 'thaumcraft/common/entities/monster/tainted/EntityTaintSwarm.java'
+            include 'thaumcraft/common/entities/monster/tainted/EntityTaintacle.java'
+            include 'thaumcraft/common/entities/monster/tainted/EntityTaintacleSmall.java'
+            include 'thaumcraft/common/entities/monster/tainted/EntityTaintSeed.java'
+            include 'thaumcraft/common/entities/monster/tainted/EntityTaintSeedPrime.java'
 
             include 'thaumcraft/api/crafting/ArcaneCraftingInput.java'
             include 'thaumcraft/api/crafting/ArcaneRecipe.java'

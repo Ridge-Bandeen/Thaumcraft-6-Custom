@@ -1,38 +1,42 @@
 package thaumcraft.common.entities.monster.tainted;
-import net.minecraft.entity.SharedMonsterAttributes;
-import net.minecraft.world.World;
-import thaumcraft.common.config.ConfigItems;
 
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.level.Level;
 
-public class EntityTaintSeedPrime extends EntityTaintSeed
-{
-    public EntityTaintSeedPrime(World par1World) {
-        super(par1World);
-        setSize(2.0f, 2.0f);
-        experienceValue = 12;
-    }
-    
-    @Override
-    protected int getArea() {
-        return 2;
-    }
-    
-    @Override
-    protected void applyEntityAttributes() {
-        super.applyEntityAttributes();
-        getEntityAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(150.0);
-        getEntityAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).setBaseValue(7.0);
-        getEntityAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).setBaseValue(0.0);
-    }
-    
-    @Override
-    protected void dropFewItems(boolean flag, int i) {
-        entityDropItem(ConfigItems.FLUX_CRYSTAL.copy(), height / 2.0f);
-        if (rand.nextBoolean()) {
-            entityDropItem(ConfigItems.FLUX_CRYSTAL.copy(), height / 2.0f);
-        }
-        if (rand.nextBoolean()) {
-            entityDropItem(ConfigItems.FLUX_CRYSTAL.copy(), height / 2.0f);
-        }
-    }
+/**
+ * Replaces the old (1.12.2) {@code EntityTaintSeedPrime} - a bigger, tougher {@link EntityTaintSeed} variant
+ * (double the {@link #getArea}, real 1-3 Flux Crystal Essence death drops instead of always exactly one).
+ */
+public class EntityTaintSeedPrime extends EntityTaintSeed {
+
+	public EntityTaintSeedPrime(EntityType<? extends EntityTaintSeedPrime> type, Level level) {
+		super(type, level);
+	}
+
+	public static AttributeSupplier.Builder createAttributes() {
+		return EntityTaintSeed.createAttributes()
+				.add(Attributes.MAX_HEALTH, 150.0)
+				.add(Attributes.ATTACK_DAMAGE, 7.0)
+				.add(Attributes.MOVEMENT_SPEED, 0.0);
+	}
+
+	@Override
+	protected int getArea() {
+		return 2;
+	}
+
+	@Override
+	protected void dropCustomDeathLoot(ServerLevel level, DamageSource damageSource, boolean recentlyHit) {
+		spawnAtLocation(makeCrystal());
+		if (random.nextBoolean()) {
+			spawnAtLocation(makeCrystal());
+		}
+		if (random.nextBoolean()) {
+			spawnAtLocation(makeCrystal());
+		}
+	}
 }

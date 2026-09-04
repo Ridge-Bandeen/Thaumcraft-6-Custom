@@ -265,6 +265,44 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("taint_swarm"));
 
+	/** See {@code EntityTaintacle}'s own doc comment. {@code sized(0.8f, 3.0f)} matches the original's own
+	 * constructor-time {@code setSize(0.8f, 3.0f)} exactly. No real renderer - the original's own version
+	 * needs a bespoke {@code ModelBase}-style tentacle model this port hasn't built, same real "no renderer
+	 * yet" gap {@link #FIRE_BAT}/{@link #SPELL_BAT}/{@link #TAINT_SWARM} already carry. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.tainted.EntityTaintacle>> TAINTACLE = ENTITY_TYPES.register("taintacle",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.tainted.EntityTaintacle>of(thaumcraft.common.entities.monster.tainted.EntityTaintacle::new, MobCategory.MONSTER)
+					.sized(0.8f, 3.0f)
+					.clientTrackingRange(64)
+					.build("taintacle"));
+
+	/** See {@code EntityTaintacleSmall}'s own doc comment. Same real no-renderer shape as {@link #TAINTACLE}.
+	 * {@code sized(0.22f, 1.0f)} matches the original's own constructor-time {@code setSize(0.22f, 1.0f)}
+	 * exactly. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.tainted.EntityTaintacleSmall>> TAINTACLE_SMALL = ENTITY_TYPES.register("taintacle_small",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.tainted.EntityTaintacleSmall>of(thaumcraft.common.entities.monster.tainted.EntityTaintacleSmall::new, MobCategory.MONSTER)
+					.sized(0.22f, 1.0f)
+					.clientTrackingRange(64)
+					.build("taintacle_small"));
+
+	/** See {@code EntityTaintSeed}'s own doc comment. Same real no-renderer shape as {@link #TAINTACLE} -
+	 * the original's own {@code ModelTaintSeed} is also a bespoke model this port hasn't built.
+	 * {@code sized(1.5f, 1.25f)} matches the original's own constructor-time {@code setSize(1.5f, 1.25f)}
+	 * exactly. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.tainted.EntityTaintSeed>> TAINT_SEED = ENTITY_TYPES.register("taint_seed",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.tainted.EntityTaintSeed>of(thaumcraft.common.entities.monster.tainted.EntityTaintSeed::new, MobCategory.MONSTER)
+					.sized(1.5f, 1.25f)
+					.clientTrackingRange(64)
+					.build("taint_seed"));
+
+	/** See {@code EntityTaintSeedPrime}'s own doc comment. Same real no-renderer shape as {@link #TAINT_SEED}.
+	 * {@code sized(2.0f, 2.0f)} matches the original's own constructor-time {@code setSize(2.0f, 2.0f)}
+	 * exactly. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.tainted.EntityTaintSeedPrime>> TAINT_SEED_PRIME = ENTITY_TYPES.register("taint_seed_prime",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.tainted.EntityTaintSeedPrime>of(thaumcraft.common.entities.monster.tainted.EntityTaintSeedPrime::new, MobCategory.MONSTER)
+					.sized(2.0f, 2.0f)
+					.clientTrackingRange(64)
+					.build("taint_seed_prime"));
+
 	private ThaumcraftEntities() {
 	}
 }

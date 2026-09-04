@@ -103,6 +103,12 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.TAINT_CRAWLER.get(), thaumcraft.client.render.RenderTaintCrawler::new);
         // No visible model - see RenderFocusProjectile's own doc comment (shared with FOCUS_PROJECTILE/FOCUS_MINE/GOLEM_ORB).
         event.registerEntityRenderer(ThaumcraftEntities.TAINT_SWARM.get(), RenderFocusProjectile::new);
+        // No renderer yet - see ThaumcraftEntities.TAINTACLE's own doc comment (shared with TAINTACLE_SMALL/
+        // TAINT_SEED/TAINT_SEED_PRIME, all bespoke-modeled in the original, none built for this port yet).
+        event.registerEntityRenderer(ThaumcraftEntities.TAINTACLE.get(), RenderFocusProjectile::new);
+        event.registerEntityRenderer(ThaumcraftEntities.TAINTACLE_SMALL.get(), RenderFocusProjectile::new);
+        event.registerEntityRenderer(ThaumcraftEntities.TAINT_SEED.get(), RenderFocusProjectile::new);
+        event.registerEntityRenderer(ThaumcraftEntities.TAINT_SEED_PRIME.get(), RenderFocusProjectile::new);
         // No visible model - see RenderFocusProjectile's own doc comment (shared with FOCUS_PROJECTILE/FOCUS_MINE).
         event.registerEntityRenderer(ThaumcraftEntities.GOLEM_ORB.get(), RenderFocusProjectile::new);
         // First real BlockEntityRenderer this whole port has needed - see its own doc comment.

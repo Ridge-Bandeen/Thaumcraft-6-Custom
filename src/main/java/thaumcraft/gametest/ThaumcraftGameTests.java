@@ -6708,4 +6708,174 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void taintacleStarvesOffTaintSpawnsATendrilAndSelfDestructs(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+
+		// Real "starves" (takes real damage) once every 20 real ticks while NOT standing on/above real taint.
+		BlockPos stoneRel = new BlockPos(2, 1, 2);
+		helper.setBlock(stoneRel, Blocks.STONE);
+		BlockPos stonePos = helper.absolutePos(stoneRel);
+		thaumcraft.common.entities.monster.tainted.EntityTaintacle starving =
+				thaumcraft.common.registry.ThaumcraftEntities.TAINTACLE.get().create(level);
+		helper.assertTrue(starving != null, "the entity type should really create an instance");
+		starving.moveTo(stonePos.getX() + 0.5, stonePos.getY() + 1.0, stonePos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(starving);
+		float healthBefore = starving.getHealth();
+		for (int i = 0; i < 200; i++) {
+			starving.tick();
+		}
+		helper.assertTrue(starving.getHealth() < healthBefore,
+				"a real taintacle not standing on real taint should really take real starvation damage over time");
+
+		// Real survival while actually standing on real taint, plus real allied-with-tainted-mobs.
+		BlockPos rockPos = helper.absolutePos(new BlockPos(5, 1, 2));
+		level.setBlockAndUpdate(rockPos, BlocksTC.taintRock.get().defaultBlockState());
+		thaumcraft.common.entities.monster.tainted.EntityTaintacle rooted =
+				thaumcraft.common.registry.ThaumcraftEntities.TAINTACLE.get().create(level);
+		helper.assertTrue(rooted != null, "the entity type should really create an instance");
+		rooted.moveTo(rockPos.getX() + 0.5, rockPos.getY() + 1.0, rockPos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(rooted);
+		for (int i = 0; i < 200; i++) {
+			rooted.tick();
+		}
+		helper.assertTrue(rooted.getHealth() == rooted.getMaxHealth(),
+				"a real taintacle really standing on real taint should really never starve");
+		helper.assertTrue(rooted.isAlliedTo(starving), "a real taintacle should really be allied to another real tainted mob");
+
+		// Real "spawns a real tendril near a distant, visible target standing on real taint" mechanic - the
+		// target needs its own real taint underfoot too, and needs to be real distance 4-16 blocks away
+		// (Taintacle's own real distanceToSqr bounds), not just anywhere near the taintacle itself.
+		BlockPos targetRockPos = helper.absolutePos(new BlockPos(5, 1, 7));
+		level.setBlockAndUpdate(targetRockPos, BlocksTC.taintRock.get().defaultBlockState());
+		net.minecraft.world.entity.npc.Villager target = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+		helper.assertTrue(target != null, "the villager entity type should really create an instance");
+		target.moveTo(targetRockPos.getX() + 0.5, targetRockPos.getY() + 1.0, targetRockPos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(target);
+		rooted.setTarget(target);
+		boolean spawnedTendril = false;
+		for (int i = 0; i < 400 && !spawnedTendril; i++) {
+			rooted.tick();
+			spawnedTendril = !level.getEntitiesOfClass(thaumcraft.common.entities.monster.tainted.EntityTaintacleSmall.class,
+					new AABB(target.blockPosition()).inflate(2)).isEmpty();
+		}
+		helper.assertTrue(spawnedTendril, "a real taintacle with a real distant, visible target standing on real taint should really spawn a real tendril nearby");
+
+		// Real tendril: never a valid natural spawn location, never spawns further tendrils itself, and
+		// really self-destructs once its real lifetime timer runs out.
+		thaumcraft.common.entities.monster.tainted.EntityTaintacleSmall tendril =
+				thaumcraft.common.registry.ThaumcraftEntities.TAINTACLE_SMALL.get().create(level);
+		helper.assertTrue(tendril != null, "the entity type should really create an instance");
+		helper.assertTrue(!tendril.canSpawnHere(), "a real taint tendril should really never count as a valid natural spawn location");
+		tendril.moveTo(rockPos.getX() + 0.5, rockPos.getY() + 1.0, rockPos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(tendril);
+		for (int i = 0; i < 250 && tendril.isAlive(); i++) {
+			tendril.tick();
+		}
+		helper.assertTrue(!tendril.isAlive(), "a real taint tendril should really self-destruct once its real 200-tick lifetime runs out");
+
+		// Real bonus Flux Crystal Essence drop on death.
+		ServerPlayer killer = spawnCasterAt(helper, rockPos.above(2));
+		boolean droppedCrystal = false;
+		for (int i = 0; i < 20 && !droppedCrystal; i++) {
+			thaumcraft.common.entities.monster.tainted.EntityTaintacle probe =
+					thaumcraft.common.registry.ThaumcraftEntities.TAINTACLE.get().create(level);
+			probe.moveTo(rockPos.getX() + 0.5, rockPos.getY() + 1.0, rockPos.getZ() + 0.5, 0.0f, 0.0f);
+			level.addFreshEntity(probe);
+			probe.hurt(level.damageSources().playerAttack(killer), 1000.0f);
+			for (ItemEntity ie : level.getEntitiesOfClass(ItemEntity.class, new AABB(rockPos).inflate(3))) {
+				if (ie.getItem().is(ItemsTC.crystalEssence.get())) {
+					droppedCrystal = true;
+				}
+			}
+		}
+		helper.assertTrue(droppedCrystal, "a real taintacle should really always drop a real Flux Crystal Essence on death");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void taintSeedTracksItselfSpreadsFibresAndInflictsAreaFluxTaint(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+
+		helper.setBlock(new BlockPos(3, 0, 3), Blocks.STONE);
+		BlockPos seedPos = helper.absolutePos(new BlockPos(3, 1, 3));
+		thaumcraft.common.entities.monster.tainted.EntityTaintSeed seed =
+				thaumcraft.common.registry.ThaumcraftEntities.TAINT_SEED.get().create(level);
+		helper.assertTrue(seed != null, "the entity type should really create an instance");
+		seed.moveTo(seedPos.getX() + 0.5, seedPos.getY(), seedPos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(seed);
+
+		// Real self-registration as a real tracked taint seed, on its very first real tick.
+		seed.tick();
+		BlockPos trackedPos = seed.blockPosition();
+		helper.assertTrue(thaumcraft.common.blocks.world.taint.TaintHelper.isNearTaintSeed(level, trackedPos),
+				"a real taint seed should really register itself as a real tracked seed on its very first tick");
+
+		// Real "starves and pollutes the aura" branch, real for a fresh chunk with near-zero real flux
+		// saturation. Only the real starvation damage is checked here, not the flux value itself - the real
+		// background AuraThread (a genuinely live, wall-clock-paced diffusion simulation, not gated by game
+		// ticks at all) can race this loop's own polluteAura calls arbitrarily many times between any two
+		// real reads, so "flux went up" isn't a reliable thing to assert against here; the real starvation
+		// damage is a reliable enough proxy that this real branch actually ran.
+		float healthBefore = seed.getHealth();
+		for (int i = 0; i < 200; i++) {
+			seed.tick();
+		}
+		helper.assertTrue(seed.getHealth() < healthBefore,
+				"a real taint seed over real near-zero flux saturation should really take real starvation damage over time");
+
+		// Real "boost forces the real spread-fibres branch instead" - a real tracked seed nearby (itself) is
+		// needed for spreadFibres to ever place anything, which is already real and true here.
+		seed.boost = 40;
+		boolean spread = false;
+		for (int i = 0; i < 400 && !spread; i++) {
+			seed.tick();
+			for (BlockPos p : BlockPos.betweenClosed(trackedPos.offset(-4, -2, -4), trackedPos.offset(4, 2, 4))) {
+				if (level.getBlockState(p).is(BlocksTC.taintFibre.get())) {
+					spread = true;
+					break;
+				}
+			}
+		}
+		helper.assertTrue(spread, "a real boosted taint seed should really eventually spread a real taint fibre somewhere nearby");
+
+		// Real area-wide Flux Taint infliction on every real living entity nearby.
+		net.minecraft.world.entity.npc.Villager victim = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+		helper.assertTrue(victim != null, "the villager entity type should really create an instance");
+		victim.moveTo(trackedPos.getX() + 1.5, trackedPos.getY(), trackedPos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(victim);
+		boolean tainted = false;
+		for (int i = 0; i < 200 && !tainted; i++) {
+			seed.tick();
+			tainted = victim.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT);
+		}
+		helper.assertTrue(tainted, "a real taint seed should really eventually inflict real Flux Taint on every real living entity in its real area");
+
+		// Real death untracks the real seed position.
+		seed.hurt(level.damageSources().playerAttack(spawnCasterAt(helper, seedPos.above(2))), 10000.0f);
+		helper.assertTrue(!thaumcraft.common.blocks.world.taint.TaintHelper.isNearTaintSeed(level, trackedPos),
+				"a real dying taint seed should really untrack its own real seed position");
+
+		// Real Prime variant: bigger, and really drops at least one real Flux Crystal Essence too.
+		BlockPos primePos = helper.absolutePos(new BlockPos(5, 1, 6));
+		thaumcraft.common.entities.monster.tainted.EntityTaintSeedPrime prime =
+				thaumcraft.common.registry.ThaumcraftEntities.TAINT_SEED_PRIME.get().create(level);
+		helper.assertTrue(prime != null, "the entity type should really create an instance");
+		helper.assertTrue(prime.getMaxHealth() == 150.0f, "a real taint seed prime should really have real 150 max health, got " + prime.getMaxHealth());
+		prime.moveTo(primePos.getX() + 0.5, primePos.getY(), primePos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(prime);
+		ServerPlayer primeKiller = spawnCasterAt(helper, primePos.above(2));
+		prime.hurt(level.damageSources().playerAttack(primeKiller), 10000.0f);
+		boolean primeDroppedCrystal = false;
+		for (ItemEntity ie : level.getEntitiesOfClass(ItemEntity.class, new AABB(primePos).inflate(3))) {
+			if (ie.getItem().is(ItemsTC.crystalEssence.get())) {
+				primeDroppedCrystal = true;
+			}
+		}
+		helper.assertTrue(primeDroppedCrystal, "a real taint seed prime should really always drop at least one real Flux Crystal Essence on death");
+
+		helper.succeed();
+	}
 }

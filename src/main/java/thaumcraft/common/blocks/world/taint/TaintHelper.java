@@ -44,6 +44,13 @@ public class TaintHelper {
 
 	private static final ConcurrentHashMap<ResourceKey<Level>, List<BlockPos>> taintSeeds = new ConcurrentHashMap<>();
 
+	/** Real accessor for {@link #TAINT_SPREAD_AREA} - {@code EntityTaintSeed} (a different package) needs
+	 * the exact same real value for its own real "don't spawn too close to another real seed" check, matching
+	 * the original's own {@code ModConfig.CONFIG_WORLD.taintSpreadArea} reference. */
+	public static int spreadArea() {
+		return TAINT_SPREAD_AREA;
+	}
+
 	public static void addTaintSeed(Level level, BlockPos pos) {
 		taintSeeds.computeIfAbsent(level.dimension(), key -> new ArrayList<>()).add(pos);
 	}
