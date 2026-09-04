@@ -503,6 +503,14 @@ public final class BlocksTC {
 			props -> new thaumcraft.common.blocks.world.taint.BlockTaint(props, thaumcraft.common.blocks.world.taint.BlockTaint.Variant.GEYSER),
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(SoundType.STONE).randomTicks());
 
+	/** {@code lightLevel(9)} is the real modern equivalent of the original's own {@code setLightLevel(0.625f)}
+	 * (a 0-1 brightness fraction the original engine itself converted to a 0-15 int - {@code (int)(0.625*15)}
+	 * really is 9). */
+	public static final DeferredBlock<thaumcraft.common.blocks.world.taint.BlockTaintFeature> taintFeature = BLOCKS.registerBlock("taint_feature",
+			thaumcraft.common.blocks.world.taint.BlockTaintFeature::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(0.1f).sound(SoundType.WOOL)
+					.noOcclusion().randomTicks().lightLevel(state -> 9));
+
 	private BlocksTC() {
 	}
 }

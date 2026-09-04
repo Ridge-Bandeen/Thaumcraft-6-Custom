@@ -715,6 +715,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> taintGeyser =
 			ITEMS.registerSimpleBlockItem("taint_geyser", BlocksTC.taintGeyser);
 
+	public static final DeferredItem<BlockItem> taintFeature =
+			ITEMS.registerSimpleBlockItem("taint_feature", BlocksTC.taintFeature);
+
 	private ItemsTC() {
 	}
 }

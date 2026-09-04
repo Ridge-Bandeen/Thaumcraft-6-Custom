@@ -6454,4 +6454,71 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void taintFeatureAttachesSpreadsSelfRemovesAndPollutesOnBreak(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+
+		// Real self-removal once its real supporting neighbor stops being sturdy (FACING=DOWN means the
+		// real support is above this block, per BlockTaintFeature's own doc comment; here it's the other
+		// way round - a feature resting on a real floor uses FACING=UP, matching the original's own case 1).
+		BlockPos supportRel = new BlockPos(2, 1, 2);
+		helper.setBlock(supportRel, Blocks.STONE);
+		BlockPos supportAbs = helper.absolutePos(supportRel);
+		BlockPos featurePos = supportAbs.above();
+		level.setBlockAndUpdate(featurePos, BlocksTC.taintFeature.get().defaultBlockState()
+				.setValue(thaumcraft.common.blocks.world.taint.BlockTaintFeature.FACING, net.minecraft.core.Direction.UP));
+		helper.assertTrue(level.getBlockState(featurePos).is(BlocksTC.taintFeature.get()),
+				"a real taint feature attached above a real solid support should really stay placed");
+		level.setBlockAndUpdate(supportAbs, Blocks.AIR.defaultBlockState());
+		helper.assertTrue(!level.getBlockState(featurePos).is(BlocksTC.taintFeature.get()),
+				"a real taint feature should really self-remove once its real supporting neighbor stops being sturdy");
+
+		// Real spreading (the same shared TaintHelper.spreadFibres already verified elsewhere in this arc -
+		// here just confirming the real one-line wiring), on a real 3x3 stone floor with a real tracked seed.
+		BlockPos spreadFloorRel = new BlockPos(2, 1, 5);
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				helper.setBlock(spreadFloorRel.offset(dx, 0, dz), Blocks.STONE);
+			}
+		}
+		BlockPos spreadFeaturePos = helper.absolutePos(spreadFloorRel).above();
+		level.setBlockAndUpdate(spreadFeaturePos, BlocksTC.taintFeature.get().defaultBlockState()
+				.setValue(thaumcraft.common.blocks.world.taint.BlockTaintFeature.FACING, net.minecraft.core.Direction.UP));
+		thaumcraft.common.blocks.world.taint.TaintHelper.addTaintSeed(level, spreadFeaturePos);
+		boolean spread = false;
+		for (int i = 0; i < 300 && !spread; i++) {
+			thaumcraft.common.blocks.world.taint.TaintHelper.spreadFibres(level, spreadFeaturePos, true);
+			for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+				if (level.getBlockState(spreadFeaturePos.relative(dir)).is(BlocksTC.taintFibre.get())) {
+					spread = true;
+					break;
+				}
+			}
+		}
+		helper.assertTrue(spread, "a real taint feature near a real tracked seed should really eventually spread a real adjacent taint fibre");
+		thaumcraft.common.blocks.world.taint.TaintHelper.removeTaintSeed(level, spreadFeaturePos);
+
+		// Real death without a real nearby seed.
+		level.setBlockAndUpdate(spreadFeaturePos, BlocksTC.taintFeature.get().defaultBlockState()
+				.setValue(thaumcraft.common.blocks.world.taint.BlockTaintFeature.FACING, net.minecraft.core.Direction.UP));
+		for (int i = 0; i < 50 && level.getBlockState(spreadFeaturePos).is(BlocksTC.taintFeature.get()); i++) {
+			level.getBlockState(spreadFeaturePos).randomTick(level, spreadFeaturePos, level.random);
+		}
+		helper.assertTrue(!level.getBlockState(spreadFeaturePos).is(BlocksTC.taintFeature.get()),
+				"a real taint feature with no real seed nearby should really die off within a handful of random ticks");
+
+		// Real aura pollution whenever a real taint feature is removed for any reason (die() included, since
+		// die() itself removes the block - onRemove fires for that real removal too, same as the original's
+		// own breakBlock firing on any block-identity change, not just player-initiated ones).
+		BlockPos pollutePos = helper.absolutePos(new BlockPos(5, 1, 1));
+		level.setBlockAndUpdate(pollutePos, BlocksTC.taintFeature.get().defaultBlockState()
+				.setValue(thaumcraft.common.blocks.world.taint.BlockTaintFeature.FACING, net.minecraft.core.Direction.UP));
+		float fluxBefore = thaumcraft.api.aura.AuraHelper.getFlux(level, pollutePos);
+		level.removeBlock(pollutePos, false);
+		helper.assertTrue(thaumcraft.api.aura.AuraHelper.getFlux(level, pollutePos) > fluxBefore,
+				"removing a real taint feature should really pollute the real local aura");
+
+		helper.succeed();
+	}
 }
