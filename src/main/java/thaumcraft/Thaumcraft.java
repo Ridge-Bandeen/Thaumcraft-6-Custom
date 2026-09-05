@@ -77,6 +77,7 @@ public class Thaumcraft {
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::registerPayloads);
         modEventBus.addListener(this::registerEntityAttributes);
+        modEventBus.addListener(this::registerChampionAttribute);
         NeoForge.EVENT_BUS.register(this);
 
         ThaumcraftAttributes.ATTRIBUTES.register(modEventBus);
@@ -301,6 +302,61 @@ public class Thaumcraft {
         event.put(ThaumcraftEntities.TURRET_CROSSBOW.get(), thaumcraft.common.entities.construct.EntityTurretCrossbow.createAttributes().build());
         event.put(ThaumcraftEntities.TURRET_CROSSBOW_ADVANCED.get(), thaumcraft.common.entities.construct.EntityTurretCrossbowAdvanced.createAttributes().build());
         event.put(ThaumcraftEntities.ARCANE_BORE.get(), thaumcraft.common.entities.construct.EntityArcaneBore.createAttributes().build());
+    }
+
+    /**
+     * Adds {@link ThaumcraftAttributes#CHAMPION_MOD} to every real hostile creature eligible to roll as a
+     * champion (see {@link thaumcraft.common.lib.events.ChampionModEvents}) - vanilla's own real hostile
+     * mobs plus this mod's own real roaming hostile creatures. {@link EntityAttributeModificationEvent} is
+     * NeoForge's real mechanism for adding a NEW attribute onto an already-registered (including vanilla)
+     * entity type's attribute map, replacing the original's 1.12 {@code EntityConstructing} event (which
+     * could freely register attributes on any entity instance at construction time - no modern equivalent
+     * for arbitrary/dynamic per-instance registration exists, so this port uses an explicit, curated type
+     * list instead of the original's blanket "every {@code EntityCreature}").
+     *
+     * <p>Excluded on purpose: this mod's own boss-tier entities ({@code CultistLeader}, the portal bosses),
+     * its construct entities (turrets, the Arcane Bore, golems - not hostile creatures), and its stationary
+     * taint hazards ({@code Taintacle}/{@code TaintSeed} - environmental growths, not roaming creatures a
+     * player fights as a champion encounter). {@code TaintCrawler}/{@code TaintSwarm} ARE included - real
+     * mobile hostile creatures.
+     */
+    private void registerChampionAttribute(net.neoforged.neoforge.event.entity.EntityAttributeModificationEvent event) {
+        net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> championMod = ThaumcraftAttributes.CHAMPION_MOD;
+        java.util.List<net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.LivingEntity>> vanilla = java.util.List.of(
+                net.minecraft.world.entity.EntityType.ZOMBIE, net.minecraft.world.entity.EntityType.ZOMBIE_VILLAGER,
+                net.minecraft.world.entity.EntityType.HUSK, net.minecraft.world.entity.EntityType.DROWNED,
+                net.minecraft.world.entity.EntityType.SKELETON, net.minecraft.world.entity.EntityType.STRAY,
+                net.minecraft.world.entity.EntityType.WITHER_SKELETON, net.minecraft.world.entity.EntityType.BOGGED,
+                net.minecraft.world.entity.EntityType.SPIDER, net.minecraft.world.entity.EntityType.CAVE_SPIDER,
+                net.minecraft.world.entity.EntityType.CREEPER, net.minecraft.world.entity.EntityType.ENDERMAN,
+                net.minecraft.world.entity.EntityType.ENDERMITE, net.minecraft.world.entity.EntityType.SILVERFISH,
+                net.minecraft.world.entity.EntityType.WITCH, net.minecraft.world.entity.EntityType.SLIME,
+                net.minecraft.world.entity.EntityType.MAGMA_CUBE, net.minecraft.world.entity.EntityType.BLAZE,
+                net.minecraft.world.entity.EntityType.GHAST, net.minecraft.world.entity.EntityType.GUARDIAN,
+                net.minecraft.world.entity.EntityType.ELDER_GUARDIAN, net.minecraft.world.entity.EntityType.SHULKER,
+                net.minecraft.world.entity.EntityType.PHANTOM, net.minecraft.world.entity.EntityType.VEX,
+                net.minecraft.world.entity.EntityType.VINDICATOR, net.minecraft.world.entity.EntityType.EVOKER,
+                net.minecraft.world.entity.EntityType.ILLUSIONER, net.minecraft.world.entity.EntityType.PILLAGER,
+                net.minecraft.world.entity.EntityType.RAVAGER, net.minecraft.world.entity.EntityType.PIGLIN,
+                net.minecraft.world.entity.EntityType.PIGLIN_BRUTE, net.minecraft.world.entity.EntityType.HOGLIN,
+                net.minecraft.world.entity.EntityType.ZOGLIN, net.minecraft.world.entity.EntityType.BREEZE);
+        for (net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.LivingEntity> type : vanilla) {
+            event.add(type, championMod, -2.0);
+        }
+
+        event.add(ThaumcraftEntities.WISP.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.THAUMIC_SLIME.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.BRAINY_ZOMBIE.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.GIANT_BRAINY_ZOMBIE.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.FIRE_BAT.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.MIND_SPIDER.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.SPELL_BAT.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.ELDRITCH_CRAB.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.CULTIST_KNIGHT.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.CULTIST_CLERIC.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.INHABITED_ZOMBIE.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.TAINT_CRAWLER.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.TAINT_SWARM.get(), championMod, -2.0);
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {

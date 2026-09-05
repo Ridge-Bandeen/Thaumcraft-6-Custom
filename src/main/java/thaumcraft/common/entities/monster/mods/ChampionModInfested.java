@@ -1,37 +1,25 @@
 package thaumcraft.common.entities.monster.mods;
-import net.minecraft.client.renderer.entity.RenderLivingBase;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.util.DamageSource;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.client.fx.FXDispatcher;
+
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.Level;
 import thaumcraft.common.entities.monster.tainted.EntityTaintCrawler;
-import thaumcraft.common.lib.SoundsTC;
+import thaumcraft.common.registry.ThaumcraftEntities;
 
-
-public class ChampionModInfested implements IChampionModifierEffect
-{
-    @Override
-    public float performEffect(EntityLivingBase boss, EntityLivingBase target, DamageSource source, float amount) {
-        if (boss.world.rand.nextFloat() < 0.4f && !boss.world.isRemote) {
-            EntityTaintCrawler spiderling = new EntityTaintCrawler(boss.world);
-            spiderling.setLocationAndAngles(boss.posX, boss.posY + boss.height / 2.0f, boss.posZ, boss.world.rand.nextFloat() * 360.0f, 0.0f);
-            boss.world.spawnEntity(spiderling);
-            boss.playSound(SoundsTC.gore, 0.5f, 1.0f);
-        }
-        return amount;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    @Override
-    public void showFX(EntityLivingBase boss) {
-        if (boss.world.rand.nextBoolean()) {
-            FXDispatcher.INSTANCE.slimeJumpFX(boss, 0);
-        }
-    }
-    
-    @Override
-    public void preRender(EntityLivingBase boss, RenderLivingBase renderLivingBase) {
-    }
+/**
+ * Replaces the old (1.12.2) {@code ChampionModInfested}. Type 2 (defensive) - real, as-is: a real 40% chance
+ * to spawn a real {@link EntityTaintCrawler} on being hit. Drops the original's "gore" sound cue - no sound
+ * registry exists yet in this port at all (see {@code SoundsTC}'s own stale, unported state).
+ */
+public class ChampionModInfested implements IChampionModifierEffect {
+	@Override
+	public float performEffect(LivingEntity boss, LivingEntity target, DamageSource source, float amount) {
+		if (boss.getRandom().nextFloat() < 0.4f && !boss.level().isClientSide) {
+			Level level = boss.level();
+			EntityTaintCrawler crawler = new EntityTaintCrawler(ThaumcraftEntities.TAINT_CRAWLER.get(), level);
+			crawler.moveTo(boss.getX(), boss.getY() + boss.getBbHeight() / 2.0, boss.getZ(), boss.getRandom().nextFloat() * 360.0f, 0.0f);
+			level.addFreshEntity(crawler);
+		}
+		return amount;
+	}
 }

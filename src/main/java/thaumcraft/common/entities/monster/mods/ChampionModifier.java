@@ -1,39 +1,64 @@
 package thaumcraft.common.entities.monster.mods;
-import java.util.UUID;
-import net.minecraft.entity.ai.attributes.AttributeModifier;
-import net.minecraft.util.text.translation.I18n;
 
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import thaumcraft.Thaumcraft;
 
-public class ChampionModifier
-{
-    String name;
-    public int id;
-    public int type;
-    public IChampionModifierEffect effect;
-    public AttributeModifier attributeMod;
-    public static ChampionModifier[] mods;
-    public static AttributeModifier ATTRIBUTE_MOD_NONE;
-    public static AttributeModifier ATTRIBUTE_MINUS_ONE;
-    
-    public ChampionModifier(int id, String name, int type, IChampionModifierEffect effect, UUID iud) {
-        this.name = "";
-        this.id = 0;
-        this.type = 0;
-        this.effect = null;
-        this.name = name;
-        this.id = id;
-        this.type = type;
-        this.effect = effect;
-        attributeMod = new AttributeModifier(iud, name, id + 2, 0);
-    }
-    
-    public String getModNameLocalized() {
-        return I18n.translateToLocal("champion.mod." + name);
-    }
-    
-    static {
-        ChampionModifier.mods = new ChampionModifier[] { new ChampionModifier(0, "bold", -1, new ChampionModBold(), UUID.fromString("40289aa1-907f-4ac6-ad79-e6681efe2cbc")), new ChampionModifier(1, "spine", 2, new ChampionModSpined(), UUID.fromString("365eead5-3f15-42a8-9e68-36100faef945")), new ChampionModifier(2, "armor", 2, new ChampionModArmored(), UUID.fromString("4e23758d-348e-42a8-8de6-08ae0a59033c")), new ChampionModifier(3, "mighty", -1, new ChampionModMighty(), UUID.fromString("6d2ffe79-f034-4a06-b288-e1916c21e385")), new ChampionModifier(4, "grim", 1, new ChampionModGrim(), UUID.fromString("0f23321e-f921-4246-90b8-21ef202de224")), new ChampionModifier(5, "warded", 0, new ChampionModWarded(), UUID.fromString("b622c4d8-abc6-4db7-b3ee-5cf71b8e5286")), new ChampionModifier(6, "warp", 1, new ChampionModWarp(), UUID.fromString("107da049-af7a-4409-989a-6de23c8fe036")), new ChampionModifier(7, "undying", 0, new ChampionModUndying(), UUID.fromString("cb9484d3-6255-4893-a4f2-3ecc375692ee")), new ChampionModifier(8, "fiery", 1, new ChampionModFire(), UUID.fromString("6b567fdf-9245-48f5-8314-f93fe5db1427")), new ChampionModifier(9, "sickly", 1, new ChampionModSickly(), UUID.fromString("b5718868-9ab0-424c-af1f-8b35e836b46e")), new ChampionModifier(10, "venomous", 1, new ChampionModPoison(), UUID.fromString("ab9a132e-c619-4c0a-a103-10cbbcfba1a2")), new ChampionModifier(11, "vampiric", 1, new ChampionModVampire(), UUID.fromString("3412251e-af81-4c3c-93ba-2e1c33b049ea")), new ChampionModifier(12, "infested", 2, new ChampionModInfested(), UUID.fromString("9c577fbe-ddbc-4ea2-a661-770ea775f43b")), new ChampionModifier(13, "tainted", 0, new ChampionModTainted(), UUID.fromString("a3bb2595-8221-4140-bc73-538abcd1bbd2")) };
-        ChampionModifier.ATTRIBUTE_MOD_NONE = new AttributeModifier(UUID.fromString("1e645a3d-9115-4807-a61c-705172839f87"), "normal", 1.0, 0);
-        ChampionModifier.ATTRIBUTE_MINUS_ONE = new AttributeModifier(UUID.fromString("f48eb416-8321-46e6-8c07-a07bed729a0c"), "minus1", -1.0, 0);
-    }
+/**
+ * Replaces the old (1.12.2) {@code ChampionModifier}. Same real 14 mods, same real names/types, same real
+ * effect-class wiring - just modern {@link AttributeModifier} (a {@link ResourceLocation} id + {@link
+ * AttributeModifier.Operation} enum, replacing the original's raw UUID + numeric-operation-code pair).
+ *
+ * {@code attributeMod} is {@code ADD_VALUE} of {@code (id + 2)} - applied on top of
+ * {@link thaumcraft.common.registry.ThaumcraftAttributes#CHAMPION_MOD}'s real base value of -2, this makes
+ * the final attribute value read back out exactly as {@code id}, same arithmetic trick the original used.
+ *
+ * {@code type}: 0 = self (dispatched once per tick, no target), 1 = offensive (dispatched when this mob deals
+ * damage), 2 = defensive (dispatched when this mob takes damage), -1 = passive (no per-event dispatch at all
+ * - {@link ChampionUtils#makeChampion} applies these mods' one-time buffs directly at spawn instead).
+ */
+public class ChampionModifier {
+
+	public final int id;
+	public final String name;
+	public final int type;
+	public final IChampionModifierEffect effect;
+	public final AttributeModifier attributeMod;
+
+	private ChampionModifier(int id, String name, int type, IChampionModifierEffect effect) {
+		this.id = id;
+		this.name = name;
+		this.type = type;
+		this.effect = effect;
+		this.attributeMod = new AttributeModifier(
+				ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "champion_" + name),
+				id + 2, AttributeModifier.Operation.ADD_VALUE);
+	}
+
+	public Component getModNameLocalized() {
+		return Component.translatable("champion.mod." + name);
+	}
+
+	public static final ChampionModifier[] MODS = {
+			new ChampionModifier(0, "bold", -1, new ChampionModBold()),
+			new ChampionModifier(1, "spine", 2, new ChampionModSpined()),
+			new ChampionModifier(2, "armor", 2, new ChampionModArmored()),
+			new ChampionModifier(3, "mighty", -1, new ChampionModMighty()),
+			new ChampionModifier(4, "grim", 1, new ChampionModGrim()),
+			new ChampionModifier(5, "warded", 0, new ChampionModWarded()),
+			new ChampionModifier(6, "warp", 1, new ChampionModWarp()),
+			new ChampionModifier(7, "undying", 0, new ChampionModUndying()),
+			new ChampionModifier(8, "fiery", 1, new ChampionModFire()),
+			new ChampionModifier(9, "sickly", 1, new ChampionModSickly()),
+			new ChampionModifier(10, "venomous", 1, new ChampionModPoison()),
+			new ChampionModifier(11, "vampiric", 1, new ChampionModVampire()),
+			new ChampionModifier(12, "infested", 2, new ChampionModInfested()),
+			new ChampionModifier(13, "tainted", 0, new ChampionModTainted()),
+	};
+
+	/** Applied (permanently) to mark "already rolled for champion status, decided no" without disturbing the
+	 * real -2 base value's meaning as "never yet rolled" - bumps the readable value from -2 to -1. */
+	public static final AttributeModifier ATTRIBUTE_NOT_CHAMPION = new AttributeModifier(
+			ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "champion_none"), 1.0, AttributeModifier.Operation.ADD_VALUE);
 }

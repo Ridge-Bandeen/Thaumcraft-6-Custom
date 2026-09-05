@@ -8673,4 +8673,153 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(knowledge.isResearchKnown("!gotthaumonomicon"), "using the Thaumonomicon should grant the real !gotthaumonomicon flag");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Champion Mods - real per-mob "elite variant" system. ChampionModEvents' handlers are called directly
+	// below wherever a real deterministic outcome is needed (damage dispatch depends on which of the 14
+	// mods gets randomly rolled, so most tests force a specific one via the real attributeMod directly
+	// rather than relying on RNG luck) - same "call the real handler method directly" approach already used
+	// for other event-driven systems in this file.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void makeChampionAppliesRealAttributeAndBuffs(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		Zombie zombie = spawnFacedBy(helper, player, origin, EntityType.ZOMBIE);
+
+		// spawnFacedBy's own addFreshEntity already fired the real natural join-level roll (see
+		// freshlySpawnedMonsterRollsRealChampionStatus below) - reset back to a clean unrolled slate so this
+		// test's own explicit makeChampion call has something real to do.
+		zombie.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD).removeModifiers();
+		double baseHealthBefore = zombie.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).getBaseValue();
+		thaumcraft.common.lib.utils.ChampionUtils.makeChampion(zombie);
+
+		net.minecraft.world.entity.ai.attributes.AttributeInstance championAttr =
+				zombie.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD);
+		helper.assertTrue(championAttr != null, "a real zombie should have the real CHAMPION_MOD attribute");
+		double id = championAttr.getValue();
+		helper.assertTrue(id >= 0 && id < thaumcraft.common.entities.monster.mods.ChampionModifier.MODS.length,
+				"a champion should read back a real mod id 0-13, found " + id);
+
+		// getValue() (the computed total including modifiers), not getBaseValue() - CHAMPION_HEALTH is a
+		// real AttributeModifier, which never changes the raw base value.
+		double healthAfter = zombie.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).getValue();
+		helper.assertTrue(healthAfter == baseHealthBefore + 100.0, "a champion should get the real +100 flat health buff, found " + healthAfter);
+		helper.assertTrue(zombie.getCustomName() != null && zombie.isCustomNameVisible(), "a champion should get a real visible custom name");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void makeChampionIsANoOpOnceAlreadyRolled(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		Zombie zombie = spawnFacedBy(helper, player, origin, EntityType.ZOMBIE);
+
+		thaumcraft.common.lib.utils.ChampionUtils.makeChampion(zombie);
+		double idAfterFirst = zombie.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD).getValue();
+		thaumcraft.common.lib.utils.ChampionUtils.makeChampion(zombie);
+		double idAfterSecond = zombie.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD).getValue();
+
+		helper.assertTrue(idAfterFirst == idAfterSecond, "calling makeChampion again on an already-rolled mob should be a real no-op");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void championTypeZeroModDispatchesOnTick(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		Zombie zombie = spawnFacedBy(helper, player, origin, EntityType.ZOMBIE);
+		zombie.setHealth(1.0f);
+
+		// Force id 7 (Undying, type 0/self) directly rather than relying on the random roll - reset first
+		// since the natural join-level roll already fired once for real (see spawnFacedBy).
+		net.minecraft.world.entity.ai.attributes.AttributeInstance championAttr =
+				zombie.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD);
+		championAttr.removeModifiers();
+		championAttr.addOrReplacePermanentModifier(thaumcraft.common.entities.monster.mods.ChampionModifier.MODS[7].attributeMod);
+
+		for (int i = 0; i < 25; i++) {
+			zombie.tickCount = i;
+			thaumcraft.common.lib.events.ChampionModEvents.onTick(new net.neoforged.neoforge.event.tick.EntityTickEvent.Post(zombie));
+		}
+
+		helper.assertTrue(zombie.getHealth() > 1.0f, "a real Undying champion should heal itself over real ticks, found health=" + zombie.getHealth());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void championTypeTwoDefensiveModReducesIncomingDamage(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		Zombie zombie = spawnFacedBy(helper, player, origin, EntityType.ZOMBIE);
+
+		// Force id 2 (Armored, type 2/defensive) - reset first, see championTypeZeroModDispatchesOnTick's
+		// own comment on why.
+		net.minecraft.world.entity.ai.attributes.AttributeInstance armoredAttr =
+				zombie.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD);
+		armoredAttr.removeModifiers();
+		armoredAttr.addOrReplacePermanentModifier(thaumcraft.common.entities.monster.mods.ChampionModifier.MODS[2].attributeMod);
+
+		net.minecraft.world.damagesource.DamageSource source = helper.getLevel().damageSources().mobAttack(player);
+		net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent event =
+				new net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent(zombie,
+						new net.neoforged.neoforge.common.damagesource.DamageContainer(source, 25.0f));
+
+		thaumcraft.common.lib.events.ChampionModEvents.onIncomingDamage(event);
+
+		helper.assertTrue(Math.abs(event.getAmount() - 19.0f) < 0.01f, "a real Armored champion should reduce 25 real damage to 19 (25 * 19/25), found " + event.getAmount());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void championTypeOneOffensiveModHealsOnHitDealt(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		Zombie zombie = spawnFacedBy(helper, player, origin, EntityType.ZOMBIE);
+		zombie.setHealth(5.0f);
+
+		// Force id 11 (Vampiric, type 1/offensive) - the champion is the ATTACKER here. Reset first, see
+		// championTypeZeroModDispatchesOnTick's own comment on why.
+		net.minecraft.world.entity.ai.attributes.AttributeInstance vampiricAttr =
+				zombie.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD);
+		vampiricAttr.removeModifiers();
+		vampiricAttr.addOrReplacePermanentModifier(thaumcraft.common.entities.monster.mods.ChampionModifier.MODS[11].attributeMod);
+
+		net.minecraft.world.damagesource.DamageSource source = helper.getLevel().damageSources().mobAttack(zombie);
+		net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent event =
+				new net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent(player,
+						new net.neoforged.neoforge.common.damagesource.DamageContainer(source, 6.0f));
+
+		thaumcraft.common.lib.events.ChampionModEvents.onIncomingDamage(event);
+
+		helper.assertTrue(zombie.getHealth() > 5.0f, "a real Vampiric champion should heal itself off the real damage it just dealt, found health=" + zombie.getHealth());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void freshlySpawnedMonsterRollsRealChampionStatus(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		Zombie zombie = new Zombie(EntityType.ZOMBIE, helper.getLevel());
+		zombie.setPos(origin.getX() + 0.5, origin.getY() + 1, origin.getZ() + 0.5);
+		helper.getLevel().addFreshEntity(zombie);
+
+		net.minecraft.world.entity.ai.attributes.AttributeInstance championAttr =
+				zombie.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD);
+		helper.assertTrue(championAttr != null, "a real zombie should carry the real CHAMPION_MOD attribute");
+		helper.assertTrue(championAttr.getValue() != -2.0, "a freshly-spawned real monster should have been rolled for champion status (either way) on join, found " + championAttr.getValue());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void passiveAnimalsNeverGetTheChampionAttribute(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		net.minecraft.world.entity.animal.Cow cow = new net.minecraft.world.entity.animal.Cow(EntityType.COW, helper.getLevel());
+		cow.setPos(origin.getX() + 0.5, origin.getY() + 1, origin.getZ() + 0.5);
+		helper.getLevel().addFreshEntity(cow);
+
+		helper.assertTrue(cow.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD) == null,
+				"a real passive Cow shouldn't have been given the champion attribute at all - it's not in the curated hostile-monster list");
+		helper.succeed();
+	}
 }

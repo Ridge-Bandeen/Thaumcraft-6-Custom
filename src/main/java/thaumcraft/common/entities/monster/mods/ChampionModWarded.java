@@ -1,39 +1,24 @@
 package thaumcraft.common.entities.monster.mods;
-import net.minecraft.client.renderer.entity.RenderLivingBase;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.SharedMonsterAttributes;
-import net.minecraft.util.DamageSource;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.client.fx.FXDispatcher;
 
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 
-public class ChampionModWarded implements IChampionModifierEffect
-{
-    @Override
-    public float performEffect(EntityLivingBase mob, EntityLivingBase target, DamageSource source, float amount) {
-        if (mob.hurtResistantTime <= 0 && mob.ticksExisted % 25 == 0) {
-            int bh = (int)mob.getEntityAttribute(SharedMonsterAttributes.MAX_HEALTH).getBaseValue() / 2;
-            if (mob.getAbsorptionAmount() < bh) {
-                mob.setAbsorptionAmount(mob.getAbsorptionAmount() + 1.0f);
-            }
-        }
-        return amount;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    @Override
-    public void showFX(EntityLivingBase boss) {
-        if (boss.world.rand.nextBoolean()) {
-            return;
-        }
-        float w = boss.world.rand.nextFloat() * boss.width;
-        float d = boss.world.rand.nextFloat() * boss.width;
-        float h = boss.world.rand.nextFloat() * boss.height;
-        FXDispatcher.INSTANCE.drawGenericParticles(boss.getEntityBoundingBox().minX + w, boss.getEntityBoundingBox().minY + h, boss.getEntityBoundingBox().minZ + d, 0.0, 0.0, 0.0, 0.5f + boss.world.rand.nextFloat() * 0.1f, 0.5f + boss.world.rand.nextFloat() * 0.1f, 0.5f + boss.world.rand.nextFloat() * 0.1f, 0.6f, true, 69, 4, 1, 4 + boss.world.rand.nextInt(4), 0, 0.8f + boss.world.rand.nextFloat() * 0.3f, 0.0f, 0);
-    }
-    
-    @Override
-    public void preRender(EntityLivingBase boss, RenderLivingBase renderLivingBase) {
-    }
+/**
+ * Replaces the old (1.12.2) {@code ChampionModWarded}. Type 0 (self, dispatched once per tick) - real:
+ * every 25 ticks, slowly regenerates absorption shield up to half its real max health. Drops the original's
+ * extra "not currently hurt-resistant" pacing guard - 1.12's post-hit invincibility-frame counter has no
+ * direct modern equivalent field, and the 25-tick cadence alone already keeps the regen rate reasonable.
+ */
+public class ChampionModWarded implements IChampionModifierEffect {
+	@Override
+	public float performEffect(LivingEntity boss, LivingEntity target, DamageSource source, float amount) {
+		if (boss.tickCount % 25 == 0) {
+			float bh = (float) boss.getAttributeValue(Attributes.MAX_HEALTH) / 2.0f;
+			if (boss.getAbsorptionAmount() < bh) {
+				boss.setAbsorptionAmount(boss.getAbsorptionAmount() + 1.0f);
+			}
+		}
+		return amount;
+	}
 }
