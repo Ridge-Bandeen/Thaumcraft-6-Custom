@@ -8294,4 +8294,32 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(wc.getCounter() < 10000, "a real warp-misfortune roll this likely to succeed should really have consumed some of the real warp counter, found " + wc.getCounter());
 		helper.succeed();
 	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.lib.crafting.InfusionModifierRecipe} - the fix for the
+	 * fortress-mask combinability gap flagged when that chunk shipped. Applying the real Helm of Revealing
+	 * upgrade recipe to a helm that ALREADY carries a real mask should keep that mask, not overwrite it -
+	 * matching the original's own "a helm can wear a mask AND the goggles mod at once" real design.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionModifierRecipePreservesAnAlreadyAppliedComponent(GameTestHelper helper) {
+		RecipeManager recipes = helper.getLevel().getRecipeManager();
+		Optional<RecipeHolder<?>> holder = recipes.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "infusion_fortress_helm_goggles"));
+		helper.assertTrue(holder.isPresent() && holder.get().value() instanceof thaumcraft.common.lib.crafting.InfusionModifierRecipe,
+				"infusion_fortress_helm_goggles should really be a real InfusionModifierRecipe");
+		thaumcraft.common.lib.crafting.InfusionModifierRecipe recipe = (thaumcraft.common.lib.crafting.InfusionModifierRecipe) holder.get().value();
+
+		ItemStack maskedHelm = new ItemStack(ItemsTC.fortressHelm.get());
+		maskedHelm.set(thaumcraft.api.items.ThaumcraftDataComponents.FORTRESS_MASK.get(), 1);
+
+		thaumcraft.api.crafting.InfusionRecipeInput input = new thaumcraft.api.crafting.InfusionRecipeInput(
+				maskedHelm, List.of(new ItemStack(Items.SLIME_BALL), new ItemStack(ItemsTC.goggles.get())));
+		ItemStack result = recipe.assemble(input, helper.getLevel().registryAccess());
+
+		helper.assertTrue(Boolean.TRUE.equals(result.get(thaumcraft.api.items.ThaumcraftDataComponents.FORTRESS_GOGGLES.get())),
+				"the real goggles component should really be applied by the recipe");
+		Integer mask = result.get(thaumcraft.api.items.ThaumcraftDataComponents.FORTRESS_MASK.get());
+		helper.assertTrue(mask != null && mask == 1, "the real, already-applied mask should really be preserved instead of overwritten, found " + mask);
+		helper.succeed();
+	}
 }

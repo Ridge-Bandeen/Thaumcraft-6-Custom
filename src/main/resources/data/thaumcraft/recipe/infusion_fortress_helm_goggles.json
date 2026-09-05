@@ -1,5 +1,5 @@
 {
-  "type": "thaumcraft:infusion",
+  "type": "thaumcraft:infusion_modifier",
   "instability": 5,
   "aspects": {
     "sensus": 40,

@@ -1,5 +1,5 @@
 {
-  "type": "thaumcraft:infusion",
+  "type": "thaumcraft:infusion_modifier",
   "instability": 8,
   "aspects": {
     "perditio": 80,

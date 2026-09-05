@@ -51,6 +51,12 @@ public final class ThaumcraftRecipeTypes {
 	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.InfusionCrystalRecipe>> INFUSION_CRYSTAL_SERIALIZER =
 			RECIPE_SERIALIZERS.register("infusion_crystal", () -> new thaumcraft.common.lib.crafting.InfusionCrystalRecipe.Serializer());
 
+	/** A 4th shape sharing {@link #INFUSION_TYPE} - see {@link thaumcraft.common.lib.crafting.InfusionModifierRecipe}'s
+	 * own doc comment: upgrades the central item in place, preserving whatever real data components it
+	 * already carried instead of replacing it wholesale with the recipe's own static result stack. */
+	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.InfusionModifierRecipe>> INFUSION_MODIFIER_SERIALIZER =
+			RECIPE_SERIALIZERS.register("infusion_modifier", () -> new thaumcraft.common.lib.crafting.InfusionModifierRecipe.Serializer());
+
 	private static <T extends net.minecraft.world.item.crafting.Recipe<?>> Supplier<RecipeType<T>> registerType(String name) {
 		return RECIPE_TYPES.register(name, () -> new RecipeType<T>() {
 			@Override
