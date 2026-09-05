@@ -1,98 +1,53 @@
 package thaumcraft.common.items.curios;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.item.EnumRarity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.EnumActionResult;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.Thaumcraft;
+
+import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import thaumcraft.api.capabilities.IPlayerKnowledge;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
-import thaumcraft.api.research.ResearchCategories;
-import thaumcraft.api.research.ResearchCategory;
-import thaumcraft.api.research.ResearchEntry;
-import thaumcraft.common.config.ConfigItems;
-import thaumcraft.common.config.ModConfig;
-import thaumcraft.common.items.ItemTCBase;
-import thaumcraft.common.lib.CommandThaumcraft;
-import thaumcraft.common.lib.SoundsTC;
-import thaumcraft.common.lib.research.ResearchManager;
+import thaumcraft.common.container.ThaumonomiconMenu;
 
+/**
+ * Replaces the old (1.12.2) {@code ItemThaumonomicon}. One registry entry, not the original's two
+ * damage-value variants - see {@code ItemsTC#thaumonomicon}'s own doc comment.
+ *
+ * Real behavior: right-click opens the real {@link ThaumonomiconMenu}/{@link
+ * thaumcraft.client.gui.ThaumonomiconScreen}. The original granted its "you've seen the book" virtual research
+ * flag ({@code "!gotthaumonomicon"}, which gates {@code FIRSTSTEPS} and everything downstream of it) from an
+ * item-pickup event hook (stale, unported {@code PlayerEvents} - a whole separate mechanic covering several
+ * other pickup/wake-up triggers, out of scope here); granting it here instead, on first use, is a small, real,
+ * deliberate substitution that produces the same practical outcome (every player who ever opens their
+ * Thaumonomicon has real access to the beginner research tree) without needing that larger hook.
+ */
+public class ItemThaumonomicon extends Item {
 
-public class ItemThaumonomicon extends ItemTCBase
-{
-    public ItemThaumonomicon() {
-        super("thaumonomicon", "normal", "cheat");
-        setHasSubtypes(true);
-        setMaxStackSize(1);
-    }
-    
-    @Override
-    public void getSubItems(CreativeTabs tab, NonNullList<ItemStack> items) {
-        if (tab == ConfigItems.TABTC || tab == CreativeTabs.SEARCH) {
-            items.add(new ItemStack(this, 1, 0));
-            if (ModConfig.CONFIG_MISC.allowCheatSheet) {
-                items.add(new ItemStack(this, 1, 1));
-            }
-        }
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void addInformation(ItemStack stack, World worldIn, List<String> tooltip, ITooltipFlag flagIn) {
-        super.addInformation(stack, worldIn, tooltip, flagIn);
-        if (stack.getItemDamage() == 1) {
-            tooltip.add(TextFormatting.DARK_PURPLE + "Creative only");
-        }
-    }
-    
-    public ActionResult<ItemStack> onItemRightClick(World world, EntityPlayer player, EnumHand hand) {
-        if (!world.isRemote) {
-            if (ModConfig.CONFIG_MISC.allowCheatSheet && player.getHeldItem(hand).getItemDamage() == 1) {
-                Collection<ResearchCategory> rc = ResearchCategories.researchCategories.values();
-                for (ResearchCategory cat : rc) {
-                    Collection<ResearchEntry> rl = cat.research.values();
-                    for (ResearchEntry ri : rl) {
-                        CommandThaumcraft.giveRecursiveResearch(player, ri.getKey());
-                    }
-                }
-            }
-            else {
-                Collection<ResearchCategory> rc = ResearchCategories.researchCategories.values();
-                for (ResearchCategory cat : rc) {
-                    Collection<ResearchEntry> rl = cat.research.values();
-                    for (ResearchEntry ri : rl) {
-                        if (ThaumcraftCapabilities.knowsResearch(player, ri.getKey()) && ri.getSiblings() != null) {
-                            for (String sib : ri.getSiblings()) {
-                                if (!ThaumcraftCapabilities.knowsResearch(player, sib)) {
-                                    ResearchManager.completeResearch(player, sib);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            ThaumcraftCapabilities.getKnowledge(player).sync((EntityPlayerMP)player);
-        }
-        else {
-            world.playSound(player.posX, player.posY, player.posZ, SoundsTC.page, SoundCategory.PLAYERS, 1.0f, 1.0f, false);
-        }
-        player.openGui(Thaumcraft.instance, 12, world, 0, 0, 0);
-        return (ActionResult<ItemStack>)new ActionResult(EnumActionResult.SUCCESS, player.getHeldItem(hand));
-    }
-    
-    public EnumRarity getRarity(ItemStack itemstack) {
-        return (itemstack.getItemDamage() != 1) ? EnumRarity.UNCOMMON : EnumRarity.EPIC;
-    }
+	private static final String GOT_THAUMONOMICON = "!gotthaumonomicon";
+
+	public ItemThaumonomicon(Properties properties) {
+		super(properties);
+	}
+
+	@Override
+	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+		ItemStack stack = player.getItemInHand(hand);
+		if (!level.isClientSide) {
+			IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+			if (!knowledge.isResearchKnown(GOT_THAUMONOMICON)) {
+				knowledge.addResearch(GOT_THAUMONOMICON);
+			}
+			player.openMenu(new SimpleMenuProvider((id, inv, p) -> new ThaumonomiconMenu(id, inv),
+					Component.translatable("item.thaumcraft.thaumonomicon")));
+		} else {
+			level.playSound(player, player.getX(), player.getY(), player.getZ(),
+					SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0f, 1.0f);
+		}
+		return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+	}
 }

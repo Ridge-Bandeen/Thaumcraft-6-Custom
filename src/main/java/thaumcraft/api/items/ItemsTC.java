@@ -261,6 +261,13 @@ public final class ItemsTC {
 	public static final DeferredItem<ItemCurio> curio =
 			ITEMS.registerItem("curio", ItemCurio::new);
 
+	/** The real Thaumonomicon research browser's item - see {@code ItemThaumonomicon}'s own doc comment. One
+	 * registry entry, not the original's two damage-value variants (normal/creative "cheat sheet" - modern
+	 * items don't have metadata subtypes, same simplification {@code ItemCurio}'s own doc comment already
+	 * used for its 8 dropped variants). */
+	public static final DeferredItem<thaumcraft.common.items.curios.ItemThaumonomicon> thaumonomicon =
+			ITEMS.registerItem("thaumonomicon", props -> new thaumcraft.common.items.curios.ItemThaumonomicon(props.stacksTo(1)));
+
 	public static final DeferredItem<ItemPechWand> pechWand =
 			ITEMS.registerItem("pech_wand", ItemPechWand::new);
 

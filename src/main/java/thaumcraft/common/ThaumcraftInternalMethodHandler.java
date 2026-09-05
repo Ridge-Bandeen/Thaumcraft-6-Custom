@@ -15,7 +15,10 @@ import thaumcraft.api.golems.seals.ISealEntity;
 import thaumcraft.api.golems.seals.SealPos;
 import thaumcraft.api.golems.tasks.Task;
 import thaumcraft.api.internal.IInternalMethodHandler;
+import thaumcraft.api.research.ResearchCategories;
 import thaumcraft.api.research.ResearchCategory;
+import thaumcraft.api.research.ResearchEntry;
+import thaumcraft.api.research.ResearchStage;
 import thaumcraft.common.world.aura.AuraHandler;
 
 /**
@@ -24,15 +27,19 @@ import thaumcraft.common.world.aura.AuraHandler;
  * a full recreation of the original (see the interface's own doc comment for the overall reasoning):
  *
  * <ul>
- * <li>Knowledge/research/warp methods wire straight through to {@link ThaumcraftCapabilities}'s already-real
+ * <li>Knowledge/warp methods wire straight through to {@link ThaumcraftCapabilities}'s already-real
  * {@code IPlayerKnowledge}/{@code IPlayerWarp} attachments - no GUI popups/sounds (the original's "with all
  * the proper bells and whistles"), just the raw state change.</li>
+ * <li>{@code progressResearch}/{@code completeResearch}/{@code doesPlayerHaveRequisites} are now real,
+ * multi-stage-aware, {@link ResearchCategories}-backed logic - ported from the original (stale, deleted)
+ * {@code thaumcraft.common.lib.research.ResearchManager}'s {@code progressResearch}/{@code
+ * doesPlayerHaveRequisites} now that {@code ThaumcraftResearchLoader} actually populates real
+ * {@link ResearchEntry} data. Dropped from that original logic: the network-synced GUI popup flags/sounds
+ * (no research popup UI yet) and the {@code required_item}/{@code required_craft} stage gates (display-only
+ * without the crafting/possession-triggered auto-progression hook, itself a real, separate, not-yet-ported
+ * system) - a stage with only those gates set is simply never auto-completed by this port yet.</li>
  * <li>Aura methods wire straight through to the already-real {@link AuraHandler} - this is what finally
  * lets {@code thaumcraft.api.aura.AuraHelper} stop being a permanent stub.</li>
- * <li>{@code doesPlayerHaveRequisites} can't check real prerequisites without a loaded research-entry
- * registry (not ported - see the port-tracking memory notes on the research/Thaumonomicon UI still being
- * blocked) - always returns {@code true} (permissive), matching this project's "don't block content behind
- * an unbuilt subsystem" precedent (e.g. the FIRSTSTEPS@2 default knowledge).</li>
  * <li>{@code getObjectAspects}/{@code generateTags} now wire through to
  * {@link thaumcraft.common.lib.crafting.ThaumcraftObjectTags} - see that class's own doc comment for what's
  * simplified in the object-tag database it replaces. {@code getEntityAspects} wires through to its sibling
@@ -51,21 +58,58 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 	@Override
 	public boolean progressResearch(Player player, String researchkey) {
 		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
-		int stage = knowledge.getResearchStage(researchkey);
-		return knowledge.setResearchStage(researchkey, Math.max(1, stage + 1));
+		ResearchEntry entry = ResearchCategories.getResearch(researchkey);
+		ResearchStage[] stages = entry != null ? entry.getStages() : null;
+		// Only a real, loaded multi-stage entry has an actual cap to refuse progressing past - an
+		// entry-less key (a "!virtualFlag", or an ad-hoc test/reference key with no ResearchEntry at all)
+		// has no such cap, matching the old placeholder implementation's fully unconditional increment for
+		// every key. completeResearch (below) is what stops calling this repeatedly for those.
+		if (stages != null && knowledge.isResearchComplete(researchkey)) return false;
+		if (!doesPlayerHaveRequisites(player, researchkey)) return false;
+
+		if (!knowledge.isResearchKnown(researchkey)) knowledge.addResearch(researchkey);
+
+		int stage = Math.max(0, knowledge.getResearchStage(researchkey));
+		if (stages != null) {
+			ResearchStage completedStage = stage > 0 ? stages[Math.min(stage, stages.length) - 1] : null;
+			knowledge.setResearchStage(researchkey, Math.min(stages.length + 1, stage + 1));
+			if (completedStage != null && completedStage.getWarp() > 0) {
+				addWarpToPlayer(player, completedStage.getWarp(), IPlayerWarp.EnumWarpType.NORMAL);
+			}
+		} else {
+			knowledge.setResearchStage(researchkey, Math.max(1, stage + 1));
+		}
+
+		if (entry != null && entry.getSiblings() != null) {
+			for (String sibling : entry.getSiblings()) {
+				if (!knowledge.isResearchComplete(sibling) && doesPlayerHaveRequisites(player, sibling)) {
+					completeResearch(player, sibling);
+				}
+			}
+		}
+		return true;
 	}
 
 	@Override
 	public boolean completeResearch(Player player, String researchkey) {
-		// This port's PlayerKnowledge treats "known" and "complete" as the same thing (no loaded
-		// ResearchEntry stage counts to compare against - see that class's own doc comment), so this and
-		// addResearch are equivalent here.
-		return ThaumcraftCapabilities.getKnowledge(player).addResearch(researchkey);
+		ResearchEntry entry = ResearchCategories.getResearch(researchkey);
+		if (entry == null || entry.getStages() == null) {
+			// No real stage count to loop through - one progressResearch call is the whole "completion" (and,
+			// since progressResearch never refuses an entry-less key on its own, looping here would never
+			// terminate).
+			return progressResearch(player, researchkey);
+		}
+		boolean any = false;
+		while (progressResearch(player, researchkey)) any = true;
+		return any;
 	}
 
 	@Override
 	public boolean doesPlayerHaveRequisites(Player player, String researchkey) {
-		return true;
+		ResearchEntry entry = ResearchCategories.getResearch(researchkey);
+		if (entry == null) return true;
+		String[] parents = entry.getParentsStripped();
+		return parents == null || ThaumcraftCapabilities.knowsResearchStrict(player, parents);
 	}
 
 	@Override

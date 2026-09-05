@@ -14,11 +14,12 @@ import thaumcraft.api.research.ResearchCategories;
  * the still-unbuilt Thaumonomicon UI or research-entry/page system (that's {@code ResearchEntry}, a
  * per-category child list, left empty here).
  *
- * Only the category *metadata* is ported, not any research entries within them - those still need the
- * Thaumonomicon/scanning system (see the port-tracking memory notes on why that's still blocked). This is
- * enough for {@link thaumcraft.common.items.curios.ItemCurio} (and anything else that calls
- * {@code IInternalMethodHandler.addKnowledge} against a category by key) to have real categories to grant
- * knowledge into, rather than a null lookup.
+ * Only the category *metadata* is registered here - the research entries themselves are loaded separately,
+ * for real, by {@link thaumcraft.common.lib.research.ThaumcraftResearchLoader} into each category's own
+ * {@code research} map (each {@code registerCategory} call below creates the empty map the loader populates).
+ * This is also enough on its own for {@link thaumcraft.common.items.curios.ItemCurio} (and anything else that
+ * calls {@code IInternalMethodHandler.addKnowledge} against a category by key) to have real categories to
+ * grant knowledge into, rather than a null lookup.
  */
 public final class ThaumcraftResearchCategories {
 

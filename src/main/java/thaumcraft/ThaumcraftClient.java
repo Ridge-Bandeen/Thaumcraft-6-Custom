@@ -84,6 +84,7 @@ public class ThaumcraftClient {
         event.register(ThaumcraftMenus.GOLEM_BUILDER.get(), thaumcraft.client.gui.GuiGolemBuilder::new);
         event.register(ThaumcraftMenus.SEAL_CONFIG.get(), thaumcraft.client.gui.SealConfigScreen::new);
         event.register(ThaumcraftMenus.TURRET_CONFIG.get(), thaumcraft.client.gui.TurretConfigScreen::new);
+        event.register(ThaumcraftMenus.THAUMONOMICON.get(), thaumcraft.client.gui.ThaumonomiconScreen::new);
     }
 
     @SubscribeEvent

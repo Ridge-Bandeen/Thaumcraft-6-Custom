@@ -37,6 +37,9 @@ public final class ThaumcraftMenus {
 	public static final Supplier<MenuType<thaumcraft.common.container.TurretConfigMenu>> TURRET_CONFIG = MENUS.register("turret_config",
 			() -> IMenuTypeExtension.create(thaumcraft.common.container.TurretConfigMenu::new));
 
+	public static final Supplier<MenuType<thaumcraft.common.container.ThaumonomiconMenu>> THAUMONOMICON = MENUS.register("thaumonomicon",
+			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.ThaumonomiconMenu(windowId, inv)));
+
 	private ThaumcraftMenus() {
 	}
 }

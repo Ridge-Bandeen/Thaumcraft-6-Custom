@@ -121,6 +121,11 @@ sourceSets {
             include 'thaumcraft/common/container/ResearchTableMenu.java'
             include 'thaumcraft/common/lib/network/ClientboundResearchDataPacket.java'
             include 'thaumcraft/client/ClientResearchTableCache.java'
+            include 'thaumcraft/common/container/ThaumonomiconMenu.java'
+            include 'thaumcraft/client/gui/ThaumonomiconScreen.java'
+            include 'thaumcraft/common/lib/network/ClientboundPlayerKnowledgePacket.java'
+            include 'thaumcraft/client/ClientPlayerKnowledgeCache.java'
+            include 'thaumcraft/common/items/curios/ItemThaumonomicon.java'
             include 'thaumcraft/api/research/ResearchAddendum.java'
             include 'thaumcraft/api/research/ResearchCategories.java'
             include 'thaumcraft/api/research/ResearchCategory.java'
@@ -360,6 +365,7 @@ sourceSets {
 
             include 'thaumcraft/common/lib/research/PlayerKnowledge.java'
             include 'thaumcraft/common/lib/research/PlayerWarp.java'
+            include 'thaumcraft/common/lib/research/ThaumcraftResearchLoader.java'
 
             include 'thaumcraft/common/blocks/crafting/BlockCrucible.java'
             include 'thaumcraft/common/tiles/crafting/TileCrucible.java'

@@ -12,23 +12,26 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.network.PacketDistributor;
 import thaumcraft.api.capabilities.IPlayerKnowledge;
+import thaumcraft.api.research.ResearchCategories;
 import thaumcraft.api.research.ResearchCategory;
+import thaumcraft.api.research.ResearchEntry;
+import thaumcraft.common.lib.network.ClientboundPlayerKnowledgePacket;
 
 /**
  * The concrete {@link IPlayerKnowledge} implementation (this class didn't exist in the ported API - the
  * 1.12.2 original lived entirely in {@code thaumcraft.common}, same as here). Attached to players via
  * {@link thaumcraft.api.capabilities.ThaumcraftCapabilities}'s Data Attachment.
  *
- * Simplified versus the original for this pass: there's no loaded {@code ResearchEntry} data yet (the
- * research/Thaumonomicon JSON system isn't ported), so there's no "total stage count" to compare against
- * to distinguish "known" from "truly complete" multi-stage research. A research key is simply "known" (and
- * therefore also "complete") once it's been added at all; {@code isResearchKnown("key@N")} still does real
- * stage-number comparison against whatever stage was recorded, since that syntax is already used by
- * recipes ported so far (e.g. "FIRSTSTEPS@2"). Revisit once research entries are loaded for real.
+ * {@code getResearchStatus}/{@code isResearchComplete} are now the real stage-count-aware check the
+ * interface documents ("complete" means the stored stage exceeds the real {@link ResearchEntry}'s stage
+ * count, looked up live via {@link ResearchCategories} now that {@code ThaumcraftResearchLoader} actually
+ * populates it) rather than the old flat "known == complete" placeholder this class shipped with before the
+ * research JSON system was loaded for real.
  *
- * {@link #sync} is a no-op - needs the not-yet-ported network layer to actually push state to the client;
- * server-side logic (research gates, etc.) works fine without it in the meantime.
+ * {@link #sync} now really pushes state to the client via {@link ClientboundPlayerKnowledgePacket} -
+ * {@link thaumcraft.common.container.ThaumonomiconMenu} is the first real caller.
  */
 public class PlayerKnowledge implements IPlayerKnowledge {
 
@@ -39,12 +42,13 @@ public class PlayerKnowledge implements IPlayerKnowledge {
 	private static final String NO_CATEGORY = "NONE";
 
 	public PlayerKnowledge() {
-		// TODO: the real progression is a starting Thaumonomicon gift + scanning-based research
-		// (ScanningManager, not ported - see the port-tracking memory notes). Without any way yet to
-		// grant research in game, defaulting every new player to knowing FIRSTSTEPS keeps the recipes
-		// ported so far (which all gate on it) actually reachable now that research-gating is enforced
-		// for real. Remove once a real granting path exists.
-		researchProgress.put("FIRSTSTEPS", 2);
+		// Every player starts able to craft the basics, matching the original's practical "always known"
+		// status for this entry (its own first stage requires nothing but opening the Thaumonomicon in the
+		// first place). Granted as real full completion now that real stage counts are loadable; falls back
+		// to a flat "known" stage of 1 if the real entry hasn't loaded yet (e.g. very early in datapack init).
+		ResearchEntry firstSteps = ResearchCategories.getResearch("FIRSTSTEPS");
+		int stageCount = (firstSteps != null && firstSteps.getStages() != null) ? firstSteps.getStages().length : 0;
+		researchProgress.put("FIRSTSTEPS", stageCount + 1);
 	}
 
 	@Override
@@ -56,14 +60,22 @@ public class PlayerKnowledge implements IPlayerKnowledge {
 
 	@Override
 	public EnumResearchStatus getResearchStatus(@Nonnull String research) {
-		Integer stage = researchProgress.get(stripQualifiers(research));
-		return stage == null ? EnumResearchStatus.UNKNOWN : EnumResearchStatus.COMPLETE;
+		String key = stripQualifiers(research);
+		Integer stage = researchProgress.get(key);
+		if (stage == null) return EnumResearchStatus.UNKNOWN;
+		ResearchEntry entry = ResearchCategories.getResearch(key);
+		// -1 for keys with no real ResearchEntry (the "!virtualFlag" convention, or an ad-hoc
+		// "required_research" reference that isn't a full entry in its own right) - there's no real stage
+		// concept to track there, so simply being known (stage 0, the default addResearch sets) already
+		// counts as complete, matching the original's flat "known == complete" treatment for those keys.
+		int stageCount = (entry != null && entry.getStages() != null) ? entry.getStages().length : -1;
+		return stage > stageCount ? EnumResearchStatus.COMPLETE : EnumResearchStatus.IN_PROGRESS;
 	}
 
 	@Override
 	public boolean isResearchComplete(String research) {
 		if (research == null || research.isEmpty()) return true;
-		return researchProgress.containsKey(stripQualifiers(research));
+		return getResearchStatus(research) == EnumResearchStatus.COMPLETE;
 	}
 
 	@Override
@@ -163,7 +175,13 @@ public class PlayerKnowledge implements IPlayerKnowledge {
 
 	@Override
 	public void sync(ServerPlayer player) {
-		// TODO: needs the not-yet-ported network layer to push this to the client.
+		try {
+			CompoundTag tag = serializeNBT(player.level().registryAccess());
+			PacketDistributor.sendToPlayer(player, new ClientboundPlayerKnowledgePacket(tag));
+		} catch (Exception e) {
+			// Same defensive catch ResearchTableMenu/ThaumonomiconMenu's own sync already uses - a genuinely
+			// disconnected/mock player makes PacketDistributor refuse the send.
+		}
 	}
 
 	@Nonnull

@@ -3893,6 +3893,16 @@ public class ThaumcraftGameTests {
 		BlockPos absolute = helper.absolutePos(pos);
 
 		ServerPlayer player = spawnCasterAt(helper, absolute.above());
+		// BOOTSTRAVELLER's real parents (INFUSION, RECHARGEPEDESTAL - now actually enforced, see
+		// ThaumcraftInternalMethodHandler's own doc comment) each sit behind their own real chain back to
+		// UNLOCKALCHEMY; FIRSTSTEPS itself is already complete by default for every fresh player.
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "UNLOCKALCHEMY");
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "UNLOCKAUROMANCY");
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "BASEAUROMANCY");
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "RECHARGEPEDESTAL");
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "UNLOCKINFUSION");
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "BASEINFUSION");
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "INFUSION");
 		helper.assertTrue(!thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("BOOTSTRAVELLER"),
 				"the player shouldn't know BOOTSTRAVELLER yet");
 
@@ -4293,6 +4303,10 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.tiles.crafting.TileFocalManipulator tile = helper.getBlockEntity(pos);
 
 		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+		// BASEAUROMANCY's real prerequisite chain - see focalManipulatorMenusCraftButtonTriggersARealStartCraft's
+		// own comment on this same chain.
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "UNLOCKALCHEMY");
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "UNLOCKAUROMANCY");
 		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "BASEAUROMANCY");
 		player.getInventory().add(makeAspectCrystal(thaumcraft.api.aspects.Aspect.AVERSION));
 		player.getInventory().add(makeAspectCrystal(thaumcraft.api.aspects.Aspect.FIRE));
@@ -4363,7 +4377,13 @@ public class ThaumcraftGameTests {
 		boolean failed = menu.clickMenuButton(player, 0);
 		helper.assertTrue(!failed, "button 0 should refuse to start a craft with no assembled node graph and no focus in the slot");
 
-		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "BASEAUROMANCY");
+		// BASEAUROMANCY's real prerequisite chain (now actually enforced - see ThaumcraftInternalMethodHandler's
+		// own doc comment) is UNLOCKALCHEMY -> UNLOCKAUROMANCY -> BASEAUROMANCY; UNLOCKALCHEMY's own parent,
+		// FIRSTSTEPS, is already complete by default for every fresh player.
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "UNLOCKALCHEMY");
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "UNLOCKAUROMANCY");
+		boolean gotBaseAuromancy = thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "BASEAUROMANCY");
+		helper.assertTrue(gotBaseAuromancy, "BASEAUROMANCY should complete once its real prerequisite chain is satisfied");
 		player.getInventory().add(makeAspectCrystal(thaumcraft.api.aspects.Aspect.AVERSION));
 		player.getInventory().add(makeAspectCrystal(thaumcraft.api.aspects.Aspect.FIRE));
 		tile.setFocus(new ItemStack(ItemsTC.focusBlank1.get()));
@@ -4428,7 +4448,11 @@ public class ThaumcraftGameTests {
 	public static void freshPlayerGetsBaselineInspirationAndOnlyBasicsIsAvailable(GameTestHelper helper) {
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
 		int inspiration = thaumcraft.api.research.theorycraft.ResearchTableData.getAvailableInspiration(player);
-		helper.assertTrue(inspiration == 5, "a fresh player with no research should have exactly the 5 baseline inspiration, found " + inspiration);
+		// 5 base + the real .5 SPIKY bonus (ResearchEntry.EnumResearchMeta's own doc comment) from the
+		// default-complete FIRSTSTEPS entry, rounded up - now that ThaumcraftResearchLoader actually loads
+		// real entries, FIRSTSTEPS.hasMeta(SPIKY) is real (it wasn't before, when getResearch("FIRSTSTEPS")
+		// returned null and this bonus could never apply).
+		helper.assertTrue(inspiration == 6, "a fresh player with real FIRSTSTEPS knowledge should have the 5 baseline + its real .5 SPIKY bonus, found " + inspiration);
 
 		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
 		java.util.ArrayList<String> cats = data.getAvailableCategories(player);
@@ -4441,7 +4465,9 @@ public class ThaumcraftGameTests {
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
 		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
 		data.initialize(player, java.util.Set.of());
-		helper.assertTrue(data.inspirationStart == 5 && data.inspiration == 5, "no aids chosen should leave inspiration untouched, found start=" + data.inspirationStart + " current=" + data.inspiration);
+		// 6, not 5 - see freshPlayerGetsBaselineInspirationAndOnlyBasicsIsAvailable's own comment on the real
+		// FIRSTSTEPS SPIKY bonus.
+		helper.assertTrue(data.inspirationStart == 6 && data.inspiration == 6, "no aids chosen should leave inspiration untouched, found start=" + data.inspirationStart + " current=" + data.inspiration);
 
 		// Most of the registered deck needs existing category progress to even initialize (CardPonder/
 		// CardRethink/CardInspired/CardReject/CardBalance all check data.categoryTotals) - a genuinely
@@ -4517,7 +4543,9 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(tile.data == null, "no theory should be in progress yet");
 		tile.startNewTheory(player, java.util.Set.of());
-		helper.assertTrue(tile.data != null && tile.data.inspirationStart == 5, "starting a new theory with no aids should give the real 5 baseline inspiration, found " + (tile.data == null ? "null" : tile.data.inspirationStart));
+		// 6, not 5 - see freshPlayerGetsBaselineInspirationAndOnlyBasicsIsAvailable's own comment on the real
+		// FIRSTSTEPS SPIKY bonus.
+		helper.assertTrue(tile.data != null && tile.data.inspirationStart == 6, "starting a new theory with no aids should give the real 5 baseline + FIRSTSTEPS's real SPIKY bonus, found " + (tile.data == null ? "null" : tile.data.inspirationStart));
 
 		tile.data.categoryTotals.put("BASICS", 100);
 		tile.finishTheory(player);
@@ -8533,6 +8561,116 @@ public class ThaumcraftGameTests {
 		}
 
 		helper.assertTrue(tile.getAspects().size() == 0, "a real powered centrifuge should really never process anything, found " + tile.getAspects());
+		helper.succeed();
+	}
+
+	/** Real coverage for {@link thaumcraft.common.lib.research.ThaumcraftResearchLoader} - confirms the real
+	 * shipped {@code data/thaumcraft/research/basics.json} content actually gets parsed into the real
+	 * {@code ResearchCategories}/{@code ResearchEntry} registry, not just that the loader class compiles. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void researchLoaderPopulatesRealFirstStepsEntry(GameTestHelper helper) {
+		thaumcraft.api.research.ResearchEntry entry = thaumcraft.api.research.ResearchCategories.getResearch("FIRSTSTEPS");
+		helper.assertTrue(entry != null, "the real FIRSTSTEPS research entry should be loaded from data/thaumcraft/research/basics.json");
+		helper.assertTrue("BASICS".equals(entry.getCategory()), "FIRSTSTEPS should be in the BASICS category, found " + entry.getCategory());
+		helper.assertTrue(entry.getStages() != null && entry.getStages().length == 3,
+				"FIRSTSTEPS should have its real 3 stages, found " + (entry.getStages() == null ? 0 : entry.getStages().length));
+		helper.assertTrue("research.FIRSTSTEPS.stage.1".equals(entry.getStages()[0].getText()),
+				"the first stage's text key should be the real research.FIRSTSTEPS.stage.1, found " + entry.getStages()[0].getText());
+		helper.succeed();
+	}
+
+	/** {@link thaumcraft.common.lib.research.PlayerKnowledge}'s own real FIRSTSTEPS default is now stage-count
+	 * aware (see that class's own doc comment) - this locks in that it actually resolves to real, full
+	 * completion once the real 3-stage entry is loaded, not just "known". */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void freshPlayerHasFirstStepsFullyComplete(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		helper.assertTrue(knowledge.isResearchComplete("FIRSTSTEPS"), "a fresh player should start with FIRSTSTEPS fully complete");
+		helper.assertTrue(knowledge.isResearchKnown("FIRSTSTEPS@3"), "a fresh player should be at least at FIRSTSTEPS stage 3");
+		helper.succeed();
+	}
+
+	/** Real coverage for {@code ThaumcraftInternalMethodHandler#completeResearch}/{@code
+	 * doesPlayerHaveRequisites} - the real parent-gating logic ported from the original (deleted, stale)
+	 * {@code ResearchManager}, now backed by real loaded {@code ResearchEntry} data. THEORYRESEARCH's real
+	 * parent is KNOWLEDGETYPES (see basics.json). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void completeResearchIsBlockedUntilParentIsKnown(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		helper.assertTrue(!knowledge.isResearchKnown("THEORYRESEARCH"), "a fresh player shouldn't know THEORYRESEARCH yet");
+
+		boolean blocked = thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "THEORYRESEARCH");
+		helper.assertTrue(!blocked, "THEORYRESEARCH requires KNOWLEDGETYPES first and should be refused");
+		helper.assertTrue(!knowledge.isResearchKnown("THEORYRESEARCH"), "THEORYRESEARCH still shouldn't be known");
+
+		boolean parentOk = thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "KNOWLEDGETYPES");
+		helper.assertTrue(parentOk && knowledge.isResearchComplete("KNOWLEDGETYPES"), "KNOWLEDGETYPES should complete freely (no parents)");
+
+		boolean unlocked = thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "THEORYRESEARCH");
+		helper.assertTrue(unlocked && knowledge.isResearchComplete("THEORYRESEARCH"), "THEORYRESEARCH should now complete since its parent is known");
+		helper.succeed();
+	}
+
+	/** Real coverage for the sibling-cascade half of {@code completeResearch} - completing a research entry
+	 * should also complete any real siblings whose own requisites are now met. Uses a synthetic fixture
+	 * (same style as this file's other ad-hoc research-key tests, e.g. the TEST_PIG_SCAN scan target above)
+	 * rather than a real multi-hop chain from the shipped content, so this stays independent of future edits
+	 * to basics.json's real dependency graph. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void completingResearchCascadesToSiblings(GameTestHelper helper) {
+		thaumcraft.api.research.ResearchCategory category = thaumcraft.api.research.ResearchCategories.getResearchCategory("BASICS");
+
+		thaumcraft.api.research.ResearchEntry parent = new thaumcraft.api.research.ResearchEntry();
+		parent.setKey("TEST_SIBLING_PARENT");
+		parent.setCategory("BASICS");
+		parent.setName("research.TEST_SIBLING_PARENT.title");
+		parent.setSiblings(new String[] {"TEST_SIBLING_CHILD"});
+		thaumcraft.api.research.ResearchStage parentStage = new thaumcraft.api.research.ResearchStage();
+		parentStage.setText("research.TEST_SIBLING_PARENT.stage.1");
+		parent.setStages(new thaumcraft.api.research.ResearchStage[] {parentStage});
+
+		thaumcraft.api.research.ResearchEntry child = new thaumcraft.api.research.ResearchEntry();
+		child.setKey("TEST_SIBLING_CHILD");
+		child.setCategory("BASICS");
+		child.setName("research.TEST_SIBLING_CHILD.title");
+		thaumcraft.api.research.ResearchStage childStage = new thaumcraft.api.research.ResearchStage();
+		childStage.setText("research.TEST_SIBLING_CHILD.stage.1");
+		child.setStages(new thaumcraft.api.research.ResearchStage[] {childStage});
+
+		category.research.put("TEST_SIBLING_PARENT", parent);
+		category.research.put("TEST_SIBLING_CHILD", child);
+		try {
+			ServerPlayer player = helper.makeMockServerPlayerInLevel();
+			IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+			helper.assertTrue(!knowledge.isResearchKnown("TEST_SIBLING_CHILD"), "the sibling shouldn't be known yet");
+
+			boolean ok = thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "TEST_SIBLING_PARENT");
+			helper.assertTrue(ok && knowledge.isResearchComplete("TEST_SIBLING_PARENT"), "the parent should complete");
+			helper.assertTrue(knowledge.isResearchComplete("TEST_SIBLING_CHILD"),
+					"completing the parent should have cascaded to complete its real sibling too");
+			helper.succeed();
+		} finally {
+			category.research.remove("TEST_SIBLING_PARENT");
+			category.research.remove("TEST_SIBLING_CHILD");
+		}
+	}
+
+	/** Real coverage for {@code ItemThaumonomicon}'s real "!gotthaumonomicon" grant - the small, deliberate
+	 * substitute for the original's item-pickup hook (see that item's own doc comment). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void openingTheThaumonomiconGrantsGotThaumonomiconResearch(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		helper.assertTrue(!knowledge.isResearchKnown("!gotthaumonomicon"), "a fresh player shouldn't have the virtual flag yet");
+
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		ItemStack book = new ItemStack(ItemsTC.thaumonomicon.get());
+		player.setItemInHand(hand, book);
+		book.getItem().use(helper.getLevel(), player, hand);
+
+		helper.assertTrue(knowledge.isResearchKnown("!gotthaumonomicon"), "using the Thaumonomicon should grant the real !gotthaumonomicon flag");
 		helper.succeed();
 	}
 }

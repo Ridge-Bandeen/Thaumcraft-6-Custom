@@ -264,6 +264,13 @@ public class Thaumcraft {
         registrar.playToClient(thaumcraft.common.lib.network.ClientboundResearchDataPacket.TYPE,
                 thaumcraft.common.lib.network.ClientboundResearchDataPacket.STREAM_CODEC,
                 (payload, context) -> thaumcraft.client.ClientResearchTableCache.handle(payload));
+
+        // ThaumonomiconMenu's own real per-action sync - see ClientboundPlayerKnowledgePacket's own doc
+        // comment. thaumcraft.client.ClientPlayerKnowledgeCache is client-only-safe the same way
+        // ClientResearchTableCache is (see that class's own doc comment).
+        registrar.playToClient(thaumcraft.common.lib.network.ClientboundPlayerKnowledgePacket.TYPE,
+                thaumcraft.common.lib.network.ClientboundPlayerKnowledgePacket.STREAM_CODEC,
+                (payload, context) -> thaumcraft.client.ClientPlayerKnowledgeCache.handle(payload));
     }
 
     /** First real living {@code Mob} this port has registered ({@link thaumcraft.common.entities.monster.EntityWisp})

@@ -27,15 +27,19 @@ class PlayerKnowledgeTest {
 	}
 
 	@Test
-	void newPlayerDefaultsToKnowingFirstStepsStageTwo() {
-		// Documents the deliberate simplification in the constructor's own doc comment: there's no
-		// research-granting path yet (no Thaumonomicon/scanning), so every new player starts knowing
-		// FIRSTSTEPS@2 or every recipe ported so far becomes uncraftable. This test exists so removing
-		// that default (once a real granting path exists) forces updating this test too, same pattern as
+	void newPlayerDefaultsToKnowingFirstStepsFully() {
+		// The constructor's own real FIRSTSTEPS default now looks up the real ResearchEntry via
+		// ResearchCategories to grant full completion (stage = real stage count + 1) - see that
+		// constructor's own doc comment. Plain JUnit never runs ThaumcraftResearchLoader (no mod/datapack
+		// environment here), so ResearchCategories.getResearch("FIRSTSTEPS") stays null and the constructor
+		// falls back to a flat stage 1, which is what this test actually locks in. (In the real running game,
+		// the same constructor grants stage 4 - past FIRSTSTEPS's real 3 stages - once the real entry has
+		// loaded; that full-game behavior is covered by the GameTest suite instead, where the real loader
+		// actually runs.) This test exists so changing that fallback forces updating it too, same pattern as
 		// AspectListTest's ItemStack-constructor-stub canary.
 		assertTrue(knowledge.isResearchKnown("FIRSTSTEPS"));
-		assertTrue(knowledge.isResearchKnown("FIRSTSTEPS@2"));
-		assertFalse(knowledge.isResearchKnown("FIRSTSTEPS@3"), "the default only grants stage 2, not further stages");
+		assertTrue(knowledge.isResearchComplete("FIRSTSTEPS"), "with no real entry loaded, any known stage counts as complete");
+		assertEquals(1, knowledge.getResearchStage("FIRSTSTEPS"));
 	}
 
 	@Test
