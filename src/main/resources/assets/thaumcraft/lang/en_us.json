@@ -541,7 +541,7 @@
   "tile.wand_workbench.name": "Focal Manipulator",
   "tile.crucible.name": "Crucible",
   "tile.pattern_crafter.name": "Arcane Pattern Crafter",
-  "tile.redstone_relay.name": "Redstone Relay",
+  "block.thaumcraft.redstone_relay": "Redstone Relay",
   "block.thaumcraft.research_table": "Research Table",
   "block.thaumcraft.golem_builder": "Golem Builder",
   "tile.arcane_ear.name": "Arcane Ear",

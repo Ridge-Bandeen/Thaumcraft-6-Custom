@@ -8410,4 +8410,68 @@ public class ThaumcraftGameTests {
 				"a real active levitator should really flip its own ENABLED blockstate on");
 		helper.succeed();
 	}
+
+	/** Names the real Redstone Relay crafting recipe and confirms it's actually registered. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void redstoneRelayRecipeRegistered(GameTestHelper helper) {
+		Optional<RecipeHolder<?>> recipe = helper.getLevel().getRecipeManager()
+				.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "redstone_relay"));
+		helper.assertTrue(recipe.isPresent(), "expected the redstone_relay recipe to be registered, but it wasn't");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.blocks.devices.BlockRedstoneRelay}'s own real, distinguishing
+	 * feature - a configurable OUTPUT strength (unlike a plain vanilla repeater's fixed 15), read via the
+	 * same real public {@code Level#getSignal} vanilla redstone wiring itself would call.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void redstoneRelayOutputsItsRealConfiguredStrength(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = new BlockPos(3, 2, 3);
+		net.minecraft.world.level.block.state.BlockState state = BlocksTC.redstoneRelay.get().defaultBlockState()
+				.setValue(thaumcraft.common.blocks.devices.BlockRedstoneRelay.FACING, net.minecraft.core.Direction.SOUTH)
+				.setValue(net.minecraft.world.level.block.DiodeBlock.POWERED, true)
+				.setValue(thaumcraft.common.blocks.devices.BlockRedstoneRelay.OUT, 7);
+		helper.setBlock(pos, state);
+		BlockPos abs = helper.absolutePos(pos);
+
+		int facingSignal = level.getSignal(abs, net.minecraft.core.Direction.SOUTH);
+		helper.assertTrue(facingSignal == 7, "a real powered relay facing south with OUT=7 should really output signal 7, found " + facingSignal);
+
+		int otherSignal = level.getSignal(abs, net.minecraft.core.Direction.NORTH);
+		helper.assertTrue(otherSignal == 0, "a real relay should really only output its real signal in its own facing direction, found " + otherSignal + " for a non-facing direction");
+
+		helper.setBlock(pos, state.setValue(net.minecraft.world.level.block.DiodeBlock.POWERED, false));
+		int unpoweredSignal = level.getSignal(abs, net.minecraft.core.Direction.SOUTH);
+		helper.assertTrue(unpoweredSignal == 0, "a real unpowered relay should really output no signal at all, found " + unpoweredSignal);
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for the Redstone Relay's real click-to-cycle interaction (the original's own 2-sub-
+	 * hitbox raytraced dials, simplified this pass to plain-click/shift-click - see that block's own doc
+	 * comment). Right-click should cycle OUT; shift-right-click should cycle IN; both wrap from 15 back to 1.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void redstoneRelayClickCyclesOutAndShiftClickCyclesIn(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = new BlockPos(3, 2, 3);
+		helper.setBlock(pos, BlocksTC.redstoneRelay.get());
+		BlockPos abs = helper.absolutePos(pos);
+		ServerPlayer player = spawnCasterAt(helper, abs.above(2));
+
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				net.minecraft.world.phys.Vec3.atCenterOf(abs), net.minecraft.core.Direction.UP, abs, false);
+
+		helper.getBlockState(pos).useWithoutItem(level, player, hit);
+		helper.assertTrue(helper.getBlockState(pos).getValue(thaumcraft.common.blocks.devices.BlockRedstoneRelay.OUT) == 1,
+				"a plain right-click should really cycle OUT from its real default of 15 to 1");
+
+		player.setShiftKeyDown(true);
+		helper.getBlockState(pos).useWithoutItem(level, player, hit);
+		helper.assertTrue(helper.getBlockState(pos).getValue(thaumcraft.common.blocks.devices.BlockRedstoneRelay.IN) == 2,
+				"a real shift-right-click should really cycle IN from its real default of 1 to 2");
+		helper.succeed();
+	}
 }
