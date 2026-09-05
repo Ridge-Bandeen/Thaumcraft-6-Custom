@@ -230,6 +230,14 @@ public class ThaumcraftClient {
             thaumcraft.api.aspects.Aspect aspect = tile.getAspectFilter();
             return aspect != null ? aspect.getColor() : 0x808080;
         }, BlocksTC.tubeFilter.get());
+
+        // Same real "one shared grayscale texture, tinted per-instance" shape as the candles above - all 7
+        // real crystal-cluster blocks share crystal.png, differentiated only by their own real Aspect color.
+        event.register((state, level, pos, tintIndex) -> {
+            net.minecraft.world.level.block.Block block = state.getBlock();
+            return block instanceof thaumcraft.common.blocks.world.ore.BlockCrystal crystal ? crystal.aspect.getColor() : -1;
+        }, BlocksTC.crystals.values().stream().map(net.neoforged.neoforge.registries.DeferredBlock::get)
+                .toArray(net.minecraft.world.level.block.Block[]::new));
     }
 
     @SubscribeEvent
@@ -238,6 +246,12 @@ public class ThaumcraftClient {
             net.minecraft.world.level.block.Block block = net.minecraft.world.level.block.Block.byItem(stack.getItem());
             return block instanceof BlockCandle candle ? candle.dye.getTextureDiffuseColor() : -1;
         }, ItemsTC.candles.values().stream().map(net.neoforged.neoforge.registries.DeferredItem::get)
+                .toArray(net.minecraft.world.item.Item[]::new));
+
+        event.register((stack, tintIndex) -> {
+            net.minecraft.world.level.block.Block block = net.minecraft.world.level.block.Block.byItem(stack.getItem());
+            return block instanceof thaumcraft.common.blocks.world.ore.BlockCrystal crystal ? crystal.aspect.getColor() : -1;
+        }, ItemsTC.crystals.values().stream().map(net.neoforged.neoforge.registries.DeferredItem::get)
                 .toArray(net.minecraft.world.item.Item[]::new));
 
         // phial_filled.json's layer1 (the liquid) is tinted per-instance off the phial's own held aspect,

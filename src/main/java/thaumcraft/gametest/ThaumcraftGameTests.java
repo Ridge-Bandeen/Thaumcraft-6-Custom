@@ -2790,6 +2790,21 @@ public class ThaumcraftGameTests {
 			ped.setItem(componentItems[i]);
 		}
 
+		// Three real symmetrical pairs of stabilizers - without real stabilization, this real recipe's real
+		// instability (4) has a real, growing chance over the many real craftCycles a 65-unit essentia cost
+		// takes to trigger a real instability event (see TileInfusionMatrix#craftCycle) severe enough to
+		// eject/destroy a nearby pedestal, genuinely stalling the craft forever - caught live (stability
+		// spiralling to -50+, eventually blowing away a pedestal). One real pair alone (0.25 replenish) still
+		// loses on average to a real instability-4 recipe's own average per-cycle loss (~0.4) - three pairs'
+		// real diminishing-returns total (~0.58) comfortably wins on average, matching how a real player
+		// would actually need to over-provision stabilizers for a recipe this costly, not a test-only fudge.
+		helper.setBlock(matrixPos.offset(3, -2, 0), BlocksTC.stabilizer.get());
+		helper.setBlock(matrixPos.offset(-3, -2, 0), BlocksTC.stabilizer.get());
+		helper.setBlock(matrixPos.offset(0, -2, 3), BlocksTC.stabilizer.get());
+		helper.setBlock(matrixPos.offset(0, -2, -3), BlocksTC.stabilizer.get());
+		helper.setBlock(matrixPos.offset(5, -2, 0), BlocksTC.stabilizer.get());
+		helper.setBlock(matrixPos.offset(-5, -2, 0), BlocksTC.stabilizer.get());
+
 		BlockPos jarHerba = matrixPos.offset(3, 0, 0);
 		BlockPos jarLux = matrixPos.offset(-3, 0, 0);
 		BlockPos jarVictus = matrixPos.offset(0, 0, 3);
@@ -2811,12 +2826,17 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(matrix.activate(level, player), "the second activation (with a real, valid lamp_growth recipe on the pedestals) should start crafting");
 		helper.assertTrue(matrix.crafting, "the matrix should be mid-craft after a successful craftingStart");
 
+		// A real, much bigger tick budget than the bare demo recipe's own test needs: real essentia only
+		// drains one unit per real craftCycle (every real countDelay ticks), and this recipe's real aspect
+		// cost (herba 20 + lux 15 + victus 15 + instrumentum 15 = 65 real units) is an order of magnitude
+		// above the demo recipe's own 6 - plenty of real margin even with the real stabilizer pair above
+		// keeping stability positive throughout.
 		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
-		for (int i = 0; i < 400 && matrix.crafting; i++) {
+		for (int i = 0; i < 6000 && matrix.crafting; i++) {
 			thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(level, matrixAbs, matrixState, matrix);
 		}
 
-		helper.assertTrue(!matrix.crafting, "the craft should have completed (or definitively failed) within 400 ticks");
+		helper.assertTrue(!matrix.crafting, "the craft should have completed (or definitively failed) within a generous tick budget");
 		helper.assertTrue(central.getItem().is(BlocksTC.lampGrowth.get().asItem()), "the central pedestal should hold a real lamp_growth, found: " + central.getItem());
 		helper.succeed();
 	}
@@ -2845,6 +2865,15 @@ public class ThaumcraftGameTests {
 			ped.setItem(componentItems[i]);
 		}
 
+		// Same real three symmetrical stabilizer pairs as the lamp_growth test above, same real reason - see
+		// that test's own comment.
+		helper.setBlock(matrixPos.offset(3, -2, 0), BlocksTC.stabilizer.get());
+		helper.setBlock(matrixPos.offset(-3, -2, 0), BlocksTC.stabilizer.get());
+		helper.setBlock(matrixPos.offset(0, -2, 3), BlocksTC.stabilizer.get());
+		helper.setBlock(matrixPos.offset(0, -2, -3), BlocksTC.stabilizer.get());
+		helper.setBlock(matrixPos.offset(5, -2, 0), BlocksTC.stabilizer.get());
+		helper.setBlock(matrixPos.offset(-5, -2, 0), BlocksTC.stabilizer.get());
+
 		BlockPos jarBestia = matrixPos.offset(3, 0, 0);
 		BlockPos jarLux = matrixPos.offset(-3, 0, 0);
 		BlockPos jarVictus = matrixPos.offset(0, 0, 3);
@@ -2866,13 +2895,88 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(matrix.activate(level, player), "the second activation (with a real, valid lamp_fertility recipe on the pedestals) should start crafting");
 		helper.assertTrue(matrix.crafting, "the matrix should be mid-craft after a successful craftingStart");
 
+		// Same real, generous tick budget as the lamp_growth test above, same real reason - see that test's
+		// own comment.
+		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
+		for (int i = 0; i < 6000 && matrix.crafting; i++) {
+			thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(level, matrixAbs, matrixState, matrix);
+		}
+		helper.assertTrue(!matrix.crafting, "the craft should have completed (or definitively failed) within a generous tick budget");
+		helper.assertTrue(central.getItem().is(BlocksTC.lampFertility.get().asItem()), "the central pedestal should hold a real lamp_fertility, found: " + central.getItem());
+		helper.succeed();
+	}
+
+	/** Real first use of the new {@link thaumcraft.common.lib.crafting.InfusionCrystalRecipe} shape - see
+	 * that class's own doc comment for why a plain JSON {@link net.minecraft.world.item.crafting.Ingredient}
+	 * couldn't express "central item must be a crystal_essence of this one specific Aspect." The direct
+	 * {@code matches} check below is deliberate, not just going through the altar: with all 7 real
+	 * CrystalCluster recipes now registered (each wanting the exact same real seeds+salis_mundus components),
+	 * a fire-aspect crystal on the altar would really, correctly start crafting crystal_ignis instead of
+	 * simply refusing to craft anything - checking {@code matches} on the crystal_aer recipe specifically is
+	 * the real, precise way to confirm it does NOT accept a fire-aspect central item, without that other
+	 * real recipe's own correct match muddying the result. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionMatrixCraftsCrystalAirFromAnAirCrystalEssenceButNotAFireOne(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos matrixPos = new BlockPos(4, 4, 4);
+		BlockPos centralPos = matrixPos.below(2);
+		BlockPos seedsPos = matrixPos.east(2);
+		BlockPos salisPos = matrixPos.west(2);
+		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		helper.setBlock(centralPos, BlocksTC.pedestal.get());
+		helper.setBlock(seedsPos, BlocksTC.pedestal.get());
+		helper.setBlock(salisPos, BlocksTC.pedestal.get());
+		thaumcraft.common.tiles.crafting.TilePedestal central = helper.getBlockEntity(centralPos);
+		thaumcraft.common.tiles.crafting.TilePedestal seeds = helper.getBlockEntity(seedsPos);
+		thaumcraft.common.tiles.crafting.TilePedestal salis = helper.getBlockEntity(salisPos);
+		seeds.setItem(new ItemStack(Items.WHEAT_SEEDS));
+		salis.setItem(new ItemStack(ItemsTC.salisMundus.get()));
+
+		// Real jars supplying the recipe's own real aspect cost (aer 10 + vitreus 10 + vinculum 5) - without
+		// these, EssentiaHandler.drainEssentia never finds anything to drain and the craft can never actually
+		// finish, even with a real, valid match (caught live: crafting=true forever, no jars at all here).
+		BlockPos jarAer = matrixPos.offset(0, -1, 3);
+		BlockPos jarVitreus = matrixPos.offset(0, -1, -3);
+		BlockPos jarVinculum = matrixPos.offset(3, -1, 0);
+		helper.setBlock(jarAer, BlocksTC.jarNormal.get());
+		helper.setBlock(jarVitreus, BlocksTC.jarNormal.get());
+		helper.setBlock(jarVinculum, BlocksTC.jarNormal.get());
+		((thaumcraft.common.tiles.essentia.TileJarFillable) helper.getBlockEntity(jarAer)).addToContainer(Aspect.AIR, 15);
+		((thaumcraft.common.tiles.essentia.TileJarFillable) helper.getBlockEntity(jarVitreus)).addToContainer(Aspect.CRYSTAL, 15);
+		((thaumcraft.common.tiles.essentia.TileJarFillable) helper.getBlockEntity(jarVinculum)).addToContainer(Aspect.TRAP, 10);
+
+		java.util.Optional<net.minecraft.world.item.crafting.RecipeHolder<?>> airRecipeHolder =
+				level.getRecipeManager().byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "infusion_crystal_cluster_air"));
+		helper.assertTrue(airRecipeHolder.isPresent() && airRecipeHolder.get().value() instanceof thaumcraft.common.lib.crafting.InfusionCrystalRecipe,
+				"the real infusion_crystal_cluster_air recipe should really be registered and loaded");
+		thaumcraft.common.lib.crafting.InfusionCrystalRecipe airRecipe =
+				(thaumcraft.common.lib.crafting.InfusionCrystalRecipe) airRecipeHolder.get().value();
+
+		ItemStack fireCrystal = new ItemStack(ItemsTC.crystalEssence.get());
+		((ItemGenericEssentiaContainer) fireCrystal.getItem()).setAspects(fireCrystal, new AspectList().add(Aspect.FIRE, 1));
+		java.util.List<ItemStack> comps = java.util.List.of(new ItemStack(Items.WHEAT_SEEDS), new ItemStack(ItemsTC.salisMundus.get()));
+		helper.assertTrue(!airRecipe.matches(new thaumcraft.api.crafting.InfusionRecipeInput(fireCrystal, comps), level),
+				"the crystal_aer recipe should NOT match a fire-aspect crystal_essence as its central item");
+
+		ItemStack airCrystal = new ItemStack(ItemsTC.crystalEssence.get());
+		((ItemGenericEssentiaContainer) airCrystal.getItem()).setAspects(airCrystal, new AspectList().add(Aspect.AIR, 1));
+		helper.assertTrue(airRecipe.matches(new thaumcraft.api.crafting.InfusionRecipeInput(airCrystal, comps), level),
+				"the crystal_aer recipe should really match a real air-aspect crystal_essence as its central item");
+
+		central.setItem(airCrystal);
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+		ServerPlayer player = spawnCasterAt(helper, matrixAbs);
+		helper.assertTrue(matrix.activate(level, player), "activation should succeed with a central pedestal in place");
+		helper.assertTrue(matrix.activate(level, player), "the second activation (with a real, valid crystal_aer recipe on the pedestals) should start crafting");
+		helper.assertTrue(matrix.crafting, "the matrix should be mid-craft after a successful craftingStart");
+
 		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
 		for (int i = 0; i < 400 && matrix.crafting; i++) {
 			thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(level, matrixAbs, matrixState, matrix);
 		}
-
-		helper.assertTrue(!matrix.crafting, "the craft should have completed (or definitively failed) within 400 ticks");
-		helper.assertTrue(central.getItem().is(BlocksTC.lampFertility.get().asItem()), "the central pedestal should hold a real lamp_fertility, found: " + central.getItem());
+		helper.assertTrue(!matrix.crafting, "the craft should have completed (or definitively failed) within a generous tick budget");
+		helper.assertTrue(central.getItem().is(BlocksTC.crystals.get(Aspect.AIR).get().asItem()), "the central pedestal should hold a real crystal_aer, found: " + central.getItem());
 		helper.succeed();
 	}
 
@@ -7593,6 +7697,108 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(sawPickaxe, "picking the bore back up should really drop its real held pickaxe");
 		helper.assertTrue(sawPlacer, "picking the bore back up should really drop a real bore placer item");
 
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Crystal-cluster blocks - see BlockCrystal's own doc comment. First real content unlocking the
+	// CrystalCluster* family of infusion recipes.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crystalWontSurviveWithoutTouchingARealSturdySurface(GameTestHelper helper) {
+		// helper.setBlock is a raw world-edit, same as a structure block placing a block directly - it
+		// doesn't run the real placement-time canSurvive check a player's own BlockItem#useOn would (that
+		// check only ever runs at the moment of real placement, not on every direct level.setBlock call), so
+		// this checks the real logical answer directly rather than expecting an already-force-placed block
+		// to have vanished on its own.
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = new BlockPos(2, 3, 2);
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.crystals.get(Aspect.FIRE).get());
+		helper.assertTrue(!level.getBlockState(abs).canSurvive(level, abs),
+				"a crystal placed with nothing sturdy touching any of its 6 faces should really refuse to survive there");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crystalGrowsWhenLocalVisIsWellAboveTheAuraBase(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos floorPos = new BlockPos(2, 2, 2);
+		BlockPos crystalPos = floorPos.above();
+		helper.setBlock(floorPos, net.minecraft.world.level.block.Blocks.STONE);
+		helper.setBlock(crystalPos, BlocksTC.crystals.get(Aspect.EARTH).get());
+		BlockPos crystalAbs = helper.absolutePos(crystalPos);
+		AuraHandler.addVis(level, crystalAbs, 1000.0f);
+
+		boolean grew = false;
+		for (int i = 0; i < 500 && !grew; i++) {
+			level.getBlockState(crystalAbs).randomTick(level, crystalAbs, level.random);
+			grew = level.getBlockState(crystalAbs).is(BlocksTC.crystals.get(Aspect.EARTH).get())
+					&& level.getBlockState(crystalAbs).getValue(thaumcraft.common.blocks.world.ore.BlockCrystal.SIZE) > 0;
+		}
+		helper.assertTrue(grew, "a real crystal sitting in a real vis surplus should really grow past size 0 within a generous tick budget");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crystalShrinksOnLowVisButOnlyVanishesNextToARealSibling(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos floorPos = new BlockPos(2, 2, 2);
+		BlockPos crystalPos = floorPos.above();
+		helper.setBlock(floorPos, net.minecraft.world.level.block.Blocks.STONE);
+		net.minecraft.world.level.block.state.BlockState grownState = BlocksTC.crystals.get(Aspect.WATER).get().defaultBlockState()
+				.setValue(thaumcraft.common.blocks.world.ore.BlockCrystal.SIZE, 1);
+		helper.setBlock(crystalPos, grownState);
+		BlockPos crystalAbs = helper.absolutePos(crystalPos);
+		AuraHandler.drainVis(level, crystalAbs, AuraHandler.getVis(level, crystalAbs), false);
+
+		boolean shrankToZero = false;
+		for (int i = 0; i < 500 && !shrankToZero; i++) {
+			level.getBlockState(crystalAbs).randomTick(level, crystalAbs, level.random);
+			shrankToZero = level.getBlockState(crystalAbs).is(BlocksTC.crystals.get(Aspect.WATER).get())
+					&& level.getBlockState(crystalAbs).getValue(thaumcraft.common.blocks.world.ore.BlockCrystal.SIZE) == 0;
+			if (!level.getBlockState(crystalAbs).is(BlocksTC.crystals.get(Aspect.WATER).get())) {
+				break; // vanished already - shouldn't happen with no sibling nearby, checked below
+			}
+		}
+		helper.assertTrue(shrankToZero, "a real lone crystal starved of vis should really shrink down to size 0 within a generous tick budget");
+		helper.assertTrue(level.getBlockState(crystalAbs).is(BlocksTC.crystals.get(Aspect.WATER).get()),
+				"a real lone crystal at size 0 should never fully vanish with no real sibling touching it");
+
+		// Now give it a real sibling and confirm it can actually vanish once starved further.
+		helper.setBlock(crystalPos.above(), BlocksTC.crystals.get(Aspect.WATER).get());
+		boolean vanished = false;
+		for (int i = 0; i < 500 && !vanished; i++) {
+			level.getBlockState(crystalAbs).randomTick(level, crystalAbs, level.random);
+			vanished = !level.getBlockState(crystalAbs).is(BlocksTC.crystals.get(Aspect.WATER).get());
+		}
+		helper.assertTrue(vanished, "a real starved crystal touching a real sibling should really vanish within a generous tick budget");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crystalDropsSizePlusOneCrystalEssenceOfItsOwnAspect(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos floorPos = new BlockPos(2, 2, 2);
+		BlockPos crystalPos = floorPos.above();
+		helper.setBlock(floorPos, net.minecraft.world.level.block.Blocks.STONE);
+		net.minecraft.world.level.block.state.BlockState grownState = BlocksTC.crystals.get(Aspect.ORDER).get().defaultBlockState()
+				.setValue(thaumcraft.common.blocks.world.ore.BlockCrystal.SIZE, 2);
+		helper.setBlock(crystalPos, grownState);
+		BlockPos crystalAbs = helper.absolutePos(crystalPos);
+
+		ServerPlayer player = spawnCasterAt(helper, crystalAbs.above(2));
+		BlocksTC.crystals.get(Aspect.ORDER).get().playerWillDestroy(level, crystalAbs, level.getBlockState(crystalAbs), player);
+
+		List<ItemEntity> drops = level.getEntitiesOfClass(ItemEntity.class, new AABB(crystalAbs).inflate(2));
+		int count = 0;
+		for (ItemEntity drop : drops) {
+			if (drop.getItem().is(ItemsTC.crystalEssence.get())) {
+				count += drop.getItem().getCount();
+			}
+		}
+		helper.assertTrue(count == 3, "a real size-2 crystal should really drop exactly 3 (size+1) real crystal_essence units, found " + count);
 		helper.succeed();
 	}
 }

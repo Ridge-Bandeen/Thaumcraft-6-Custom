@@ -1668,5 +1668,12 @@
   "entity.thaumcraft.turret_crossbow_advanced.name": "Advanced Automated Crossbow",
   "item.thaumcraft.turret_placer_advanced": "Advanced Automated Crossbow",
   "entity.thaumcraft.arcane_bore.name": "Arcane Bore",
-  "item.thaumcraft.turret_placer_bore": "Arcane Bore"
+  "item.thaumcraft.turret_placer_bore": "Arcane Bore",
+  "block.thaumcraft.crystal_aer": "Air Crystal",
+  "block.thaumcraft.crystal_ignis": "Fire Crystal",
+  "block.thaumcraft.crystal_aqua": "Water Crystal",
+  "block.thaumcraft.crystal_terra": "Earth Crystal",
+  "block.thaumcraft.crystal_ordo": "Order Crystal",
+  "block.thaumcraft.crystal_perditio": "Entropy Crystal",
+  "block.thaumcraft.crystal_vitium": "Flux Crystal"
 }

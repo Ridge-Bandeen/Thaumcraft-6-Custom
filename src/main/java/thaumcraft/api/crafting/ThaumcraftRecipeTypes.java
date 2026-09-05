@@ -45,6 +45,12 @@ public final class ThaumcraftRecipeTypes {
 	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.InfusionEnchantmentRecipe>> INFUSION_ENCHANTMENT_SERIALIZER =
 			RECIPE_SERIALIZERS.register("infusion_enchantment", () -> new thaumcraft.common.lib.crafting.InfusionEnchantmentRecipe.Serializer());
 
+	/** A third shape sharing {@link #INFUSION_TYPE} - see {@link thaumcraft.common.lib.crafting.InfusionCrystalRecipe}'s
+	 * own doc comment for why this exists instead of trying to express "central item must be a crystal_essence
+	 * of this one specific Aspect" as a plain JSON ingredient. */
+	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.InfusionCrystalRecipe>> INFUSION_CRYSTAL_SERIALIZER =
+			RECIPE_SERIALIZERS.register("infusion_crystal", () -> new thaumcraft.common.lib.crafting.InfusionCrystalRecipe.Serializer());
+
 	private static <T extends net.minecraft.world.item.crafting.Recipe<?>> Supplier<RecipeType<T>> registerType(String name) {
 		return RECIPE_TYPES.register(name, () -> new RecipeType<T>() {
 			@Override

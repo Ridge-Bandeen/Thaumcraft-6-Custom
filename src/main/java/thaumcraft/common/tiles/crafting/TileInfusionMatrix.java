@@ -438,6 +438,12 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		return recipeEssentia;
 	}
 
+	/** How many real component ingredients are still waiting to be pulled off a pedestal - real, useful for
+	 * a future progress readout, not just debugging. */
+	public int getRemainingIngredientCount() {
+		return recipeIngredients.size();
+	}
+
 	@Override
 	public void setAspects(AspectList aspects) {
 	}

@@ -548,6 +548,30 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.world.taint.BlockTaintLog::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(3.0f, 100.0f).sound(SoundType.WART_BLOCK).randomTicks());
 
+	/** Real self-spreading crystal-cluster formations, one real registration per real {@link
+	 * thaumcraft.api.aspects.Aspect} - see {@link thaumcraft.common.blocks.world.ore.BlockCrystal}'s own doc
+	 * comment. Registry names match the original's own internal aspect tag naming (e.g. {@code crystal_aer}
+	 * for Air), not the English aspect names, matching the original's own real asset naming this port's own
+	 * still-present {@code crystal_*.json} blockstate/item-model files already use. */
+	public static final Map<thaumcraft.api.aspects.Aspect, DeferredBlock<thaumcraft.common.blocks.world.ore.BlockCrystal>> crystals = new java.util.LinkedHashMap<>();
+	static {
+		registerCrystal("crystal_aer", thaumcraft.api.aspects.Aspect.AIR);
+		registerCrystal("crystal_ignis", thaumcraft.api.aspects.Aspect.FIRE);
+		registerCrystal("crystal_aqua", thaumcraft.api.aspects.Aspect.WATER);
+		registerCrystal("crystal_terra", thaumcraft.api.aspects.Aspect.EARTH);
+		registerCrystal("crystal_ordo", thaumcraft.api.aspects.Aspect.ORDER);
+		registerCrystal("crystal_perditio", thaumcraft.api.aspects.Aspect.ENTROPY);
+		registerCrystal("crystal_vitium", thaumcraft.api.aspects.Aspect.FLUX);
+	}
+
+	private static void registerCrystal(String id, thaumcraft.api.aspects.Aspect aspect) {
+		DeferredBlock<thaumcraft.common.blocks.world.ore.BlockCrystal> block = BLOCKS.registerBlock(id,
+				props -> new thaumcraft.common.blocks.world.ore.BlockCrystal(props, aspect),
+				BlockBehaviour.Properties.of().mapColor(MapColor.NONE).strength(0.25f).sound(SoundType.AMETHYST_CLUSTER)
+						.noOcclusion().noCollission().randomTicks().lightLevel(state -> 1));
+		crystals.put(aspect, block);
+	}
+
 	private BlocksTC() {
 	}
 }

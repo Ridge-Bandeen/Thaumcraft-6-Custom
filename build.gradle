@@ -268,6 +268,7 @@ sourceSets {
             include 'thaumcraft/api/crafting/ThaumcraftRecipeTypes.java'
             include 'thaumcraft/common/lib/enchantment/EnumInfusionEnchantment.java'
             include 'thaumcraft/common/lib/crafting/InfusionEnchantmentRecipe.java'
+            include 'thaumcraft/common/lib/crafting/InfusionCrystalRecipe.java'
             include 'thaumcraft/common/lib/events/ToolEvents.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXSlash.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXScanSource.java'
@@ -319,6 +320,7 @@ sourceSets {
 
             include 'thaumcraft/api/blocks/BlocksTC.java'
             include 'thaumcraft/api/items/ItemsTC.java'
+            include 'thaumcraft/common/blocks/world/ore/BlockCrystal.java'
 
             include 'thaumcraft/common/blocks/crafting/BlockArcaneWorkbench.java'
             include 'thaumcraft/common/tiles/crafting/TileArcaneWorkbench.java'

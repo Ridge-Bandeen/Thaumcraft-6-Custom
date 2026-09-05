@@ -742,6 +742,21 @@ public final class ItemsTC {
 			ITEMS.registerItem("turret_placer_bore",
 					props -> new thaumcraft.common.entities.construct.ItemTurretPlacer(props, () -> thaumcraft.common.registry.ThaumcraftEntities.ARCANE_BORE.get()));
 
+	public static final java.util.Map<thaumcraft.api.aspects.Aspect, DeferredItem<BlockItem>> crystals = new java.util.LinkedHashMap<>();
+	static {
+		registerCrystalItem("crystal_aer", thaumcraft.api.aspects.Aspect.AIR);
+		registerCrystalItem("crystal_ignis", thaumcraft.api.aspects.Aspect.FIRE);
+		registerCrystalItem("crystal_aqua", thaumcraft.api.aspects.Aspect.WATER);
+		registerCrystalItem("crystal_terra", thaumcraft.api.aspects.Aspect.EARTH);
+		registerCrystalItem("crystal_ordo", thaumcraft.api.aspects.Aspect.ORDER);
+		registerCrystalItem("crystal_perditio", thaumcraft.api.aspects.Aspect.ENTROPY);
+		registerCrystalItem("crystal_vitium", thaumcraft.api.aspects.Aspect.FLUX);
+	}
+
+	private static void registerCrystalItem(String id, thaumcraft.api.aspects.Aspect aspect) {
+		crystals.put(aspect, ITEMS.registerSimpleBlockItem(id, BlocksTC.crystals.get(aspect)));
+	}
+
 	private ItemsTC() {
 	}
 }

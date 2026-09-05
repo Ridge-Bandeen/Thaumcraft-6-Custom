@@ -1,0 +1,15 @@
+{
+  "type": "thaumcraft:infusion_crystal",
+  "instability": 0,
+  "aspects": {
+    "ignis": 10,
+    "vitreus": 10,
+    "vinculum": 5
+  },
+  "centralAspect": "ignis",
+  "components": [
+    { "item": "minecraft:wheat_seeds" },
+    { "item": "thaumcraft:salis_mundus" }
+  ],
+  "result": { "id": "thaumcraft:crystal_ignis" }
+}
