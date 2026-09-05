@@ -7801,4 +7801,118 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(count == 3, "a real size-2 crystal should really drop exactly 3 (size+1) real crystal_essence units, found " + count);
 		helper.succeed();
 	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.api.items.WornGearHelper} - the shared scan every "bauble" item
+	 * this pass added relies on instead of a real dedicated equipment slot (see that class's own doc
+	 * comment). Confirms it picks up the hotbar and the offhand but not a deep main-inventory slot.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void wornGearHelperScansHotbarAndOffhandOnly(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.getInventory().setItem(0, new ItemStack(Items.STICK));
+		player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, new ItemStack(Items.APPLE));
+		player.getInventory().setItem(20, new ItemStack(Items.DIAMOND));
+
+		List<ItemStack> worn = thaumcraft.api.items.WornGearHelper.getWornItems(player);
+		helper.assertTrue(worn.stream().anyMatch(s -> s.is(Items.STICK)), "a hotbar item should be found");
+		helper.assertTrue(worn.stream().anyMatch(s -> s.is(Items.APPLE)), "the offhand item should be found");
+		helper.assertFalse(worn.stream().anyMatch(s -> s.is(Items.DIAMOND)), "a deep main-inventory slot should NOT be scanned - it isn't real hotbar/offhand");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.items.baubles.ItemAmuletVis} - the worn charm should
+	 * recharge the first real {@code IRechargable} item it finds among the player's worn items, drawing
+	 * from the local aura (already seeded here via {@code AuraHandler.addVis}, same as every other real
+	 * aura-consuming test in this file).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void amuletVisRechargesFirstRechargableWornItem(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(new BlockPos(2, 2, 2));
+		AuraHandler.addVis(helper.getLevel(), origin, 500.0f);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+
+		ItemStack charm = new ItemStack(ItemsTC.amuletVisCrafted.get());
+		ItemStack rechargable = new ItemStack(TEST_RECHARGABLE_ITEM.get());
+		player.getInventory().setItem(0, charm);
+		player.getInventory().setItem(1, rechargable);
+
+		helper.assertTrue(thaumcraft.api.items.RechargeHelper.getCharge(rechargable) == 0, "should start with no charge");
+		((thaumcraft.api.items.IWornGear) charm.getItem()).wornTick(charm, player);
+		helper.assertTrue(thaumcraft.api.items.RechargeHelper.getCharge(rechargable) == 1,
+				"amulet_vis's wornTick should have recharged the rechargable item in the hotbar by 1, found charge " + thaumcraft.api.items.RechargeHelper.getCharge(rechargable));
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.items.baubles.ItemVerdantCharm}'s priority-ordered
+	 * cure chain (Wither &gt; Poison &gt; Flux Taint), ported as-is from the original's {@code onWornTick} -
+	 * only one effect fires per tick, checked in this exact order.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void verdantCharmCuresWitherThenPoisonThenFluxInPriorityOrder(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.addEffect(new net.minecraft.world.effect.MobEffectInstance(MobEffects.WITHER, 200, 0));
+		player.addEffect(new net.minecraft.world.effect.MobEffectInstance(MobEffects.POISON, 200, 0));
+		player.addEffect(new net.minecraft.world.effect.MobEffectInstance(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT, 200, 0));
+
+		ItemStack charm = new ItemStack(ItemsTC.verdantCharm.get());
+		charm.set(thaumcraft.api.items.ThaumcraftDataComponents.CHARGE.get(), 200);
+		thaumcraft.api.items.IWornGear wornGear = (thaumcraft.api.items.IWornGear) charm.getItem();
+
+		wornGear.wornTick(charm, player);
+		helper.assertFalse(player.hasEffect(MobEffects.WITHER), "Wither should be cured first");
+		helper.assertTrue(player.hasEffect(MobEffects.POISON), "Poison should NOT be cured yet - only one effect per tick");
+
+		wornGear.wornTick(charm, player);
+		helper.assertFalse(player.hasEffect(MobEffects.POISON), "Poison should be cured second");
+		helper.assertTrue(player.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT), "Flux Taint should NOT be cured yet");
+
+		wornGear.wornTick(charm, player);
+		helper.assertFalse(player.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT), "Flux Taint should be cured third");
+		helper.assertTrue(thaumcraft.api.items.RechargeHelper.getCharge(charm) == 200 - 20 - 10 - 5,
+				"charge should have been consumed for exactly the 3 real cures, found " + thaumcraft.api.items.RechargeHelper.getCharge(charm));
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for the Charm of Undying death-prevention hook - see
+	 * {@link thaumcraft.common.lib.events.WornGearEvents#onDeath}.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void charmUndyingCancelsFatalDamageAndConsumesItself(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.setHealth(0.0f);
+		ItemStack charm = new ItemStack(ItemsTC.charmUndying.get());
+		player.getInventory().setItem(0, charm);
+
+		net.neoforged.neoforge.event.entity.living.LivingDeathEvent event =
+				new net.neoforged.neoforge.event.entity.living.LivingDeathEvent(player, level.damageSources().generic());
+		thaumcraft.common.lib.events.WornGearEvents.onDeath(event);
+
+		helper.assertTrue(event.isCanceled(), "the death event should have been canceled");
+		helper.assertTrue(player.getHealth() == 1.0f, "the player should have been set to 1 HP, found " + player.getHealth());
+		helper.assertTrue(player.hasEffect(MobEffects.REGENERATION), "Regeneration should have been granted");
+		helper.assertTrue(player.hasEffect(MobEffects.ABSORPTION), "Absorption should have been granted");
+		helper.assertTrue(player.getInventory().getItem(0).isEmpty(), "the charm should have been consumed");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.items.casters.ItemCaster#getConsumptionModifier}'s hotbar/
+	 * offhand scan - see that method's own doc comment for why this replaces the original's Baubles-slot scan.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void visDiscountScanIncludesHotbarItems(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		ItemStack caster = new ItemStack(ItemsTC.casterBasic.get());
+		player.getInventory().setItem(0, new ItemStack(ItemsTC.ringApprentice.get()));
+
+		float modifier = ((thaumcraft.api.casters.ICaster) caster.getItem()).getConsumptionModifier(caster, player, false);
+		helper.assertTrue(Math.abs(modifier - 0.95f) < 0.0001f,
+				"a real 5% vis discount ring in the hotbar should reduce the consumption modifier to 0.95, found " + modifier);
+		helper.succeed();
+	}
 }

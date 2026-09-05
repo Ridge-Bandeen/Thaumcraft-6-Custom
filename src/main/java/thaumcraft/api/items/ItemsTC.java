@@ -742,6 +742,64 @@ public final class ItemsTC {
 			ITEMS.registerItem("turret_placer_bore",
 					props -> new thaumcraft.common.entities.construct.ItemTurretPlacer(props, () -> thaumcraft.common.registry.ThaumcraftEntities.ARCANE_BORE.get()));
 
+	/** See {@link thaumcraft.api.items.WornGearHelper}'s own doc comment for why these 7 "bauble" items - the
+	 * original's real equipment-slot trinkets - are plain items here (hotbar/offhand instead of a dedicated
+	 * bauble slot, per the user's explicit "move bauble items to normal item slots... unfuck it later" call).
+	 * The 6 always-blank trinkets from the original's {@code ItemBaubles} (mundane trio + fancy trio) are
+	 * shipped as real, obtainable components now even though nothing crafts with them yet - same "ship the
+	 * item, the recipe chain is real follow-up work" precedent as {@link #amber} and siblings. */
+	public static final DeferredItem<Item> amuletMundane = ITEMS.registerSimpleItem("amulet_mundane");
+	public static final DeferredItem<Item> ringMundane = ITEMS.registerSimpleItem("ring_mundane");
+	public static final DeferredItem<Item> girdleMundane = ITEMS.registerSimpleItem("girdle_mundane");
+	public static final DeferredItem<Item> amuletFancy = ITEMS.registerItem("amulet_fancy",
+			props -> new Item(props.rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+	public static final DeferredItem<Item> ringFancy = ITEMS.registerItem("ring_fancy",
+			props -> new Item(props.rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+	public static final DeferredItem<Item> girdleFancy = ITEMS.registerItem("girdle_fancy",
+			props -> new Item(props.rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+
+	/** The one real subtype out of the original's 7-way {@code ItemBaubles} - see
+	 * {@link thaumcraft.common.items.baubles.ItemRingApprentice}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.baubles.ItemRingApprentice> ringApprentice =
+			ITEMS.registerItem("ring_apprentice", thaumcraft.common.items.baubles.ItemRingApprentice::new);
+
+	/** See {@link thaumcraft.common.items.baubles.ItemAmuletVis}'s own doc comment. Two variants: "found"
+	 * (slower recharge cadence, uncommon) and "crafted" (faster, rare) - same real difference the original's
+	 * two damage-value subtypes had. */
+	public static final DeferredItem<thaumcraft.common.items.baubles.ItemAmuletVis> amuletVisFound =
+			ITEMS.registerItem("amulet_vis", props -> new thaumcraft.common.items.baubles.ItemAmuletVis(props, 40, false));
+	public static final DeferredItem<thaumcraft.common.items.baubles.ItemAmuletVis> amuletVisCrafted =
+			ITEMS.registerItem("amulet_vis_stone", props -> new thaumcraft.common.items.baubles.ItemAmuletVis(props, 5, true));
+
+	/** See {@link thaumcraft.common.items.baubles.ItemCharmUndying}'s own doc comment - the real
+	 * cancel-death/heal/Regen/Absorption effect lives in {@link thaumcraft.common.lib.events.WornGearEvents#onDeath}. */
+	public static final DeferredItem<thaumcraft.common.items.baubles.ItemCharmUndying> charmUndying =
+			ITEMS.registerItem("charm_undying", thaumcraft.common.items.baubles.ItemCharmUndying::new);
+
+	/** See {@link thaumcraft.common.items.baubles.ItemCloudRing}'s own doc comment for the documented
+	 * double-jump cut; the fall-damage reduction it DOES keep lives in
+	 * {@link thaumcraft.common.lib.events.WornGearEvents#fallDamage}. */
+	public static final DeferredItem<thaumcraft.common.items.baubles.ItemCloudRing> cloudRing =
+			ITEMS.registerItem("cloud_ring", thaumcraft.common.items.baubles.ItemCloudRing::new);
+
+	/** See {@link thaumcraft.common.items.baubles.ItemCuriosityBand}'s own doc comment - its real XP-split
+	 * effect lives in {@link thaumcraft.common.lib.events.WornGearEvents#xpPickup}. */
+	public static final DeferredItem<thaumcraft.common.items.baubles.ItemCuriosityBand> curiosityBand =
+			ITEMS.registerItem("curiosity_band", thaumcraft.common.items.baubles.ItemCuriosityBand::new);
+
+	/** See {@link thaumcraft.common.items.baubles.ItemVerdantCharm}'s own doc comment. 3 variants (base/life/
+	 * sustain), replacing the original's single NBT-"type"-driven item. */
+	public static final DeferredItem<thaumcraft.common.items.baubles.ItemVerdantCharm> verdantCharm =
+			ITEMS.registerItem("verdant_charm", props -> new thaumcraft.common.items.baubles.ItemVerdantCharm(props, thaumcraft.common.items.baubles.ItemVerdantCharm.TYPE_BASE));
+	public static final DeferredItem<thaumcraft.common.items.baubles.ItemVerdantCharm> verdantCharmLife =
+			ITEMS.registerItem("verdant_charm_life", props -> new thaumcraft.common.items.baubles.ItemVerdantCharm(props, thaumcraft.common.items.baubles.ItemVerdantCharm.TYPE_LIFE));
+	public static final DeferredItem<thaumcraft.common.items.baubles.ItemVerdantCharm> verdantCharmSustain =
+			ITEMS.registerItem("verdant_charm_sustain", props -> new thaumcraft.common.items.baubles.ItemVerdantCharm(props, thaumcraft.common.items.baubles.ItemVerdantCharm.TYPE_SUSTAIN));
+
+	/** See {@link thaumcraft.common.items.baubles.ItemVoidseerCharm}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.baubles.ItemVoidseerCharm> voidseerCharm =
+			ITEMS.registerItem("voidseer_charm", thaumcraft.common.items.baubles.ItemVoidseerCharm::new);
+
 	public static final java.util.Map<thaumcraft.api.aspects.Aspect, DeferredItem<BlockItem>> crystals = new java.util.LinkedHashMap<>();
 	static {
 		registerCrystalItem("crystal_aer", thaumcraft.api.aspects.Aspect.AIR);

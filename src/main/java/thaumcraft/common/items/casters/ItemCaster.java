@@ -20,6 +20,7 @@ import thaumcraft.api.casters.IFocusElement;
 import thaumcraft.api.casters.IInteractWithCaster;
 import thaumcraft.api.items.IVisDiscountGear;
 import thaumcraft.api.items.ThaumcraftDataComponents;
+import thaumcraft.api.items.WornGearHelper;
 import thaumcraft.common.world.aura.AuraHandler;
 
 /**
@@ -45,11 +46,11 @@ public class ItemCaster extends Item implements ICaster {
 
 	/**
 	 * Replaces the original's {@code CasterManager#getTotalVisDiscount}. Sums {@link IVisDiscountGear}'s
-	 * discount off worn armor (the original also scanned Baubles slots - not ported here, still deferred
-	 * alongside the rest of the Curios/Baubles equipment-slot work) and the potion-based Vis Exhaust penalty
-	 * the original applied on top - neither of those two pieces is built yet either, so this is armor-only
-	 * for now, capped at the interface's own documented 50% max (the original never actually enforced that
-	 * cap in code despite documenting it - enforced here for real).
+	 * discount off worn armor plus the player's hotbar/offhand (the original scanned Baubles slots for this -
+	 * see {@link thaumcraft.api.items.WornGearHelper}'s own doc comment for why a plain inventory scan
+	 * stands in for that here) and the potion-based Vis Exhaust penalty the original applied on top - that
+	 * potion isn't built yet, so this omits it, capped at the interface's own documented 50% max (the
+	 * original never actually enforced that cap in code despite documenting it - enforced here for real).
 	 */
 	@Override
 	public float getConsumptionModifier(ItemStack is, Player player, boolean crafting) {
@@ -58,6 +59,11 @@ public class ItemCaster extends Item implements ICaster {
 			ItemStack armor = player.getItemBySlot(slot);
 			if (armor.getItem() instanceof IVisDiscountGear discountGear) {
 				discount += discountGear.getVisDiscount(armor, player);
+			}
+		}
+		for (ItemStack stack : WornGearHelper.getWornItems(player)) {
+			if (stack.getItem() instanceof IVisDiscountGear discountGear) {
+				discount += discountGear.getVisDiscount(stack, player);
 			}
 		}
 		discount = Math.min(discount, 50);

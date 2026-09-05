@@ -298,6 +298,8 @@ sourceSets {
             include 'thaumcraft/api/items/ItemGenericEssentiaContainer.java'
             include 'thaumcraft/api/items/IVisDiscountGear.java'
             include 'thaumcraft/api/items/IWarpingGear.java'
+            include 'thaumcraft/api/items/IWornGear.java'
+            include 'thaumcraft/api/items/WornGearHelper.java'
             include 'thaumcraft/api/items/RechargeHelper.java'
             include 'thaumcraft/api/items/ThaumcraftDataComponents.java'
 
@@ -451,6 +453,15 @@ sourceSets {
 
             include 'thaumcraft/common/blocks/devices/BlockBellows.java'
             include 'thaumcraft/common/tiles/devices/TileBellows.java'
+
+            include 'thaumcraft/common/items/baubles/ItemRingApprentice.java'
+            include 'thaumcraft/common/items/baubles/ItemAmuletVis.java'
+            include 'thaumcraft/common/items/baubles/ItemCharmUndying.java'
+            include 'thaumcraft/common/items/baubles/ItemCloudRing.java'
+            include 'thaumcraft/common/items/baubles/ItemCuriosityBand.java'
+            include 'thaumcraft/common/items/baubles/ItemVerdantCharm.java'
+            include 'thaumcraft/common/items/baubles/ItemVoidseerCharm.java'
+            include 'thaumcraft/common/lib/events/WornGearEvents.java'
 
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
