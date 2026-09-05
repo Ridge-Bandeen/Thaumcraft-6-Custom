@@ -8239,4 +8239,59 @@ public class ThaumcraftGameTests {
 				"each real focus tier should really hold a bigger node graph than the last, found " + tier1.getMaxComplexity() + "/" + tier2.getMaxComplexity() + "/" + tier3.getMaxComplexity());
 		helper.succeed();
 	}
+
+	/**
+	 * Names the 6 real Warp-misfortune mob effects and confirms each one is really registered - same
+	 * pattern as the recipe-registration tests, applied to a mob-effect registry instead.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void warpMobEffectsRegistered(GameTestHelper helper) {
+		helper.assertTrue(thaumcraft.common.registry.ThaumcraftMobEffects.THAUMARHIA.isBound(), "thaumarhia should be registered");
+		helper.assertTrue(thaumcraft.common.registry.ThaumcraftMobEffects.UNNATURAL_HUNGER.isBound(), "unnatural_hunger should be registered");
+		helper.assertTrue(thaumcraft.common.registry.ThaumcraftMobEffects.BLURRED_VISION.isBound(), "blurred_vision should be registered");
+		helper.assertTrue(thaumcraft.common.registry.ThaumcraftMobEffects.SUN_SCORNED.isBound(), "sun_scorned should be registered");
+		helper.assertTrue(thaumcraft.common.registry.ThaumcraftMobEffects.DEATH_GAZE.isBound(), "death_gaze should be registered");
+		helper.assertTrue(thaumcraft.common.registry.ThaumcraftMobEffects.WARP_WARD.isBound(), "warp_ward should be registered");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.lib.events.WarpEvents#checkDeathGaze} - a real nearby
+	 * visible living entity should really be forced to target the wearer and inflicted with real Wither.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void deathGazeForcesNearbyVisibleEntitiesToTargetAndWither(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.addEffect(new net.minecraft.world.effect.MobEffectInstance(thaumcraft.common.registry.ThaumcraftMobEffects.DEATH_GAZE, 200, 0));
+
+		Pig pig = EntityType.PIG.create(level);
+		pig.moveTo(player.getX() + 3, player.getY(), player.getZ());
+		level.addFreshEntity(pig);
+
+		thaumcraft.common.lib.events.WarpEvents.checkDeathGaze(player);
+
+		helper.assertTrue(pig.hasEffect(MobEffects.WITHER), "a real nearby visible entity should really be inflicted with Wither by Death Gaze");
+		helper.assertTrue(pig.getLastHurtByMob() == player, "the entity's real last-hurt-by-mob should really be set to the death-gaze wearer");
+		helper.succeed();
+	}
+
+	/**
+	 * Real end-to-end coverage for {@link thaumcraft.common.lib.events.WarpEvents#checkWarpEvent} - with
+	 * enough real Warp and a real warp counter high enough to force the {@code r <= sqrt(warpCounter)} real
+	 * roll to always succeed (counter 10000 -> sqrt is 100, and {@code r} is drawn from [0,99]), a real
+	 * warp-misfortune should really happen (the real warp counter should really decrease) without throwing.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void checkWarpEventTriggersARealMisfortuneWithoutThrowing(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		thaumcraft.api.capabilities.IPlayerWarp wc = thaumcraft.api.capabilities.ThaumcraftCapabilities.getWarp(player);
+		wc.set(thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.PERMANENT, 50);
+		wc.setCounter(10000);
+
+		thaumcraft.common.lib.events.WarpEvents.checkWarpEvent(player);
+
+		helper.assertTrue(wc.getCounter() < 10000, "a real warp-misfortune roll this likely to succeed should really have consumed some of the real warp counter, found " + wc.getCounter());
+		helper.succeed();
+	}
 }

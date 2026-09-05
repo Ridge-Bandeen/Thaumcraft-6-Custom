@@ -30,6 +30,20 @@ public final class ThaumcraftMobEffects {
 	public static final DeferredHolder<MobEffect, MobEffectInfectiousVisExhaust> INFECTIOUS_VIS_EXHAUST =
 			MOB_EFFECTS.register("infectious_vis_exhaust", MobEffectInfectiousVisExhaust::new);
 
+	/** The 6 real Warp-misfortune effects - see {@code thaumcraft.common.lib.events.WarpEvents#checkWarpEvent}. */
+	public static final DeferredHolder<MobEffect, thaumcraft.common.lib.potions.MobEffectThaumarhia> THAUMARHIA =
+			MOB_EFFECTS.register("thaumarhia", thaumcraft.common.lib.potions.MobEffectThaumarhia::new);
+	public static final DeferredHolder<MobEffect, thaumcraft.common.lib.potions.MobEffectUnnaturalHunger> UNNATURAL_HUNGER =
+			MOB_EFFECTS.register("unnatural_hunger", thaumcraft.common.lib.potions.MobEffectUnnaturalHunger::new);
+	public static final DeferredHolder<MobEffect, thaumcraft.common.lib.potions.MobEffectBlurredVision> BLURRED_VISION =
+			MOB_EFFECTS.register("blurred_vision", thaumcraft.common.lib.potions.MobEffectBlurredVision::new);
+	public static final DeferredHolder<MobEffect, thaumcraft.common.lib.potions.MobEffectSunScorned> SUN_SCORNED =
+			MOB_EFFECTS.register("sun_scorned", thaumcraft.common.lib.potions.MobEffectSunScorned::new);
+	public static final DeferredHolder<MobEffect, thaumcraft.common.lib.potions.MobEffectDeathGaze> DEATH_GAZE =
+			MOB_EFFECTS.register("death_gaze", thaumcraft.common.lib.potions.MobEffectDeathGaze::new);
+	public static final DeferredHolder<MobEffect, thaumcraft.common.lib.potions.MobEffectWarpWard> WARP_WARD =
+			MOB_EFFECTS.register("warp_ward", thaumcraft.common.lib.potions.MobEffectWarpWard::new);
+
 	private ThaumcraftMobEffects() {
 	}
 }

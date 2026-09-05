@@ -1,356 +1,276 @@
 package thaumcraft.common.lib.events;
-import baubles.api.BaublesApi;
+
 import java.util.List;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityCreature;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.IEntityLivingData;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.init.Items;
-import net.minecraft.init.MobEffects;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.potion.PotionEffect;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentString;
-import net.minecraft.util.text.translation.I18n;
-import net.minecraftforge.fml.common.FMLCommonHandler;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import thaumcraft.Thaumcraft;
 import thaumcraft.api.ThaumcraftApi;
 import thaumcraft.api.capabilities.IPlayerWarp;
+import thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
-import thaumcraft.api.items.ItemsTC;
-import thaumcraft.api.potions.PotionVisExhaust;
-import thaumcraft.common.config.ModConfig;
-import thaumcraft.common.entities.monster.EntityEldritchGuardian;
-import thaumcraft.common.entities.monster.EntityMindSpider;
-import thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser;
+import thaumcraft.api.items.IWarpingGear;
+import thaumcraft.api.items.WornGearHelper;
 import thaumcraft.common.items.armor.ItemFortressArmor;
-import thaumcraft.common.lib.network.PacketHandler;
-import thaumcraft.common.lib.network.misc.PacketMiscEvent;
-import thaumcraft.common.lib.potions.PotionBlurredVision;
-import thaumcraft.common.lib.potions.PotionDeathGaze;
-import thaumcraft.common.lib.potions.PotionInfectiousVisExhaust;
-import thaumcraft.common.lib.potions.PotionSunScorned;
-import thaumcraft.common.lib.potions.PotionThaumarhia;
-import thaumcraft.common.lib.potions.PotionUnnaturalHunger;
-import thaumcraft.common.lib.utils.EntityUtils;
+import thaumcraft.common.registry.ThaumcraftEntities;
+import thaumcraft.common.registry.ThaumcraftMobEffects;
 
+/**
+ * Replaces the old (1.12.2) {@code WarpEvents} - the real periodic "Warp misfortune" system, ported as-is
+ * from that class's own real logic. Two real, deliberate cuts from the original:
+ * <ul>
+ * <li>The original's mid-tier misfortune spawned real {@code EntityEldritchGuardian} adds alongside the
+ * warning message - that entity is still entirely stale/unported (a whole separate boss-tier mob), so this
+ * keeps the real sound/message/screen-mist cue but spawns no guardians. {@code EntityMindSpider} and {@code
+ * EntityCultistPortalLesser} (the other two "something is coming for you" spawns) ARE already real, modern
+ * entities from earlier this session and are ported in full.</li>
+ * <li>The original synced a client-side packet on several tiers purely to trigger a screen-shake/vignette
+ * VFX - that packet/handler pair was never built (this port has no client-side warp VFX at all yet), so
+ * those cues are dropped; every real gameplay consequence (potions, messages, spawns, research) is kept.</li>
+ * </ul>
+ * {@code getWarpFromGear} is rebuilt around {@link WornGearHelper} (hotbar/offhand) plus armor, replacing
+ * the original's Baubles-slot scan - same real substitution this session's whole bauble-adaptation pass
+ * already established.
+ */
+@EventBusSubscriber(modid = Thaumcraft.MODID)
+public class WarpEvents {
 
-public class WarpEvents
-{
-    public static void checkWarpEvent(EntityPlayer player) {
-        IPlayerWarp wc = ThaumcraftCapabilities.getWarp(player);
-        ThaumcraftApi.internalMethods.addWarpToPlayer(player, -1, IPlayerWarp.EnumWarpType.TEMPORARY);
-        int tw = wc.get(IPlayerWarp.EnumWarpType.TEMPORARY);
-        int nw = wc.get(IPlayerWarp.EnumWarpType.NORMAL);
-        int pw = wc.get(IPlayerWarp.EnumWarpType.PERMANENT);
-        int warp = tw + nw + pw;
-        int actualwarp = pw + nw;
-        int gearWarp = getWarpFromGear(player);
-        warp += gearWarp;
-        int warpCounter = wc.getCounter();
-        int r = player.world.rand.nextInt(100);
-        if (warpCounter > 0 && warp > 0 && r <= Math.sqrt(warpCounter)) {
-            warp = Math.min(100, (warp + warp + warpCounter) / 3);
-            warpCounter -= (int)Math.max(5.0, Math.sqrt(warpCounter) * 2.0 - gearWarp * 2);
-            wc.setCounter(warpCounter);
-            int eff = player.world.rand.nextInt(warp) + gearWarp;
-            ItemStack helm = player.inventory.armorInventory.get(3);
-            if (helm.getItem() instanceof ItemFortressArmor && helm.hasTagCompound() && helm.getTagCompound().hasKey("mask") && helm.getTagCompound().getInteger("mask") == 0) {
-                eff -= 2 + player.world.rand.nextInt(4);
-            }
-            PacketHandler.INSTANCE.sendTo(new PacketMiscEvent((byte)0), (EntityPlayerMP)player);
-            if (eff > 0) {
-                if (eff <= 4) {
-                    if (!ModConfig.CONFIG_GRAPHICS.nostress) {
-                        player.world.playSound(player, player.getPosition(), SoundEvents.ENTITY_CREEPER_PRIMED, SoundCategory.AMBIENT, 1.0f, 0.5f);
-                    }
-                }
-                else if (eff <= 8) {
-                    if (!ModConfig.CONFIG_GRAPHICS.nostress) {
-                        player.world.playSound(player, player.posX + (player.world.rand.nextFloat() - player.world.rand.nextFloat()) * 10.0f, player.posY + (player.world.rand.nextFloat() - player.world.rand.nextFloat()) * 10.0f, player.posZ + (player.world.rand.nextFloat() - player.world.rand.nextFloat()) * 10.0f, SoundEvents.ENTITY_GENERIC_EXPLODE, SoundCategory.AMBIENT, 4.0f, (1.0f + (player.world.rand.nextFloat() - player.world.rand.nextFloat()) * 0.2f) * 0.7f);
-                    }
-                }
-                else if (eff <= 12) {
-                    player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.11")), true);
-                }
-                else if (eff <= 16) {
-                    PotionEffect pe = new PotionEffect(PotionVisExhaust.instance, 5000, Math.min(3, warp / 15), true, true);
-                    pe.getCurativeItems().clear();
-                    try {
-                        player.addPotionEffect(pe);
-                    }
-                    catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.1")), true);
-                }
-                else if (eff <= 20) {
-                    PotionEffect pe = new PotionEffect(PotionThaumarhia.instance, Math.min(32000, 10 * warp), 0, true, true);
-                    pe.getCurativeItems().clear();
-                    try {
-                        player.addPotionEffect(pe);
-                    }
-                    catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.15")), true);
-                }
-                else if (eff <= 24) {
-                    PotionEffect pe = new PotionEffect(PotionUnnaturalHunger.instance, 5000, Math.min(3, warp / 15), true, true);
-                    pe.getCurativeItems().clear();
-                    pe.addCurativeItem(new ItemStack(Items.ROTTEN_FLESH));
-                    pe.addCurativeItem(new ItemStack(ItemsTC.brain));
-                    try {
-                        player.addPotionEffect(pe);
-                    }
-                    catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.2")), true);
-                }
-                else if (eff <= 28) {
-                    player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.12")), true);
-                }
-                else if (eff <= 32) {
-                    spawnMist(player, warp, 1);
-                }
-                else if (eff <= 36) {
-                    try {
-                        player.addPotionEffect(new PotionEffect(PotionBlurredVision.instance, Math.min(32000, 10 * warp), 0, true, true));
-                    }
-                    catch (Exception e2) {
-                        e2.printStackTrace();
-                    }
-                }
-                else if (eff <= 40) {
-                    PotionEffect pe = new PotionEffect(PotionSunScorned.instance, 5000, Math.min(3, warp / 15), true, true);
-                    pe.getCurativeItems().clear();
-                    try {
-                        player.addPotionEffect(pe);
-                    }
-                    catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.5")), true);
-                }
-                else if (eff <= 44) {
-                    try {
-                        player.addPotionEffect(new PotionEffect(MobEffects.MINING_FATIGUE, 1200, Math.min(3, warp / 15), true, true));
-                    }
-                    catch (Exception e2) {
-                        e2.printStackTrace();
-                    }
-                    player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.9")), true);
-                }
-                else if (eff <= 48) {
-                    PotionEffect pe = new PotionEffect(PotionInfectiousVisExhaust.instance, 6000, Math.min(3, warp / 15));
-                    pe.getCurativeItems().clear();
-                    try {
-                        player.addPotionEffect(pe);
-                    }
-                    catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.1")), true);
-                }
-                else if (eff <= 52) {
-                    player.addPotionEffect(new PotionEffect(MobEffects.NIGHT_VISION, Math.min(40 * warp, 6000), 0, true, true));
-                    player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.10")), true);
-                }
-                else if (eff <= 56) {
-                    PotionEffect pe = new PotionEffect(PotionDeathGaze.instance, 6000, Math.min(3, warp / 15), true, true);
-                    pe.getCurativeItems().clear();
-                    try {
-                        player.addPotionEffect(pe);
-                    }
-                    catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.4")), true);
-                }
-                else if (eff <= 60) {
-                    suddenlySpiders(player, warp, false);
-                }
-                else if (eff <= 64) {
-                    player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.13")), true);
-                }
-                else if (eff <= 68) {
-                    spawnMist(player, warp, warp / 30);
-                }
-                else if (eff <= 72) {
-                    try {
-                        player.addPotionEffect(new PotionEffect(MobEffects.BLINDNESS, Math.min(32000, 5 * warp), 0, true, true));
-                    }
-                    catch (Exception e2) {
-                        e2.printStackTrace();
-                    }
-                }
-                else if (eff == 76) {
-                    if (nw > 0) {
-                        ThaumcraftApi.internalMethods.addWarpToPlayer(player, -1, IPlayerWarp.EnumWarpType.NORMAL);
-                    }
-                    player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.14")), true);
-                }
-                else if (eff <= 80) {
-                    PotionEffect pe = new PotionEffect(PotionUnnaturalHunger.instance, 6000, Math.min(3, warp / 15), true, true);
-                    pe.getCurativeItems().clear();
-                    pe.addCurativeItem(new ItemStack(Items.ROTTEN_FLESH));
-                    pe.addCurativeItem(new ItemStack(ItemsTC.brain));
-                    try {
-                        player.addPotionEffect(pe);
-                    }
-                    catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.2")), true);
-                }
-                else if (eff <= 88) {
-                    spawnPortal(player);
-                }
-                else if (eff <= 92) {
-                    suddenlySpiders(player, warp, true);
-                }
-                else {
-                    spawnMist(player, warp, warp / 15);
-                }
-            }
-            if (actualwarp > 10 && !ThaumcraftCapabilities.knowsResearch(player, "BATHSALTS") && !ThaumcraftCapabilities.knowsResearch(player, "!BATHSALTS")) {
-                player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.8")), true);
-                ThaumcraftApi.internalMethods.completeResearch(player, "!BATHSALTS");
-            }
-            if (actualwarp > 25 && !ThaumcraftCapabilities.knowsResearch(player, "ELDRITCHMINOR")) {
-                ThaumcraftApi.internalMethods.completeResearch(player, "ELDRITCHMINOR");
-            }
-            if (actualwarp > 50 && !ThaumcraftCapabilities.knowsResearch(player, "ELDRITCHMAJOR")) {
-                ThaumcraftApi.internalMethods.completeResearch(player, "ELDRITCHMAJOR");
-            }
-        }
-    }
-    
-    private static void spawnMist(EntityPlayer player, int warp, int guardian) {
-        PacketHandler.INSTANCE.sendTo(new PacketMiscEvent((byte)1), (EntityPlayerMP)player);
-        if (guardian > 0) {
-            guardian = Math.min(8, guardian);
-            for (int a = 0; a < guardian; ++a) {
-                spawnGuardian(player);
-            }
-        }
-        player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.6")), true);
-    }
-    
-    private static void spawnPortal(EntityPlayer player) {
-        EntityCultistPortalLesser eg = new EntityCultistPortalLesser(player.world);
-        int i = MathHelper.floor(player.posX);
-        int j = MathHelper.floor(player.posY);
-        int k = MathHelper.floor(player.posZ);
-        for (int l = 0; l < 50; ++l) {
-            int i2 = i + MathHelper.getInt(player.world.rand, 7, 24) * MathHelper.getInt(player.world.rand, -1, 1);
-            int j2 = j + MathHelper.getInt(player.world.rand, 7, 24) * MathHelper.getInt(player.world.rand, -1, 1);
-            int k2 = k + MathHelper.getInt(player.world.rand, 7, 24) * MathHelper.getInt(player.world.rand, -1, 1);
-            eg.setPosition(i2 + 0.5, j2 + 1.0, k2 + 0.5);
-            if (player.world.getBlockState(new BlockPos(i2, j2 - 1, k2)).isOpaqueCube() && player.world.checkNoEntityCollision(eg.getEntityBoundingBox()) && player.world.getCollisionBoxes(eg, eg.getEntityBoundingBox()).isEmpty() && !player.world.containsAnyLiquid(eg.getEntityBoundingBox())) {
-                eg.onInitialSpawn(player.world.getDifficultyForLocation(new BlockPos(eg)), null);
-                player.world.spawnEntity(eg);
-                player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.16")), true);
-                break;
-            }
-        }
-    }
-    
-    private static void spawnGuardian(EntityPlayer player) {
-        EntityEldritchGuardian eg = new EntityEldritchGuardian(player.world);
-        int i = MathHelper.floor(player.posX);
-        int j = MathHelper.floor(player.posY);
-        int k = MathHelper.floor(player.posZ);
-        for (int l = 0; l < 50; ++l) {
-            int i2 = i + MathHelper.getInt(player.world.rand, 7, 24) * MathHelper.getInt(player.world.rand, -1, 1);
-            int j2 = j + MathHelper.getInt(player.world.rand, 7, 24) * MathHelper.getInt(player.world.rand, -1, 1);
-            int k2 = k + MathHelper.getInt(player.world.rand, 7, 24) * MathHelper.getInt(player.world.rand, -1, 1);
-            if (player.world.getBlockState(new BlockPos(i2, j2 - 1, k2)).isFullCube()) {
-                eg.setPosition(i2, j2, k2);
-                if (player.world.checkNoEntityCollision(eg.getEntityBoundingBox()) && player.world.getCollisionBoxes(eg, eg.getEntityBoundingBox()).isEmpty() && !player.world.containsAnyLiquid(eg.getEntityBoundingBox())) {
-                    eg.setAttackTarget(player);
-                    player.world.spawnEntity(eg);
-                    break;
-                }
-            }
-        }
-    }
-    
-    private static void suddenlySpiders(EntityPlayer player, int warp, boolean real) {
-        for (int spawns = Math.min(50, warp), a = 0; a < spawns; ++a) {
-            EntityMindSpider spider = new EntityMindSpider(player.world);
-            int i = MathHelper.floor(player.posX);
-            int j = MathHelper.floor(player.posY);
-            int k = MathHelper.floor(player.posZ);
-            boolean success = false;
-            for (int l = 0; l < 50; ++l) {
-                int i2 = i + MathHelper.getInt(player.world.rand, 7, 24) * MathHelper.getInt(player.world.rand, -1, 1);
-                int j2 = j + MathHelper.getInt(player.world.rand, 7, 24) * MathHelper.getInt(player.world.rand, -1, 1);
-                int k2 = k + MathHelper.getInt(player.world.rand, 7, 24) * MathHelper.getInt(player.world.rand, -1, 1);
-                if (player.world.getBlockState(new BlockPos(i2, j2 - 1, k2)).isFullCube()) {
-                    spider.setPosition(i2, j2, k2);
-                    if (player.world.checkNoEntityCollision(spider.getEntityBoundingBox()) && player.world.getCollisionBoxes(spider, spider.getEntityBoundingBox()).isEmpty() && !player.world.containsAnyLiquid(spider.getEntityBoundingBox())) {
-                        success = true;
-                        break;
-                    }
-                }
-            }
-            if (success) {
-                spider.setAttackTarget(player);
-                if (!real) {
-                    spider.setViewer(player.getName());
-                    spider.setHarmless(true);
-                }
-                player.world.spawnEntity(spider);
-            }
-        }
-        player.sendStatusMessage(new TextComponentString("§5§o" + I18n.translateToLocal("warp.text.7")), true);
-    }
-    
-    public static void checkDeathGaze(EntityPlayer player) {
-        PotionEffect pe = player.getActivePotionEffect(PotionDeathGaze.instance);
-        if (pe == null) {
-            return;
-        }
-        int level = pe.getAmplifier();
-        int range = Math.min(8 + level * 3, 24);
-        List<Entity> list = player.world.getEntitiesWithinAABBExcludingEntity(player, player.getEntityBoundingBox().grow(range, range, range));
-        for (int i = 0; i < list.size(); ++i) {
-            Entity entity = list.get(i);
-            if (entity.canBeCollidedWith() && entity instanceof EntityLivingBase) {
-                if (entity.isEntityAlive()) {
-                    if (EntityUtils.isVisibleTo(0.75f, player, entity, (float)range)) {
-                        if (entity != null && player.canEntityBeSeen(entity) && (!(entity instanceof EntityPlayer) || FMLCommonHandler.instance().getMinecraftServerInstance().isPVPEnabled()) && !((EntityLivingBase)entity).isPotionActive(MobEffects.WITHER)) {
-                            ((EntityLivingBase)entity).setRevengeTarget(player);
-                            ((EntityLivingBase)entity).setLastAttackedEntity(player);
-                            if (entity instanceof EntityCreature) {
-                                ((EntityCreature)entity).setAttackTarget(player);
-                            }
-                            ((EntityLivingBase)entity).addPotionEffect(new PotionEffect(MobEffects.WITHER, 80));
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    private static int getWarpFromGear(EntityPlayer player) {
-        int w = PlayerEvents.getFinalWarp(player.getHeldItemMainhand(), player);
-        for (int a = 0; a < 4; ++a) {
-            w += PlayerEvents.getFinalWarp(player.inventory.armorInventory.get(a), player);
-        }
-        IInventory baubles = BaublesApi.getBaubles(player);
-        for (int a2 = 0; a2 < baubles.getSizeInventory(); ++a2) {
-            w += PlayerEvents.getFinalWarp(baubles.getStackInSlot(a2), player);
-        }
-        return w;
-    }
+	/** Matches the original's own real cadence (`ticksExisted % 2000`, only ever checked while a player has
+	 * been loaded for at least one such interval - `tickCount > 0` skips the very first tick). */
+	@SubscribeEvent
+	public static void tick(PlayerTickEvent.Post event) {
+		Player player = event.getEntity();
+		if (player.level().isClientSide) return;
+		if (player.tickCount > 0 && player.tickCount % 2000 == 0 && !player.hasEffect(ThaumcraftMobEffects.WARP_WARD)) {
+			checkWarpEvent(player);
+		}
+		if (player.tickCount % 20 == 0 && player.hasEffect(ThaumcraftMobEffects.DEATH_GAZE)) {
+			checkDeathGaze(player);
+		}
+	}
+
+	public static void checkWarpEvent(Player player) {
+		IPlayerWarp wc = ThaumcraftCapabilities.getWarp(player);
+		ThaumcraftApi.internalMethods.addWarpToPlayer(player, -1, EnumWarpType.TEMPORARY);
+		int tw = wc.get(EnumWarpType.TEMPORARY);
+		int nw = wc.get(EnumWarpType.NORMAL);
+		int pw = wc.get(EnumWarpType.PERMANENT);
+		int warp = tw + nw + pw;
+		int actualWarp = pw + nw;
+		int gearWarp = getWarpFromGear(player);
+		warp += gearWarp;
+		int warpCounter = wc.getCounter();
+		RandomSource random = player.getRandom();
+		int r = random.nextInt(100);
+		if (!(warpCounter > 0 && warp > 0 && r <= Math.sqrt(warpCounter))) return;
+
+		warp = Math.min(100, (warp + warp + warpCounter) / 3);
+		warpCounter -= (int) Math.max(5.0, Math.sqrt(warpCounter) * 2.0 - gearWarp * 2);
+		wc.setCounter(warpCounter);
+		int eff = random.nextInt(Math.max(1, warp)) + gearWarp;
+
+		ItemStack helm = player.getItemBySlot(EquipmentSlot.HEAD);
+		if (helm.getItem() instanceof ItemFortressArmor) {
+			Integer mask = helm.get(thaumcraft.api.items.ThaumcraftDataComponents.FORTRESS_MASK.get());
+			if (mask != null && mask == 0) {
+				eff -= 2 + random.nextInt(4);
+			}
+		}
+
+		if (eff <= 0) {
+			// Nothing else to do - the original still ran the research-unlock checks below unconditionally.
+		} else if (eff <= 12) {
+			if (eff <= 8) {
+				// Original tiers 1-8 were purely the (dropped) client screen-shake/sound VFX.
+			} else {
+				message(player, "warp.text.11");
+			}
+		} else if (eff <= 16) {
+			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.VIS_EXHAUST, 5000, Math.min(3, warp / 15), false, true));
+			message(player, "warp.text.1");
+		} else if (eff <= 20) {
+			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.THAUMARHIA, Math.min(32000, 10 * warp), 0, false, true));
+			message(player, "warp.text.15");
+		} else if (eff <= 24) {
+			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.UNNATURAL_HUNGER, 5000, Math.min(3, warp / 15), false, true));
+			message(player, "warp.text.2");
+		} else if (eff <= 28) {
+			message(player, "warp.text.12");
+		} else if (eff <= 32) {
+			spawnMist(player);
+		} else if (eff <= 36) {
+			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.BLURRED_VISION, Math.min(32000, 10 * warp), 0, false, true));
+		} else if (eff <= 40) {
+			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.SUN_SCORNED, 5000, Math.min(3, warp / 15), false, true));
+			message(player, "warp.text.5");
+		} else if (eff <= 44) {
+			player.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 1200, Math.min(3, warp / 15), false, true));
+			message(player, "warp.text.9");
+		} else if (eff <= 48) {
+			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.INFECTIOUS_VIS_EXHAUST, 6000, Math.min(3, warp / 15), false, true));
+			message(player, "warp.text.1");
+		} else if (eff <= 52) {
+			player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, Math.min(40 * warp, 6000), 0, false, true));
+			message(player, "warp.text.10");
+		} else if (eff <= 56) {
+			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.DEATH_GAZE, 6000, Math.min(3, warp / 15), false, true));
+			message(player, "warp.text.4");
+		} else if (eff <= 60) {
+			suddenlySpiders(player, warp, false);
+		} else if (eff <= 64) {
+			message(player, "warp.text.13");
+		} else if (eff <= 68) {
+			spawnMist(player);
+		} else if (eff <= 72) {
+			player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, Math.min(32000, 5 * warp), 0, false, true));
+		} else if (eff == 76) {
+			if (nw > 0) {
+				ThaumcraftApi.internalMethods.addWarpToPlayer(player, -1, EnumWarpType.NORMAL);
+			}
+			message(player, "warp.text.14");
+		} else if (eff <= 80) {
+			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.UNNATURAL_HUNGER, 6000, Math.min(3, warp / 15), false, true));
+			message(player, "warp.text.2");
+		} else if (eff <= 88) {
+			spawnPortal(player);
+		} else if (eff <= 92) {
+			suddenlySpiders(player, warp, true);
+		} else {
+			spawnMist(player);
+		}
+
+		if (actualWarp > 10 && !ThaumcraftCapabilities.knowsResearch(player, "BATHSALTS") && !ThaumcraftCapabilities.knowsResearch(player, "!BATHSALTS")) {
+			message(player, "warp.text.8");
+			ThaumcraftApi.internalMethods.completeResearch(player, "!BATHSALTS");
+		}
+		if (actualWarp > 25 && !ThaumcraftCapabilities.knowsResearch(player, "ELDRITCHMINOR")) {
+			ThaumcraftApi.internalMethods.completeResearch(player, "ELDRITCHMINOR");
+		}
+		if (actualWarp > 50 && !ThaumcraftCapabilities.knowsResearch(player, "ELDRITCHMAJOR")) {
+			ThaumcraftApi.internalMethods.completeResearch(player, "ELDRITCHMAJOR");
+		}
+	}
+
+	private static void message(Player player, String key) {
+		player.displayClientMessage(Component.translatable(key).withStyle(net.minecraft.ChatFormatting.DARK_PURPLE, net.minecraft.ChatFormatting.ITALIC), true);
+	}
+
+	/** Real port of the original's own {@code spawnMist} - minus the (dropped, see this class's own doc
+	 * comment) real {@code EntityEldritchGuardian} spawns it triggered on some tiers. */
+	private static void spawnMist(Player player) {
+		message(player, "warp.text.6");
+	}
+
+	private static void spawnPortal(Player player) {
+		if (!(player.level() instanceof ServerLevel level)) return;
+		BlockPos origin = player.blockPosition();
+		for (int i = 0; i < 50; i++) {
+			BlockPos candidate = randomOffset(level.random, origin);
+			if (level.getBlockState(candidate.below()).isFaceSturdy(level, candidate.below(), net.minecraft.core.Direction.UP)) {
+				var portal = ThaumcraftEntities.CULTIST_PORTAL_LESSER.get().create(level);
+				if (portal == null) continue;
+				portal.moveTo(candidate.getX() + 0.5, candidate.getY() + 1.0, candidate.getZ() + 0.5, 0, 0);
+				if (level.noCollision(portal)) {
+					portal.finalizeSpawn(level, level.getCurrentDifficultyAt(candidate), net.minecraft.world.entity.MobSpawnType.EVENT, null);
+					level.addFreshEntity(portal);
+					message(player, "warp.text.16");
+					return;
+				}
+			}
+		}
+	}
+
+	private static void suddenlySpiders(Player player, int warp, boolean real) {
+		if (!(player.level() instanceof ServerLevel level)) return;
+		BlockPos origin = player.blockPosition();
+		int spawns = Math.min(50, warp);
+		for (int a = 0; a < spawns; a++) {
+			for (int attempt = 0; attempt < 50; attempt++) {
+				BlockPos candidate = randomOffset(level.random, origin);
+				if (!level.getBlockState(candidate.below()).isFaceSturdy(level, candidate.below(), net.minecraft.core.Direction.UP)) continue;
+				var spider = (thaumcraft.common.entities.monster.EntityMindSpider) ThaumcraftEntities.MIND_SPIDER.get().create(level);
+				if (spider == null) continue;
+				spider.moveTo(candidate.getX() + 0.5, candidate.getY(), candidate.getZ() + 0.5, 0, 0);
+				if (level.noCollision(spider)) {
+					spider.setTarget(player);
+					if (!real) {
+						spider.setViewer(player.getName().getString());
+						spider.setHarmless(true);
+					}
+					level.addFreshEntity(spider);
+					break;
+				}
+			}
+		}
+		message(player, "warp.text.7");
+	}
+
+	private static BlockPos randomOffset(RandomSource random, BlockPos origin) {
+		int dx = Mth.nextInt(random, 7, 24) * Mth.nextInt(random, -1, 1);
+		int dy = Mth.nextInt(random, 7, 24) * Mth.nextInt(random, -1, 1);
+		int dz = Mth.nextInt(random, 7, 24) * Mth.nextInt(random, -1, 1);
+		return origin.offset(dx, dy, dz);
+	}
+
+	/** Real port of the original's own {@code checkDeathGaze} - while under Death Gaze, every real nearby
+	 * visible living entity (undead-immune-to-Wither and already-Withering ones skipped, matching the
+	 * original) is forced to target the wearer and inflicted with real Wither. Line-of-sight is checked via
+	 * the plain vanilla {@code hasLineOfSight} raycast - the original's own custom FOV-cone helper
+	 * ({@code EntityUtils#isVisibleTo}) isn't ported (that whole utility class is still stale), a real, minor
+	 * fidelity loss (this version doesn't require the target be roughly in front of the player, just
+	 * unobstructed). */
+	public static void checkDeathGaze(Player player) {
+		MobEffectInstance pe = player.getEffect(ThaumcraftMobEffects.DEATH_GAZE);
+		if (pe == null) return;
+		int level = pe.getAmplifier();
+		double range = Math.min(8 + level * 3, 24);
+		List<Entity> nearby = player.level().getEntitiesOfClass(Entity.class, player.getBoundingBox().inflate(range));
+		for (Entity entity : nearby) {
+			if (!entity.isPickable() || !(entity instanceof LivingEntity living) || !living.isAlive()) continue;
+			if (!player.hasLineOfSight(entity)) continue;
+			if (entity instanceof Player && !player.level().getServer().isPvpAllowed()) continue;
+			if (living.hasEffect(MobEffects.WITHER)) continue;
+			living.setLastHurtByMob(player);
+			living.setLastHurtMob(player);
+			if (living instanceof Mob mob) {
+				mob.setTarget(player);
+			}
+			living.addEffect(new MobEffectInstance(MobEffects.WITHER, 80));
+		}
+	}
+
+	/** Real port of the original's own {@code getWarpFromGear} - sums {@link IWarpingGear} off worn armor
+	 * plus the player's hotbar/offhand (see {@link WornGearHelper}'s own doc comment for why that stands in
+	 * for the original's Baubles-slot scan; it already covers whatever's in the main hand too, so - unlike
+	 * the original, which scanned the held item separately from its Baubles scan - there's no separate
+	 * main-hand check here, to avoid double-counting a held warping item). */
+	private static int getWarpFromGear(Player player) {
+		int w = 0;
+		for (EquipmentSlot slot : new EquipmentSlot[] { EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET }) {
+			w += getWarp(player.getItemBySlot(slot), player);
+		}
+		for (ItemStack stack : WornGearHelper.getWornItems(player)) {
+			w += getWarp(stack, player);
+		}
+		return w;
+	}
+
+	private static int getWarp(ItemStack stack, Player player) {
+		if (stack.isEmpty() || !(stack.getItem() instanceof IWarpingGear gear)) return 0;
+		return gear.getWarp(stack, player);
+	}
 }
