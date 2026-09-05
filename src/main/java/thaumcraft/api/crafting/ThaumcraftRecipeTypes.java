@@ -57,6 +57,11 @@ public final class ThaumcraftRecipeTypes {
 	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.InfusionModifierRecipe>> INFUSION_MODIFIER_SERIALIZER =
 			RECIPE_SERIALIZERS.register("infusion_modifier", () -> new thaumcraft.common.lib.crafting.InfusionModifierRecipe.Serializer());
 
+	/** A 5th shape sharing {@link #INFUSION_TYPE} - see {@link thaumcraft.common.lib.crafting.InfusionPotionRecipe}'s
+	 * own doc comment for why this exists instead of a custom {@code Ingredient} type. */
+	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.InfusionPotionRecipe>> INFUSION_POTION_SERIALIZER =
+			RECIPE_SERIALIZERS.register("infusion_potion", () -> new thaumcraft.common.lib.crafting.InfusionPotionRecipe.Serializer());
+
 	private static <T extends net.minecraft.world.item.crafting.Recipe<?>> Supplier<RecipeType<T>> registerType(String name) {
 		return RECIPE_TYPES.register(name, () -> new RecipeType<T>() {
 			@Override

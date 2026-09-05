@@ -8322,4 +8322,54 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(mask != null && mask == 1, "the real, already-applied mask should really be preserved instead of overwritten, found " + mask);
 		helper.succeed();
 	}
+
+	/**
+	 * Names the 3 real VerdantHeart recipes (last of the previously-blocked infusion-recipe gaps this
+	 * session) and asserts each one is actually registered.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void verdantHeartRecipesRegistered(GameTestHelper helper) {
+		RecipeManager recipes = helper.getLevel().getRecipeManager();
+		String[] expectedIds = { "infusion_verdant_heart", "infusion_verdant_heart_life", "infusion_verdant_heart_sustain" };
+		for (String id : expectedIds) {
+			Optional<RecipeHolder<?>> recipe = recipes.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id));
+			helper.assertTrue(recipe.isPresent(), "expected recipe '" + id + "' to be registered, but it wasn't");
+		}
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.lib.crafting.InfusionPotionRecipe} - the real fix for
+	 * VerdantHeartLife/Sustain's own "one pedestal item must carry a specific real vanilla potion"
+	 * requirement. A plain potion of the wrong kind should NOT match; the real required potion should.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionPotionRecipeOnlyMatchesItsRealRequiredPotion(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		RecipeManager recipes = level.getRecipeManager();
+		Optional<RecipeHolder<?>> holder = recipes.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "infusion_verdant_heart_life"));
+		helper.assertTrue(holder.isPresent() && holder.get().value() instanceof thaumcraft.common.lib.crafting.InfusionPotionRecipe,
+				"infusion_verdant_heart_life should really be a real InfusionPotionRecipe");
+		thaumcraft.common.lib.crafting.InfusionPotionRecipe recipe = (thaumcraft.common.lib.crafting.InfusionPotionRecipe) holder.get().value();
+
+		ItemStack central = new ItemStack(ItemsTC.verdantCharm.get());
+		ItemStack goldenApple = new ItemStack(Items.GOLDEN_APPLE);
+		ItemStack crystal1 = new ItemStack(ItemsTC.crystalEssence.get());
+		ItemStack crystal2 = new ItemStack(ItemsTC.crystalEssence.get());
+
+		ItemStack wrongPotion = new ItemStack(Items.POTION);
+		wrongPotion.set(net.minecraft.core.component.DataComponents.POTION_CONTENTS,
+				new net.minecraft.world.item.alchemy.PotionContents(net.minecraft.world.item.alchemy.Potions.STRONG_REGENERATION));
+		thaumcraft.api.crafting.InfusionRecipeInput wrongInput = new thaumcraft.api.crafting.InfusionRecipeInput(
+				central, List.of(goldenApple, crystal1, wrongPotion, crystal2));
+		helper.assertFalse(recipe.matches(wrongInput, level), "a Strong Regeneration potion should NOT satisfy a recipe that really requires Strong Healing");
+
+		ItemStack rightPotion = new ItemStack(Items.POTION);
+		rightPotion.set(net.minecraft.core.component.DataComponents.POTION_CONTENTS,
+				new net.minecraft.world.item.alchemy.PotionContents(net.minecraft.world.item.alchemy.Potions.STRONG_HEALING));
+		thaumcraft.api.crafting.InfusionRecipeInput rightInput = new thaumcraft.api.crafting.InfusionRecipeInput(
+				central, List.of(goldenApple, crystal1, rightPotion, crystal2));
+		helper.assertTrue(recipe.matches(rightInput, level), "a real Strong Healing potion should really satisfy the recipe");
+		helper.succeed();
+	}
 }

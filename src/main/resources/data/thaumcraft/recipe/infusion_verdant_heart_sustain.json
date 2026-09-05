@@ -1,0 +1,17 @@
+{
+  "type": "thaumcraft:infusion_potion",
+  "instability": 5,
+  "aspects": {
+    "desiderium": 80,
+    "aer": 80
+  },
+  "central": { "item": "thaumcraft:verdant_charm" },
+  "components": [
+    { "item": "minecraft:golden_carrot" },
+    { "item": "thaumcraft:crystal_essence" },
+    { "item": "minecraft:potion" },
+    { "item": "thaumcraft:crystal_essence" }
+  ],
+  "result": { "id": "thaumcraft:verdant_charm_sustain" },
+  "potion": "minecraft:strong_regeneration"
+}

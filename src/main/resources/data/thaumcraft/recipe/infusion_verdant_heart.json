@@ -1,0 +1,17 @@
+{
+  "type": "thaumcraft:infusion",
+  "instability": 5,
+  "aspects": {
+    "victus": 60,
+    "ordo": 30,
+    "herba": 60
+  },
+  "central": { "item": "thaumcraft:amulet_fancy" },
+  "components": [
+    { "item": "thaumcraft:nugget_thaumium" },
+    { "item": "thaumcraft:crystal_essence" },
+    { "item": "minecraft:milk_bucket" },
+    { "item": "thaumcraft:crystal_essence" }
+  ],
+  "result": { "id": "thaumcraft:verdant_charm" }
+}
