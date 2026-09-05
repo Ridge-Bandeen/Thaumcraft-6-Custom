@@ -465,6 +465,9 @@ sourceSets {
             include 'thaumcraft/common/items/tools/ItemElementalAxe.java'
             include 'thaumcraft/common/items/tools/ItemElementalSword.java'
             include 'thaumcraft/common/items/tools/ItemElementalHoe.java'
+            include 'thaumcraft/common/items/armor/ItemVoidArmor.java'
+            include 'thaumcraft/common/items/armor/ItemVoidRobeArmor.java'
+            include 'thaumcraft/common/items/armor/ItemGoggles.java'
 
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }

@@ -170,6 +170,64 @@ public final class ThaumcraftArmorMaterials {
 					1.0F,
 					0.0F));
 
+	/** {@code ThaumcraftMaterials.ARMORMAT_VOID} from the original (durability multiplier 10, protection
+	 * {@code [3,8,6,3]} - boots/legs/chest/helm, enchantability 10, chain equip sound, no toughness). Real
+	 * repair ingredient substitution: the original repaired with a void ingot ({@code ItemsTC.ingots} meta
+	 * 1) - that ore chain isn't ported (same real gap {@link thaumcraft.common.items.tools.ItemVoidSword}'s
+	 * own doc comment already documents), so this repairs with a Thaumium ingot instead, same precedent. */
+	public static final Holder<ArmorMaterial> VOID = ARMOR_MATERIALS.register("void",
+			() -> new ArmorMaterial(
+					Util.make(new EnumMap<>(ArmorItem.Type.class), m -> {
+						m.put(ArmorItem.Type.BOOTS, 3);
+						m.put(ArmorItem.Type.LEGGINGS, 8);
+						m.put(ArmorItem.Type.CHESTPLATE, 6);
+						m.put(ArmorItem.Type.HELMET, 3);
+						m.put(ArmorItem.Type.BODY, 6);
+					}),
+					10,
+					SoundEvents.ARMOR_EQUIP_CHAIN,
+					() -> Ingredient.of(ItemsTC.ingotThaumium),
+					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "void"))),
+					1.0F,
+					0.0F));
+
+	/** {@code ThaumcraftMaterials.ARMORMAT_VOIDROBE} from the original (durability multiplier 18, protection
+	 * {@code [4,9,7,4]}, enchantability 10, leather equip sound, 2.0 toughness - a real, better upgrade tier
+	 * over {@link #VOID}). Same real Thaumium-ingot repair substitution as {@link #VOID}. The original's own
+	 * two armor-layer textures ({@code void_robe_armor.png}/{@code _overlay.png}, no separate legs-specific
+	 * art) are reused directly for both vanilla layer slots - copied to the {@code _1}/{@code _2} suffixes
+	 * the modern {@code ArmorMaterial.Layer} system expects (same file, not a new asset). */
+	public static final Holder<ArmorMaterial> VOID_ROBE = ARMOR_MATERIALS.register("void_robe_armor",
+			() -> new ArmorMaterial(
+					Util.make(new EnumMap<>(ArmorItem.Type.class), m -> {
+						m.put(ArmorItem.Type.BOOTS, 4);
+						m.put(ArmorItem.Type.LEGGINGS, 9);
+						m.put(ArmorItem.Type.CHESTPLATE, 7);
+						m.put(ArmorItem.Type.HELMET, 4);
+						m.put(ArmorItem.Type.BODY, 7);
+					}),
+					10,
+					SoundEvents.ARMOR_EQUIP_LEATHER,
+					() -> Ingredient.of(ItemsTC.ingotThaumium),
+					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "void_robe_armor"))),
+					2.0F,
+					0.0F));
+
+	/** {@code ThaumcraftMaterials.ARMORMAT_SPECIAL} again (same real stats as {@link #TRAVELLER}/{@link
+	 * #ROBES} - see {@link #ROBES}'s own doc comment for why a stat-identical material still needs its own
+	 * registry entry: the texture {@code Layer} is baked into the material, and Goggles needs its own real
+	 * {@code goggles_1.png}, not {@code traveller_1.png}). Used by {@link
+	 * thaumcraft.common.items.armor.ItemGoggles} - a helmet-only piece, so only the layer-1 texture exists. */
+	public static final Holder<ArmorMaterial> GOGGLES = ARMOR_MATERIALS.register("goggles",
+			() -> new ArmorMaterial(
+					Util.make(new EnumMap<>(ArmorItem.Type.class), m -> m.put(ArmorItem.Type.HELMET, 1)),
+					25,
+					SoundEvents.ARMOR_EQUIP_LEATHER,
+					() -> Ingredient.of(ItemsTC.ingotThaumium),
+					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "goggles"))),
+					1.0F,
+					0.0F));
+
 	private ThaumcraftArmorMaterials() {
 	}
 }

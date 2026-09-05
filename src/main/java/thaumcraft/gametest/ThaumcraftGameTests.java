@@ -8079,4 +8079,66 @@ public class ThaumcraftGameTests {
 		}
 		helper.succeed();
 	}
+
+	/**
+	 * Names the real crafting-table recipes for the base Void armor set and the real infusion recipes for
+	 * its Void Robe upgrade tier, and asserts each one is actually registered - same "name every id" pattern
+	 * as {@link #focusRecipesRegistered} and siblings.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void voidArmorRecipesRegistered(GameTestHelper helper) {
+		RecipeManager recipes = helper.getLevel().getRecipeManager();
+		String[] expectedIds = { "void_helm", "void_chest", "void_legs", "void_boots",
+				"infusion_void_robe_helm", "infusion_void_robe_chest", "infusion_void_robe_legs" };
+		for (String id : expectedIds) {
+			Optional<RecipeHolder<?>> recipe = recipes.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id));
+			helper.assertTrue(recipe.isPresent(), "expected recipe '" + id + "' to be registered, but it wasn't");
+		}
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.items.armor.ItemVoidArmor}'s real self-repair tick - a
+	 * damaged piece should really regain 1 durability every real second (20 ticks) while worn.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void voidArmorSelfRepairsOneDurabilityPerSecondWhileWorn(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		ItemStack helm = new ItemStack(ItemsTC.voidHelm.get());
+		helm.setDamageValue(10);
+		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, helm);
+
+		for (int i = 0; i < 20; i++) {
+			helm.getItem().inventoryTick(helm, level, player, 0, false);
+			player.tickCount++;
+		}
+		helper.assertTrue(helm.getDamageValue() == 9,
+				"a worn void_helm should really repair exactly 1 durability after 20 real ticks, found damage " + helm.getDamageValue());
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.items.armor.ItemVoidRobeArmor}'s real vis-discount/warp
+	 * values, and {@link thaumcraft.common.items.armor.ItemGoggles}' own real vis-discount - direct checks
+	 * against the real interface methods, matching the values the original's own items really had.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void voidRobeArmorAndGogglesHaveTheirRealDiscountAndWarpValues(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		ItemStack robeChest = new ItemStack(ItemsTC.voidRobeChest.get());
+		thaumcraft.api.items.IVisDiscountGear robeDiscount = (thaumcraft.api.items.IVisDiscountGear) robeChest.getItem();
+		thaumcraft.api.items.IWarpingGear robeWarp = (thaumcraft.api.items.IWarpingGear) robeChest.getItem();
+		helper.assertTrue(robeDiscount.getVisDiscount(robeChest, player) == 5, "void_robe_chest should give a real 5% vis discount");
+		helper.assertTrue(robeWarp.getWarp(robeChest, player) == 3, "void_robe_chest should add a real 3 warp");
+
+		ItemStack goggles = new ItemStack(ItemsTC.goggles.get());
+		thaumcraft.api.items.IVisDiscountGear gogglesDiscount = (thaumcraft.api.items.IVisDiscountGear) goggles.getItem();
+		helper.assertTrue(gogglesDiscount.getVisDiscount(goggles, player) == 5, "goggles should give a real 5% vis discount");
+
+		ItemStack voidHelm = new ItemStack(ItemsTC.voidHelm.get());
+		thaumcraft.api.items.IWarpingGear voidWarp = (thaumcraft.api.items.IWarpingGear) voidHelm.getItem();
+		helper.assertTrue(voidWarp.getWarp(voidHelm, player) == 1, "base void_helm should add a real 1 warp");
+		helper.succeed();
+	}
 }

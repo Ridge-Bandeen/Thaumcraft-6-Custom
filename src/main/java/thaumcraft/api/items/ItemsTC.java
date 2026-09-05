@@ -832,6 +832,38 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemElementalHoe> elementalHoe = ITEMS.registerItem("elemental_hoe",
 			props -> new thaumcraft.common.items.tools.ItemElementalHoe(TIER_ELEMENTAL, props.attributes(HoeItem.createAttributes(TIER_ELEMENTAL, -3.0F, 0.0F)).rarity(net.minecraft.world.item.Rarity.RARE)));
 
+	/** See {@link thaumcraft.common.items.armor.ItemVoidArmor}'s own doc comment - the base Void armor set,
+	 * crafted at a plain crafting table (see {@code data/thaumcraft/recipe/void_helm.json} and siblings). */
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemVoidArmor> voidHelm = ITEMS.registerItem("void_helm",
+			props -> new thaumcraft.common.items.armor.ItemVoidArmor(ThaumcraftArmorMaterials.VOID, ArmorItem.Type.HELMET,
+					props.durability(ArmorItem.Type.HELMET.getDurability(10)).rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemVoidArmor> voidChest = ITEMS.registerItem("void_chest",
+			props -> new thaumcraft.common.items.armor.ItemVoidArmor(ThaumcraftArmorMaterials.VOID, ArmorItem.Type.CHESTPLATE,
+					props.durability(ArmorItem.Type.CHESTPLATE.getDurability(10)).rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemVoidArmor> voidLegs = ITEMS.registerItem("void_legs",
+			props -> new thaumcraft.common.items.armor.ItemVoidArmor(ThaumcraftArmorMaterials.VOID, ArmorItem.Type.LEGGINGS,
+					props.durability(ArmorItem.Type.LEGGINGS.getDurability(10)).rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemVoidArmor> voidBoots = ITEMS.registerItem("void_boots",
+			props -> new thaumcraft.common.items.armor.ItemVoidArmor(ThaumcraftArmorMaterials.VOID, ArmorItem.Type.BOOTS,
+					props.durability(ArmorItem.Type.BOOTS.getDurability(10)).rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+
+	/** See {@link thaumcraft.common.items.armor.ItemVoidRobeArmor}'s own doc comment - the Void Robe upgrade
+	 * tier, crafted at the Infusion Altar from a base {@link #voidHelm}/{@link #voidChest}/{@link #voidLegs}.
+	 * No robe boots - the original's own recipe list never had one either. */
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemVoidRobeArmor> voidRobeHelm = ITEMS.registerItem("void_robe_helm",
+			props -> new thaumcraft.common.items.armor.ItemVoidRobeArmor(ThaumcraftArmorMaterials.VOID_ROBE, ArmorItem.Type.HELMET,
+					props.durability(ArmorItem.Type.HELMET.getDurability(18)).rarity(net.minecraft.world.item.Rarity.EPIC)));
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemVoidRobeArmor> voidRobeChest = ITEMS.registerItem("void_robe_chest",
+			props -> new thaumcraft.common.items.armor.ItemVoidRobeArmor(ThaumcraftArmorMaterials.VOID_ROBE, ArmorItem.Type.CHESTPLATE,
+					props.durability(ArmorItem.Type.CHESTPLATE.getDurability(18)).rarity(net.minecraft.world.item.Rarity.EPIC)));
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemVoidRobeArmor> voidRobeLegs = ITEMS.registerItem("void_robe_legs",
+			props -> new thaumcraft.common.items.armor.ItemVoidRobeArmor(ThaumcraftArmorMaterials.VOID_ROBE, ArmorItem.Type.LEGGINGS,
+					props.durability(ArmorItem.Type.LEGGINGS.getDurability(18)).rarity(net.minecraft.world.item.Rarity.EPIC)));
+
+	/** See {@link thaumcraft.common.items.armor.ItemGoggles}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemGoggles> goggles = ITEMS.registerItem("goggles",
+			props -> new thaumcraft.common.items.armor.ItemGoggles(props.durability(ArmorItem.Type.HELMET.getDurability(25)).rarity(net.minecraft.world.item.Rarity.RARE)));
+
 	public static final java.util.Map<thaumcraft.api.aspects.Aspect, DeferredItem<BlockItem>> crystals = new java.util.LinkedHashMap<>();
 	static {
 		registerCrystalItem("crystal_aer", thaumcraft.api.aspects.Aspect.AIR);

@@ -1,0 +1,20 @@
+{
+  "type": "thaumcraft:infusion",
+  "instability": 6,
+  "aspects": {
+    "metallum": 35,
+    "praemunio": 35,
+    "potentia": 25,
+    "vacuos": 35
+  },
+  "central": { "item": "thaumcraft:void_chest" },
+  "components": [
+    { "item": "thaumcraft:cloth_chest" },
+    { "item": "thaumcraft:plate_void" },
+    { "item": "thaumcraft:plate_void" },
+    { "item": "thaumcraft:salis_mundus" },
+    { "item": "thaumcraft:fabric" },
+    { "item": "minecraft:leather" }
+  ],
+  "result": { "id": "thaumcraft:void_robe_chest" }
+}

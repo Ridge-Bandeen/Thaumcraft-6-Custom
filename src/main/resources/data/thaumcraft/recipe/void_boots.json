@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "I I",
+    "I I"
+  ],
+  "key": {
+    "I": { "item": "thaumcraft:ingot_thaumium" }
+  },
+  "result": { "id": "thaumcraft:void_boots", "count": 1 }
+}
