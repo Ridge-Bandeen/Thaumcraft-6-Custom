@@ -1,8 +1,5 @@
 {
-    "forge_marker": 1,
-    "variants": {
-        "inventory": { "model": "thaumcraft:empty", "transform": "forge:default-block" },      
-        "normal": { "model": "thaumcraft:empty" }
-    }
-
+  "variants": {
+    "": { "model": "minecraft:block/barrier" }
+  }
 }

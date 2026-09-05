@@ -8822,4 +8822,99 @@ public class ThaumcraftGameTests {
 				"a real passive Cow shouldn't have been given the champion attribute at all - it's not in the curated hostile-monster list");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Rift focus effect + the real portable-hole mechanic it drives (FocusEffectRift/BlockHole/TileHole).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void createHoleReplacesASolidBlockWithARealWalkableTemporaryHole(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(2, 2, 2);
+		helper.setBlock(relPos, Blocks.STONE);
+		BlockPos abs = helper.absolutePos(relPos);
+
+		boolean created = thaumcraft.common.items.casters.foci.FocusEffectRift.createHole(helper.getLevel(), abs, net.minecraft.core.Direction.UP, (byte) 1, 100);
+
+		helper.assertTrue(created, "createHole should succeed on a real plain stone block");
+		helper.assertTrue(helper.getLevel().getBlockState(abs).is(BlocksTC.hole.get()), "the block should really have become thaumcraft:hole");
+		helper.assertTrue(helper.getLevel().getBlockState(abs).getCollisionShape(helper.getLevel(), abs).isEmpty(), "a real hole should have no collision - a player should walk straight through");
+		thaumcraft.common.tiles.misc.TileHole tile = helper.getBlockEntity(relPos);
+		helper.assertTrue(tile.oldBlock.is(Blocks.STONE), "the tile should remember the real original block, found " + tile.oldBlock);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void holeRevertsToItsRealOriginalBlockAfterTheCountdownExpires(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(2, 2, 2);
+		helper.setBlock(relPos, Blocks.COBBLESTONE);
+		BlockPos abs = helper.absolutePos(relPos);
+		thaumcraft.common.items.casters.foci.FocusEffectRift.createHole(helper.getLevel(), abs, null, (byte) 1, 5);
+
+		net.minecraft.world.level.block.state.BlockState state = helper.getLevel().getBlockState(abs);
+		thaumcraft.common.tiles.misc.TileHole tile = helper.getBlockEntity(relPos);
+		for (int i = 0; i < 5; i++) {
+			thaumcraft.common.tiles.misc.TileHole.tick(helper.getLevel(), abs, state, tile);
+		}
+
+		helper.assertTrue(helper.getLevel().getBlockState(abs).is(Blocks.COBBLESTONE), "the hole should have reverted to the real original cobblestone after its countdown expired, found " + helper.getLevel().getBlockState(abs));
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void holePropagatesForwardAndBurstsPerpendicularlyOnTheFirstTick(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(2, 2, 2);
+		BlockPos nextPos = relPos.north(); // direction.getOpposite() of SOUTH is NORTH
+		BlockPos burstPos = relPos.above(); // part of the perpendicular (Y-axis) 3x3 burst plane
+		for (BlockPos p : new BlockPos[] { relPos, nextPos, burstPos }) {
+			helper.setBlock(p, Blocks.STONE);
+		}
+		BlockPos abs = helper.absolutePos(relPos);
+
+		// count=3 (propagates once more after this one), direction=SOUTH -> propagates toward NORTH.
+		thaumcraft.common.items.casters.foci.FocusEffectRift.createHole(helper.getLevel(), abs, net.minecraft.core.Direction.SOUTH, (byte) 3, 100);
+		net.minecraft.world.level.block.state.BlockState state = helper.getLevel().getBlockState(abs);
+		thaumcraft.common.tiles.misc.TileHole tile = helper.getBlockEntity(relPos);
+		thaumcraft.common.tiles.misc.TileHole.tick(helper.getLevel(), abs, state, tile);
+
+		helper.assertTrue(helper.getLevel().getBlockState(helper.absolutePos(nextPos)).is(BlocksTC.hole.get()),
+				"the tunnel should have propagated one real block further on its first tick");
+		helper.assertTrue(helper.getLevel().getBlockState(helper.absolutePos(burstPos)).is(BlocksTC.hole.get()),
+				"the real perpendicular 3x3 burst should have opened a hole above too");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void createHoleRefusesBedrockAndBlocksWithARealTileEntity(GameTestHelper helper) {
+		BlockPos bedrockPos = new BlockPos(2, 2, 2);
+		BlockPos chestPos = new BlockPos(2, 2, 4);
+		helper.setBlock(bedrockPos, Blocks.BEDROCK);
+		helper.setBlock(chestPos, Blocks.CHEST);
+
+		boolean bedrockResult = thaumcraft.common.items.casters.foci.FocusEffectRift.createHole(helper.getLevel(), helper.absolutePos(bedrockPos), null, (byte) 1, 100);
+		boolean chestResult = thaumcraft.common.items.casters.foci.FocusEffectRift.createHole(helper.getLevel(), helper.absolutePos(chestPos), null, (byte) 1, 100);
+
+		helper.assertTrue(!bedrockResult && helper.getLevel().getBlockState(helper.absolutePos(bedrockPos)).is(Blocks.BEDROCK), "real bedrock should never become a hole");
+		helper.assertTrue(!chestResult && helper.getLevel().getBlockState(helper.absolutePos(chestPos)).is(Blocks.CHEST), "a real block with its own tile entity should never become a hole");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focusEffectRiftPunchesARealHoleEndToEnd(GameTestHelper helper) {
+		BlockPos wallPos = new BlockPos(2, 2, 2);
+		helper.setBlock(wallPos, Blocks.STONE);
+		BlockPos absWall = helper.absolutePos(wallPos);
+		ServerPlayer player = spawnCasterAt(helper, absWall.north(3));
+
+		thaumcraft.common.items.casters.foci.FocusEffectRift rift = new thaumcraft.common.items.casters.foci.FocusEffectRift();
+		rift.initialize();
+		rift.setPackage(new thaumcraft.api.casters.FocusPackage(player));
+
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absWall), net.minecraft.core.Direction.SOUTH, absWall, false);
+		boolean executed = rift.execute(hit, null, 1.0f, 0);
+
+		helper.assertTrue(executed, "casting a real Rift focus at a real solid block should succeed");
+		helper.assertTrue(helper.getLevel().getBlockState(absWall).is(BlocksTC.hole.get()), "the struck block should really have become a temporary hole");
+		helper.succeed();
+	}
 }

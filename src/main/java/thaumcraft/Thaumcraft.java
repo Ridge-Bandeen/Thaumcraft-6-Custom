@@ -180,6 +180,7 @@ public class Thaumcraft {
         FocusEngine.registerElement(FocusEffectAir.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/air.png"), 16777086);
         FocusEngine.registerElement(FocusMediumMine.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/mine.png"), 8760709);
         FocusEngine.registerElement(FocusMediumCloud.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/cloud.png"), 10071429);
+        FocusEngine.registerElement(thaumcraft.common.items.casters.foci.FocusEffectRift.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/rift.png"), 3084645);
 
         // Theorycraft card registry (thaumcraft.api.research.theorycraft.TheorycraftManager) - see
         // ResearchTableData's own doc comment. A first real, representative slice of the original's ~56

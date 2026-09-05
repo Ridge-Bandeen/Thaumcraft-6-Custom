@@ -270,6 +270,14 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.devices.BlockLevitator::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
 
+	/** See {@link thaumcraft.common.blocks.misc.BlockHole}'s own doc comment - the internal, temporary
+	 * "portable hole" block. No loot table is registered on purpose - a block with none simply drops
+	 * nothing, matching the original's own real undroppable/unpickable behavior. */
+	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockHole> hole = BLOCKS.registerBlock("hole",
+			thaumcraft.common.blocks.misc.BlockHole::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(-1.0f, 3600000.0f)
+					.sound(SoundType.WOOL).lightLevel(state -> 11).noOcclusion().noCollission());
+
 	/** See {@link thaumcraft.common.blocks.devices.BlockRedstoneRelay}'s own doc comment - a real
 	 * configurable-threshold/strength redstone repeater variant, no tile entity needed. */
 	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockRedstoneRelay> redstoneRelay = BLOCKS.registerBlock("redstone_relay",
