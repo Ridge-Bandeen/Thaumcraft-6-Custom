@@ -22,9 +22,9 @@ import thaumcraft.api.items.ThaumcraftDataComponents;
  * #FORTRESS_GOGGLES}): the Helm of Revealing mod ({@link IGoggles} popups, no vis discount - matching the
  * original's own in-game research text: "It does not, however, give the vis discount the goggles usually
  * do") and one of 3 real combat masks (Grinning Devil/Angry Ghost/Sipping Fiend - see {@code
- * thaumcraft.common.lib.events.FortressMaskEvents} for the real Wither-on-hit/lifesteal-on-hit effects; the
- * third mask's real effect, damping Warp event severity, is a documented cut - see that class's own doc
- * comment for why).
+ * thaumcraft.common.lib.events.FortressMaskEvents} for the real Wither-on-hit/lifesteal-on-hit effects;
+ * Grinning Devil's own real Warp-misfortune-dampening effect lives in {@code
+ * thaumcraft.common.lib.events.WarpEvents#checkWarpEvent}, once that whole system existed to check it).
  *
  * Real, deliberate simplification vs the original: the original's real {@code ISpecialArmor} damage curve
  * (gone in modern MC - real vanilla armor/toughness stats cover the "better tier" role instead, same

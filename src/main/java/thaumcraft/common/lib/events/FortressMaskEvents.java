@@ -20,12 +20,9 @@ import thaumcraft.common.items.armor.ItemFortressArmor;
  * with the damage amount ({@code amount/10} and {@code amount/12} respectively - the same real formulas the
  * original used), checked directly off the wearer's real equipped {@link ItemFortressArmor} helm.
  *
- * The third mask, Grinning Devil (damping Warp EVENT severity), is a real, documented cut - it's built on
- * top of the original's own Warp-event-severity system, which lives entirely in a separate, still-stale,
- * never-ported {@code WarpEvents} class. Building that whole system just to support one mask's real effect
- * is a substantially bigger, separate task, not attempted this pass - the mask item/component itself is
- * still real and craftable, it just has no gameplay effect yet, same "ship the real item, the effect is
- * real follow-up work" precedent this session has used elsewhere.
+ * The third mask, Grinning Devil (damping Warp misfortune severity), doesn't live here - its effect is
+ * checked directly inside {@code WarpEvents#checkWarpEvent} (real now, ported later the same session), not
+ * off a {@code LivingIncomingDamageEvent} like the other two.
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID)
 public class FortressMaskEvents {
