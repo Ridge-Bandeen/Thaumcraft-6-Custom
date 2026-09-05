@@ -8215,4 +8215,28 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(healed, "the Sipping Fiend mask should really be able to heal its wearer within a generous number of real chance rolls");
 		helper.succeed();
 	}
+
+	/**
+	 * Names the real focus-tier-upgrade recipes (last of the 4 "let's do them all" infusion-content
+	 * families) and asserts each one is actually registered - same "name every id" pattern as {@link
+	 * #focusRecipesRegistered} and siblings. Also confirms the real per-tier complexity cap {@link
+	 * thaumcraft.common.items.casters.ItemFocusBlank} already exposes actually increases across the tiers -
+	 * these recipes are only worth anything if a bigger focus can really hold a bigger real node graph.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focusBlankTierUpgradeRecipesRegistered(GameTestHelper helper) {
+		RecipeManager recipes = helper.getLevel().getRecipeManager();
+		String[] expectedIds = { "infusion_focus_blank_2", "infusion_focus_blank_3" };
+		for (String id : expectedIds) {
+			Optional<RecipeHolder<?>> recipe = recipes.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id));
+			helper.assertTrue(recipe.isPresent(), "expected recipe '" + id + "' to be registered, but it wasn't");
+		}
+
+		thaumcraft.common.items.casters.ItemFocusBlank tier1 = (thaumcraft.common.items.casters.ItemFocusBlank) ItemsTC.focusBlank1.get();
+		thaumcraft.common.items.casters.ItemFocusBlank tier2 = (thaumcraft.common.items.casters.ItemFocusBlank) ItemsTC.focusBlank2.get();
+		thaumcraft.common.items.casters.ItemFocusBlank tier3 = (thaumcraft.common.items.casters.ItemFocusBlank) ItemsTC.focusBlank3.get();
+		helper.assertTrue(tier1.getMaxComplexity() < tier2.getMaxComplexity() && tier2.getMaxComplexity() < tier3.getMaxComplexity(),
+				"each real focus tier should really hold a bigger node graph than the last, found " + tier1.getMaxComplexity() + "/" + tier2.getMaxComplexity() + "/" + tier3.getMaxComplexity());
+		helper.succeed();
+	}
 }
