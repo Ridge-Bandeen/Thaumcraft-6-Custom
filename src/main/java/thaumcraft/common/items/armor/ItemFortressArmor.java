@@ -1,169 +1,60 @@
 package thaumcraft.common.items.armor;
+
 import java.util.List;
-import net.minecraft.client.model.ModelBiped;
-import net.minecraft.client.renderer.ItemMeshDefinition;
-import net.minecraft.client.renderer.block.model.ModelResourceLocation;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.EntityEquipmentSlot;
-import net.minecraft.item.EnumRarity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemArmor;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.translation.I18n;
-import net.minecraft.world.World;
-import net.minecraftforge.common.ISpecialArmor;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.ArmorMaterial;
+import net.minecraft.world.item.Item.TooltipContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import thaumcraft.api.items.IGoggles;
-import thaumcraft.api.items.IRevealer;
-import thaumcraft.api.items.ItemsTC;
-import thaumcraft.client.renderers.models.gear.ModelFortressArmor;
-import thaumcraft.common.config.ConfigItems;
-import thaumcraft.common.items.IThaumcraftItems;
+import thaumcraft.api.items.ThaumcraftDataComponents;
 
+/**
+ * Replaces the old (1.12.2) {@code ItemFortressArmor} - the Fortress armor tier (helm/chest/legs only, no
+ * boots, matching the original's own real recipe list), crafted at the Infusion Altar from the matching
+ * Thaumium armor piece. Two further real, orthogonal helm-only upgrades from the original, ported as data
+ * components instead of raw NBT (see {@link ThaumcraftDataComponents#FORTRESS_MASK}/{@code
+ * #FORTRESS_GOGGLES}): the Helm of Revealing mod ({@link IGoggles} popups, no vis discount - matching the
+ * original's own in-game research text: "It does not, however, give the vis discount the goggles usually
+ * do") and one of 3 real combat masks (Grinning Devil/Angry Ghost/Sipping Fiend - see {@code
+ * thaumcraft.common.lib.events.FortressMaskEvents} for the real Wither-on-hit/lifesteal-on-hit effects; the
+ * third mask's real effect, damping Warp event severity, is a documented cut - see that class's own doc
+ * comment for why).
+ *
+ * Real, deliberate simplification vs the original: the original's real {@code ISpecialArmor} damage curve
+ * (gone in modern MC - real vanilla armor/toughness stats cover the "better tier" role instead, same
+ * precedent as every other armor piece this session) and its "a helm can wear a mask AND the goggles mod at
+ * once, stacking recipes" combinability are both dropped. Each of the 4 real upgrade recipes sets its own
+ * component(s) on a FRESH result stack rather than reading-and-preserving whatever the central item already
+ * had, so applying a second upgrade recipe to an already-upgraded helm replaces the first rather than
+ * stacking with it - a real, minor fidelity loss; a proper fix would need a small custom recipe class
+ * (matching {@code InfusionCrystalRecipe}'s own precedent) to carry the central item's existing components
+ * forward, not attempted this pass.
+ */
+public class ItemFortressArmor extends ArmorItem implements IGoggles {
 
-public class ItemFortressArmor extends ItemArmor implements ISpecialArmor, IGoggles, IRevealer, IThaumcraftItems
-{
-    ModelBiped model1;
-    ModelBiped model2;
-    ModelBiped model;
-    
-    public ItemFortressArmor(String name, ItemArmor.ArmorMaterial material, int renderIndex, EntityEquipmentSlot armorType) {
-        super(material, renderIndex, armorType);
-        model1 = null;
-        model2 = null;
-        model = null;
-        setRegistryName(name);
-        setUnlocalizedName(name);
-        ConfigItems.ITEM_VARIANT_HOLDERS.add(this);
-        setCreativeTab(ConfigItems.TABTC);
-    }
-    
-    public Item getItem() {
-        return this;
-    }
-    
-    public String[] getVariantNames() {
-        return new String[] { "normal" };
-    }
-    
-    public int[] getVariantMeta() {
-        return new int[] { 0 };
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public ItemMeshDefinition getCustomMesh() {
-        return null;
-    }
-    
-    public ModelResourceLocation getCustomModelResourceLocation(String variant) {
-        return new ModelResourceLocation("thaumcraft:" + variant);
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public ModelBiped getArmorModel(EntityLivingBase entityLiving, ItemStack itemStack, EntityEquipmentSlot armorSlot, ModelBiped _default) {
-        if (model1 == null) {
-            model1 = new ModelFortressArmor(1.0f);
-        }
-        if (model2 == null) {
-            model2 = new ModelFortressArmor(0.5f);
-        }
-        return model = CustomArmorHelper.getCustomArmorModel(entityLiving, itemStack, armorSlot, model, model1, model2);
-    }
-    
-    public String getArmorTexture(ItemStack stack, Entity entity, EntityEquipmentSlot slot, String type) {
-        return "thaumcraft:textures/entity/armor/fortress_armor.png";
-    }
-    
-    public EnumRarity getRarity(ItemStack itemstack) {
-        return EnumRarity.RARE;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void addInformation(ItemStack stack, World worldIn, List<String> tooltip, ITooltipFlag flagIn) {
-        if (stack.hasTagCompound() && stack.getTagCompound().hasKey("goggles")) {
-            tooltip.add(TextFormatting.DARK_PURPLE + I18n.translateToLocal("item.goggles.name"));
-        }
-        if (stack.hasTagCompound() && stack.getTagCompound().hasKey("mask")) {
-            tooltip.add(TextFormatting.GOLD + I18n.translateToLocal("item.fortress_helm.mask." + stack.getTagCompound().getInteger("mask")));
-        }
-        super.addInformation(stack, worldIn, tooltip, flagIn);
-    }
-    
-    public boolean getIsRepairable(ItemStack stack1, ItemStack stack2) {
-        return stack2.isItemEqual(new ItemStack(ItemsTC.ingots, 1, 0)) || super.getIsRepairable(stack1, stack2);
-    }
-    
-    public ISpecialArmor.ArmorProperties getProperties(EntityLivingBase player, ItemStack armor, DamageSource source, double damage, int slot) {
-        int priority = 0;
-        double ratio = damageReduceAmount / 25.0;
-        if (source.isMagicDamage()) {
-            priority = 1;
-            ratio = damageReduceAmount / 35.0;
-        }
-        else if (source.isFireDamage() || source.isExplosion()) {
-            priority = 1;
-            ratio = damageReduceAmount / 20.0;
-        }
-        else if (source.isUnblockable()) {
-            priority = 0;
-            ratio = 0.0;
-        }
-        ISpecialArmor.ArmorProperties ap = new ISpecialArmor.ArmorProperties(priority, ratio, armor.getMaxDamage() + 1 - armor.getItemDamage());
-        if (player instanceof EntityPlayer) {
-            int q = 0;
-            for (int a = 1; a < 4; ++a) {
-                ItemStack piece = ((EntityPlayer)player).inventory.armorInventory.get(a);
-                if (piece != null && !piece.isEmpty() && piece.getItem() instanceof ItemFortressArmor) {
-                    if (piece.hasTagCompound() && piece.getTagCompound().hasKey("mask")) {
-                        ISpecialArmor.ArmorProperties armorProperties = ap;
-                        ++armorProperties.Armor;
-                    }
-                    if (++q <= 1) {
-                        ISpecialArmor.ArmorProperties armorProperties2 = ap;
-                        ++armorProperties2.Armor;
-                        ISpecialArmor.ArmorProperties armorProperties3 = ap;
-                        ++armorProperties3.Toughness;
-                    }
-                }
-            }
-        }
-        return ap;
-    }
-    
-    public int getArmorDisplay(EntityPlayer player, ItemStack armor, int slot) {
-        int q = 0;
-        int ar = 0;
-        for (int a = 1; a < 4; ++a) {
-            ItemStack piece = player.inventory.armorInventory.get(a);
-            if (piece != null && !piece.isEmpty() && piece.getItem() instanceof ItemFortressArmor) {
-                if (piece.hasTagCompound() && piece.getTagCompound().hasKey("mask")) {
-                    ++ar;
-                }
-                if (++q <= 1) {
-                    ++ar;
-                }
-            }
-        }
-        return ar;
-    }
-    
-    public void damageArmor(EntityLivingBase entity, ItemStack stack, DamageSource source, int damage, int slot) {
-        if (source != DamageSource.FALL) {
-            stack.damageItem(damage, entity);
-        }
-    }
-    
-    public boolean showNodes(ItemStack itemstack, EntityLivingBase player) {
-        return itemstack.hasTagCompound() && itemstack.getTagCompound().hasKey("goggles");
-    }
-    
-    public boolean showIngamePopups(ItemStack itemstack, EntityLivingBase player) {
-        return itemstack.hasTagCompound() && itemstack.getTagCompound().hasKey("goggles");
-    }
+	public ItemFortressArmor(Holder<ArmorMaterial> material, Type type, Properties properties) {
+		super(material, type, properties);
+	}
+
+	@Override
+	public boolean showIngamePopups(ItemStack itemstack, LivingEntity player) {
+		return getType() == Type.HELMET && Boolean.TRUE.equals(itemstack.get(ThaumcraftDataComponents.FORTRESS_GOGGLES.get()));
+	}
+
+	@Override
+	public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+		if (Boolean.TRUE.equals(stack.get(ThaumcraftDataComponents.FORTRESS_GOGGLES.get()))) {
+			tooltip.add(Component.translatable("item.fortress_helm.goggles").withStyle(ChatFormatting.DARK_PURPLE));
+		}
+		Integer mask = stack.get(ThaumcraftDataComponents.FORTRESS_MASK.get());
+		if (mask != null) {
+			tooltip.add(Component.translatable("item.fortress_helm.mask." + mask).withStyle(ChatFormatting.GOLD));
+		}
+	}
 }

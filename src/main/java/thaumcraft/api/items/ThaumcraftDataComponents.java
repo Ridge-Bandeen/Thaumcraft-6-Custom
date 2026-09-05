@@ -183,6 +183,25 @@ public final class ThaumcraftDataComponents {
 				GolemPlacerData::new);
 	}
 
+	/** Was the {@code "mask"} NBT int tag on the original {@code ItemFortressArmor} - which of the 3 real
+	 * Fortress Helm mask upgrades (0=Grinning Devil, 1=Angry Ghost, 2=Sipping Fiend) is applied. Absent means
+	 * no mask. Orthogonal to {@link #FORTRESS_GOGGLES} - the original's own real design lets a helm carry
+	 * both at once (see {@code thaumcraft.common.items.armor.ItemFortressArmor}'s own doc comment for the
+	 * real, documented simplification this port makes there instead). */
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> FORTRESS_MASK = DATA_COMPONENTS.register("fortress_mask",
+			() -> DataComponentType.<Integer>builder()
+					.persistent(Codec.INT)
+					.networkSynchronized(ByteBufCodecs.VAR_INT)
+					.build());
+
+	/** Was the {@code "goggles"} NBT tag (presence-only) on the original {@code ItemFortressArmor} - the
+	 * Helm of Revealing upgrade. See {@link #FORTRESS_MASK}'s own doc comment. */
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<Boolean>> FORTRESS_GOGGLES = DATA_COMPONENTS.register("fortress_goggles",
+			() -> DataComponentType.<Boolean>builder()
+					.persistent(Codec.BOOL)
+					.networkSynchronized(ByteBufCodecs.BOOL)
+					.build());
+
 	private ThaumcraftDataComponents() {
 	}
 }

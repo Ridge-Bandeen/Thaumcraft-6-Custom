@@ -1,0 +1,18 @@
+{
+  "type": "thaumcraft:infusion",
+  "instability": 3,
+  "aspects": {
+    "metallum": 50,
+    "praemunio": 20,
+    "potentia": 25
+  },
+  "central": { "item": "thaumcraft:thaumium_helm" },
+  "components": [
+    { "item": "thaumcraft:plate_thaumium" },
+    { "item": "thaumcraft:plate_thaumium" },
+    { "item": "minecraft:gold_ingot" },
+    { "item": "minecraft:gold_ingot" },
+    { "item": "minecraft:emerald" }
+  ],
+  "result": { "id": "thaumcraft:fortress_helm" }
+}

@@ -1,0 +1,24 @@
+{
+  "type": "thaumcraft:infusion",
+  "instability": 8,
+  "aspects": {
+    "exanimis": 80,
+    "victus": 80,
+    "praemunio": 20
+  },
+  "central": { "item": "thaumcraft:fortress_helm" },
+  "components": [
+    { "item": "minecraft:red_dye" },
+    { "item": "thaumcraft:plate_iron" },
+    { "item": "minecraft:leather" },
+    { "item": "minecraft:ghast_tear" },
+    { "item": "minecraft:milk_bucket" },
+    { "item": "thaumcraft:plate_iron" }
+  ],
+  "result": {
+    "id": "thaumcraft:fortress_helm",
+    "components": {
+      "thaumcraft:fortress_mask": 2
+    }
+  }
+}

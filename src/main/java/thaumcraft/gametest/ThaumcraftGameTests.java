@@ -8141,4 +8141,78 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(voidWarp.getWarp(voidHelm, player) == 1, "base void_helm should add a real 1 warp");
 		helper.succeed();
 	}
+
+	/**
+	 * Names the real Fortress armor recipes (3 base pieces + 4 helm upgrades) and asserts each one is
+	 * actually registered - same "name every id" pattern as {@link #focusRecipesRegistered} and siblings.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void fortressArmorRecipesRegistered(GameTestHelper helper) {
+		RecipeManager recipes = helper.getLevel().getRecipeManager();
+		String[] expectedIds = { "infusion_fortress_helm", "infusion_fortress_chest", "infusion_fortress_legs",
+				"infusion_fortress_helm_goggles", "infusion_fortress_mask_devil", "infusion_fortress_mask_ghost", "infusion_fortress_mask_fiend" };
+		for (String id : expectedIds) {
+			Optional<RecipeHolder<?>> recipe = recipes.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id));
+			helper.assertTrue(recipe.isPresent(), "expected recipe '" + id + "' to be registered, but it wasn't");
+		}
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.lib.events.FortressMaskEvents} - the Angry Ghost mask should
+	 * give a real chance to Wither whoever hits its wearer.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void fortressHelmAngryGhostMaskCanWitherTheAttacker(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer victim = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		ItemStack helm = new ItemStack(ItemsTC.fortressHelm.get());
+		helm.set(thaumcraft.api.items.ThaumcraftDataComponents.FORTRESS_MASK.get(), 1);
+		victim.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, helm);
+		ServerPlayer attacker = spawnCasterAt(helper, helper.absolutePos(new BlockPos(2, 0, 0)));
+
+		net.minecraft.world.damagesource.DamageSource source = level.damageSources().playerAttack(attacker);
+		boolean withered = false;
+		for (int i = 0; i < 200 && !withered; i++) {
+			net.neoforged.neoforge.common.damagesource.DamageContainer container =
+					new net.neoforged.neoforge.common.damagesource.DamageContainer(source, 10.0f);
+			container.setNewDamage(10.0f);
+			net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent event =
+					new net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent(victim, container);
+			thaumcraft.common.lib.events.FortressMaskEvents.onDamage(event);
+			withered = attacker.hasEffect(MobEffects.WITHER);
+		}
+		helper.assertTrue(withered, "the Angry Ghost mask should really be able to Wither an attacker within a generous number of real chance rolls");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.lib.events.FortressMaskEvents} - the Sipping Fiend mask
+	 * should give a real chance to heal its wearer when they land a hit.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void fortressHelmSippingFiendMaskCanHealTheAttacker(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer attacker = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		attacker.setHealth(10.0f);
+		ItemStack helm = new ItemStack(ItemsTC.fortressHelm.get());
+		helm.set(thaumcraft.api.items.ThaumcraftDataComponents.FORTRESS_MASK.get(), 2);
+		attacker.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, helm);
+		ServerPlayer victim = spawnCasterAt(helper, helper.absolutePos(new BlockPos(2, 0, 0)));
+
+		net.minecraft.world.damagesource.DamageSource source = level.damageSources().playerAttack(attacker);
+		boolean healed = false;
+		for (int i = 0; i < 200 && !healed; i++) {
+			attacker.setHealth(10.0f);
+			net.neoforged.neoforge.common.damagesource.DamageContainer container =
+					new net.neoforged.neoforge.common.damagesource.DamageContainer(source, 10.0f);
+			container.setNewDamage(10.0f);
+			net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent event =
+					new net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent(victim, container);
+			thaumcraft.common.lib.events.FortressMaskEvents.onDamage(event);
+			healed = attacker.getHealth() > 10.0f;
+		}
+		helper.assertTrue(healed, "the Sipping Fiend mask should really be able to heal its wearer within a generous number of real chance rolls");
+		helper.succeed();
+	}
 }

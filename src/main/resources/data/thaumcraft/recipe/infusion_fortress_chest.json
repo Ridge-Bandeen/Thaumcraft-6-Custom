@@ -1,0 +1,19 @@
+{
+  "type": "thaumcraft:infusion",
+  "instability": 3,
+  "aspects": {
+    "metallum": 50,
+    "praemunio": 30,
+    "potentia": 25
+  },
+  "central": { "item": "thaumcraft:thaumium_chest" },
+  "components": [
+    { "item": "thaumcraft:plate_thaumium" },
+    { "item": "thaumcraft:plate_thaumium" },
+    { "item": "thaumcraft:plate_thaumium" },
+    { "item": "thaumcraft:plate_thaumium" },
+    { "item": "minecraft:gold_ingot" },
+    { "item": "minecraft:leather" }
+  ],
+  "result": { "id": "thaumcraft:fortress_chest" }
+}

@@ -228,6 +228,24 @@ public final class ThaumcraftArmorMaterials {
 					1.0F,
 					0.0F));
 
+	/** {@code ThaumcraftMaterials.ARMORMAT_FORTRESS} from the original (durability multiplier 40, protection
+	 * {@code [_,6,7,3]} - boots/legs/chest/helm, no boots piece exists so that slot is omitted entirely, same
+	 * as {@link #CULTIST_BOOTS}'s own single-slot pattern; enchantability 25, iron equip sound, 3.0
+	 * toughness - a real top-tier defensive set). Repaired with a Thaumium ingot, same as the original. */
+	public static final Holder<ArmorMaterial> FORTRESS = ARMOR_MATERIALS.register("fortress",
+			() -> new ArmorMaterial(
+					Util.make(new EnumMap<>(ArmorItem.Type.class), m -> {
+						m.put(ArmorItem.Type.LEGGINGS, 6);
+						m.put(ArmorItem.Type.CHESTPLATE, 7);
+						m.put(ArmorItem.Type.HELMET, 3);
+					}),
+					25,
+					SoundEvents.ARMOR_EQUIP_IRON,
+					() -> Ingredient.of(ItemsTC.ingotThaumium),
+					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "fortress_armor"))),
+					3.0F,
+					0.0F));
+
 	private ThaumcraftArmorMaterials() {
 	}
 }

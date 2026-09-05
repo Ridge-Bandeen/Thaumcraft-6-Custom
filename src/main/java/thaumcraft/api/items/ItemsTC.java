@@ -864,6 +864,19 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.items.armor.ItemGoggles> goggles = ITEMS.registerItem("goggles",
 			props -> new thaumcraft.common.items.armor.ItemGoggles(props.durability(ArmorItem.Type.HELMET.getDurability(25)).rarity(net.minecraft.world.item.Rarity.RARE)));
 
+	/** See {@link thaumcraft.common.items.armor.ItemFortressArmor}'s own doc comment - the Fortress armor
+	 * tier, crafted at the Infusion Altar from the matching Thaumium armor piece. No boots piece, matching
+	 * the original's own real recipe list. */
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemFortressArmor> fortressHelm = ITEMS.registerItem("fortress_helm",
+			props -> new thaumcraft.common.items.armor.ItemFortressArmor(ThaumcraftArmorMaterials.FORTRESS, ArmorItem.Type.HELMET,
+					props.durability(ArmorItem.Type.HELMET.getDurability(40)).rarity(net.minecraft.world.item.Rarity.RARE)));
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemFortressArmor> fortressChest = ITEMS.registerItem("fortress_chest",
+			props -> new thaumcraft.common.items.armor.ItemFortressArmor(ThaumcraftArmorMaterials.FORTRESS, ArmorItem.Type.CHESTPLATE,
+					props.durability(ArmorItem.Type.CHESTPLATE.getDurability(40)).rarity(net.minecraft.world.item.Rarity.RARE)));
+	public static final DeferredItem<thaumcraft.common.items.armor.ItemFortressArmor> fortressLegs = ITEMS.registerItem("fortress_legs",
+			props -> new thaumcraft.common.items.armor.ItemFortressArmor(ThaumcraftArmorMaterials.FORTRESS, ArmorItem.Type.LEGGINGS,
+					props.durability(ArmorItem.Type.LEGGINGS.getDurability(40)).rarity(net.minecraft.world.item.Rarity.RARE)));
+
 	public static final java.util.Map<thaumcraft.api.aspects.Aspect, DeferredItem<BlockItem>> crystals = new java.util.LinkedHashMap<>();
 	static {
 		registerCrystalItem("crystal_aer", thaumcraft.api.aspects.Aspect.AIR);

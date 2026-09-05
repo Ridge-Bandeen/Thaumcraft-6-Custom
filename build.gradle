@@ -468,6 +468,8 @@ sourceSets {
             include 'thaumcraft/common/items/armor/ItemVoidArmor.java'
             include 'thaumcraft/common/items/armor/ItemVoidRobeArmor.java'
             include 'thaumcraft/common/items/armor/ItemGoggles.java'
+            include 'thaumcraft/common/items/armor/ItemFortressArmor.java'
+            include 'thaumcraft/common/lib/events/FortressMaskEvents.java'
 
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
