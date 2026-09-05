@@ -7915,4 +7915,66 @@ public class ThaumcraftGameTests {
 				"a real 5% vis discount ring in the hotbar should reduce the consumption modifier to 0.95, found " + modifier);
 		helper.succeed();
 	}
+
+	/**
+	 * Names the 5 real infusion recipes this pass unlocked now that the bauble-family items themselves are
+	 * real (VisAmulet/CloudRing/CuriosityBand/CharmUndying/VoidseerPearl - VerdantHeart's own 3 recipes are
+	 * still blocked on an unported nugget subtype and a specific-potion-content ingredient, not done this
+	 * pass) and asserts each one is actually registered - same "name every id, don't just eyeball a count"
+	 * approach as {@link #focusRecipesRegistered}.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void baubleInfusionRecipesRegistered(GameTestHelper helper) {
+		RecipeManager recipes = helper.getLevel().getRecipeManager();
+		String[] expectedIds = { "infusion_vis_amulet", "infusion_cloud_ring", "infusion_curiosity_band",
+				"infusion_charm_undying", "infusion_voidseer_pearl" };
+		for (String id : expectedIds) {
+			Optional<RecipeHolder<?>> recipe = recipes.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id));
+			helper.assertTrue(recipe.isPresent(), "expected recipe '" + id + "' to be registered, but it wasn't");
+		}
+		helper.succeed();
+	}
+
+	/**
+	 * Real end-to-end craft coverage for the simplest of the 5 new bauble recipes - a real vanilla Totem of
+	 * Undying plus a real brass plate becomes a real Charm of Undying. Low instability (2) and a small real
+	 * aspect cost (25 units) - no stabilizers needed, matching the same low-cost/low-instability crystal
+	 * recipes from the previous chunk that also needed none.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionMatrixCraftsCharmUndyingFromTotemAndPlateBrass(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos matrixPos = new BlockPos(4, 4, 4);
+		BlockPos centralPos = matrixPos.below(2);
+		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		helper.setBlock(centralPos, BlocksTC.pedestal.get());
+		thaumcraft.common.tiles.crafting.TilePedestal central = helper.getBlockEntity(centralPos);
+		central.setItem(new ItemStack(Items.TOTEM_OF_UNDYING));
+
+		BlockPos componentPos = matrixPos.offset(2, 0, 0);
+		helper.setBlock(componentPos, BlocksTC.pedestal.get());
+		thaumcraft.common.tiles.crafting.TilePedestal component = helper.getBlockEntity(componentPos);
+		component.setItem(new ItemStack(ItemsTC.plateBrass.get()));
+
+		BlockPos jarPos = matrixPos.offset(-2, 0, 0);
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		((thaumcraft.common.tiles.essentia.TileJarFillable) helper.getBlockEntity(jarPos)).addToContainer(Aspect.LIFE, 30);
+
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+		ServerPlayer player = spawnCasterAt(helper, matrixAbs);
+
+		helper.assertTrue(matrix.activate(level, player), "activation should succeed with a central pedestal in place");
+		helper.assertTrue(matrix.activate(level, player), "the second activation (with a real, valid charm_undying recipe on the pedestals) should start crafting");
+		helper.assertTrue(matrix.crafting, "the matrix should be mid-craft after a successful craftingStart");
+
+		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
+		for (int i = 0; i < 2000 && matrix.crafting; i++) {
+			thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(level, matrixAbs, matrixState, matrix);
+		}
+
+		helper.assertTrue(!matrix.crafting, "the craft should have completed (or definitively failed) within a generous tick budget");
+		helper.assertTrue(central.getItem().is(ItemsTC.charmUndying.get()), "the central pedestal should hold a real charm_undying, found: " + central.getItem());
+		helper.succeed();
+	}
 }

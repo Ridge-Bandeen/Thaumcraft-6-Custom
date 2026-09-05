@@ -1,0 +1,19 @@
+{
+  "type": "thaumcraft:infusion",
+  "instability": 6,
+  "aspects": {
+    "auram": 50,
+    "potentia": 100,
+    "vacuos": 50
+  },
+  "central": { "item": "thaumcraft:amulet_mundane" },
+  "components": [
+    { "item": "thaumcraft:vis_resonator" },
+    { "item": "thaumcraft:crystal_essence" },
+    { "item": "thaumcraft:crystal_essence" },
+    { "item": "thaumcraft:crystal_essence" },
+    { "item": "thaumcraft:crystal_essence" },
+    { "item": "thaumcraft:crystal_essence" }
+  ],
+  "result": { "id": "thaumcraft:amulet_vis_stone" }
+}
