@@ -7977,4 +7977,106 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(central.getItem().is(ItemsTC.charmUndying.get()), "the central pedestal should hold a real charm_undying, found: " + central.getItem());
 		helper.succeed();
 	}
+
+	/**
+	 * Names the 5 real elemental-tool infusion recipes this pass unlocked - same "name every id" approach as
+	 * {@link #focusRecipesRegistered}/{@link #baubleInfusionRecipesRegistered}.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void elementalInfusionRecipesRegistered(GameTestHelper helper) {
+		RecipeManager recipes = helper.getLevel().getRecipeManager();
+		String[] expectedIds = { "infusion_elemental_axe", "infusion_elemental_pick", "infusion_elemental_sword",
+				"infusion_elemental_shovel", "infusion_elemental_hoe" };
+		for (String id : expectedIds) {
+			Optional<RecipeHolder<?>> recipe = recipes.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id));
+			helper.assertTrue(recipe.isPresent(), "expected recipe '" + id + "' to be registered, but it wasn't");
+		}
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.items.tools.ItemElementalAxe}'s real "magnet" ability -
+	 * holding right-click should pull a nearby real item entity closer with each real use-tick.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void elementalAxePullsNearbyItemEntitiesWhileUsed(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		ItemEntity dropped = new ItemEntity(level, player.getX() + 4, player.getY(), player.getZ(), new ItemStack(Items.STICK));
+		dropped.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+		level.addFreshEntity(dropped);
+
+		double startDistance = player.distanceTo(dropped);
+		ItemStack axe = new ItemStack(ItemsTC.elementalAxe.get());
+		thaumcraft.common.items.tools.ItemElementalAxe item = (thaumcraft.common.items.tools.ItemElementalAxe) axe.getItem();
+		for (int i = 0; i < 20; i++) {
+			item.onUseTick(level, player, axe, 100);
+			dropped.tick();
+		}
+		double endDistance = player.distanceTo(dropped);
+		helper.assertTrue(endDistance < startDistance,
+				"a nearby item entity should really be pulled closer while the elemental axe is in use - started " + startDistance + ", ended " + endDistance);
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.items.tools.ItemElementalSword}'s real "gust" ability -
+	 * holding right-click should push a nearby real living entity FURTHER away with each real use-tick (the
+	 * opposite direction from the axe's own magnet - see that item's own doc comment for the real motion-
+	 * vector sign difference this test locks in).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void elementalSwordPushesNearbyLivingEntitiesAwayWhileUsed(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		Pig pig = EntityType.PIG.create(level);
+		pig.moveTo(player.getX() + 2, player.getY(), player.getZ());
+		level.addFreshEntity(pig);
+
+		double startDistance = player.distanceTo(pig);
+		ItemStack sword = new ItemStack(ItemsTC.elementalSword.get());
+		thaumcraft.common.items.tools.ItemElementalSword item = (thaumcraft.common.items.tools.ItemElementalSword) sword.getItem();
+		for (int i = 0; i < 20; i++) {
+			item.onUseTick(level, player, sword, 100);
+			pig.tick();
+		}
+		double endDistance = player.distanceTo(pig);
+		helper.assertTrue(endDistance > startDistance,
+				"a nearby living entity should really be pushed further away while the elemental sword is in use - started " + startDistance + ", ended " + endDistance);
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.items.tools.ItemElementalHoe}'s real 3x3 area-till ability -
+	 * a single real right-click on the center of a 3x3 patch of real grass blocks (with real air above each)
+	 * should till all 9 into real farmland, not just the one clicked.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void elementalHoeTillsA3x3AreaAroundTheClickedBlock(GameTestHelper helper) {
+		BlockPos center = new BlockPos(3, 2, 3);
+		for (int xx = -1; xx <= 1; xx++) {
+			for (int zz = -1; zz <= 1; zz++) {
+				helper.setBlock(center.offset(xx, 0, zz), net.minecraft.world.level.block.Blocks.GRASS_BLOCK);
+			}
+		}
+		BlockPos centerAbs = helper.absolutePos(center);
+		ServerPlayer player = spawnCasterAt(helper, centerAbs.above(2));
+		ItemStack hoe = new ItemStack(ItemsTC.elementalHoe.get());
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, hoe);
+
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				net.minecraft.world.phys.Vec3.atCenterOf(centerAbs), net.minecraft.core.Direction.UP, centerAbs, false);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(
+				helper.getLevel(), player, net.minecraft.world.InteractionHand.MAIN_HAND, hoe, hit);
+		((thaumcraft.common.items.tools.ItemElementalHoe) hoe.getItem()).useOn(context);
+
+		for (int xx = -1; xx <= 1; xx++) {
+			for (int zz = -1; zz <= 1; zz++) {
+				BlockPos p = center.offset(xx, 0, zz);
+				helper.assertTrue(helper.getBlockState(p).is(net.minecraft.world.level.block.Blocks.FARMLAND),
+						"position " + p + " should have been tilled into real farmland by the 3x3 area effect, found " + helper.getBlockState(p));
+			}
+		}
+		helper.succeed();
+	}
 }

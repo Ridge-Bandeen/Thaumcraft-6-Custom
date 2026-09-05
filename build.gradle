@@ -462,6 +462,9 @@ sourceSets {
             include 'thaumcraft/common/items/baubles/ItemVerdantCharm.java'
             include 'thaumcraft/common/items/baubles/ItemVoidseerCharm.java'
             include 'thaumcraft/common/lib/events/WornGearEvents.java'
+            include 'thaumcraft/common/items/tools/ItemElementalAxe.java'
+            include 'thaumcraft/common/items/tools/ItemElementalSword.java'
+            include 'thaumcraft/common/items/tools/ItemElementalHoe.java'
 
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }

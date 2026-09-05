@@ -1,0 +1,16 @@
+{
+  "type": "thaumcraft:infusion",
+  "instability": 1,
+  "aspects": {
+    "aqua": 60,
+    "herba": 30
+  },
+  "central": { "item": "thaumcraft:thaumium_axe" },
+  "components": [
+    { "item": "thaumcraft:crystal_essence" },
+    { "item": "thaumcraft:crystal_essence" },
+    { "item": "thaumcraft:nugget_thaumium" },
+    { "item": "thaumcraft:plank_greatwood" }
+  ],
+  "result": { "id": "thaumcraft:elemental_axe" }
+}

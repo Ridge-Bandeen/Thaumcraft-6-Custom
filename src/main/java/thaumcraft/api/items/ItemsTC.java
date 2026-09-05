@@ -800,6 +800,38 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.items.baubles.ItemVoidseerCharm> voidseerCharm =
 			ITEMS.registerItem("voidseer_charm", thaumcraft.common.items.baubles.ItemVoidseerCharm::new);
 
+	/** {@code ThaumcraftMaterials.TOOLMAT_ELEMENTAL} from the original ("THAUMIUM_ELEMENTAL": harvest level 3
+	 * - same tag as {@link #TIER_THAUMIUM}, 1500 uses, 9.0 mining speed, +3 attack damage, 18 enchantability,
+	 * repaired with a Thaumium ingot). A real upgrade path from the base Thaumium tools, crafted at the
+	 * Infusion Altar - see {@code data/thaumcraft/recipe/infusion_elemental_*.json}. */
+	private static final Tier TIER_ELEMENTAL = new SimpleTier(BlockTags.INCORRECT_FOR_DIAMOND_TOOL, 1500, 9.0F, 3.0F, 18,
+			() -> Ingredient.of(ItemsTC.ingotThaumium));
+
+	/** See {@link thaumcraft.common.items.tools.ItemElementalAxe}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemElementalAxe> elementalAxe = ITEMS.registerItem("elemental_axe",
+			props -> new thaumcraft.common.items.tools.ItemElementalAxe(TIER_ELEMENTAL, props.attributes(AxeItem.createAttributes(TIER_ELEMENTAL, 5.0F, -3.0F)).rarity(net.minecraft.world.item.Rarity.RARE)));
+
+	/** A plain upgrade over {@link #thaumiumPick} - the original's own {@code ItemElementalPick} had no
+	 * special ability of its own either, just the better {@link #TIER_ELEMENTAL} tier. */
+	public static final DeferredItem<Item> elementalPick = ITEMS.registerItem("elemental_pick",
+			props -> new PickaxeItem(TIER_ELEMENTAL, props.attributes(PickaxeItem.createAttributes(TIER_ELEMENTAL, 1.0F, -2.8F)).rarity(net.minecraft.world.item.Rarity.RARE)));
+
+	/** See {@link thaumcraft.common.items.tools.ItemElementalSword}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemElementalSword> elementalSword = ITEMS.registerItem("elemental_sword",
+			props -> new thaumcraft.common.items.tools.ItemElementalSword(TIER_ELEMENTAL, props.attributes(SwordItem.createAttributes(TIER_ELEMENTAL, 3, -2.4F)).rarity(net.minecraft.world.item.Rarity.RARE)));
+
+	/** A plain upgrade over {@link #thaumiumShovel} - the original's own {@code ItemElementalShovel} real
+	 * special ability (right-click to duplicate the clicked block into the surrounding 3x3 area from your
+	 * own inventory, {@code IArchitect}-driven) is a real, deliberate cut, same reasoning {@link
+	 * thaumcraft.common.items.casters.ItemCaster}'s own doc comment already gives for {@code IArchitect}/
+	 * block-highlighting: a real, separate, not-yet-built subsystem, not part of this pass's minimal slice. */
+	public static final DeferredItem<Item> elementalShovel = ITEMS.registerItem("elemental_shovel",
+			props -> new ShovelItem(TIER_ELEMENTAL, props.attributes(ShovelItem.createAttributes(TIER_ELEMENTAL, 1.5F, -3.0F)).rarity(net.minecraft.world.item.Rarity.RARE)));
+
+	/** See {@link thaumcraft.common.items.tools.ItemElementalHoe}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemElementalHoe> elementalHoe = ITEMS.registerItem("elemental_hoe",
+			props -> new thaumcraft.common.items.tools.ItemElementalHoe(TIER_ELEMENTAL, props.attributes(HoeItem.createAttributes(TIER_ELEMENTAL, -3.0F, 0.0F)).rarity(net.minecraft.world.item.Rarity.RARE)));
+
 	public static final java.util.Map<thaumcraft.api.aspects.Aspect, DeferredItem<BlockItem>> crystals = new java.util.LinkedHashMap<>();
 	static {
 		registerCrystalItem("crystal_aer", thaumcraft.api.aspects.Aspect.AIR);
