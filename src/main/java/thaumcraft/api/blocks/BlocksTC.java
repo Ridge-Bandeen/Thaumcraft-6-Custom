@@ -276,6 +276,12 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.devices.BlockRedstoneRelay::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).instabreak().sound(SoundType.WOOD).noCollission());
 
+	/** See {@link thaumcraft.common.tiles.essentia.TileCentrifuge}'s own doc comment - a real aspect-
+	 * decomposition device. */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockCentrifuge> centrifuge = BLOCKS.registerBlock("centrifuge",
+			thaumcraft.common.blocks.essentia.BlockCentrifuge::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
+
 	/** The first real {@link thaumcraft.api.aspects.IAspectSource}/{@link thaumcraft.api.aspects.IEssentiaTransport}
 	 * device this port has built - see {@link thaumcraft.common.tiles.essentia.TileJarFillable}'s own doc
 	 * comment for why no physical tube network was needed to make it functional. */

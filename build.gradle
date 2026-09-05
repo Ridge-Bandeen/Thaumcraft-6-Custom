@@ -450,6 +450,9 @@ sourceSets {
 
             include 'thaumcraft/common/blocks/devices/BlockRedstoneRelay.java'
 
+            include 'thaumcraft/common/blocks/essentia/BlockCentrifuge.java'
+            include 'thaumcraft/common/tiles/essentia/TileCentrifuge.java'
+
             include 'thaumcraft/common/blocks/essentia/BlockJar.java'
             include 'thaumcraft/common/tiles/essentia/TileJarFillable.java'
             include 'thaumcraft/common/blocks/essentia/BlockJarVoid.java'

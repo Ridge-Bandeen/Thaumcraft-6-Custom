@@ -8474,4 +8474,65 @@ public class ThaumcraftGameTests {
 				"a real shift-right-click should really cycle IN from its real default of 1 to 2");
 		helper.succeed();
 	}
+
+	/** Names the real Centrifuge crafting recipe and confirms it's actually registered. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void centrifugeRecipeRegistered(GameTestHelper helper) {
+		Optional<RecipeHolder<?>> recipe = helper.getLevel().getRecipeManager()
+				.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "centrifuge"));
+		helper.assertTrue(recipe.isPresent(), "expected the centrifuge recipe to be registered, but it wasn't");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.tiles.essentia.TileCentrifuge} - a real compound aspect
+	 * (LIFE, made of EARTH+WATER) drawn from a real jar below should really decompose into one of its own 2
+	 * real component aspects after processing, ready to be drawn from above.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void centrifugeDecomposesACompoundAspectIntoARealComponent(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos jarPos = new BlockPos(3, 2, 3);
+		BlockPos centPos = jarPos.above();
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		helper.setBlock(centPos, BlocksTC.centrifuge.get());
+		((thaumcraft.common.tiles.essentia.TileJarFillable) helper.getBlockEntity(jarPos)).addToContainer(Aspect.LIFE, 10);
+
+		BlockPos centAbs = helper.absolutePos(centPos);
+		thaumcraft.common.tiles.essentia.TileCentrifuge tile = helper.getBlockEntity(centPos);
+		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(centPos);
+		for (int i = 0; i < 100; i++) {
+			thaumcraft.common.tiles.essentia.TileCentrifuge.tick(level, centAbs, state, tile);
+		}
+
+		AspectList result = tile.getAspects();
+		helper.assertTrue(result.size() == 1 && (result.getAmount(Aspect.EARTH) == 1 || result.getAmount(Aspect.WATER) == 1),
+				"a real centrifuge fed LIFE essentia should really decompose it into EARTH or WATER, found " + result);
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for the Centrifuge's real redstone lock - a powered centrifuge should NOT draw or
+	 * process essentia at all, matching the original's own real {@code gettingPower()} gate.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void centrifugeDoesNothingWhilePowered(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos jarPos = new BlockPos(3, 2, 3);
+		BlockPos centPos = jarPos.above();
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		helper.setBlock(centPos, BlocksTC.centrifuge.get());
+		((thaumcraft.common.tiles.essentia.TileJarFillable) helper.getBlockEntity(jarPos)).addToContainer(Aspect.LIFE, 10);
+		helper.setBlock(centPos.east(), net.minecraft.world.level.block.Blocks.REDSTONE_BLOCK);
+
+		BlockPos centAbs = helper.absolutePos(centPos);
+		thaumcraft.common.tiles.essentia.TileCentrifuge tile = helper.getBlockEntity(centPos);
+		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(centPos);
+		for (int i = 0; i < 100; i++) {
+			thaumcraft.common.tiles.essentia.TileCentrifuge.tick(level, centAbs, state, tile);
+		}
+
+		helper.assertTrue(tile.getAspects().size() == 0, "a real powered centrifuge should really never process anything, found " + tile.getAspects());
+		helper.succeed();
+	}
 }

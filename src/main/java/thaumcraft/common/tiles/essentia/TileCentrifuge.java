@@ -1,237 +1,210 @@
 package thaumcraft.common.tiles.essentia;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.ITickable;
-import net.minecraft.util.SoundCategory;
-import thaumcraft.api.ThaumcraftApiHelper;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.aspects.IAspectContainer;
 import thaumcraft.api.aspects.IEssentiaTransport;
-import thaumcraft.common.lib.SoundsTC;
-import thaumcraft.common.tiles.TileThaumcraft;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 
+/**
+ * Replaces the old (1.12.2) {@code TileCentrifuge} - a real aspect-decomposition device: pulls one unit of a
+ * real non-primal (compound) aspect from below via the same real suction-based {@link IEssentiaTransport}
+ * protocol {@link TileTube} already established, holds it for 2 real seconds, then splits it into one of its
+ * own 2 real component aspects (random pick, matching the original exactly), ready to be drawn from above.
+ * Powering the block with redstone pauses it entirely, same as the original.
+ *
+ * Real, deliberate cut: the original's client-only spinning-axle animation (drawn by a custom
+ * TileEntitySpecialRenderer, since the block itself rendered fully invisible) is dropped in favor of the
+ * real, already-present static baked model - see {@link thaumcraft.common.blocks.essentia.BlockCentrifuge}'s
+ * own doc comment for why that's a real improvement (visible at all) over reproducing the original's own
+ * render setup exactly.
+ */
+public class TileCentrifuge extends BlockEntity implements IAspectContainer, IEssentiaTransport {
 
-public class TileCentrifuge extends TileThaumcraft implements IAspectContainer, IEssentiaTransport, ITickable
-{
-    public Aspect aspectOut;
-    public Aspect aspectIn;
-    int count;
-    int process;
-    float rotationSpeed;
-    public float rotation;
-    
-    public TileCentrifuge() {
-        aspectOut = null;
-        aspectIn = null;
-        count = 0;
-        process = 0;
-        rotationSpeed = 0.0f;
-        rotation = 0.0f;
-    }
-    
-    @Override
-    public void readSyncNBT(NBTTagCompound nbttagcompound) {
-        aspectIn = Aspect.getAspect(nbttagcompound.getString("aspectIn"));
-        aspectOut = Aspect.getAspect(nbttagcompound.getString("aspectOut"));
-    }
-    
-    @Override
-    public NBTTagCompound writeSyncNBT(NBTTagCompound nbttagcompound) {
-        if (aspectIn != null) {
-            nbttagcompound.setString("aspectIn", aspectIn.getTag());
-        }
-        if (aspectOut != null) {
-            nbttagcompound.setString("aspectOut", aspectOut.getTag());
-        }
-        return nbttagcompound;
-    }
-    
-    @Override
-    public AspectList getAspects() {
-        AspectList al = new AspectList();
-        if (aspectOut != null) {
-            al.add(aspectOut, 1);
-        }
-        return al;
-    }
-    
-    @Override
-    public int addToContainer(Aspect tt, int am) {
-        if (am > 0 && aspectOut == null) {
-            aspectOut = tt;
-            markDirty();
-            world.markAndNotifyBlock(getPos(), world.getChunkFromBlockCoords(getPos()), world.getBlockState(getPos()), world.getBlockState(getPos()), 3);
-            --am;
-        }
-        return am;
-    }
-    
-    @Override
-    public boolean takeFromContainer(Aspect tt, int am) {
-        if (aspectOut != null && tt == aspectOut) {
-            aspectOut = null;
-            markDirty();
-            world.markAndNotifyBlock(getPos(), world.getChunkFromBlockCoords(getPos()), world.getBlockState(getPos()), world.getBlockState(getPos()), 3);
-            return true;
-        }
-        return false;
-    }
-    
-    @Override
-    public boolean takeFromContainer(AspectList ot) {
-        return false;
-    }
-    
-    @Override
-    public boolean doesContainerContainAmount(Aspect tag, int amt) {
-        return amt == 1 && tag == aspectOut;
-    }
-    
-    @Override
-    public boolean doesContainerContain(AspectList ot) {
-        for (Aspect tt : ot.getAspects()) {
-            if (tt == aspectOut) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    @Override
-    public int containerContains(Aspect tag) {
-        return (tag == aspectOut) ? 1 : 0;
-    }
-    
-    @Override
-    public boolean doesContainerAccept(Aspect tag) {
-        return true;
-    }
-    
-    @Override
-    public boolean isConnectable(EnumFacing face) {
-        return face == EnumFacing.UP || face == EnumFacing.DOWN;
-    }
-    
-    @Override
-    public boolean canInputFrom(EnumFacing face) {
-        return face == EnumFacing.DOWN;
-    }
-    
-    @Override
-    public boolean canOutputTo(EnumFacing face) {
-        return face == EnumFacing.UP;
-    }
-    
-    @Override
-    public void setSuction(Aspect aspect, int amount) {
-    }
-    
-    @Override
-    public int getMinimumSuction() {
-        return 0;
-    }
-    
-    @Override
-    public Aspect getSuctionType(EnumFacing face) {
-        return null;
-    }
-    
-    @Override
-    public int getSuctionAmount(EnumFacing face) {
-        return (face == EnumFacing.DOWN) ? (gettingPower() ? 0 : ((aspectIn == null) ? 128 : 64)) : 0;
-    }
-    
-    @Override
-    public Aspect getEssentiaType(EnumFacing loc) {
-        return aspectOut;
-    }
-    
-    @Override
-    public int getEssentiaAmount(EnumFacing loc) {
-        return (aspectOut != null) ? 1 : 0;
-    }
-    
-    @Override
-    public int takeEssentia(Aspect aspect, int amount, EnumFacing face) {
-        return (canOutputTo(face) && takeFromContainer(aspect, amount)) ? amount : 0;
-    }
-    
-    @Override
-    public int addEssentia(Aspect aspect, int amount, EnumFacing face) {
-        if (aspectIn == null && !aspect.isPrimal()) {
-            aspectIn = aspect;
-            process = 39;
-            markDirty();
-            world.markAndNotifyBlock(getPos(), world.getChunkFromBlockCoords(getPos()), world.getBlockState(getPos()), world.getBlockState(getPos()), 3);
-            return 1;
-        }
-        return 0;
-    }
-    
-    public void update() {
-        if (!world.isRemote) {
-            if (!gettingPower()) {
-                if (aspectOut == null && aspectIn == null && ++count % 5 == 0) {
-                    drawEssentia();
-                }
-                if (process > 0) {
-                    --process;
-                }
-                if (aspectOut == null && aspectIn != null && process == 0) {
-                    processEssentia();
-                }
-            }
-        }
-        else {
-            if (aspectIn != null && !gettingPower() && rotationSpeed < 20.0f) {
-                rotationSpeed += 2.0f;
-            }
-            if ((aspectIn == null || gettingPower()) && rotationSpeed > 0.0f) {
-                rotationSpeed -= 0.5f;
-            }
-            int pr = (int) rotation;
-            rotation += rotationSpeed;
-            if (rotation % 180.0f <= 20.0f && pr % 180 >= 160 && rotationSpeed > 0.0f) {
-                world.playSound(getPos().getX() + 0.5, getPos().getY() + 0.5, getPos().getZ() + 0.5, SoundsTC.pump, SoundCategory.BLOCKS, 1.0f, 1.0f, false);
-            }
-        }
-    }
-    
-    void processEssentia() {
-        Aspect[] comps = aspectIn.getComponents();
-        aspectOut = comps[world.rand.nextInt(2)];
-        aspectIn = null;
-        markDirty();
-        world.markAndNotifyBlock(getPos(), world.getChunkFromBlockCoords(getPos()), world.getBlockState(getPos()), world.getBlockState(getPos()), 3);
-    }
-    
-    void drawEssentia() {
-        TileEntity te = ThaumcraftApiHelper.getConnectableTile(world, getPos(), EnumFacing.DOWN);
-        if (te != null) {
-            IEssentiaTransport ic = (IEssentiaTransport)te;
-            if (!ic.canOutputTo(EnumFacing.UP)) {
-                return;
-            }
-            Aspect ta = null;
-            if (ic.getEssentiaAmount(EnumFacing.UP) > 0 && ic.getSuctionAmount(EnumFacing.UP) < getSuctionAmount(EnumFacing.DOWN) && getSuctionAmount(EnumFacing.DOWN) >= ic.getMinimumSuction()) {
-                ta = ic.getEssentiaType(EnumFacing.UP);
-            }
-            if (ta != null && !ta.isPrimal() && ic.getSuctionAmount(EnumFacing.UP) < getSuctionAmount(EnumFacing.DOWN) && ic.takeEssentia(ta, 1, EnumFacing.UP) == 1) {
-                aspectIn = ta;
-                process = 39;
-                markDirty();
-                world.markAndNotifyBlock(getPos(), world.getChunkFromBlockCoords(getPos()), world.getBlockState(getPos()), world.getBlockState(getPos()), 3);
-            }
-        }
-    }
-    
-    @Override
-    public void setAspects(AspectList aspects) {
-    }
-    
-    public boolean canRenderBreaking() {
-        return true;
-    }
+	private Aspect aspectIn;
+	private Aspect aspectOut;
+	private int count;
+	private int process;
+
+	public TileCentrifuge(BlockPos pos, BlockState state) {
+		super(ThaumcraftBlockEntities.CENTRIFUGE.get(), pos, state);
+	}
+
+	public static void tick(Level level, BlockPos pos, BlockState state, TileCentrifuge tile) {
+		if (level.isClientSide || level.hasNeighborSignal(pos)) return;
+		if (tile.aspectOut == null && tile.aspectIn == null && ++tile.count % 5 == 0) {
+			tile.drawEssentia(level, pos);
+		}
+		if (tile.process > 0) {
+			tile.process--;
+		}
+		if (tile.aspectOut == null && tile.aspectIn != null && tile.process == 0) {
+			tile.processEssentia();
+		}
+	}
+
+	private void processEssentia() {
+		Aspect[] comps = aspectIn.getComponents();
+		aspectOut = comps[level.getRandom().nextInt(2)];
+		aspectIn = null;
+		setChanged();
+	}
+
+	private void drawEssentia(Level level, BlockPos pos) {
+		if (!(level.getBlockEntity(pos.below()) instanceof IEssentiaTransport neighbor)) return;
+		if (!neighbor.canOutputTo(Direction.UP)) return;
+		if (neighbor.getEssentiaAmount(Direction.UP) <= 0) return;
+		Aspect type = neighbor.getEssentiaType(Direction.UP);
+		if (type == null || type.isPrimal()) return;
+		if (neighbor.getSuctionAmount(Direction.UP) >= getSuctionAmount(Direction.DOWN)) return;
+		if (getSuctionAmount(Direction.DOWN) < neighbor.getMinimumSuction()) return;
+		if (neighbor.takeEssentia(type, 1, Direction.UP) != 1) return;
+		aspectIn = type;
+		process = 39;
+		setChanged();
+	}
+
+	@Override
+	public AspectList getAspects() {
+		AspectList al = new AspectList();
+		if (aspectOut != null) al.add(aspectOut, 1);
+		return al;
+	}
+
+	@Override
+	public void setAspects(AspectList aspects) {
+	}
+
+	@Override
+	public boolean doesContainerAccept(Aspect tag) {
+		return true;
+	}
+
+	@Override
+	public int addToContainer(Aspect tag, int amount) {
+		if (amount > 0 && aspectOut == null) {
+			aspectOut = tag;
+			setChanged();
+			amount--;
+		}
+		return amount;
+	}
+
+	@Override
+	public boolean takeFromContainer(Aspect tag, int amount) {
+		if (aspectOut != null && tag == aspectOut) {
+			aspectOut = null;
+			setChanged();
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public boolean takeFromContainer(AspectList ot) {
+		return false;
+	}
+
+	@Override
+	public boolean doesContainerContainAmount(Aspect tag, int amount) {
+		return amount == 1 && tag == aspectOut;
+	}
+
+	@Override
+	public boolean doesContainerContain(AspectList ot) {
+		for (Aspect a : ot.getAspects()) {
+			if (a == aspectOut) return true;
+		}
+		return false;
+	}
+
+	@Override
+	public int containerContains(Aspect tag) {
+		return tag == aspectOut ? 1 : 0;
+	}
+
+	@Override
+	public boolean isConnectable(Direction face) {
+		return face == Direction.UP || face == Direction.DOWN;
+	}
+
+	@Override
+	public boolean canInputFrom(Direction face) {
+		return face == Direction.DOWN;
+	}
+
+	@Override
+	public boolean canOutputTo(Direction face) {
+		return face == Direction.UP;
+	}
+
+	@Override
+	public void setSuction(Aspect aspect, int amount) {
+	}
+
+	@Override
+	public Aspect getSuctionType(Direction face) {
+		return null;
+	}
+
+	@Override
+	public int getSuctionAmount(Direction face) {
+		if (face != Direction.DOWN) return 0;
+		if (level != null && level.hasNeighborSignal(getBlockPos())) return 0;
+		return aspectIn == null ? 128 : 64;
+	}
+
+	@Override
+	public int getMinimumSuction() {
+		return 0;
+	}
+
+	@Override
+	public Aspect getEssentiaType(Direction face) {
+		return aspectOut;
+	}
+
+	@Override
+	public int getEssentiaAmount(Direction face) {
+		return aspectOut != null ? 1 : 0;
+	}
+
+	@Override
+	public int takeEssentia(Aspect aspect, int amount, Direction face) {
+		return canOutputTo(face) && takeFromContainer(aspect, amount) ? amount : 0;
+	}
+
+	@Override
+	public int addEssentia(Aspect aspect, int amount, Direction face) {
+		if (aspectIn == null && !aspect.isPrimal()) {
+			aspectIn = aspect;
+			process = 39;
+			setChanged();
+			return 1;
+		}
+		return 0;
+	}
+
+	@Override
+	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.loadAdditional(tag, registries);
+		aspectIn = tag.contains("aspectIn") ? Aspect.getAspect(tag.getString("aspectIn")) : null;
+		aspectOut = tag.contains("aspectOut") ? Aspect.getAspect(tag.getString("aspectOut")) : null;
+		process = tag.getInt("process");
+	}
+
+	@Override
+	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.saveAdditional(tag, registries);
+		if (aspectIn != null) tag.putString("aspectIn", aspectIn.getTag());
+		if (aspectOut != null) tag.putString("aspectOut", aspectOut.getTag());
+		tag.putInt("process", process);
+	}
 }

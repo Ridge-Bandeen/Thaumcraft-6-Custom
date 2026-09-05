@@ -65,6 +65,9 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.devices.TileLevitator>> LEVITATOR = BLOCK_ENTITIES.register("levitator",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.devices.TileLevitator::new, BlocksTC.levitator.get()).build(null));
 
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.essentia.TileCentrifuge>> CENTRIFUGE = BLOCK_ENTITIES.register("centrifuge",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.essentia.TileCentrifuge::new, BlocksTC.centrifuge.get()).build(null));
+
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileJarFillable>> JAR = BLOCK_ENTITIES.register("jar_normal",
 			() -> BlockEntityType.Builder.of(TileJarFillable::new, BlocksTC.jarNormal.get()).build(null));
 

@@ -883,6 +883,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> redstoneRelay =
 			ITEMS.registerSimpleBlockItem("redstone_relay", BlocksTC.redstoneRelay);
 
+	public static final DeferredItem<BlockItem> centrifuge =
+			ITEMS.registerSimpleBlockItem("centrifuge", BlocksTC.centrifuge);
+
 	public static final java.util.Map<thaumcraft.api.aspects.Aspect, DeferredItem<BlockItem>> crystals = new java.util.LinkedHashMap<>();
 	static {
 		registerCrystalItem("crystal_aer", thaumcraft.api.aspects.Aspect.AIR);
