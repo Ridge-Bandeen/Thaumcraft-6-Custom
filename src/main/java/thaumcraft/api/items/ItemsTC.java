@@ -877,6 +877,9 @@ public final class ItemsTC {
 			props -> new thaumcraft.common.items.armor.ItemFortressArmor(ThaumcraftArmorMaterials.FORTRESS, ArmorItem.Type.LEGGINGS,
 					props.durability(ArmorItem.Type.LEGGINGS.getDurability(40)).rarity(net.minecraft.world.item.Rarity.RARE)));
 
+	public static final DeferredItem<BlockItem> levitator =
+			ITEMS.registerSimpleBlockItem("levitator", BlocksTC.levitator);
+
 	public static final java.util.Map<thaumcraft.api.aspects.Aspect, DeferredItem<BlockItem>> crystals = new java.util.LinkedHashMap<>();
 	static {
 		registerCrystalItem("crystal_aer", thaumcraft.api.aspects.Aspect.AIR);

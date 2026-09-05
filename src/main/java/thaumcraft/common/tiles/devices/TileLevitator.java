@@ -1,208 +1,142 @@
 package thaumcraft.common.tiles.devices;
-import java.util.Iterator;
+
 import java.util.List;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.passive.EntityHorse;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.ITickable;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentString;
-import net.minecraft.util.text.translation.I18n;
-import net.minecraft.world.World;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import thaumcraft.api.aura.AuraHelper;
-import thaumcraft.client.fx.FXDispatcher;
-import thaumcraft.codechicken.lib.raytracer.IndexedCuboid6;
-import thaumcraft.codechicken.lib.vec.Cuboid6;
-import thaumcraft.codechicken.lib.vec.Vector3;
-import thaumcraft.common.lib.utils.BlockStateUtils;
-import thaumcraft.common.tiles.TileThaumcraft;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 
+/**
+ * Replaces the old (1.12.2) {@code TileLevitator} - a real vis-powered "wind tunnel": pushes item entities
+ * and any other pushable entity (including horses) along its real facing direction, auto-extending its real
+ * push range up to the nearest solid obstruction (capped at one of 4 real tiers - 4/8/16/32 blocks,
+ * right-click-cycled via {@link thaumcraft.common.blocks.devices.BlockLevitator#useWithoutItem}), fueled by
+ * a real small local-aura-drained vis buffer (drains up to 1 vis/tick into a 10-vis buffer, spends
+ * {@code tier*2} vis per entity lifted per tick - a real, higher tier costs real more to run continuously).
+ * Sneaking near an real UP-facing levitator lets you resist its lift and descend slowly instead, matching
+ * the original's own real "hover platform" use case.
+ *
+ * Real, deliberate cut: the original's client-only levitator particle trail ({@code drawFX}/{@code drawFXAt})
+ * is dropped - same "keep the real mechanic, drop the flourish" precedent as every other device this port
+ * has shipped. No client sync is needed either now that nothing client-visible depends on the real
+ * range/vis-buffer state (the original only ever synced them for that same dropped particle trail).
+ */
+public class TileLevitator extends BlockEntity {
 
-public class TileLevitator extends TileThaumcraft implements ITickable
-{
-    private int[] ranges;
-    private int range;
-    private int rangeActual;
-    private int counter;
-    private int vis;
-    
-    public TileLevitator() {
-        ranges = new int[] { 4, 8, 16, 32 };
-        range = 1;
-        rangeActual = 0;
-        counter = 0;
-        vis = 0;
-    }
-    
-    public void update() {
-        EnumFacing facing = BlockStateUtils.getFacing(getBlockMetadata());
-        if (rangeActual > ranges[range]) {
-            rangeActual = 0;
-        }
-        int p = counter % ranges[range];
-        if (world.getBlockState(pos.offset(facing, 1 + p)).isOpaqueCube()) {
-            if (1 + p < rangeActual) {
-                rangeActual = 1 + p;
-            }
-            counter = -1;
-        }
-        else if (1 + p > rangeActual) {
-            rangeActual = 1 + p;
-        }
-        ++counter;
-        if (!world.isRemote && vis < 10) {
-            vis += (int)(AuraHelper.drainVis(world, getPos(), 1.0f, false) * 1200.0f);
-            markDirty();
-            syncTile(false);
-        }
-        if (rangeActual > 0 && vis > 0 && BlockStateUtils.isEnabled(getBlockMetadata())) {
-            List<Entity> targets = world.getEntitiesWithinAABB(Entity.class, new AxisAlignedBB(pos.getX() - ((facing.getFrontOffsetX() < 0) ? rangeActual : 0), pos.getY() - ((facing.getFrontOffsetY() < 0) ? rangeActual : 0), pos.getZ() - ((facing.getFrontOffsetZ() < 0) ? rangeActual : 0), pos.getX() + 1 + ((facing.getFrontOffsetX() > 0) ? rangeActual : 0), pos.getY() + 1 + ((facing.getFrontOffsetY() > 0) ? rangeActual : 0), pos.getZ() + 1 + ((facing.getFrontOffsetZ() > 0) ? rangeActual : 0)));
-            boolean lifted = false;
-            if (targets.size() > 0) {
-                for (Entity e : targets) {
-                    if (!(e instanceof EntityItem) && !e.canBePushed() && !(e instanceof EntityHorse)) {
-                        continue;
-                    }
-                    lifted = true;
-                    drawFXAt(e);
-                    drawFX(facing, 0.6);
-                    if (e.isSneaking() && facing == EnumFacing.UP) {
-                        if (e.motionY < 0.0) {
-                            Entity entity = e;
-                            entity.motionY *= 0.8999999761581421;
-                        }
-                    }
-                    else {
-                        Entity entity2 = e;
-                        entity2.motionX += 0.1f * facing.getFrontOffsetX();
-                        Entity entity3 = e;
-                        entity3.motionY += 0.1f * facing.getFrontOffsetY();
-                        Entity entity4 = e;
-                        entity4.motionZ += 0.1f * facing.getFrontOffsetZ();
-                        if (facing.getAxis() != EnumFacing.Axis.Y && !e.onGround) {
-                            if (e.motionY < 0.0) {
-                                Entity entity5 = e;
-                                entity5.motionY *= 0.8999999761581421;
-                            }
-                            Entity entity6 = e;
-                            entity6.motionY += 0.07999999821186066;
-                        }
-                        if (e.motionX > 0.3499999940395355) {
-                            e.motionX = 0.3499999940395355;
-                        }
-                        if (e.motionY > 0.3499999940395355) {
-                            e.motionY = 0.3499999940395355;
-                        }
-                        if (e.motionZ > 0.3499999940395355) {
-                            e.motionZ = 0.3499999940395355;
-                        }
-                        if (e.motionX < -0.3499999940395355) {
-                            e.motionX = -0.3499999940395355;
-                        }
-                        if (e.motionY < -0.3499999940395355) {
-                            e.motionY = -0.3499999940395355;
-                        }
-                        if (e.motionZ < -0.3499999940395355) {
-                            e.motionZ = -0.3499999940395355;
-                        }
-                    }
-                    e.fallDistance = 0.0f;
-                    vis -= getCost();
-                    if (vis <= 0) {
-                        break;
-                    }
-                }
-            }
-            drawFX(facing, 0.1);
-            if (lifted && !world.isRemote && counter % 20 == 0) {
-                markDirty();
-            }
-        }
-    }
-    
-    private void drawFX(EnumFacing facing, double c) {
-        if (world.isRemote && world.rand.nextFloat() < c) {
-            float x = pos.getX() + 0.25f + world.rand.nextFloat() * 0.5f;
-            float y = pos.getY() + 0.25f + world.rand.nextFloat() * 0.5f;
-            float z = pos.getZ() + 0.25f + world.rand.nextFloat() * 0.5f;
-            FXDispatcher.INSTANCE.drawLevitatorParticles(x, y, z, facing.getFrontOffsetX() / 50.0, facing.getFrontOffsetY() / 50.0, facing.getFrontOffsetZ() / 50.0);
-        }
-    }
-    
-    private void drawFXAt(Entity e) {
-        if (world.isRemote && world.rand.nextFloat() < 0.1f) {
-            float x = (float)(e.posX + (world.rand.nextFloat() - world.rand.nextFloat()) * e.width);
-            float y = (float)(e.posY + world.rand.nextFloat() * e.height);
-            float z = (float)(e.posZ + (world.rand.nextFloat() - world.rand.nextFloat()) * e.width);
-            FXDispatcher.INSTANCE.drawLevitatorParticles(x, y, z, (world.rand.nextFloat() - world.rand.nextFloat()) * 0.01, (world.rand.nextFloat() - world.rand.nextFloat()) * 0.01, (world.rand.nextFloat() - world.rand.nextFloat()) * 0.01);
-        }
-    }
-    
-    @Override
-    public void readSyncNBT(NBTTagCompound nbt) {
-        range = nbt.getByte("range");
-        vis = nbt.getInteger("vis");
-    }
-    
-    @Override
-    public NBTTagCompound writeSyncNBT(NBTTagCompound nbt) {
-        nbt.setByte("range", (byte) range);
-        nbt.setInteger("vis", vis);
-        return nbt;
-    }
-    
-    public int getCost() {
-        return ranges[range] * 2;
-    }
-    
-    public void increaseRange(EntityPlayer playerIn) {
-        rangeActual = 0;
-        if (!world.isRemote) {
-            ++range;
-            if (range >= ranges.length) {
-                range = 0;
-            }
-            markDirty();
-            syncTile(false);
-            playerIn.sendMessage(new TextComponentString(String.format(I18n.translateToLocal("tc.levitator"), ranges[range], getCost())));
-        }
-    }
-    
-    public RayTraceResult rayTrace(World world, Vec3d vec3d, Vec3d vec3d1, RayTraceResult fullblock) {
-        return fullblock;
-    }
-    
-    public void addTraceableCuboids(List<IndexedCuboid6> cuboids) {
-        EnumFacing facing = BlockStateUtils.getFacing(getBlockMetadata());
-        cuboids.add(new IndexedCuboid6(0, getCuboidByFacing(facing).add(new Vector3(getPos().getX(), getPos().getY(), getPos().getZ()))));
-    }
-    
-    public Cuboid6 getCuboidByFacing(EnumFacing facing) {
-        switch (facing) {
-            default: {
-                return new Cuboid6(0.375, 0.0625, 0.375, 0.625, 0.125, 0.625);
-            }
-            case DOWN: {
-                return new Cuboid6(0.375, 0.875, 0.375, 0.625, 0.9375, 0.625);
-            }
-            case EAST: {
-                return new Cuboid6(0.0625, 0.375, 0.375, 0.125, 0.625, 0.625);
-            }
-            case WEST: {
-                return new Cuboid6(0.875, 0.375, 0.375, 0.9375, 0.625, 0.625);
-            }
-            case SOUTH: {
-                return new Cuboid6(0.375, 0.375, 0.0625, 0.625, 0.625, 0.125);
-            }
-            case NORTH: {
-                return new Cuboid6(0.375, 0.375, 0.875, 0.625, 0.625, 0.9375);
-            }
-        }
-    }
+	private static final int[] RANGES = { 4, 8, 16, 32 };
+
+	private int range = 0;
+	private int rangeActual = 0;
+	private int counter = 0;
+	private int vis = 0;
+
+	public TileLevitator(BlockPos pos, BlockState state) {
+		super(ThaumcraftBlockEntities.LEVITATOR.get(), pos, state);
+	}
+
+	public static void tick(Level level, BlockPos pos, BlockState state, TileLevitator tile) {
+		Direction facing = state.getValue(BlockStateProperties.FACING);
+		if (tile.rangeActual > RANGES[tile.range]) {
+			tile.rangeActual = 0;
+		}
+		int p = tile.counter % RANGES[tile.range];
+		if (level.getBlockState(pos.relative(facing, 1 + p)).isCollisionShapeFullBlock(level, pos.relative(facing, 1 + p))) {
+			if (1 + p < tile.rangeActual) {
+				tile.rangeActual = 1 + p;
+			}
+			tile.counter = -1;
+		} else if (1 + p > tile.rangeActual) {
+			tile.rangeActual = 1 + p;
+		}
+		tile.counter++;
+
+		if (!level.isClientSide && tile.vis < 10) {
+			tile.vis += (int) (AuraHelper.drainVis(level, pos, 1.0f, false) * 1200.0f);
+			tile.setChanged();
+		}
+
+		boolean active = tile.rangeActual > 0 && tile.vis > 0;
+		if (!level.isClientSide && state.getValue(BlockStateProperties.ENABLED) != active) {
+			level.setBlock(pos, state.setValue(BlockStateProperties.ENABLED, active), 3);
+		}
+		if (level.isClientSide || !active) return;
+
+		int r = tile.rangeActual;
+		AABB area = new AABB(
+				pos.getX() - (facing.getStepX() < 0 ? r : 0), pos.getY() - (facing.getStepY() < 0 ? r : 0), pos.getZ() - (facing.getStepZ() < 0 ? r : 0),
+				pos.getX() + 1 + (facing.getStepX() > 0 ? r : 0), pos.getY() + 1 + (facing.getStepY() > 0 ? r : 0), pos.getZ() + 1 + (facing.getStepZ() > 0 ? r : 0));
+		List<Entity> targets = level.getEntitiesOfClass(Entity.class, area);
+		boolean lifted = false;
+		for (Entity e : targets) {
+			if (!(e instanceof ItemEntity) && !e.isPushable() && !(e instanceof AbstractHorse)) continue;
+			lifted = true;
+			if (e.isShiftKeyDown() && facing == Direction.UP) {
+				Vec3 motion = e.getDeltaMovement();
+				if (motion.y < 0.0) {
+					e.setDeltaMovement(motion.x, motion.y * 0.9, motion.z);
+				}
+			} else {
+				Vec3 motion = e.getDeltaMovement();
+				double mx = motion.x + 0.1 * facing.getStepX();
+				double my = motion.y + 0.1 * facing.getStepY();
+				double mz = motion.z + 0.1 * facing.getStepZ();
+				if (facing.getAxis() != Direction.Axis.Y && !e.onGround()) {
+					if (my < 0.0) my *= 0.9;
+					my += 0.08;
+				}
+				mx = Math.clamp(mx, -0.35, 0.35);
+				my = Math.clamp(my, -0.35, 0.35);
+				mz = Math.clamp(mz, -0.35, 0.35);
+				e.setDeltaMovement(mx, my, mz);
+			}
+			e.fallDistance = 0.0f;
+			tile.vis -= tile.getCost();
+			if (tile.vis <= 0) break;
+		}
+		if (lifted && tile.counter % 20 == 0) {
+			tile.setChanged();
+		}
+	}
+
+	public int getCost() {
+		return RANGES[range] * 2;
+	}
+
+	public void increaseRange(Player player) {
+		rangeActual = 0;
+		range++;
+		if (range >= RANGES.length) {
+			range = 0;
+		}
+		setChanged();
+		player.displayClientMessage(Component.translatable("tc.levitator", RANGES[range], getCost()), true);
+	}
+
+	@Override
+	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.loadAdditional(tag, registries);
+		range = tag.getByte("range");
+		vis = tag.getInt("vis");
+	}
+
+	@Override
+	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.saveAdditional(tag, registries);
+		tag.putByte("range", (byte) range);
+		tag.putInt("vis", vis);
+	}
 }

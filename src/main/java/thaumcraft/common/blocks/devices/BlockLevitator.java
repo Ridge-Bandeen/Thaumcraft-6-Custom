@@ -1,126 +1,109 @@
 package thaumcraft.common.blocks.devices;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import net.minecraft.block.Block;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.client.Minecraft;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import net.minecraftforge.client.event.DrawBlockHighlightEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.codechicken.lib.raytracer.ExtendedMOP;
-import thaumcraft.codechicken.lib.raytracer.IndexedCuboid6;
-import thaumcraft.codechicken.lib.raytracer.RayTracer;
-import thaumcraft.codechicken.lib.vec.BlockCoord;
-import thaumcraft.codechicken.lib.vec.Cuboid6;
-import thaumcraft.codechicken.lib.vec.Vector3;
-import thaumcraft.common.blocks.BlockTCDevice;
-import thaumcraft.common.blocks.IBlockEnabled;
-import thaumcraft.common.blocks.IBlockFacing;
-import thaumcraft.common.lib.SoundsTC;
-import thaumcraft.common.lib.utils.BlockStateUtils;
+
+import javax.annotation.Nullable;
+
+import com.mojang.serialization.MapCodec;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 import thaumcraft.common.tiles.devices.TileLevitator;
 
+/**
+ * Replaces the old (1.12.2) {@code BlockLevitator} - a directional vis-powered "wind tunnel" that pushes
+ * entities along its facing (see {@link TileLevitator}'s own doc comment for the real push/range mechanic).
+ * Same {@code FACING}-from-clicked-face placement convention as {@link BlockArcaneEar}.
+ *
+ * Real, deliberate simplification: the original used a CodeChickenLib multi-hitbox raytracer so only
+ * clicking a small raised "key" nub on one face would cycle the range, leaving the rest of the block's real
+ * interaction (none, in the original) untouched - that whole precise-sub-hitbox-click system doesn't exist
+ * in modern MC and isn't worth rebuilding for this one interaction. Right-clicking anywhere on the block now
+ * cycles the range instead - same real function, a plain interaction like every other device this port has
+ * shipped.
+ */
+public class BlockLevitator extends Block implements EntityBlock {
 
-@Mod.EventBusSubscriber({ Side.CLIENT })
-public class BlockLevitator extends BlockTCDevice implements IBlockFacing, IBlockEnabled
-{
-    private RayTracer rayTracer;
-    
-    public BlockLevitator() {
-        super(Material.WOOD, TileLevitator.class, "levitator");
-        rayTracer = new RayTracer();
-        setSoundType(SoundType.WOOD);
-    }
-    
-    public boolean isOpaqueCube(IBlockState state) {
-        return false;
-    }
-    
-    public boolean isFullCube(IBlockState state) {
-        return false;
-    }
-    
-    @Override
-    public int damageDropped(IBlockState state) {
-        return 0;
-    }
-    
-    public boolean onBlockActivated(World world, BlockPos pos, IBlockState state, EntityPlayer player, EnumHand hand, EnumFacing side, float hitX, float hitY, float hitZ) {
-        RayTraceResult hit = RayTracer.retraceBlock(world, player, pos);
-        if (hit == null) {
-            return super.onBlockActivated(world, pos, state, player, hand, side, hitX, hitY, hitZ);
-        }
-        TileEntity tile = world.getTileEntity(pos);
-        if (hit.subHit == 0 && tile instanceof TileLevitator) {
-            ((TileLevitator)tile).increaseRange(player);
-            world.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, SoundsTC.key, SoundCategory.BLOCKS, 0.5f, 1.0f);
-            return true;
-        }
-        return super.onBlockActivated(world, pos, state, player, hand, side, hitX, hitY, hitZ);
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public AxisAlignedBB getSelectedBoundingBox(IBlockState state, World world, BlockPos pos) {
-        TileEntity tile = world.getTileEntity(pos);
-        if (tile != null && tile instanceof TileLevitator) {
-            RayTraceResult hit = RayTracer.retraceBlock(world, Minecraft.getMinecraft().player, pos);
-            if (hit != null && hit.subHit == 0) {
-                Cuboid6 cubeoid = ((TileLevitator)tile).getCuboidByFacing(BlockStateUtils.getFacing(tile.getBlockMetadata()));
-                Vector3 v = new Vector3(pos);
-                Cuboid6 c = cubeoid.add(v);
-                return c.aabb();
-            }
-        }
-        return super.getSelectedBoundingBox(state, world, pos);
-    }
-    
-    public AxisAlignedBB getBoundingBox(IBlockState state, IBlockAccess source, BlockPos pos) {
-        EnumFacing facing = BlockStateUtils.getFacing(state);
-        float f = 0.125f;
-        float minx = 0.0f + ((facing.getFrontOffsetX() > 0) ? f : 0.0f);
-        float maxx = 1.0f - ((facing.getFrontOffsetX() < 0) ? f : 0.0f);
-        float miny = 0.0f + ((facing.getFrontOffsetY() > 0) ? f : 0.0f);
-        float maxy = 1.0f - ((facing.getFrontOffsetY() < 0) ? f : 0.0f);
-        float minz = 0.0f + ((facing.getFrontOffsetZ() > 0) ? f : 0.0f);
-        float maxz = 1.0f - ((facing.getFrontOffsetZ() < 0) ? f : 0.0f);
-        return new AxisAlignedBB(minx, miny, minz, maxx, maxy, maxz);
-    }
-    
-    @SideOnly(Side.CLIENT)
-    @SubscribeEvent
-    public void onBlockHighlight(DrawBlockHighlightEvent event) {
-        if (event.getTarget().typeOfHit == RayTraceResult.Type.BLOCK && event.getPlayer().world.getBlockState(event.getTarget().getBlockPos()).getBlock() == this) {
-            RayTracer.retraceBlock(event.getPlayer().world, event.getPlayer(), event.getTarget().getBlockPos());
-        }
-    }
-    
-    public RayTraceResult collisionRayTrace(IBlockState state, World world, BlockPos pos, Vec3d start, Vec3d end) {
-        TileEntity tile = world.getTileEntity(pos);
-        if (tile == null || !(tile instanceof TileLevitator)) {
-            return super.collisionRayTrace(state, world, pos, start, end);
-        }
-        List<IndexedCuboid6> cuboids = new LinkedList<IndexedCuboid6>();
-        if (tile instanceof TileLevitator) {
-            ((TileLevitator)tile).addTraceableCuboids(cuboids);
-        }
-        ArrayList<ExtendedMOP> list = new ArrayList<ExtendedMOP>();
-        rayTracer.rayTraceCuboids(new Vector3(start), new Vector3(end), cuboids, new BlockCoord(pos), this, list);
-        return (list.size() > 0) ? list.get(0) : super.collisionRayTrace(state, world, pos, start, end);
-    }
+	public static final MapCodec<BlockLevitator> CODEC = simpleCodec(BlockLevitator::new);
+
+	private static final VoxelShape SHAPE_DOWN = Shapes.box(0.375, 0.0, 0.375, 0.625, 0.9375, 0.625);
+	private static final VoxelShape SHAPE_UP = Shapes.box(0.375, 0.0625, 0.375, 0.625, 1.0, 0.625);
+	private static final VoxelShape SHAPE_NORTH = Shapes.box(0.375, 0.375, 0.0, 0.625, 0.625, 0.9375);
+	private static final VoxelShape SHAPE_SOUTH = Shapes.box(0.375, 0.375, 0.0625, 0.625, 0.625, 1.0);
+	private static final VoxelShape SHAPE_WEST = Shapes.box(0.0, 0.375, 0.375, 0.9375, 0.625, 0.625);
+	private static final VoxelShape SHAPE_EAST = Shapes.box(0.0625, 0.375, 0.375, 1.0, 0.625, 0.625);
+
+	public BlockLevitator(BlockBehaviour.Properties properties) {
+		super(properties);
+		registerDefaultState(getStateDefinition().any()
+				.setValue(BlockStateProperties.FACING, Direction.UP)
+				.setValue(BlockStateProperties.ENABLED, false));
+	}
+
+	@Override
+	protected MapCodec<? extends Block> codec() {
+		return CODEC;
+	}
+
+	@Override
+	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+		builder.add(BlockStateProperties.FACING, BlockStateProperties.ENABLED);
+	}
+
+	@Override
+	public BlockState getStateForPlacement(BlockPlaceContext context) {
+		return defaultBlockState().setValue(BlockStateProperties.FACING, context.getClickedFace());
+	}
+
+	@Override
+	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		return switch (state.getValue(BlockStateProperties.FACING)) {
+			case DOWN -> SHAPE_DOWN;
+			case UP -> SHAPE_UP;
+			case NORTH -> SHAPE_NORTH;
+			case SOUTH -> SHAPE_SOUTH;
+			case WEST -> SHAPE_WEST;
+			case EAST -> SHAPE_EAST;
+		};
+	}
+
+	@Override
+	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+		if (level.isClientSide) return InteractionResult.SUCCESS;
+		if (level.getBlockEntity(pos) instanceof TileLevitator tile) {
+			tile.increaseRange(player);
+		}
+		return InteractionResult.CONSUME;
+	}
+
+	@Nullable
+	@Override
+	public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+		return new TileLevitator(pos, state);
+	}
+
+	@Nullable
+	@Override
+	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+		return type == ThaumcraftBlockEntities.LEVITATOR.get()
+				? (lvl, pos, st, be) -> TileLevitator.tick(lvl, pos, st, (TileLevitator) be)
+				: null;
+	}
 }

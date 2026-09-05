@@ -546,7 +546,7 @@
   "block.thaumcraft.golem_builder": "Golem Builder",
   "tile.arcane_ear.name": "Arcane Ear",
   "tile.arcane_ear_toggle.name": "Arcane Ear (Toggle)",
-  "tile.levitator.name": "Arcane Levitator",
+  "block.thaumcraft.levitator": "Arcane Levitator",
   "tile.everfull_urn.name": "Everfull Urn",
   "tile.lamp_arcane.name": "Arcane Lamp",
   "tile.lamp_growth.name": "Lamp of Growth  ",

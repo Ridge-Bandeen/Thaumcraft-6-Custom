@@ -264,6 +264,12 @@ public final class BlocksTC {
 			props -> new thaumcraft.common.blocks.devices.BlockArcaneEar(props, true),
 			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
 
+	/** See {@link thaumcraft.common.tiles.devices.TileLevitator}'s own doc comment - a real vis-powered
+	 * directional "wind tunnel." */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockLevitator> levitator = BLOCKS.registerBlock("levitator",
+			thaumcraft.common.blocks.devices.BlockLevitator::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
+
 	/** The first real {@link thaumcraft.api.aspects.IAspectSource}/{@link thaumcraft.api.aspects.IEssentiaTransport}
 	 * device this port has built - see {@link thaumcraft.common.tiles.essentia.TileJarFillable}'s own doc
 	 * comment for why no physical tube network was needed to make it functional. */

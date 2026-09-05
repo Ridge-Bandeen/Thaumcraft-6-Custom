@@ -8372,4 +8372,42 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(recipe.matches(rightInput, level), "a real Strong Healing potion should really satisfy the recipe");
 		helper.succeed();
 	}
+
+	/** Names the real Levitator crafting recipe and confirms it's actually registered. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void levitatorRecipeRegistered(GameTestHelper helper) {
+		Optional<RecipeHolder<?>> recipe = helper.getLevel().getRecipeManager()
+				.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "levitator"));
+		helper.assertTrue(recipe.isPresent(), "expected the levitator recipe to be registered, but it wasn't");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.tiles.devices.TileLevitator} - a real Levitator with real
+	 * vis available should really push a real nearby item entity upward along its facing, and really flip
+	 * its own real ENABLED blockstate on while doing so.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void levitatorPushesItemsUpwardAndTogglesEnabled(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos levPos = new BlockPos(3, 2, 3);
+		helper.setBlock(levPos, BlocksTC.levitator.get());
+		BlockPos levAbs = helper.absolutePos(levPos);
+		AuraHandler.addVis(level, levAbs, 500.0f);
+
+		ItemEntity item = new ItemEntity(level, levAbs.getX() + 0.5, levAbs.getY() + 1.5, levAbs.getZ() + 0.5, new ItemStack(Items.STICK));
+		item.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+		level.addFreshEntity(item);
+
+		thaumcraft.common.tiles.devices.TileLevitator tile = helper.getBlockEntity(levPos);
+		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(levPos);
+		for (int i = 0; i < 40; i++) {
+			thaumcraft.common.tiles.devices.TileLevitator.tick(level, levAbs, helper.getBlockState(levPos), tile);
+		}
+
+		helper.assertTrue(item.getDeltaMovement().y > 0.0, "a real item above an active levitator should really be pushed upward, found motion " + item.getDeltaMovement());
+		helper.assertTrue(helper.getBlockState(levPos).getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED),
+				"a real active levitator should really flip its own ENABLED blockstate on");
+		helper.succeed();
+	}
 }
