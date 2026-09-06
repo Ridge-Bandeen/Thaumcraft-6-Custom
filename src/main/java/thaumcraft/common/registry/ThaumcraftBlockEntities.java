@@ -68,6 +68,9 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.misc.TileHole>> HOLE = BLOCK_ENTITIES.register("hole",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.misc.TileHole::new, BlocksTC.hole.get()).build(null));
 
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.devices.TileInfernalFurnace>> INFERNAL_FURNACE = BLOCK_ENTITIES.register("infernal_furnace",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.devices.TileInfernalFurnace::new, BlocksTC.infernalFurnace.get()).build(null));
+
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.essentia.TileCentrifuge>> CENTRIFUGE = BLOCK_ENTITIES.register("centrifuge",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.essentia.TileCentrifuge::new, BlocksTC.centrifuge.get()).build(null));
 

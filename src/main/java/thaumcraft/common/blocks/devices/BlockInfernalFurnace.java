@@ -1,137 +1,125 @@
 package thaumcraft.common.blocks.devices;
-import java.util.Random;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.init.Blocks;
-import net.minecraft.item.Item;
-import net.minecraft.util.BlockRenderLayer;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.api.blocks.BlocksTC;
-import thaumcraft.common.blocks.BlockTCDevice;
-import thaumcraft.common.blocks.IBlockFacingHorizontal;
-import thaumcraft.common.lib.utils.BlockStateUtils;
+
+import javax.annotation.Nullable;
+
+import com.mojang.serialization.MapCodec;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.phys.Vec3;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 import thaumcraft.common.tiles.devices.TileInfernalFurnace;
 
+/**
+ * Replaces the old (1.12.2) {@code BlockInfernalFurnace} - a real fuel-free, vis-fed lava furnace: anything
+ * dropped on top gets pulled in and auto-smelted, anything not smeltable is destroyed, living entities that
+ * touch it take real lava-like damage and catch fire.
+ *
+ * Real, documented cut, same "pick the right vanilla-shaped block directly, drop the multi-block illusion"
+ * simplification {@code BlockGolemBuilder}'s own doc comment already established for exactly this situation:
+ * the original wasn't a real block at all - an invisible core built by a whole separate "structure
+ * recognition" ritual ({@code IDustTrigger}/{@code DustTriggerMultiblock}, never ported) that swapped a real
+ * 3x3x3 arrangement of decorative nether-brick/obsidian/iron-bars "placeholder" blocks into their real vanilla
+ * equivalents on completion/destruction. This ships as one real, solid, directly placed/broken block instead,
+ * with a real {@link thaumcraft.api.crafting} recipe using the same real ingredients the original's ritual
+ * consumed (nether bricks/obsidian/iron bars/lava bucket) rather than the original's structure-based
+ * acquisition. Real, deliberate cut: the smelting-bonus-nugget system ({@code ThaumcraftApi.SmeltBonus}/the
+ * real ~30 registered bonuses in the original's {@code ConfigRecipes}) needs a whole family of modern nugget
+ * items this port hasn't built yet ({@code ItemsTC} has none) - a real, separately-scoped future addition,
+ * not attempted here. See {@link TileInfernalFurnace}'s own doc comment for the real smelting mechanic.
+ */
+public class BlockInfernalFurnace extends Block implements EntityBlock {
 
-public class BlockInfernalFurnace extends BlockTCDevice implements IBlockFacingHorizontal
-{
-    public static boolean ignore;
-    
-    public BlockInfernalFurnace() {
-        super(Material.ROCK, TileInfernalFurnace.class, "infernal_furnace");
-        setSoundType(SoundType.STONE);
-        setLightLevel(0.9f);
-        IBlockState bs = blockState.getBaseState();
-        bs.withProperty((IProperty)IBlockFacingHorizontal.FACING, (Comparable)EnumFacing.NORTH);
-        setDefaultState(bs);
-        setCreativeTab(null);
-    }
-    
-    @Override
-    public boolean rotateBlock(World world, BlockPos pos, EnumFacing axis) {
-        return false;
-    }
-    
-    public AxisAlignedBB getBoundingBox(IBlockState state, IBlockAccess source, BlockPos pos) {
-        return new AxisAlignedBB(0.0, 0.0, 0.0, 1.0, 0.5, 1.0);
-    }
-    
-    @Override
-    public void onBlockAdded(World worldIn, BlockPos pos, IBlockState state) {
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public BlockRenderLayer getBlockLayer() {
-        return BlockRenderLayer.CUTOUT_MIPPED;
-    }
-    
-    @Override
-    public IBlockState getStateForPlacement(World worldIn, BlockPos pos, EnumFacing facing, float hitX, float hitY, float hitZ, int meta, EntityLivingBase placer) {
-        IBlockState bs = getDefaultState();
-        bs = bs.withProperty((IProperty)IBlockFacingHorizontal.FACING, (Comparable)placer.getHorizontalFacing().getOpposite());
-        return bs;
-    }
-    
-    public static void destroyFurnace(World worldIn, BlockPos pos, IBlockState state, BlockPos startpos) {
-        if (BlockInfernalFurnace.ignore || worldIn.isRemote) {
-            return;
-        }
-        BlockInfernalFurnace.ignore = true;
-        for (int a = -1; a <= 1; ++a) {
-            for (int b = -1; b <= 1; ++b) {
-                for (int c = -1; c <= 1; ++c) {
-                    if (pos.add(a, b, c) != startpos) {
-                        IBlockState bs = worldIn.getBlockState(pos.add(a, b, c));
-                        if (bs.getBlock() == BlocksTC.placeholderNetherbrick) {
-                            worldIn.setBlockState(pos.add(a, b, c), Blocks.NETHER_BRICK.getDefaultState());
-                        }
-                        if (bs.getBlock() == BlocksTC.placeholderObsidian) {
-                            worldIn.setBlockState(pos.add(a, b, c), Blocks.OBSIDIAN.getDefaultState());
-                        }
-                    }
-                }
-            }
-        }
-        if (worldIn.isAirBlock(pos.offset(BlockStateUtils.getFacing(state).getOpposite()))) {
-            worldIn.setBlockState(pos.offset(BlockStateUtils.getFacing(state).getOpposite()), Blocks.IRON_BARS.getDefaultState());
-        }
-        worldIn.setBlockState(pos, Blocks.LAVA.getDefaultState());
-        BlockInfernalFurnace.ignore = false;
-    }
-    
-    public Item getItemDropped(IBlockState state, Random rand, int fortune) {
-        return Item.getItemById(0);
-    }
-    
-    @Override
-    public void breakBlock(World worldIn, BlockPos pos, IBlockState state) {
-        destroyFurnace(worldIn, pos, state, pos);
-        super.breakBlock(worldIn, pos, state);
-    }
-    
-    public void onEntityCollidedWithBlock(World world, BlockPos pos, IBlockState state, Entity entity) {
-        if (entity.posX < pos.getX() + 0.3f) {
-            entity.motionX += 9.999999747378752E-5;
-        }
-        if (entity.posX > pos.getX() + 0.7f) {
-            entity.motionX -= 9.999999747378752E-5;
-        }
-        if (entity.posZ < pos.getZ() + 0.3f) {
-            entity.motionZ += 9.999999747378752E-5;
-        }
-        if (entity.posZ > pos.getZ() + 0.7f) {
-            entity.motionZ -= 9.999999747378752E-5;
-        }
-        if (!world.isRemote && entity.ticksExisted % 10 == 0) {
-            if (entity instanceof EntityItem) {
-                entity.motionY = 0.02500000037252903;
-                if (entity.onGround) {
-                    TileInfernalFurnace taf = (TileInfernalFurnace)world.getTileEntity(pos);
-                    ((EntityItem)entity).setItem(taf.addItemsToInventory(((EntityItem)entity).getItem()));
-                }
-            }
-            else if (entity instanceof EntityLivingBase && !entity.isImmuneToFire()) {
-                entity.attackEntityFrom(DamageSource.LAVA, 3.0f);
-                entity.setFire(10);
-            }
-        }
-        super.onEntityCollidedWithBlock(world, pos, state, entity);
-    }
-    
-    static {
-        BlockInfernalFurnace.ignore = false;
-    }
+	public static final MapCodec<BlockInfernalFurnace> CODEC = simpleCodec(BlockInfernalFurnace::new);
+
+	private static final VoxelShape SHAPE = Shapes.box(0, 0, 0, 1, 0.5, 1);
+
+	public BlockInfernalFurnace(BlockBehaviour.Properties properties) {
+		super(properties);
+		registerDefaultState(getStateDefinition().any().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH));
+	}
+
+	@Override
+	protected MapCodec<? extends Block> codec() {
+		return CODEC;
+	}
+
+	@Override
+	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+		builder.add(BlockStateProperties.HORIZONTAL_FACING);
+	}
+
+	@Override
+	public BlockState getStateForPlacement(BlockPlaceContext context) {
+		// Real original semantic: faces AWAY from the placer, matching its own real getStateForPlacement
+		// (placer.getHorizontalFacing().getOpposite()) - items get ejected out the front, away from whoever
+		// built it.
+		return defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, context.getHorizontalDirection().getOpposite());
+	}
+
+	@Override
+	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		return SHAPE;
+	}
+
+	@Nullable
+	@Override
+	public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+		return new TileInfernalFurnace(pos, state);
+	}
+
+	@Nullable
+	@Override
+	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+		return type == ThaumcraftBlockEntities.INFERNAL_FURNACE.get()
+				? (lvl, pos, st, be) -> TileInfernalFurnace.tick(lvl, pos, st, (TileInfernalFurnace) be)
+				: null;
+	}
+
+	/** Real port of the original's own real {@code onEntityCollidedWithBlock} - a gentle horizontal nudge
+	 * toward the furnace's center (so items/mobs settle in rather than sliding off), and every 10 real ticks:
+	 * a real item resting on top gets pulled into the tile's inventory, a real non-fire-immune living entity
+	 * takes real lava damage and catches fire. */
+	@Override
+	protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
+		double dx = 0;
+		double dz = 0;
+		if (entity.getX() < pos.getX() + 0.3) dx = 0.0001;
+		if (entity.getX() > pos.getX() + 0.7) dx = -0.0001;
+		if (entity.getZ() < pos.getZ() + 0.3) dz = 0.0001;
+		if (entity.getZ() > pos.getZ() + 0.7) dz = -0.0001;
+		if (dx != 0 || dz != 0) {
+			Vec3 motion = entity.getDeltaMovement();
+			entity.setDeltaMovement(motion.x + dx, motion.y, motion.z + dz);
+		}
+
+		if (!level.isClientSide && entity.tickCount % 10 == 0) {
+			if (entity instanceof ItemEntity itemEntity) {
+				if (itemEntity.onGround() && level.getBlockEntity(pos) instanceof TileInfernalFurnace tile) {
+					itemEntity.setItem(tile.addItemsToInventory(itemEntity.getItem()));
+				}
+			} else if (entity instanceof LivingEntity living && !living.fireImmune()) {
+				living.hurt(level.damageSources().lava(), 3.0f);
+				living.igniteForSeconds(10);
+			}
+		}
+	}
 }

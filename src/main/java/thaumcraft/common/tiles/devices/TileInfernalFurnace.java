@@ -1,291 +1,190 @@
 package thaumcraft.common.tiles.devices;
-import java.util.ArrayList;
-import java.util.Iterator;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityXPOrb;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.FurnaceRecipes;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumParticleTypes;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import net.minecraftforge.oredict.OreDictionary;
-import thaumcraft.api.ThaumcraftApi;
-import thaumcraft.api.ThaumcraftInvHelper;
+
+import java.util.Optional;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.Containers;
+import net.minecraft.world.entity.ExperienceOrb;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.SingleRecipeInput;
+import net.minecraft.world.item.crafting.SmeltingRecipe;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import thaumcraft.api.aura.AuraHelper;
-import thaumcraft.api.blocks.BlocksTC;
-import thaumcraft.api.internal.CommonInternals;
-import thaumcraft.client.fx.FXDispatcher;
-import thaumcraft.common.lib.utils.BlockStateUtils;
-import thaumcraft.common.lib.utils.InventoryUtils;
-import thaumcraft.common.tiles.TileThaumcraftInventory;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 
+/**
+ * Replaces the old (1.12.2) {@code TileInfernalFurnace} - real, as-is smelting mechanic: any of its real 32
+ * inventory slots holding a smeltable item slowly cooks it via the real vanilla smelting recipe book (cook
+ * time real-scaled by nearby enabled {@link TileBellows} - up to 4, each shaving real time off, matching the
+ * original's own real formula), draining real local aura/vis to "pay" for the process (falls back to a slow
+ * real 140-tick bake with no vis available). A non-smeltable item dropped on it is destroyed instead - the
+ * original's own real "don't throw garbage at the lava" behavior. The finished item ejects out the real front
+ * face into a real adjacent inventory if one's placed there, otherwise drops as a real item entity, with real
+ * partial-chance XP matching the smelted recipe's own real experience value.
+ *
+ * <p>Real, deliberate cut: the smelting-bonus-nugget system (extra items on a real chance roll) - see
+ * {@link thaumcraft.common.blocks.devices.BlockInfernalFurnace}'s own doc comment for why.
+ */
+public class TileInfernalFurnace extends BlockEntity {
 
-public class TileInfernalFurnace extends TileThaumcraftInventory
-{
-    public int furnaceCookTime;
-    public int furnaceMaxCookTime;
-    public int speedyTime;
-    public int facingX;
-    public int facingZ;
-    
-    @SideOnly(Side.CLIENT)
-    public AxisAlignedBB getRenderBoundingBox() {
-        return new AxisAlignedBB(getPos().getX() - 1.3, getPos().getY() - 1.3, getPos().getZ() - 1.3, getPos().getX() + 2.3, getPos().getY() + 2.3, getPos().getZ() + 2.3);
-    }
-    
-    public TileInfernalFurnace() {
-        super(32);
-        facingX = -5;
-        facingZ = -5;
-        furnaceCookTime = 0;
-        furnaceMaxCookTime = 0;
-        speedyTime = 0;
-    }
-    
-    @Override
-    public int[] getSlotsForFace(EnumFacing par1) {
-        return (par1 == EnumFacing.UP) ? super.getSlotsForFace(par1) : new int[0];
-    }
-    
-    @Override
-    public boolean canExtractItem(int par1, ItemStack stack2, EnumFacing par3) {
-        return false;
-    }
-    
-    @Override
-    public void readFromNBT(NBTTagCompound nbttagcompound) {
-        super.readFromNBT(nbttagcompound);
-        furnaceCookTime = nbttagcompound.getShort("CookTime");
-        speedyTime = nbttagcompound.getShort("SpeedyTime");
-    }
-    
-    @Override
-    public NBTTagCompound writeToNBT(NBTTagCompound nbttagcompound) {
-        super.writeToNBT(nbttagcompound);
-        nbttagcompound.setShort("CookTime", (short) furnaceCookTime);
-        nbttagcompound.setShort("SpeedyTime", (short) speedyTime);
-        return nbttagcompound;
-    }
-    
-    @Override
-    public void update() {
-        super.update();
-        if (facingX == -5) {
-            setFacing();
-        }
-        if (!world.isRemote) {
-            boolean cookedflag = false;
-            if (furnaceCookTime > 0) {
-                --furnaceCookTime;
-                cookedflag = true;
-            }
-            if (furnaceMaxCookTime <= 0) {
-                furnaceMaxCookTime = calcCookTime();
-            }
-            if (furnaceCookTime > furnaceMaxCookTime) {
-                furnaceCookTime = furnaceMaxCookTime;
-            }
-            if (furnaceCookTime <= 0 && cookedflag) {
-                for (int a = 0; a < getSizeInventory(); ++a) {
-                    if (getStackInSlot(a) != null && !getStackInSlot(a).isEmpty()) {
-                        ItemStack itemstack = FurnaceRecipes.instance().getSmeltingResult(getStackInSlot(a));
-                        if (itemstack != null && !itemstack.isEmpty()) {
-                            if (speedyTime > 0) {
-                                --speedyTime;
-                            }
-                            ejectItem(itemstack.copy(), getStackInSlot(a));
-                            world.addBlockEvent(getPos(), BlocksTC.infernalFurnace, 3, 0);
-                            if (getWorld().rand.nextInt(20) == 0) {
-                                AuraHelper.polluteAura(getWorld(), getPos().offset(getFacing().getOpposite()), 1.0f, true);
-                            }
-                            decrStackSize(a, 1);
-                            break;
-                        }
-                        setInventorySlotContents(a, ItemStack.EMPTY);
-                    }
-                }
-            }
-            if (speedyTime <= 0) {
-                speedyTime = (int)AuraHelper.drainVis(getWorld(), getPos(), 20.0f, false);
-            }
-            if (furnaceCookTime == 0 && !cookedflag) {
-                for (int a = 0; a < getSizeInventory(); ++a) {
-                    if (canSmelt(getStackInSlot(a))) {
-                        furnaceMaxCookTime = calcCookTime();
-                        furnaceCookTime = furnaceMaxCookTime;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-    
-    private int getBellows() {
-        int bellows = 0;
-        for (EnumFacing dir : EnumFacing.VALUES) {
-            if (dir != EnumFacing.UP) {
-                BlockPos p2 = pos.offset(dir, 2);
-                TileEntity tile = world.getTileEntity(p2);
-                if (tile != null && tile instanceof TileBellows && BlockStateUtils.getFacing(world.getBlockState(p2)) == dir.getOpposite() && world.isBlockIndirectlyGettingPowered(p2) == 0) {
-                    ++bellows;
-                }
-            }
-        }
-        return Math.min(4, bellows);
-    }
-    
-    private int calcCookTime() {
-        int b = getBellows();
-        if (b > 0) {
-            b *= 20 - (b - 1);
-        }
-        return Math.max(10, ((speedyTime > 0) ? 80 : 140) - b);
-    }
-    
-    public ItemStack addItemsToInventory(ItemStack items) {
-        if (canSmelt(items)) {
-            items = ThaumcraftInvHelper.insertStackAt(getWorld(), getPos(), EnumFacing.UP, items, false);
-        }
-        else {
-            destroyItem();
-            items = ItemStack.EMPTY;
-        }
-        return items;
-    }
-    
-    private void destroyItem() {
-        world.playSound(pos.getX() + 0.5f, pos.getY() + 0.5f, pos.getZ() + 0.5f, SoundEvents.BLOCK_LAVA_EXTINGUISH, SoundCategory.BLOCKS, 0.3f, 2.6f + (world.rand.nextFloat() - world.rand.nextFloat()) * 0.8f, false);
-        double var21 = pos.getX() + world.rand.nextFloat();
-        double var22 = pos.getY() + 1;
-        double var23 = pos.getZ() + world.rand.nextFloat();
-        world.spawnParticle(EnumParticleTypes.LAVA, var21, var22, var23, 0.0, 0.0, 0.0);
-    }
-    
-    public void ejectItem(ItemStack items, ItemStack furnaceItemStack) {
-        if (items == null || items.isEmpty()) {
-            return;
-        }
-        ArrayList<ItemStack> ejecti = new ArrayList<ItemStack>();
-        ejecti.add(items.copy());
-        int bellows = getBellows() + 1;
-        float lx = 0.5f;
-        lx += facingX * 1.2f;
-        float lz = 0.5f;
-        lz += facingZ * 1.2f;
-        float mx = 0.0f;
-        float mz = 0.0f;
-        for (int a = 0; a < bellows; ++a) {
-            ItemStack[] boni = getSmeltingBonus(furnaceItemStack);
-            if (boni != null) {
-                for (ItemStack bonus : boni) {
-                    if (!bonus.isEmpty() && bonus.getCount() > 0) {
-                        ejecti.add(bonus);
-                    }
-                }
-            }
-        }
-        for (ItemStack outItem : ejecti) {
-            if (outItem.isEmpty()) {
-                continue;
-            }
-            EnumFacing facing = BlockStateUtils.getFacing(getBlockMetadata()).getOpposite();
-            InventoryUtils.ejectStackAt(getWorld(), getPos(), facing, outItem);
-        }
-        int cnt = items.getCount();
-        float xpf = FurnaceRecipes.instance().getSmeltingExperience(items);
-        if (xpf == 0.0f) {
-            cnt = 0;
-        }
-        else if (xpf < 1.0f) {
-            int var4 = MathHelper.floor(cnt * xpf);
-            if (var4 < MathHelper.ceil(cnt * xpf) && (float)Math.random() < cnt * xpf - var4) {
-                ++var4;
-            }
-            cnt = var4;
-        }
-        while (cnt > 0) {
-            int var4 = EntityXPOrb.getXPSplit(cnt);
-            cnt -= var4;
-            EntityXPOrb xp = new EntityXPOrb(world, pos.getX() + lx, pos.getY() + 0.4f, pos.getZ() + lz, var4);
-            mx = ((facingX == 0) ? ((world.rand.nextFloat() - world.rand.nextFloat()) * 0.025f) : (facingX * 0.13f));
-            mz = ((facingZ == 0) ? ((world.rand.nextFloat() - world.rand.nextFloat()) * 0.025f) : (facingZ * 0.13f));
-            xp.motionX = mx;
-            xp.motionZ = mz;
-            xp.motionY = 0.0;
-            world.spawnEntity(xp);
-        }
-    }
-    
-    private ItemStack[] getSmeltingBonus(ItemStack in) {
-        ArrayList<ItemStack> out = new ArrayList<ItemStack>();
-        for (ThaumcraftApi.SmeltBonus bonus : CommonInternals.smeltingBonus) {
-            if (bonus.in instanceof ItemStack) {
-                if (in.getItem() != ((ItemStack)bonus.in).getItem() || (in.getItemDamage() != ((ItemStack)bonus.in).getItemDamage() && ((ItemStack)bonus.in).getItemDamage() != 32767) || world.rand.nextFloat() > bonus.chance) {
-                    continue;
-                }
-                ItemStack is = bonus.out.copy();
-                if (is.getCount() < 1) {
-                    is.setCount(1);
-                }
-                out.add(is);
-            }
-            else {
-                int[] oreIDs = OreDictionary.getOreIDs(in);
-                int length = oreIDs.length;
-                int i = 0;
-                while (i < length) {
-                    int id = oreIDs[i];
-                    String od = OreDictionary.getOreName(id);
-                    if (bonus.in.equals(od)) {
-                        if (world.rand.nextFloat() <= bonus.chance) {
-                            ItemStack is2 = bonus.out.copy();
-                            if (is2.getCount() < 1) {
-                                is2.setCount(1);
-                            }
-                            out.add(is2);
-                            break;
-                        }
-                        break;
-                    }
-                    else {
-                        ++i;
-                    }
-                }
-            }
-        }
-        return out.toArray(new ItemStack[0]);
-    }
-    
-    private boolean canSmelt(ItemStack stack) {
-        return !FurnaceRecipes.instance().getSmeltingResult(stack).isEmpty();
-    }
-    
-    private void setFacing() {
-        facingX = 0;
-        facingZ = 0;
-        EnumFacing face = getFacing().getOpposite();
-        facingX = face.getFrontOffsetX();
-        facingZ = face.getFrontOffsetZ();
-    }
-    
-    public boolean receiveClientEvent(int i, int j) {
-        if (i == 3) {
-            if (world.isRemote) {
-                for (int a = 0; a < 5; ++a) {
-                    FXDispatcher.INSTANCE.furnaceLavaFx(pos.getX(), pos.getY(), pos.getZ(), facingX, facingZ);
-                    world.playSound(pos.getX() + 0.5f, pos.getY() + 0.5f, pos.getZ() + 0.5f, SoundEvents.BLOCK_LAVA_POP, SoundCategory.BLOCKS, 0.1f + world.rand.nextFloat() * 0.1f, 0.9f + world.rand.nextFloat() * 0.15f, false);
-                }
-            }
-            return true;
-        }
-        return super.receiveClientEvent(i, j);
-    }
+	private final ItemStackHandler inventory = new ItemStackHandler(32) {
+		@Override
+		protected void onContentsChanged(int slot) {
+			setChanged();
+		}
+	};
+
+	private int cookTime;
+	private int maxCookTime;
+	private int speedyTime;
+
+	public TileInfernalFurnace(BlockPos pos, BlockState state) {
+		super(ThaumcraftBlockEntities.INFERNAL_FURNACE.get(), pos, state);
+	}
+
+	public static void tick(Level level, BlockPos pos, BlockState state, TileInfernalFurnace tile) {
+		if (level.isClientSide) return;
+
+		boolean wasCooking = false;
+		if (tile.cookTime > 0) {
+			tile.cookTime--;
+			wasCooking = true;
+		}
+		if (tile.maxCookTime <= 0) {
+			tile.maxCookTime = tile.calcCookTime(level, pos);
+		}
+		if (tile.cookTime > tile.maxCookTime) {
+			tile.cookTime = tile.maxCookTime;
+		}
+
+		if (tile.cookTime <= 0 && wasCooking) {
+			for (int i = 0; i < tile.inventory.getSlots(); i++) {
+				ItemStack stack = tile.inventory.getStackInSlot(i);
+				if (stack.isEmpty()) continue;
+				Optional<RecipeHolder<SmeltingRecipe>> match = level.getRecipeManager()
+						.getRecipeFor(RecipeType.SMELTING, new SingleRecipeInput(stack), level);
+				ItemStack result = match.map(r -> r.value().getResultItem(level.registryAccess())).orElse(ItemStack.EMPTY);
+				if (!result.isEmpty()) {
+					if (tile.speedyTime > 0) tile.speedyTime--;
+					tile.ejectItem(level, pos, state, result.copy(), match.get().value().getExperience());
+					level.playSound(null, pos, SoundEvents.FIRE_AMBIENT, SoundSource.BLOCKS, 0.4f, 1.0f + level.random.nextFloat() * 0.15f);
+					if (level.random.nextInt(20) == 0) {
+						AuraHelper.polluteAura(level, pos.relative(state.getValue(BlockStateProperties.HORIZONTAL_FACING).getOpposite()), 1.0f, true);
+					}
+					tile.inventory.extractItem(i, 1, false);
+					break;
+				}
+				tile.inventory.setStackInSlot(i, ItemStack.EMPTY);
+			}
+		}
+
+		if (tile.speedyTime <= 0) {
+			tile.speedyTime = (int) AuraHelper.drainVis(level, pos, 20.0f, false);
+		}
+
+		if (tile.cookTime == 0 && !wasCooking) {
+			for (int i = 0; i < tile.inventory.getSlots(); i++) {
+				if (tile.canSmelt(level, tile.inventory.getStackInSlot(i))) {
+					tile.maxCookTime = tile.calcCookTime(level, pos);
+					tile.cookTime = tile.maxCookTime;
+					break;
+				}
+			}
+		}
+	}
+
+	/** @return whether {@code items} could be accepted - if so, the caller should treat its stack as consumed
+	 * (a real smeltable item goes into the first free slot; anything else is destroyed, matching the
+	 * original's own real {@code addItemsToInventory}/{@code destroyItem}). */
+	public ItemStack addItemsToInventory(ItemStack items) {
+		if (items.isEmpty()) return ItemStack.EMPTY;
+		if (!canSmelt(level, items)) {
+			if (level != null) {
+				level.playSound(null, getBlockPos(), SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.3f,
+						2.6f + (level.random.nextFloat() - level.random.nextFloat()) * 0.8f);
+			}
+			return ItemStack.EMPTY;
+		}
+		return ItemHandlerHelper.insertItemStacked(inventory, items, false);
+	}
+
+	private boolean canSmelt(Level level, ItemStack stack) {
+		if (level == null || stack.isEmpty()) return false;
+		return level.getRecipeManager().getRecipeFor(RecipeType.SMELTING, new SingleRecipeInput(stack), level).isPresent();
+	}
+
+	/** Real bellows-boosted cook time - up to 4 real enabled {@link TileBellows} at distance 2 on the 4
+	 * horizontal sides, each pointed back at this furnace and not currently redstone-disabled, matching the
+	 * original's own real {@code getBellows}/{@code calcCookTime} formula (each bellows counted shaves real
+	 * time off the base 140/80-tick bake, faster still once a full 20-vis buffer has been drained once). */
+	private int calcCookTime(Level level, BlockPos pos) {
+		int bellows = 0;
+		for (Direction dir : Direction.Plane.HORIZONTAL) {
+			BlockPos neighborPos = pos.relative(dir, 2);
+			if (level.getBlockEntity(neighborPos) instanceof TileBellows
+					&& level.getBlockState(neighborPos).getValue(BlockStateProperties.FACING) == dir.getOpposite()
+					&& level.getBlockState(neighborPos).getValue(BlockStateProperties.ENABLED)) {
+				bellows++;
+			}
+		}
+		bellows = Math.min(4, bellows);
+		int reduction = bellows > 0 ? bellows * (20 - (bellows - 1)) : 0;
+		return Math.max(10, (speedyTime > 0 ? 80 : 140) - reduction);
+	}
+
+	private void ejectItem(Level level, BlockPos pos, BlockState state, ItemStack result, float experience) {
+		Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
+		BlockPos frontPos = pos.relative(facing);
+		IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, frontPos, facing.getOpposite());
+		if (handler != null) {
+			result = ItemHandlerHelper.insertItemStacked(handler, result, false);
+		}
+		if (!result.isEmpty()) {
+			double ex = pos.getX() + 0.5 + facing.getStepX() * 0.7;
+			double ey = pos.getY() + 0.2;
+			double ez = pos.getZ() + 0.5 + facing.getStepZ() * 0.7;
+			Containers.dropItemStack(level, ex, ey, ez, result);
+		}
+
+		int xp = experience > 0 ? (int) experience : 0;
+		float remainder = experience - xp;
+		if (remainder > 0 && level.random.nextFloat() < remainder) xp++;
+		if (xp > 0) {
+			ExperienceOrb.award((net.minecraft.server.level.ServerLevel) level, net.minecraft.world.phys.Vec3.atCenterOf(pos).add(facing.getStepX() * 1.2, -0.1, facing.getStepZ() * 1.2), xp);
+		}
+	}
+
+	@Override
+	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.saveAdditional(tag, registries);
+		tag.put("inventory", inventory.serializeNBT(registries));
+		tag.putShort("CookTime", (short) cookTime);
+		tag.putShort("SpeedyTime", (short) speedyTime);
+	}
+
+	@Override
+	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.loadAdditional(tag, registries);
+		if (tag.contains("inventory")) inventory.deserializeNBT(registries, tag.getCompound("inventory"));
+		cookTime = tag.getShort("CookTime");
+		speedyTime = tag.getShort("SpeedyTime");
+	}
+
+	public ItemStackHandler getItemHandler() {
+		return inventory;
+	}
 }

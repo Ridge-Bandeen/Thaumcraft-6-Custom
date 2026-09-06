@@ -278,6 +278,13 @@ public final class BlocksTC {
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(-1.0f, 3600000.0f)
 					.sound(SoundType.WOOL).lightLevel(state -> 11).noOcclusion().noCollission());
 
+	/** See {@link thaumcraft.common.blocks.devices.BlockInfernalFurnace}'s own doc comment - a real
+	 * fuel-free, vis-fed auto-smelting furnace. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockInfernalFurnace> infernalFurnace = BLOCKS.registerBlock("infernal_furnace",
+			thaumcraft.common.blocks.devices.BlockInfernalFurnace::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0f).sound(SoundType.STONE)
+					.lightLevel(state -> 14).noOcclusion());
+
 	/** See {@link thaumcraft.common.blocks.devices.BlockRedstoneRelay}'s own doc comment - a real
 	 * configurable-threshold/strength redstone repeater variant, no tile entity needed. */
 	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockRedstoneRelay> redstoneRelay = BLOCKS.registerBlock("redstone_relay",

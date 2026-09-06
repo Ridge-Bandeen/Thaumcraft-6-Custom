@@ -498,6 +498,8 @@ sourceSets {
 
             include 'thaumcraft/common/blocks/devices/BlockBellows.java'
             include 'thaumcraft/common/tiles/devices/TileBellows.java'
+            include 'thaumcraft/common/blocks/devices/BlockInfernalFurnace.java'
+            include 'thaumcraft/common/tiles/devices/TileInfernalFurnace.java'
 
             include 'thaumcraft/common/items/baubles/ItemRingApprentice.java'
             include 'thaumcraft/common/items/baubles/ItemAmuletVis.java'

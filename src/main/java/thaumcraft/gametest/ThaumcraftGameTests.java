@@ -8917,4 +8917,121 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(helper.getLevel().getBlockState(absWall).is(BlocksTC.hole.get()), "the struck block should really have become a temporary hole");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Infernal Furnace - real fuel-free auto-smelting device (BlockInfernalFurnace/TileInfernalFurnace).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infernalFurnaceAcceptsSmeltableItemsAndDestroysJunk(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.infernalFurnace.get());
+		thaumcraft.common.tiles.devices.TileInfernalFurnace tile = helper.getBlockEntity(pos);
+
+		ItemStack leftover = tile.addItemsToInventory(new ItemStack(Items.SAND, 4));
+		helper.assertTrue(leftover.isEmpty(), "a real smeltable item should be fully accepted into the furnace's inventory, found leftover " + leftover);
+
+		ItemStack junkLeftover = tile.addItemsToInventory(new ItemStack(Items.STICK, 4));
+		helper.assertTrue(junkLeftover.isEmpty(), "a non-smeltable item should be reported as fully consumed (destroyed), found leftover " + junkLeftover);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infernalFurnaceSmeltsAndEjectsItsRealResultOverTime(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.infernalFurnace.get());
+		thaumcraft.common.tiles.devices.TileInfernalFurnace tile = helper.getBlockEntity(pos);
+		tile.addItemsToInventory(new ItemStack(Items.SAND));
+		BlockPos abs = helper.absolutePos(pos);
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(abs);
+
+		for (int i = 0; i < 200 && level.getEntitiesOfClass(ItemEntity.class, new AABB(abs).inflate(2)).isEmpty(); i++) {
+			thaumcraft.common.tiles.devices.TileInfernalFurnace.tick(level, abs, state, tile);
+		}
+
+		List<ItemEntity> dropped = level.getEntitiesOfClass(ItemEntity.class, new AABB(abs).inflate(2));
+		boolean foundGlass = dropped.stream().anyMatch(e -> e.getItem().is(Items.GLASS));
+		helper.assertTrue(foundGlass, "the furnace should have really smelted the sand into real glass and ejected it, found " + dropped.stream().map(e -> e.getItem().toString()).toList());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infernalFurnaceEjectsIntoARealAdjacentContainer(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.infernalFurnace.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, net.minecraft.core.Direction.SOUTH));
+		BlockPos chestPos = pos.south();
+		helper.setBlock(chestPos, net.minecraft.world.level.block.Blocks.CHEST);
+
+		thaumcraft.common.tiles.devices.TileInfernalFurnace tile = helper.getBlockEntity(pos);
+		tile.addItemsToInventory(new ItemStack(Items.SAND));
+		BlockPos abs = helper.absolutePos(pos);
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(abs);
+		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(chestPos);
+
+		for (int i = 0; i < 200 && chest.isEmpty(); i++) {
+			thaumcraft.common.tiles.devices.TileInfernalFurnace.tick(level, abs, state, tile);
+		}
+
+		helper.assertTrue(!chest.isEmpty(), "the smelted result should have been inserted into the real chest placed in front rather than dropped");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infernalFurnaceCooksFasterWithRealBellows(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos posA = new BlockPos(2, 2, 2);
+		BlockPos posB = new BlockPos(2, 2, 8);
+		helper.setBlock(posA, BlocksTC.infernalFurnace.get());
+		helper.setBlock(posB, BlocksTC.infernalFurnace.get());
+
+		// A real bellows facing back at posB from 2 blocks south, enabled (unpowered).
+		helper.setBlock(posB.south(2), BlocksTC.bellows.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.NORTH)
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED, true));
+
+		thaumcraft.common.tiles.devices.TileInfernalFurnace tileA = helper.getBlockEntity(posA);
+		thaumcraft.common.tiles.devices.TileInfernalFurnace tileB = helper.getBlockEntity(posB);
+		tileA.addItemsToInventory(new ItemStack(Items.SAND));
+		tileB.addItemsToInventory(new ItemStack(Items.SAND));
+		BlockPos absA = helper.absolutePos(posA);
+		BlockPos absB = helper.absolutePos(posB);
+		net.minecraft.world.level.block.state.BlockState stateA = level.getBlockState(absA);
+		net.minecraft.world.level.block.state.BlockState stateB = level.getBlockState(absB);
+
+		int ticksA = -1;
+		int ticksB = -1;
+		for (int i = 0; i < 200; i++) {
+			thaumcraft.common.tiles.devices.TileInfernalFurnace.tick(level, absA, stateA, tileA);
+			thaumcraft.common.tiles.devices.TileInfernalFurnace.tick(level, absB, stateB, tileB);
+			if (ticksA < 0 && !level.getEntitiesOfClass(ItemEntity.class, new AABB(absA).inflate(2)).isEmpty()) ticksA = i;
+			if (ticksB < 0 && !level.getEntitiesOfClass(ItemEntity.class, new AABB(absB).inflate(2)).isEmpty()) ticksB = i;
+		}
+
+		helper.assertTrue(ticksA > 0 && ticksB > 0, "both furnaces should have finished smelting within the tick budget, found A=" + ticksA + " B=" + ticksB);
+		helper.assertTrue(ticksB < ticksA, "the bellows-boosted furnace should finish real strictly faster, found A=" + ticksA + " (no bellows) vs B=" + ticksB + " (bellows)");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infernalFurnaceDamagesAndIgnitesLivingEntities(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.infernalFurnace.get());
+		BlockPos abs = helper.absolutePos(pos);
+
+		Pig pig = new Pig(EntityType.PIG, helper.getLevel());
+		pig.setPos(abs.getX() + 0.5, abs.getY() + 0.5, abs.getZ() + 0.5);
+		helper.getLevel().addFreshEntity(pig);
+		float healthBefore = pig.getHealth();
+
+		// entityInside is protected/only reachable through the real world entity-collision tick - letting
+		// the test framework's own real server ticks run (via succeedWhen) is the only way to reach it, same
+		// as this file's other real damage-over-time device tests (e.g. the lava/fire-based ones above).
+		helper.succeedWhen(() -> {
+			helper.assertTrue(pig.getHealth() < healthBefore, "a real pig standing on the furnace should take real lava-like damage, health=" + pig.getHealth());
+			helper.assertTrue(pig.getRemainingFireTicks() > 0, "a real pig standing on the furnace should really catch fire, remainingFireTicks=" + pig.getRemainingFireTicks());
+		});
+	}
 }
