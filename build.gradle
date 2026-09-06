@@ -42,6 +42,8 @@ sourceSets {
             include 'thaumcraft/common/blocks/devices/BlockCondenserLattice.java'
             include 'thaumcraft/common/blocks/devices/BlockPotionSprayer.java'
             include 'thaumcraft/common/tiles/devices/TilePotionSprayer.java'
+            include 'thaumcraft/common/blocks/crafting/BlockVoidSiphon.java'
+            include 'thaumcraft/common/tiles/crafting/TileVoidSiphon.java'
             include 'thaumcraft/common/blocks/basic/BlockPavingStoneTravel.java'
             include 'thaumcraft/common/blocks/basic/BlockCandle.java'
             include 'thaumcraft/common/blocks/misc/BlockNitor.java'

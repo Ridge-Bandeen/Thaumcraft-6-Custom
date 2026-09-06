@@ -386,6 +386,12 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.devices.BlockPotionSprayer::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.METAL).noOcclusion());
 
+	/** Drains nearby flux rifts into Void Seeds - see
+	 * {@link thaumcraft.common.tiles.crafting.TileVoidSiphon}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.crafting.BlockVoidSiphon> voidSiphon = BLOCKS.registerBlock("void_siphon",
+			thaumcraft.common.blocks.crafting.BlockVoidSiphon::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.METAL).noOcclusion());
+
 	/** Only the "travel" variant of the original's shared {@code BlockPavingStone} - see
 	 * {@link thaumcraft.common.blocks.basic.BlockPavingStoneTravel}'s own doc comment for why the
 	 * "barrier" variant (the warding-network floor tile) is deferred separately. */

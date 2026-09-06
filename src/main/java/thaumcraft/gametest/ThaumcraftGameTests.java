@@ -2002,6 +2002,66 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
+	// Void Siphon - drains nearby EntityFluxRifts (in real line of sight, within 8 blocks) into progress,
+	// eventually producing Void Seeds. Calls TileVoidSiphon.tick(...) directly, same "test the real entry
+	// point" precedent as every other ticking device above.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void voidSiphonDrainsAVisibleRiftAndProducesAVoidSeed(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos.below(), Blocks.STONE);
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.voidSiphon.get());
+
+		thaumcraft.common.tiles.crafting.TileVoidSiphon tile = helper.getBlockEntity(pos);
+		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(pos);
+
+		thaumcraft.common.entities.EntityFluxRift rift =
+				new thaumcraft.common.entities.EntityFluxRift(thaumcraft.common.registry.ThaumcraftEntities.FLUX_RIFT.get(), helper.getLevel());
+		rift.setRiftSeed(42);
+		rift.setPos(absolute.getX() + 3.5, absolute.getY() + 1, absolute.getZ() + 0.5);
+		rift.setRiftSize(400);
+		helper.getLevel().addFreshEntity(rift);
+		float stabilityBefore = rift.getRiftStability();
+
+		for (int i = 0; i < 3000 && tile.getItem().isEmpty(); i++) {
+			thaumcraft.common.tiles.crafting.TileVoidSiphon.tick(helper.getLevel(), absolute, state, tile);
+		}
+
+		helper.assertFalse(tile.getItem().isEmpty(), "the siphon should have produced a Void Seed by now, progress: " + tile.getProgress());
+		helper.assertTrue(tile.getItem().is(thaumcraft.api.items.ItemsTC.voidSeed.get()), "the produced item should be a real Void Seed");
+		helper.assertTrue(rift.getRiftStability() < stabilityBefore, "draining the rift should have reduced its stability");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void voidSiphonDoesNothingWhenDisabledOrRiftOutOfRange(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos.below(), Blocks.STONE);
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.voidSiphon.get());
+
+		thaumcraft.common.tiles.crafting.TileVoidSiphon tile = helper.getBlockEntity(pos);
+		net.minecraft.world.level.block.state.BlockState disabledState = helper.getBlockState(pos).setValue(
+				net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED, false);
+		helper.getLevel().setBlock(absolute, disabledState, 3);
+
+		thaumcraft.common.entities.EntityFluxRift rift =
+				new thaumcraft.common.entities.EntityFluxRift(thaumcraft.common.registry.ThaumcraftEntities.FLUX_RIFT.get(), helper.getLevel());
+		rift.setRiftSeed(7);
+		rift.setPos(absolute.getX() + 3.5, absolute.getY() + 1, absolute.getZ() + 0.5);
+		rift.setRiftSize(400);
+		helper.getLevel().addFreshEntity(rift);
+
+		for (int i = 0; i < 40; i++) {
+			thaumcraft.common.tiles.crafting.TileVoidSiphon.tick(helper.getLevel(), absolute, disabledState, tile);
+		}
+		helper.assertTrue(tile.getProgress() == 0, "a disabled siphon shouldn't drain a rift, found progress: " + tile.getProgress());
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
 	// Candles - one small block per DyeColor, all sharing BlockCandle. The color-handler tint itself is
 	// client-only and not GameTest-observable; these check the functional side instead (light level,
 	// falling off when unsupported).

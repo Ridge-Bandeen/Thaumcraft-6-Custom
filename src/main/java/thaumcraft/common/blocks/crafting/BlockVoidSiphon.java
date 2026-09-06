@@ -1,81 +1,104 @@
 package thaumcraft.common.blocks.crafting;
-import java.util.List;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.state.BlockFaceShape;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.relauncher.Side;
-import thaumcraft.Thaumcraft;
-import thaumcraft.common.blocks.BlockTCDevice;
-import thaumcraft.common.blocks.IBlockEnabled;
+
+import javax.annotation.Nullable;
+
+import com.mojang.serialization.MapCodec;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 import thaumcraft.common.tiles.crafting.TileVoidSiphon;
 
+/**
+ * Replaces the old (1.12.2) {@code BlockVoidSiphon} - see {@link TileVoidSiphon}'s own doc comment for the
+ * rift-draining mechanic and what's simplified. Not a full cube (matches the original's slim
+ * base/stem/orb shape closely enough for collision/selection), no facing needed.
+ */
+public class BlockVoidSiphon extends Block implements EntityBlock {
 
-@Mod.EventBusSubscriber({ Side.CLIENT })
-public class BlockVoidSiphon extends BlockTCDevice implements IBlockEnabled
-{
-    protected static AxisAlignedBB AABB_MAIN;
-    protected static AxisAlignedBB AABB_BASE;
-    protected static AxisAlignedBB AABB_TOP;
-    protected static AxisAlignedBB AABB_ORB;
-    
-    public BlockVoidSiphon() {
-        super(Material.IRON, TileVoidSiphon.class, "void_siphon");
-        setSoundType(SoundType.METAL);
-    }
-    
-    @Override
-    public int damageDropped(IBlockState state) {
-        return 0;
-    }
-    
-    public boolean isOpaqueCube(IBlockState state) {
-        return false;
-    }
-    
-    public boolean isFullCube(IBlockState state) {
-        return false;
-    }
-    
-    public BlockFaceShape getBlockFaceShape(IBlockAccess worldIn, IBlockState state, BlockPos pos, EnumFacing face) {
-        return BlockFaceShape.UNDEFINED;
-    }
-    
-    public boolean isSideSolid(IBlockState state, IBlockAccess world, BlockPos pos, EnumFacing side) {
-        return false;
-    }
-    
-    public void addCollisionBoxToList(IBlockState state, World worldIn, BlockPos pos, AxisAlignedBB AABB, List<AxisAlignedBB> list, Entity p_185477_6_, boolean isActualState) {
-        addCollisionBoxToList(pos, AABB, list, BlockVoidSiphon.AABB_BASE);
-        addCollisionBoxToList(pos, AABB, list, BlockVoidSiphon.AABB_TOP);
-        addCollisionBoxToList(pos, AABB, list, BlockVoidSiphon.AABB_ORB);
-    }
-    
-    public AxisAlignedBB getBoundingBox(IBlockState state, IBlockAccess source, BlockPos pos) {
-        return BlockVoidSiphon.AABB_MAIN;
-    }
-    
-    public boolean onBlockActivated(World world, BlockPos pos, IBlockState state, EntityPlayer player, EnumHand hand, EnumFacing side, float hitX, float hitY, float hitZ) {
-        if (world.isRemote) {
-            return true;
-        }
-        player.openGui(Thaumcraft.instance, 22, world, pos.getX(), pos.getY(), pos.getZ());
-        return true;
-    }
-    
-    static {
-        AABB_MAIN = new AxisAlignedBB(0.1875, 0.0, 0.1875, 0.8125, 1.0, 0.8125);
-        AABB_BASE = new AxisAlignedBB(0.1875, 0.0, 0.1875, 0.8125, 0.125, 0.8125);
-        AABB_TOP = new AxisAlignedBB(0.25, 0.125, 0.25, 0.75, 0.6875, 0.75);
-        AABB_ORB = new AxisAlignedBB(0.3125, 0.75, 0.3125, 0.625, 1.0, 0.625);
-    }
+	public static final MapCodec<BlockVoidSiphon> CODEC = simpleCodec(BlockVoidSiphon::new);
+
+	private static final VoxelShape SHAPE = Shapes.or(
+			Shapes.box(0.1875, 0.0, 0.1875, 0.8125, 0.125, 0.8125),
+			Shapes.box(0.25, 0.125, 0.25, 0.75, 0.6875, 0.75),
+			Shapes.box(0.3125, 0.75, 0.3125, 0.625, 1.0, 0.625))
+			.optimize();
+
+	public BlockVoidSiphon(BlockBehaviour.Properties properties) {
+		super(properties);
+		registerDefaultState(getStateDefinition().any().setValue(BlockStateProperties.ENABLED, true));
+	}
+
+	@Override
+	protected MapCodec<? extends Block> codec() {
+		return CODEC;
+	}
+
+	@Override
+	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+		builder.add(BlockStateProperties.ENABLED);
+	}
+
+	@Override
+	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		return SHAPE;
+	}
+
+	@Override
+	protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock, BlockPos neighborPos, boolean movedByPiston) {
+		boolean shouldBeEnabled = !level.hasNeighborSignal(pos);
+		if (shouldBeEnabled != state.getValue(BlockStateProperties.ENABLED)) {
+			level.setBlock(pos, state.setValue(BlockStateProperties.ENABLED, shouldBeEnabled), 3);
+		}
+		super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);
+	}
+
+	@Nullable
+	@Override
+	public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+		return new TileVoidSiphon(pos, state);
+	}
+
+	@Nullable
+	@Override
+	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+		return type == ThaumcraftBlockEntities.VOID_SIPHON.get()
+				? (lvl, pos, st, be) -> TileVoidSiphon.tick(lvl, pos, st, (TileVoidSiphon) be)
+				: null;
+	}
+
+	@Override
+	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+		if (level.isClientSide) return InteractionResult.SUCCESS;
+		if (!(level.getBlockEntity(pos) instanceof TileVoidSiphon tile)) return InteractionResult.PASS;
+
+		ItemStack held = tile.getItem();
+		if (held.isEmpty()) return InteractionResult.PASS;
+		tile.getItemHandler().extractItem(0, held.getCount(), false);
+		if (!player.getInventory().add(held)) {
+			player.drop(held, false);
+		}
+		level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.2f,
+				((level.random.nextFloat() - level.random.nextFloat()) * 0.7f + 1.0f) * 1.6f);
+		return InteractionResult.SUCCESS;
+	}
 }
