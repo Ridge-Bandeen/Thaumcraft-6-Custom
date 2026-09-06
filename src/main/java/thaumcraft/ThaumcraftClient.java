@@ -153,6 +153,7 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.TURRET_CROSSBOW_ADVANCED.get(), RenderFocusProjectile::new);
         // Real geometry now - see ModelArcaneBore/RenderArcaneBore's own doc comments.
         event.registerEntityRenderer(ThaumcraftEntities.ARCANE_BORE.get(), thaumcraft.client.render.RenderArcaneBore::new);
+        event.registerEntityRenderer(ThaumcraftEntities.PECH.get(), thaumcraft.client.render.RenderPech::new);
         // First real BlockEntityRenderer this whole port has needed - see its own doc comment.
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.BANNER.get(), thaumcraft.client.render.TileBannerRenderer::new);
     }

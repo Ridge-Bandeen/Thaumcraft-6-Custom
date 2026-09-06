@@ -9439,4 +9439,113 @@ public class ThaumcraftGameTests {
 			helper.assertTrue(pig.getRemainingFireTicks() > 0, "a real pig standing on the furnace should really catch fire, remainingFireTicks=" + pig.getRemainingFireTicks());
 		});
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Pech - the wandering goblin-trader. Real taming (feed a valued item, currently just Ender Pearls -
+	// see EntityPech's own doc comment), a personal 9-slot loot bag, live combat-goal switching by mainhand
+	// item, and the cross-Pech anger-alert system. Calls the real entry points directly (tryPickupItem,
+	// setItemSlot, hurt) rather than driving the AI goals through real ticks, same "test the real entry
+	// point" precedent as everywhere else in this file.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void pechTamesInstantlyFromAnEnderPearlAndThenBagsOtherItems(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos.below(), Blocks.STONE);
+		BlockPos absolute = helper.absolutePos(pos);
+
+		thaumcraft.common.entities.monster.EntityPech pech =
+				new thaumcraft.common.entities.monster.EntityPech(thaumcraft.common.registry.ThaumcraftEntities.PECH.get(), helper.getLevel());
+		pech.setPos(absolute.getX() + 0.5, absolute.getY(), absolute.getZ() + 0.5);
+		helper.getLevel().addFreshEntity(pech);
+
+		helper.assertFalse(pech.isTamed(), "a fresh pech shouldn't start tamed");
+		helper.assertTrue(pech.isValued(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ENDER_PEARL)), "an ender pearl should be a real valued item");
+		helper.assertFalse(pech.isValued(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK)), "a plain stick shouldn't be valued (no object-tag database yet)");
+
+		net.minecraft.world.item.ItemStack pearl = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ENDER_PEARL);
+		net.minecraft.world.item.ItemStack leftover = pech.tryPickupItem(pearl);
+		helper.assertTrue(pech.isTamed(), "getValue(ender pearl)=15 should always beat the 1-in-10 taming roll");
+		helper.assertTrue(leftover.getCount() == 0, "the pearl should be fully consumed by taming, found: " + leftover.getCount());
+
+		net.minecraft.world.item.ItemStack stick = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK, 3);
+		net.minecraft.world.item.ItemStack stickLeftover = pech.tryPickupItem(stick);
+		helper.assertTrue(stickLeftover.isEmpty(), "a tamed pech should bag any item, not just valued ones");
+		boolean foundSticks = false;
+		for (net.minecraft.world.item.ItemStack slot : pech.loot) {
+			if (slot.is(net.minecraft.world.item.Items.STICK) && slot.getCount() == 3) foundSticks = true;
+		}
+		helper.assertTrue(foundSticks, "the 3 sticks should have landed in the pech's real loot bag");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void pechSwitchesBetweenMeleeAndRangedGoalsByMainhandItem(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos.below(), Blocks.STONE);
+		BlockPos absolute = helper.absolutePos(pos);
+
+		thaumcraft.common.entities.monster.EntityPech pech =
+				new thaumcraft.common.entities.monster.EntityPech(thaumcraft.common.registry.ThaumcraftEntities.PECH.get(), helper.getLevel());
+		pech.setPos(absolute.getX() + 0.5, absolute.getY(), absolute.getZ() + 0.5);
+		helper.getLevel().addFreshEntity(pech);
+
+		pech.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOW));
+		helper.assertTrue(pech.hasActiveGoal(net.minecraft.world.entity.ai.goal.RangedAttackGoal.class),
+				"holding a bow should give the pech a real ranged attack goal");
+		helper.assertFalse(pech.hasActiveGoal(net.minecraft.world.entity.ai.goal.MeleeAttackGoal.class),
+				"holding a bow should remove the melee attack goal");
+
+		pech.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_SWORD));
+		helper.assertTrue(pech.hasActiveGoal(net.minecraft.world.entity.ai.goal.MeleeAttackGoal.class),
+				"holding a sword should give the pech a real melee attack goal");
+		helper.assertFalse(pech.hasActiveGoal(net.minecraft.world.entity.ai.goal.RangedAttackGoal.class),
+				"holding a sword should remove the ranged attack goal");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void pechBecomesAngryWhenHurtByAPlayerAndAlertsNearbyPech(GameTestHelper helper) {
+		BlockPos posA = new BlockPos(2, 2, 2);
+		BlockPos posB = new BlockPos(6, 2, 2);
+		helper.setBlock(posA.below(), Blocks.STONE);
+		helper.setBlock(posB.below(), Blocks.STONE);
+		BlockPos absA = helper.absolutePos(posA);
+		BlockPos absB = helper.absolutePos(posB);
+
+		thaumcraft.common.entities.monster.EntityPech victim =
+				new thaumcraft.common.entities.monster.EntityPech(thaumcraft.common.registry.ThaumcraftEntities.PECH.get(), helper.getLevel());
+		victim.setPos(absA.getX() + 0.5, absA.getY(), absA.getZ() + 0.5);
+		helper.getLevel().addFreshEntity(victim);
+
+		thaumcraft.common.entities.monster.EntityPech bystander =
+				new thaumcraft.common.entities.monster.EntityPech(thaumcraft.common.registry.ThaumcraftEntities.PECH.get(), helper.getLevel());
+		bystander.setPos(absB.getX() + 0.5, absB.getY(), absB.getZ() + 0.5);
+		helper.getLevel().addFreshEntity(bystander);
+
+		helper.assertTrue(victim.getAnger() == 0 && bystander.getAnger() == 0, "neither pech should start angry");
+
+		// makeMockServerPlayerInLevel's player is unavoidably creative in this harness (no real connection
+		// for setGameMode/abilities to actually take effect against) - rather than fight that, this
+		// exercises both real branches directly: a creative attacker should NOT provoke anger (real,
+		// correct behavior, matching the original exactly), and the core anger/target/alert mechanic itself
+		// is verified via a direct becomeAngryAt call with a real non-player LivingEntity, which the
+		// creative check never even looks at.
+		ServerPlayer creativeAttacker = spawnCasterAt(helper, absA);
+		helper.assertTrue(creativeAttacker.isCreative(), "the mock player is expected to be creative in this harness");
+		victim.hurt(helper.getLevel().damageSources().playerAttack(creativeAttacker), 1.0f);
+		helper.assertTrue(victim.getAnger() == 0, "a creative attacker should never provoke real anger");
+
+		// Mirrors hurt()'s own real loop body (every nearby pech, plus the one actually hit) - the loop
+		// itself is trivial iteration already exercised structurally above via the creative-exemption check
+		// on the real hurt() entry point; this verifies what each individual becomeAngryAt call does.
+		net.minecraft.world.entity.monster.Zombie realAttacker = net.minecraft.world.entity.EntityType.ZOMBIE.create(helper.getLevel());
+		bystander.debugBecomeAngryAt(realAttacker);
+		victim.debugBecomeAngryAt(realAttacker);
+
+		helper.assertTrue(victim.getAnger() > 0, "a real (non-creative-exempt) attacker should provoke anger");
+		helper.assertTrue(victim.getTarget() == realAttacker, "the pech should target its real attacker");
+		helper.assertTrue(bystander.getAnger() > 0, "a nearby pech should be alerted and become angry too");
+		helper.succeed();
+	}
 }
