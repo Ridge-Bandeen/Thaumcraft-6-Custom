@@ -9548,4 +9548,69 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(bystander.getAnger() > 0, "a nearby pech should be alerted and become angry too");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Pech trading (chunk 2) - PechMenu/GuiPechTrade. Real "confirm trade" via clickMenuButton id 0, real
+	// value-tier reward generation. GameTest is server-only and can't exercise the real Screen, so these
+	// drive the real Menu/entity entry points directly.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void pechTradeConsumesAValuedItemAndFillsRealOutputSlots(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos.below(), Blocks.STONE);
+		BlockPos absolute = helper.absolutePos(pos);
+
+		thaumcraft.common.entities.monster.EntityPech pech =
+				new thaumcraft.common.entities.monster.EntityPech(thaumcraft.common.registry.ThaumcraftEntities.PECH.get(), helper.getLevel());
+		pech.setPos(absolute.getX() + 0.5, absolute.getY(), absolute.getZ() + 0.5);
+		helper.getLevel().addFreshEntity(pech);
+		pech.setTamed(true);
+
+		pech.getTradeItems().insertItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ENDER_PEARL), false);
+		pech.generateTradeContents();
+
+		helper.assertTrue(pech.getTradeItems().getStackInSlot(0).isEmpty(), "the input slot should be consumed by a real trade");
+		boolean anyOutput = false;
+		for (int i = 1; i <= 4; i++) {
+			if (!pech.getTradeItems().getStackInSlot(i).isEmpty()) anyOutput = true;
+		}
+		helper.assertTrue(anyOutput, "a real trade should fill at least one real output slot");
+
+		// A non-valued item should be refused (real check, not just "any non-empty stack").
+		pech.getTradeItems().insertItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK), false);
+		pech.generateTradeContents();
+		helper.assertFalse(pech.getTradeItems().getStackInSlot(0).isEmpty(), "a non-valued item shouldn't be consumed by a trade");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void pechTradeMenuOpensOnInteractWhenTamedAndRespectsRealValidity(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos.below(), Blocks.STONE);
+		BlockPos absolute = helper.absolutePos(pos);
+
+		thaumcraft.common.entities.monster.EntityPech pech =
+				new thaumcraft.common.entities.monster.EntityPech(thaumcraft.common.registry.ThaumcraftEntities.PECH.get(), helper.getLevel());
+		pech.setPos(absolute.getX() + 0.5, absolute.getY(), absolute.getZ() + 0.5);
+		helper.getLevel().addFreshEntity(pech);
+
+		ServerPlayer player = spawnCasterAt(helper, absolute);
+
+		pech.interact(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertFalse(player.containerMenu instanceof thaumcraft.common.container.PechMenu,
+				"an untamed pech shouldn't open the trade menu");
+
+		pech.setTamed(true);
+		pech.interact(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(player.containerMenu instanceof thaumcraft.common.container.PechMenu,
+				"a tamed pech should open a real trade menu on interact");
+		helper.assertTrue(pech.trading, "the pech should be marked as trading while the menu is open");
+
+		thaumcraft.common.container.PechMenu menu = (thaumcraft.common.container.PechMenu) player.containerMenu;
+		helper.assertTrue(menu.stillValid(player), "the menu should stay valid while the pech is alive, tamed, and in range");
+		menu.removed(player);
+		helper.assertFalse(pech.trading, "closing the menu should clear the trading flag");
+		helper.succeed();
+	}
 }

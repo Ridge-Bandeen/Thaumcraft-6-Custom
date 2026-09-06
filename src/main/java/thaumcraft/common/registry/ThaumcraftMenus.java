@@ -40,6 +40,12 @@ public final class ThaumcraftMenus {
 	public static final Supplier<MenuType<thaumcraft.common.container.ThaumonomiconMenu>> THAUMONOMICON = MENUS.register("thaumonomicon",
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.ThaumonomiconMenu(windowId, inv)));
 
+	/** Like {@link #GOLEM_BUILDER} above, the client constructor ignores the buffer - {@code PechMenu}'s own
+	 * shape never varies per instance. This port's first menu attached to a live entity rather than a block
+	 * position - see that class's own doc comment. */
+	public static final Supplier<MenuType<thaumcraft.common.container.PechMenu>> PECH_TRADE = MENUS.register("pech_trade",
+			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.PechMenu(windowId, inv)));
+
 	private ThaumcraftMenus() {
 	}
 }

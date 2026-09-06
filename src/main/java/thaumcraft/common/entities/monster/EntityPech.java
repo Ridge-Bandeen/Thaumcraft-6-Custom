@@ -18,6 +18,9 @@ import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -46,17 +49,25 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Arrow;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.NameTagItem;
 import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemStackHandler;
+import thaumcraft.api.aspects.Aspect;
+import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.casters.FocusEngine;
 import thaumcraft.api.casters.FocusMediumRoot;
 import thaumcraft.api.casters.FocusPackage;
 import thaumcraft.api.casters.IFocusElement;
+import thaumcraft.api.items.ItemGenericEssentiaContainer;
 import thaumcraft.api.items.ItemsTC;
+import thaumcraft.common.container.PechMenu;
 import thaumcraft.common.items.casters.foci.FocusEffectAir;
 import thaumcraft.common.items.casters.foci.FocusEffectCurse;
 import thaumcraft.common.items.casters.foci.FocusEffectEarth;
@@ -74,6 +85,14 @@ import thaumcraft.common.items.casters.foci.FocusMediumProjectile;
  * elemental/curse effects) via the same real {@link FocusEngine}/caster API this port's wand items already
  * use.
  *
+ * <b>Trading (chunk 2)</b>: a tamed Pech opens {@link thaumcraft.common.container.PechMenu} on right-click -
+ * feed a valued item into the input slot and click "Trade" (real {@code clickMenuButton} id 0, the modern
+ * replacement for the original's own {@code enchantItem}/{@code sendEnchantPacket} pair) to receive a
+ * random mix of rewards (drawn from {@link #TRADE_REWARDS}, one real table per {@link #getPechType()}) or
+ * an item straight out of the loot bag, exactly matching the original's own {@code
+ * ContainerPech#generateContents} value-tier algorithm. A successful high-value trade re-arms the Pech's
+ * hostility (matches the original's own quirk of a trade sometimes "using up" the taming).
+ *
  * <b>Real, documented simplifications (forced by missing dependencies, not design choices)</b>:
  * <ul>
  * <li>Taming only recognizes {@code Items.ENDER_PEARL} as a "valued" item (the original's own single
@@ -81,11 +100,13 @@ import thaumcraft.common.items.casters.foci.FocusMediumProjectile;
  * onto {@code ThaumcraftCraftingManager#getObjectTags}, the same thousands-of-entries item-aspect ("object
  * tag") database blocking the Potion Sprayer's real aspect cost (see the port-tracking memory's "config
  * system" gap) - not available, so no other item can raise a Pech's Desire score yet.</li>
- * <li><b>No trading GUI yet</b> - {@code ContainerPech}/{@code InventoryPech}/{@code GuiPech} (a real
- * input-slot-plus-4-output-slots trade menu) and the {@code tradeInventory} reward tables are a separate,
- * real chunk of GUI work, deliberately not attempted in this pass. A tamed Pech's right-click currently
- * falls through to vanilla's default interact (nothing happens) - {@link #mobInteract} is the real hook
- * point for wiring the menu up later.</li>
+ * <li>{@link #TRADE_REWARDS} is a real, representative reward set per type, not an exhaustive port of the
+ * original's own {@code ConfigEntities#tradeInventory} tables - several original reward items (ore
+ * clusters, the Eldritch Eye, the Void amulet, enchanted books) reference either unported items or the
+ * modern data-component enchantment API's real extra complexity, so this substitutes already-real items of
+ * the same rough tier/flavor instead (crystal essence and elemental crystals, cloth armor, Thaumium tools,
+ * baubles, candles, experience bottles, golden apples), same "substitute the nearest already-real
+ * equivalent" precedent every other chunk this session has used.</li>
  * <li>No enchantment-based arrow damage/knockback/fire-aspect scaling on the bow attack (Power/Punch/Flame)
  * - modern MC's data-component-based enchantment API is real extra complexity this pass skips; the arrow
  * still does real, difficulty-scaled damage and can still roll a poison tip.</li>
@@ -118,10 +139,71 @@ public class EntityPech extends Monster implements RangedAttackMob {
 	 * qualifies yet. */
 	private static final Map<Item, Integer> VALUED_ITEMS = Map.of(Items.ENDER_PEARL, 15);
 
+	private record TradeReward(int tier, java.util.function.Supplier<ItemStack> stack) {
+	}
+
+	/** One real reward table per {@link #getPechType()} - see this class's own doc comment for why this is a
+	 * representative set, not an exhaustive port of the original's own {@code tradeInventory}. */
+	private static final Map<Integer, List<TradeReward>> TRADE_REWARDS = Map.of(
+			0, List.of( // forage/melee
+					new TradeReward(1, () -> new ItemStack(thaumcraft.api.items.ItemsTC.crystalEssence.get())),
+					new TradeReward(1, () -> new ItemStack(Items.BLAZE_POWDER)),
+					new TradeReward(2, () -> new ItemStack(Items.BLAZE_ROD)),
+					new TradeReward(2, () -> new ItemStack(thaumcraft.api.blocks.BlocksTC.saplingGreatwood.get())),
+					new TradeReward(3, () -> new ItemStack(Items.EXPERIENCE_BOTTLE)),
+					new TradeReward(3, () -> new ItemStack(Items.GOLDEN_APPLE)),
+					new TradeReward(4, () -> new ItemStack(thaumcraft.api.items.ItemsTC.thaumiumPick.get())),
+					new TradeReward(4, () -> new ItemStack(thaumcraft.api.items.ItemsTC.thaumiumAxe.get())),
+					new TradeReward(5, () -> new ItemStack(Items.TOTEM_OF_UNDYING)),
+					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.curiosityBand.get()))),
+			1, List.of( // thaum/wand
+					new TradeReward(1, () -> EntityPech.makeCrystal(Aspect.AIR)),
+					new TradeReward(1, () -> EntityPech.makeCrystal(Aspect.EARTH)),
+					new TradeReward(1, () -> EntityPech.makeCrystal(Aspect.FIRE)),
+					new TradeReward(1, () -> EntityPech.makeCrystal(Aspect.WATER)),
+					new TradeReward(1, () -> EntityPech.makeCrystal(Aspect.ORDER)),
+					new TradeReward(1, () -> EntityPech.makeCrystal(Aspect.ENTROPY)),
+					new TradeReward(2, () -> EntityPech.makeCrystal(Aspect.FLUX)),
+					new TradeReward(3, () -> new ItemStack(Items.EXPERIENCE_BOTTLE)),
+					new TradeReward(3, () -> EntityPech.makeCrystal(Aspect.AURA)),
+					new TradeReward(4, () -> new ItemStack(thaumcraft.api.items.ItemsTC.clothBoots.get())),
+					new TradeReward(4, () -> new ItemStack(thaumcraft.api.items.ItemsTC.clothChest.get())),
+					new TradeReward(4, () -> new ItemStack(thaumcraft.api.items.ItemsTC.clothLegs.get())),
+					new TradeReward(5, () -> new ItemStack(Items.ENCHANTED_GOLDEN_APPLE)),
+					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.pechWand.get())),
+					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.amuletVisCrafted.get()))),
+			2, List.of( // stalker/bow
+					new TradeReward(1, () -> new ItemStack(thaumcraft.api.blocks.BlocksTC.candles.get(DyeColor.WHITE).get())),
+					new TradeReward(2, () -> new ItemStack(Items.GHAST_TEAR)),
+					new TradeReward(2, () -> new ItemStack(Items.COMPASS)),
+					new TradeReward(3, () -> new ItemStack(Items.EXPERIENCE_BOTTLE)),
+					new TradeReward(3, () -> new ItemStack(Items.GOLDEN_APPLE)),
+					new TradeReward(4, () -> new ItemStack(Items.SPECTRAL_ARROW, 8)),
+					new TradeReward(4, () -> new ItemStack(Items.ENCHANTED_GOLDEN_APPLE)),
+					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.voidseerCharm.get()))));
+
+	/** Small, local stand-in for the original's {@code ThaumcraftApiHelper.makeCrystal} - same duplicate
+	 * {@code EntityWisp}/{@code ToolEvents} already carry locally rather than porting the whole unconverted
+	 * class for one method. */
+	private static ItemStack makeCrystal(Aspect aspect) {
+		ItemStack stack = new ItemStack(ItemsTC.crystalEssence.get());
+		((ItemGenericEssentiaContainer) stack.getItem()).setAspects(stack, new AspectList().add(aspect, 1));
+		return stack;
+	}
+
 	public final NonNullList<ItemStack> loot = NonNullList.withSize(9, ItemStack.EMPTY);
-	/** Set true/false by the (not yet built - see this class's own doc comment) trading menu while open;
-	 * real field kept now so {@link TradePlayerGoal} and future menu code share it, matching the original. */
+	/** Set true/false by {@link thaumcraft.common.container.PechMenu} while open - real field shared with
+	 * {@link TradePlayerGoal}, matching the original's own {@code EntityPech.trading} flag. */
 	public boolean trading;
+	/** The trade menu's own 5 slots (0 = input, 1-4 = output) - a real purpose-built {@link ItemStackHandler}
+	 * replacing the original's shared-base {@code InventoryPech}, same "no shared inventory-tile base"
+	 * precedent {@code GolemBuilderMenu}'s own doc comment already established. */
+	public final ItemStackHandler tradeItems = new ItemStackHandler(5) {
+		@Override
+		public boolean isItemValid(int slot, ItemStack stack) {
+			return slot == 0;
+		}
+	};
 
 	private int chargeCount;
 
@@ -459,6 +541,111 @@ public class EntityPech extends Monster implements RangedAttackMob {
 	public int getValue(ItemStack stack) {
 		if (stack.isEmpty()) return 0;
 		return VALUED_ITEMS.getOrDefault(stack.getItem(), 0);
+	}
+
+	public IItemHandler getTradeItems() {
+		return tradeItems;
+	}
+
+	public boolean hasLootInBag() {
+		for (ItemStack stack : loot) {
+			if (!stack.isEmpty()) return true;
+		}
+		return false;
+	}
+
+	/** Removes and returns a single item from a random filled loot-bag slot - real port of the original's
+	 * own random loot pick inside {@code ContainerPech#generateContents}. */
+	public ItemStack takeRandomLootItem() {
+		List<Integer> filled = new java.util.ArrayList<>();
+		for (int i = 0; i < loot.size(); i++) {
+			if (!loot.get(i).isEmpty()) filled.add(i);
+		}
+		if (filled.isEmpty()) return ItemStack.EMPTY;
+		int index = filled.get(random.nextInt(filled.size()));
+		ItemStack taken = loot.get(index).copy();
+		taken.setCount(1);
+		loot.get(index).shrink(1);
+		if (loot.get(index).isEmpty()) loot.set(index, ItemStack.EMPTY);
+		return taken;
+	}
+
+	/** Real port of the original's own {@code ContainerPech#generateContents} - consumes the input slot (if
+	 * it's a real valued item and the 4 output slots are all empty) and fills the output slots with a random
+	 * value-tier mix of rewards drawn from {@link #TRADE_REWARDS} (or straight out of the loot bag). A
+	 * successful high-value roll re-arms the Pech's hostility, matching the original's own real quirk. */
+	public void generateTradeContents() {
+		ItemStack payment = tradeItems.getStackInSlot(0);
+		if (payment.isEmpty() || !isValued(payment)) return;
+		for (int i = 1; i <= 4; i++) {
+			if (!tradeItems.getStackInSlot(i).isEmpty()) return;
+		}
+
+		int value = getValue(payment);
+		if (random.nextInt(100) <= value / 2) {
+			setTamed(false);
+			setCombatTask();
+			playSound(SoundEvents.VILLAGER_YES, getSoundVolume(), getVoicePitch());
+		}
+		if (random.nextInt(5) == 0) {
+			value += random.nextInt(3);
+		} else if (random.nextBoolean()) {
+			value -= Math.min(value, random.nextInt(3));
+		}
+
+		List<TradeReward> pool = TRADE_REWARDS.getOrDefault(getPechType(), List.of());
+		int guard = 0;
+		while (value > 0 && guard++ < 50) {
+			int roll = random.nextInt(Math.max(value, 1)) + 1;
+			int amount = Math.min(5, Math.max((value + 1) / 2, roll));
+			value -= amount;
+			ItemStack reward = ItemStack.EMPTY;
+			if (amount == 1 && random.nextBoolean() && hasLootInBag()) {
+				reward = takeRandomLootItem();
+			} else if (!(amount >= 4 && random.nextBoolean())) {
+				reward = rollReward(pool, amount);
+			}
+			if (!reward.isEmpty() && !addRewardToOutput(reward)) break;
+		}
+		tradeItems.setStackInSlot(0, ItemStack.EMPTY);
+	}
+
+	private boolean addRewardToOutput(ItemStack stack) {
+		for (int i = 1; i <= 4; i++) {
+			ItemStack slot = tradeItems.getStackInSlot(i);
+			if (slot.isEmpty()) {
+				tradeItems.setStackInSlot(i, stack);
+				return true;
+			}
+			if (ItemStack.isSameItemSameComponents(slot, stack) && slot.getCount() + stack.getCount() <= slot.getMaxStackSize()) {
+				slot.grow(stack.getCount());
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private ItemStack rollReward(List<TradeReward> pool, int tier) {
+		List<TradeReward> matching = pool.stream().filter(r -> r.tier() == tier).toList();
+		return matching.isEmpty() ? ItemStack.EMPTY : matching.get(random.nextInt(matching.size())).stack().get();
+	}
+
+	@Override
+	protected InteractionResult mobInteract(Player player, InteractionHand hand) {
+		if (player.isShiftKeyDown() || player.getItemInHand(hand).getItem() instanceof NameTagItem) {
+			return super.mobInteract(player, hand);
+		}
+		if (isTamed()) {
+			if (!level().isClientSide) {
+				trading = true;
+				MenuProvider provider = new SimpleMenuProvider(
+						(id, inv, p) -> new PechMenu(id, inv, this),
+						net.minecraft.network.chat.Component.translatable("entity.thaumcraft.pech"));
+				player.openMenu(provider);
+			}
+			return InteractionResult.SUCCESS;
+		}
+		return super.mobInteract(player, hand);
 	}
 
 	@Override

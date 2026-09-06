@@ -85,6 +85,7 @@ public class ThaumcraftClient {
         event.register(ThaumcraftMenus.SEAL_CONFIG.get(), thaumcraft.client.gui.SealConfigScreen::new);
         event.register(ThaumcraftMenus.TURRET_CONFIG.get(), thaumcraft.client.gui.TurretConfigScreen::new);
         event.register(ThaumcraftMenus.THAUMONOMICON.get(), thaumcraft.client.gui.ThaumonomiconScreen::new);
+        event.register(ThaumcraftMenus.PECH_TRADE.get(), thaumcraft.client.gui.GuiPechTrade::new);
     }
 
     @SubscribeEvent

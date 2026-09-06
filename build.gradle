@@ -46,6 +46,8 @@ sourceSets {
             include 'thaumcraft/common/tiles/crafting/TileVoidSiphon.java'
             include 'thaumcraft/common/entities/monster/EntityPech.java'
             include 'thaumcraft/client/render/RenderPech.java'
+            include 'thaumcraft/common/container/PechMenu.java'
+            include 'thaumcraft/client/gui/GuiPechTrade.java'
             include 'thaumcraft/common/blocks/basic/BlockPavingStoneTravel.java'
             include 'thaumcraft/common/blocks/basic/BlockCandle.java'
             include 'thaumcraft/common/blocks/misc/BlockNitor.java'
