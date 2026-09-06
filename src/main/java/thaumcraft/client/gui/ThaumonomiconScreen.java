@@ -15,7 +15,18 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.ShapedRecipe;
+import thaumcraft.api.aspects.Aspect;
+import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.capabilities.IPlayerKnowledge;
+import thaumcraft.api.crafting.ArcaneRecipe;
+import thaumcraft.api.crafting.ArcaneShapedRecipe;
+import thaumcraft.api.crafting.CrucibleRecipe;
+import thaumcraft.api.crafting.InfusionRecipe;
 import thaumcraft.api.research.ResearchAddendum;
 import thaumcraft.api.research.ResearchCategories;
 import thaumcraft.api.research.ResearchCategory;
@@ -24,6 +35,7 @@ import thaumcraft.api.research.ResearchEntry.EnumResearchMeta;
 import thaumcraft.api.research.ResearchStage;
 import thaumcraft.client.ClientPlayerKnowledgeCache;
 import thaumcraft.common.container.ThaumonomiconMenu;
+import thaumcraft.common.lib.crafting.InfusionEnchantmentRecipe;
 
 /**
  * Replaces the old (1.12.2) {@code GuiResearchBrowser}/{@code GuiResearchPage} pair. Restores the original's
@@ -88,10 +100,16 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 	private int readerPage;
 
 	private static final ResourceLocation BOOK_TEX = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/gui/gui_researchbook.png");
+	private static final ResourceLocation OVERLAY_TEX = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/gui/gui_researchbook_overlay.png");
+	private static final ResourceLocation PAPER_TEX = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/gui/paper.png");
 	private static final int BOOK_W = 256, BOOK_H = 181;
 	private static final int PAGE_TEXT_WIDTH = 140;
 	private static final Pattern MARKUP_MARKER = Pattern.compile("~P|~D|~L|~I");
 	private static final Object PAGE_BREAK = new Object();
+	private static final ResourceLocation[] NO_RECIPES = new ResourceLocation[0];
+
+	/** The recipe bookmark currently open in the reader's detail popup, {@code null} when closed. */
+	private RecipeHolder<?> shownRecipe;
 
 	/** One pre-cut decorative rule image, cut from {@link #BOOK_TEX} under the original's own fixed 256x256
 	 * UV-space convention (its real file is 512x512 - see {@link #drawReaderImage} for why that's irrelevant). */
@@ -106,9 +124,11 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 
 	/** One physical page's worth of already-paginated content - each element is either a wrapped text
 	 * {@link String} line (possibly ending in the internal {@code "~B"} paragraph-break marker) or a
-	 * {@link ReaderImage}, mirroring the original's own {@code Page.contents} mixed list. */
+	 * {@link ReaderImage}, mirroring the original's own {@code Page.contents} mixed list. Also carries the
+	 * real {@code recipes} bookmark list from whichever stage or addendum this page's own text came from. */
 	private static final class ReaderPage {
 		final List<Object> content = new ArrayList<>();
+		ResourceLocation[] recipes = NO_RECIPES;
 	}
 
 	/** One real search result row - either a category (jump there) or a known research entry (open its
@@ -309,6 +329,21 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 		if (super.mouseClicked(mouseX, mouseY, button)) return true;
 		if (openEntry != null) {
 			if (button != 0) return false;
+			if (shownRecipe != null) {
+				if (!detailPopupContains(mouseX, mouseY)) {
+					shownRecipe = null;
+					playPageTurnSound();
+				}
+				return true;
+			}
+			int sw = (width - BOOK_W) / 2;
+			int sh = (height - BOOK_H) / 2;
+			RecipeHolder<?> clicked = bookmarkAt(mouseX, mouseY, resolveVisibleRecipes(), sw, sh);
+			if (clicked != null) {
+				shownRecipe = clicked;
+				playPageTurnSound();
+				return true;
+			}
 			if (readerPage > 0 && mouseInsidePrevArrow(mouseX, mouseY)) {
 				readerPage -= 2;
 				playPageTurnSound();
@@ -434,6 +469,7 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 	private void openReader(ResearchEntry entry) {
 		openEntry = entry;
 		readerPage = 0;
+		shownRecipe = null;
 		buildReaderPages();
 		rebuild();
 	}
@@ -442,6 +478,7 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 		openEntry = null;
 		readerPages.clear();
 		readerPage = 0;
+		shownRecipe = null;
 		rebuild();
 	}
 
@@ -918,23 +955,29 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 			return;
 		}
 
-		StringBuilder raw = new StringBuilder();
-		for (int i = 0; i < stages.length; i++) {
-			if (i > 0) raw.append("<PAGE>");
-			raw.append(stages[i].getTextLocalized().getString());
+		for (ResearchStage stage : stages) {
+			readerPages.addAll(paginateSegment(stage.getTextLocalized().getString(), stage.getRecipes()));
 		}
 		if (openEntry.getAddenda() != null) {
 			int ac = 0;
 			for (ResearchAddendum addendum : openEntry.getAddenda()) {
 				if (addendum.getResearch() == null || knowsAllStrict(addendum.getResearch())) {
 					ac++;
-					raw.append("<PAGE>").append(Component.translatable("tc.addendumtext", ac).getString())
-							.append("<BR>").append(addendum.getTextLocalized().getString());
+					String text = Component.translatable("tc.addendumtext", ac).getString()
+							+ "<BR>" + addendum.getTextLocalized().getString();
+					readerPages.addAll(paginateSegment(text, addendum.getRecipes()));
 				}
 			}
 		}
+		if (readerPages.isEmpty()) readerPages.add(new ReaderPage());
+	}
 
-		String text = raw.toString();
+	/** Real markup parsing + word-wrap + height-budget pagination for one stage's or addendum's own raw
+	 * text, tagging every resulting page with that source's own real {@code recipes} bookmark list - split
+	 * out of {@link #buildReaderPages} so each stage/addendum's own recipes stay attached to the pages that
+	 * actually came from it, rather than one flat document losing track of which part said what. */
+	private List<ReaderPage> paginateSegment(String rawText, ResourceLocation[] recipes) {
+		String text = rawText;
 		text = text.replace("<BR/>", "~B\n").replace("<BR>", "~B\n");
 		text = text.replace("<LINE/>", "~L").replace("<LINE>", "~L");
 		text = text.replace("<DIV/>", "~D").replace("<DIV>", "~D");
@@ -981,19 +1024,20 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 			}
 		}
 
+		List<ReaderPage> pages = new ArrayList<>();
 		int lineHeight = font.lineHeight;
 		int heightRemaining = 182;
 		ReaderPage current = new ReaderPage();
 		for (Object el : stream) {
 			if (el == PAGE_BREAK) {
-				readerPages.add(current);
+				pages.add(current);
 				current = new ReaderPage();
 				heightRemaining = 210;
 				continue;
 			}
 			if (el instanceof ReaderImage img) {
 				if (heightRemaining < img.ah() + 2 && !current.content.isEmpty()) {
-					readerPages.add(current);
+					pages.add(current);
 					current = new ReaderPage();
 					heightRemaining = 210;
 				}
@@ -1006,13 +1050,16 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 			heightRemaining -= lineHeight;
 			if (line.endsWith("~B")) heightRemaining -= (int) (lineHeight * 0.66);
 			if (heightRemaining < lineHeight && !current.content.isEmpty()) {
-				readerPages.add(current);
+				pages.add(current);
 				current = new ReaderPage();
 				heightRemaining = 210;
 			}
 		}
-		if (!current.content.isEmpty()) readerPages.add(current);
-		if (readerPages.isEmpty()) readerPages.add(new ReaderPage());
+		if (!current.content.isEmpty()) pages.add(current);
+		if (pages.isEmpty()) pages.add(new ReaderPage());
+		ResourceLocation[] tag = recipes != null ? recipes : NO_RECIPES;
+		for (ReaderPage page : pages) page.recipes = tag;
+		return pages;
 	}
 
 	private boolean knowsAllStrict(String[] keys) {
@@ -1143,6 +1190,26 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 		if (readerPage + 2 < readerPages.size()) {
 			drawBobbingArrow(graphics, sw + BOOK_W + 6, sh + 190, 12, 184, bob);
 		}
+
+		renderRecipeBookmarks(graphics, resolveVisibleRecipes(), mouseX, mouseY, sw, sh);
+		if (shownRecipe != null) {
+			renderRecipeDetail(graphics, mouseX, mouseY);
+		}
+	}
+
+	/** The real recipe bookmarks for whichever stage/addendum the current LEFT page came from - matches the
+	 * original's own "recipes shown are for the page you're looking at" behavior, generalized to this port's
+	 * concatenated-all-stages document (see {@link #buildReaderPages}'s own doc comment for why that's a
+	 * real, deliberate difference from the original's per-stage reader). */
+	private List<RecipeHolder<?>> resolveVisibleRecipes() {
+		if (readerPage >= readerPages.size() || minecraft.level == null) return List.of();
+		ResourceLocation[] ids = readerPages.get(readerPage).recipes;
+		if (ids.length == 0) return List.of();
+		List<RecipeHolder<?>> out = new ArrayList<>();
+		for (ResourceLocation id : ids) {
+			minecraft.level.getRecipeManager().byKey(id).ifPresent(out::add);
+		}
+		return out;
 	}
 
 	private void drawBobbingArrow(GuiGraphics graphics, int x, int y, int u, int v, float bob) {
@@ -1194,5 +1261,254 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 		graphics.pose().scale(img.scale(), img.scale(), 1f);
 		graphics.blit(img.tex(), 0, 0, img.u(), img.v(), img.w(), img.h());
 		graphics.pose().popPose();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Recipe visualization ("Stage 2b") - real crafting/arcane/crucible/infusion recipe pages, restoring
+	// GuiResearchPage's own real per-type renderers. The original's 5th type, compound crafting (a real 3D
+	// multiblock-structure preview via a bespoke IBlockAccess + the game's own block renderer), is dropped
+	// outright rather than ported: confirmed via direct search that no compound-crafting recipe type was
+	// ever ported to this project at all - no Java class, no JSON data anywhere - so it's real, provable
+	// dead code for this port, the same class of cut as the hex-grid browser's addon-category panel. The
+	// aspect/knowledge "insert" encyclopedia popups (drawAspectPage/drawKnowledgesInsert) are a separate
+	// feature from recipe visualization and stay out of scope here too.
+	//
+	// Real simplification versus the original: one bookmark (one real ResourceLocation in a stage's
+	// `recipes` list) now always means exactly one real recipe, so the original's own recipe-cycling
+	// ("recipePage"/"hasRecipePages", for when several physical recipes shared one catalog key) is dropped -
+	// that stemmed entirely from the original's own recipe-groups catalog, which was never ported (this
+	// port's data-driven recipe files are already real, individually-addressed one-key-one-recipe).
+	// --------------------------------------------------------------------------------------------------
+
+	private static final int BOOKMARK_SIZE = 18;
+	private static final int DETAIL_SIZE = 256;
+
+	private int bookmarkX(int sw) {
+		return sw + BOOK_W + 22;
+	}
+
+	private int bookmarkY(int sh, int index) {
+		return sh + 12 + index * (BOOKMARK_SIZE + 4);
+	}
+
+	private void renderRecipeBookmarks(GuiGraphics graphics, List<RecipeHolder<?>> bookmarks, int mouseX, int mouseY, int sw, int sh) {
+		for (int i = 0; i < bookmarks.size(); i++) {
+			RecipeHolder<?> holder = bookmarks.get(i);
+			int x = bookmarkX(sw);
+			int y = bookmarkY(sh, i);
+			boolean hovered = mouseX >= x && mouseX < x + BOOKMARK_SIZE && mouseY >= y && mouseY < y + BOOKMARK_SIZE;
+			boolean open = shownRecipe == holder;
+			graphics.setColor(1f, 1f, 1f, 1f);
+			graphics.fill(x - 1, y - 1, x + BOOKMARK_SIZE + 1, y + BOOKMARK_SIZE + 1,
+					open ? 0xE0805030 : (hovered ? 0xC0403020 : 0xA0201810));
+			ItemStack icon = recipeIcon(holder.value());
+			if (!icon.isEmpty()) {
+				graphics.renderItem(icon, x + 1, y + 1);
+				if (hovered) graphics.renderTooltip(font, icon, mouseX, mouseY);
+			}
+		}
+	}
+
+	/** Returns the bookmark hit at this screen position, or {@code null}. Mirrors
+	 * {@link #renderRecipeBookmarks}'s own layout exactly. */
+	private RecipeHolder<?> bookmarkAt(double mouseX, double mouseY, List<RecipeHolder<?>> bookmarks, int sw, int sh) {
+		for (int i = 0; i < bookmarks.size(); i++) {
+			int x = bookmarkX(sw);
+			int y = bookmarkY(sh, i);
+			if (mouseX >= x && mouseX < x + BOOKMARK_SIZE && mouseY >= y && mouseY < y + BOOKMARK_SIZE) {
+				return bookmarks.get(i);
+			}
+		}
+		return null;
+	}
+
+	private ItemStack recipeIcon(Recipe<?> recipe) {
+		try {
+			return recipe.getResultItem(minecraft.level.registryAccess());
+		} catch (Exception ex) {
+			return ItemStack.EMPTY;
+		}
+	}
+
+	private boolean detailPopupContains(double mouseX, double mouseY) {
+		int x = (width - DETAIL_SIZE) / 2;
+		int y = (height - DETAIL_SIZE) / 2;
+		return mouseX >= x && mouseX < x + DETAIL_SIZE && mouseY >= y && mouseY < y + DETAIL_SIZE;
+	}
+
+	private void renderRecipeDetail(GuiGraphics graphics, int mouseX, int mouseY) {
+		Recipe<?> recipe = shownRecipe.value();
+		int x = (width - DETAIL_SIZE) / 2;
+		int y = (height - DETAIL_SIZE) / 2;
+		int cx = x + DETAIL_SIZE / 2;
+		int cy = y + DETAIL_SIZE / 2;
+
+		graphics.fill(0, 0, width, height, 0x90000000);
+		graphics.setColor(1f, 1f, 1f, 1f);
+		graphics.blit(PAPER_TEX, x, y, 0, 0, DETAIL_SIZE, DETAIL_SIZE);
+
+		if (recipe instanceof ArcaneRecipe ar) {
+			drawArcaneDetail(graphics, cx, cy, mouseX, mouseY, ar);
+		} else if (recipe instanceof CrucibleRecipe cr) {
+			drawCrucibleDetail(graphics, cx, cy, mouseX, mouseY, cr);
+		} else if (recipe instanceof InfusionRecipe ir) {
+			drawInfusionDetail(graphics, cx, cy, mouseX, mouseY, ir);
+		} else if (recipe instanceof CraftingRecipe cr) {
+			drawCraftingDetail(graphics, cx, cy, mouseX, mouseY, cr);
+		}
+
+		graphics.drawCenteredString(font, Component.translatable("gui.back"), cx, y + DETAIL_SIZE - 14, 0xFFA0A0A0);
+	}
+
+	private void drawArcaneDetail(GuiGraphics graphics, int cx, int cy, int mouseX, int mouseY, ArcaneRecipe recipe) {
+		graphics.drawCenteredString(font, Component.translatable("recipe.type.arcane"), cx, cy - 90, 0x202020);
+		drawStackAt(graphics, recipeIcon(recipe), cx - 8, cy - 70, mouseX, mouseY);
+
+		String vis = String.valueOf(recipe.getVis());
+		graphics.drawCenteredString(font, vis + " " + Component.translatable("wandtable.text1").getString(), cx, cy + 60, 0x202020);
+
+		AspectList crystals = recipe.getCrystals();
+		if (crystals != null && crystals.size() > 0) {
+			Aspect[] tags = crystals.getAspectsSortedByName();
+			int startX = cx - tags.length * 10;
+			for (int i = 0; i < tags.length; i++) {
+				drawAspectTag(graphics, startX + i * 20, cy + 74, mouseX, mouseY, tags[i], crystals.getAmount(tags[i]));
+			}
+		}
+
+		if (recipe instanceof ArcaneShapedRecipe shaped) {
+			drawIngredientGrid(graphics, shaped.getIngredients(), shaped.getWidth(), shaped.getHeight(), cx, cy - 16, mouseX, mouseY);
+		} else {
+			drawIngredientGrid(graphics, recipe.getIngredients(), 3, 3, cx, cy - 16, mouseX, mouseY);
+		}
+	}
+
+	private void drawCraftingDetail(GuiGraphics graphics, int cx, int cy, int mouseX, int mouseY, CraftingRecipe recipe) {
+		String typeKey = recipe instanceof ShapedRecipe ? "recipe.type.workbench" : "recipe.type.workbenchshapeless";
+		graphics.drawCenteredString(font, Component.translatable(typeKey), cx, cy - 90, 0x202020);
+		drawStackAt(graphics, recipeIcon(recipe), cx - 8, cy - 70, mouseX, mouseY);
+
+		if (recipe instanceof ShapedRecipe shaped) {
+			drawIngredientGrid(graphics, shaped.getIngredients(), shaped.getWidth(), shaped.getHeight(), cx, cy, mouseX, mouseY);
+		} else {
+			drawIngredientGrid(graphics, recipe.getIngredients(), 3, 3, cx, cy, mouseX, mouseY);
+		}
+	}
+
+	private void drawCrucibleDetail(GuiGraphics graphics, int cx, int cy, int mouseX, int mouseY, CrucibleRecipe recipe) {
+		graphics.drawCenteredString(font, Component.translatable("recipe.type.crucible"), cx, cy - 90, 0x202020);
+		drawStackAt(graphics, recipeIcon(recipe), cx - 8, cy - 70, mouseX, mouseY);
+		drawStackAt(graphics, cycleIngredient(recipe.getCatalyst()), cx - 40, cy - 8, mouseX, mouseY);
+
+		Aspect[] tags = recipe.getAspects().getAspectsSortedByName();
+		int cols = Math.min(6, Math.max(1, tags.length));
+		int rows = (tags.length + cols - 1) / Math.max(1, cols);
+		for (int i = 0; i < tags.length; i++) {
+			int row = i / cols;
+			int col = i % cols;
+			int rowLen = Math.min(cols, tags.length - row * cols);
+			int startX = cx - rowLen * 10;
+			drawAspectTag(graphics, startX + col * 20, cy + 16 + row * 20 - (rows - 1) * 10, mouseX, mouseY, tags[i], recipe.getAspects().getAmount(tags[i]));
+		}
+	}
+
+	private void drawInfusionDetail(GuiGraphics graphics, int cx, int cy, int mouseX, int mouseY, InfusionRecipe recipe) {
+		graphics.drawCenteredString(font, Component.translatable("recipe.type.infusion"), cx, cy - 90, 0x202020);
+
+		ItemStack central = cycleIngredient(recipe.getRecipeInput());
+		AspectList aspects = recipe.getAspects();
+		ItemStack output = recipeIcon(recipe);
+		int instability = recipe.getInstability();
+		if (recipe instanceof InfusionEnchantmentRecipe && minecraft.player != null && !central.isEmpty()) {
+			List<ItemStack> comps = new ArrayList<>();
+			for (Ingredient ing : recipe.getComponents()) comps.add(cycleIngredient(ing));
+			output = recipe.getRecipeOutput(minecraft.player, central, comps);
+			aspects = recipe.getAspects(minecraft.player, central, comps);
+			instability = recipe.getInstability(minecraft.player, central, comps);
+		}
+
+		drawStackAt(graphics, output, cx - 8, cy - 70, mouseX, mouseY);
+		drawStackAt(graphics, central, cx - 8, cy - 8, mouseX, mouseY);
+
+		List<Ingredient> components = recipe.getComponents();
+		int count = components.size();
+		double slice = count > 0 ? Math.PI * 2 / count : 0;
+		for (int i = 0; i < count; i++) {
+			double angle = -Math.PI / 2 + slice * i;
+			int vx = cx + (int) (Math.cos(angle) * 34) - 8;
+			int vy = cy + (int) (Math.sin(angle) * 34) - 8;
+			drawStackAt(graphics, cycleIngredient(components.get(i)), vx, vy, mouseX, mouseY);
+		}
+
+		String instText = Component.translatable("tc.inst").getString() + " "
+				+ Component.translatable("tc.inst." + Math.min(5, instability / 2)).getString();
+		graphics.drawCenteredString(font, instText, cx, cy + 60, 0x202020);
+
+		Aspect[] tags = aspects.getAspectsSortedByName();
+		int cols = Math.min(6, Math.max(1, tags.length));
+		for (int i = 0; i < tags.length; i++) {
+			int row = i / cols;
+			int col = i % cols;
+			int rowLen = Math.min(cols, tags.length - row * cols);
+			int startX = cx - rowLen * 10;
+			drawAspectTag(graphics, startX + col * 20, cy + 74 + row * 20, mouseX, mouseY, tags[i], aspects.getAmount(tags[i]));
+		}
+	}
+
+	/** Lays a shaped recipe's real flat, row-major {@link Ingredient} list back out into its own {@code
+	 * width}x{@code height} grid, centered on ({@code cx},{@code cy}); a shapeless list is drawn the same
+	 * way by just passing 3x3 and taking whatever fits, matching the original's own "shapeless just fills a
+	 * 3x3 in order" real behavior. */
+	private void drawIngredientGrid(GuiGraphics graphics, List<Ingredient> ingredients, int gridW, int gridH, int cx, int cy, int mouseX, int mouseY) {
+		int startX = cx - gridW * 9;
+		int startY = cy - gridH * 9;
+		for (int row = 0; row < gridH; row++) {
+			for (int col = 0; col < gridW; col++) {
+				int i = row * gridW + col;
+				if (i >= ingredients.size()) continue;
+				Ingredient ing = ingredients.get(i);
+				if (ing == null || ing.isEmpty()) continue;
+				drawStackAt(graphics, cycleIngredient(ing), startX + col * 18, startY + row * 18, mouseX, mouseY);
+			}
+		}
+	}
+
+	/** Shows a different one of an {@link Ingredient}'s real matching items every second, matching the
+	 * original's own real {@code InventoryUtils#cycleItemStack} ore-dictionary-cycling display behavior. */
+	private ItemStack cycleIngredient(Ingredient ingredient) {
+		if (ingredient == null || ingredient.isEmpty()) return ItemStack.EMPTY;
+		ItemStack[] items = ingredient.getItems();
+		if (items.length == 0) return ItemStack.EMPTY;
+		return items[(int) (System.currentTimeMillis() / 1000L % items.length)];
+	}
+
+	private void drawStackAt(GuiGraphics graphics, ItemStack stack, int x, int y, int mouseX, int mouseY) {
+		if (stack == null || stack.isEmpty()) return;
+		graphics.renderItem(stack, x, y);
+		if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
+			graphics.renderTooltip(font, stack, mouseX, mouseY);
+		}
+	}
+
+	private void drawAspectTag(GuiGraphics graphics, int x, int y, int mouseX, int mouseY, Aspect aspect, int amount) {
+		ResourceLocation image = aspect.getImage();
+		if (image != null) {
+			java.awt.Color c = new java.awt.Color(aspect.getColor());
+			graphics.setColor(c.getRed() / 255f, c.getGreen() / 255f, c.getBlue() / 255f, 1f);
+			graphics.blit(image, x, y, 0, 0, 16, 16);
+			graphics.setColor(1f, 1f, 1f, 1f);
+		}
+		if (amount > 0) {
+			String s = String.valueOf(amount);
+			graphics.pose().pushPose();
+			graphics.pose().translate(x + 16 - font.width(s) * 0.6f, y + 10, 200);
+			graphics.pose().scale(0.6f, 0.6f, 1f);
+			graphics.drawString(font, s, 0, 0, 0xFFFFFFFF);
+			graphics.pose().popPose();
+		}
+		if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
+			graphics.renderTooltip(font, List.of(Component.literal(aspect.getName()).getVisualOrderText(),
+					aspect.getLocalizedDescription().getVisualOrderText()), mouseX, mouseY);
+		}
 	}
 }

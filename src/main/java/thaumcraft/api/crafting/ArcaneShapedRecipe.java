@@ -94,6 +94,17 @@ public class ArcaneShapedRecipe implements ArcaneRecipe, IThaumcraftRecipe {
 		return pattern.ingredients();
 	}
 
+	/** Real width/height accessors, matching vanilla {@code ShapedRecipe}'s own - needed by the Thaumonomicon
+	 * reader's recipe-visualization page to lay {@link #getIngredients()}'s flat, row-major list back out into
+	 * its real grid shape instead of always assuming a full 3x3. */
+	public int getWidth() {
+		return pattern.width();
+	}
+
+	public int getHeight() {
+		return pattern.height();
+	}
+
 	@Override
 	public String getGroup() {
 		return group;
