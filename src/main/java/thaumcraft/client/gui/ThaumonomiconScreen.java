@@ -2,6 +2,8 @@ package thaumcraft.client.gui;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -9,11 +11,12 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import thaumcraft.api.capabilities.IPlayerKnowledge;
+import thaumcraft.api.research.ResearchAddendum;
 import thaumcraft.api.research.ResearchCategories;
 import thaumcraft.api.research.ResearchCategory;
 import thaumcraft.api.research.ResearchEntry;
@@ -26,9 +29,13 @@ import thaumcraft.common.container.ThaumonomiconMenu;
  * Replaces the old (1.12.2) {@code GuiResearchBrowser}/{@code GuiResearchPage} pair. Restores the original's
  * real hex-grid browser in full - pan/zoom, per-entry hex/round icon frames, real connector lines between
  * parents/siblings, category tabs, "new research"/"new page" badges - reusing the original's own real
- * {@code gui_research_browser.png} atlas and UV layout directly. The page-reader side stays the simplified
- * text-stage view from this port's first pass (see {@link ResearchStage}) - {@code GuiResearchPage}'s real
- * recipe-visualization page types are a separate, later restoration pass.
+ * {@code gui_research_browser.png} atlas and UV layout directly. The reader side is restored as a real
+ * two-page open-book spread (the original's {@code gui_researchbook.png} art, real {@code <BR>}/{@code <LINE>}/
+ * {@code <DIV>}/{@code <PAGE>}/{@code <IMG>} stage-text markup, real addenda) - see {@link #buildReaderPages}'s
+ * own doc comment for the one deliberate omission (the live per-stage requirements checklist) and why it
+ * doesn't apply here. {@code GuiResearchPage}'s real recipe-visualization page types (crafting/arcane/
+ * crucible/infusion/compound-crafting grids, the aspect/knowledge "insert" popups) are a separate, later
+ * restoration pass.
  *
  * <p>Real search: category names plus every research entry the player already knows (matched by localized
  * name), following the original's own real filtering - dropped from that original search: matching against
@@ -77,7 +84,32 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 	private final List<SearchHit> searchResults = new ArrayList<>();
 
 	private ResearchEntry openEntry;
-	private int stageIndex;
+	private final List<ReaderPage> readerPages = new ArrayList<>();
+	private int readerPage;
+
+	private static final ResourceLocation BOOK_TEX = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/gui/gui_researchbook.png");
+	private static final int BOOK_W = 256, BOOK_H = 181;
+	private static final int PAGE_TEXT_WIDTH = 140;
+	private static final Pattern MARKUP_MARKER = Pattern.compile("~P|~D|~L|~I");
+	private static final Object PAGE_BREAK = new Object();
+
+	/** One pre-cut decorative rule image, cut from {@link #BOOK_TEX} under the original's own fixed 256x256
+	 * UV-space convention (its real file is 512x512 - see {@link #drawReaderImage} for why that's irrelevant). */
+	private record ReaderImage(ResourceLocation tex, int u, int v, int w, int h, float scale, int aw, int ah) {
+		static ReaderImage of(ResourceLocation tex, int u, int v, int w, int h, float scale) {
+			return new ReaderImage(tex, u, v, w, h, scale, Math.round(w * scale), Math.round(h * scale));
+		}
+	}
+
+	private static final ReaderImage DIVIDER_LINE = ReaderImage.of(BOOK_TEX, 24, 184, 95, 6, 1f);
+	private static final ReaderImage DIVIDER_BIG = ReaderImage.of(BOOK_TEX, 28, 192, 140, 6, 1f);
+
+	/** One physical page's worth of already-paginated content - each element is either a wrapped text
+	 * {@link String} line (possibly ending in the internal {@code "~B"} paragraph-break marker) or a
+	 * {@link ReaderImage}, mirroring the original's own {@code Page.contents} mixed list. */
+	private static final class ReaderPage {
+		final List<Object> content = new ArrayList<>();
+	}
 
 	/** One real search result row - either a category (jump there) or a known research entry (open its
 	 * page directly), matching the original's own two real result kinds. */
@@ -178,22 +210,10 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 
 	private void addReaderButtons() {
 		addRenderableWidget(Button.builder(Component.translatable("gui.back"), b -> closeEntry())
-				.bounds(viewLeft, viewTop + viewHeight - 20, 60, 18).build());
-
-		ResearchStage[] stages = openEntry.getStages();
-		Button prev = Button.builder(Component.literal("<"), b -> {
-			stageIndex = Math.max(0, stageIndex - 1);
-			rebuild();
-		}).bounds(viewLeft + viewWidth - 80, viewTop + viewHeight - 20, 20, 18).build();
-		prev.active = stageIndex > 0;
-		addRenderableWidget(prev);
-
-		Button next = Button.builder(Component.literal(">"), b -> {
-			stageIndex = Math.min(stages.length - 1, stageIndex + 1);
-			rebuild();
-		}).bounds(viewLeft + viewWidth - 56, viewTop + viewHeight - 20, 20, 18).build();
-		next.active = stageIndex < stages.length - 1;
-		addRenderableWidget(next);
+				.bounds(viewLeft, viewTop, 60, 18).build());
+		// Page-turning uses real book-arrow graphics hit-tested directly against the mouse (see
+		// prevArrowRect/nextArrowRect + mouseClicked) instead of Button widgets, matching the original's
+		// own non-widget click handling for these.
 	}
 
 	// --------------------------------------------------------------------------------------------------
@@ -287,7 +307,20 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 	@Override
 	public boolean mouseClicked(double mouseX, double mouseY, int button) {
 		if (super.mouseClicked(mouseX, mouseY, button)) return true;
-		if (openEntry != null) return false;
+		if (openEntry != null) {
+			if (button != 0) return false;
+			if (readerPage > 0 && mouseInsidePrevArrow(mouseX, mouseY)) {
+				readerPage -= 2;
+				playPageTurnSound();
+				return true;
+			}
+			if (readerPage + 2 < readerPages.size() && mouseInsideNextArrow(mouseX, mouseY)) {
+				readerPage += 2;
+				playPageTurnSound();
+				return true;
+			}
+			return false;
+		}
 
 		if (button == 0) {
 			if (searchButtonAt(mouseX, mouseY)) {
@@ -373,9 +406,7 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 			toggleSearch();
 			category = hit.entry().getCategory();
 			rebuildEntries();
-			openEntry = hit.entry();
-			stageIndex = 0;
-			rebuild();
+			openReader(hit.entry());
 		}
 		return true;
 	}
@@ -397,14 +428,20 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 		} else {
 			sendButtonClick(entry.getKey().hashCode()); // clears "new" flags server-side, see ThaumonomiconMenu
 		}
+		openReader(entry);
+	}
+
+	private void openReader(ResearchEntry entry) {
 		openEntry = entry;
-		stageIndex = 0;
+		readerPage = 0;
+		buildReaderPages();
 		rebuild();
 	}
 
 	private void closeEntry() {
 		openEntry = null;
-		stageIndex = 0;
+		readerPages.clear();
+		readerPage = 0;
 		rebuild();
 	}
 
@@ -427,7 +464,7 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
 		super.render(graphics, mouseX, mouseY, partialTick);
 		if (openEntry != null) {
-			renderReader(graphics);
+			renderReader(graphics, mouseX, mouseY);
 		} else {
 			renderBrowser(graphics, mouseX, mouseY, partialTick);
 		}
@@ -854,20 +891,308 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 		graphics.renderTooltip(font, lines.stream().map(Component::getVisualOrderText).toList(), mouseX, mouseY);
 	}
 
-	private void renderReader(GuiGraphics graphics) {
+	// --------------------------------------------------------------------------------------------------
+	// Reader - real two-page open-book spread, restoring GuiResearchPage's own real look. Recipe
+	// visualization (crafting/arcane/crucible/infusion/compound-crafting page types, aspect/knowledge
+	// "insert" popups) is a separate, later restoration pass - see this class's own doc comment.
+	// --------------------------------------------------------------------------------------------------
+
+	/** Builds {@link #readerPages} from {@link #openEntry}'s real stage text. Since this port's own
+	 * {@code ThaumcraftInternalMethodHandler#completeResearch} advances a multi-stage entry through every
+	 * stage in one click (see its doc comment) rather than gating each stage on live crafting/possession
+	 * requirements the way the original did, the reader can never observe a partially-progressed entry -
+	 * by the time it opens, the entry is always complete. So instead of showing only the "current" stage
+	 * (which would always be the last one, silently discarding every earlier stage's authored text), this
+	 * concatenates every real stage's text back-to-back as one browsable document, stage boundaries marked
+	 * with the same real page-break behavior the original itself already uses between addenda. Real
+	 * addenda are appended the same way, gated on the same {@code required_research} check. The original's
+	 * live per-stage requirements checklist ({@code drawRequirements}, its icon rows and "complete stage"
+	 * button) is dropped outright rather than ported: with completion already atomic, it would render
+	 * against an already-satisfied gate and never be interactible - real dead code under this port's own
+	 * already-shipped progression model, not a visual shortcut. */
+	private void buildReaderPages() {
+		readerPages.clear();
 		ResearchStage[] stages = openEntry.getStages();
-		ResearchStage stage = stages[Math.min(stageIndex, stages.length - 1)];
-
-		graphics.fill(viewLeft - 4, viewTop - 4, viewLeft + viewWidth + 4, viewTop + viewHeight + 4, 0xE0201018);
-		graphics.drawString(font, openEntry.getLocalizedName(), viewLeft + 8, viewTop + 8, 0xFFFFE0A0);
-		graphics.drawString(font, Component.literal((stageIndex + 1) + " / " + stages.length), viewLeft + 8, viewTop + 20, 0xFFA0A0A0);
-
-		List<FormattedCharSequence> lines = font.split(stage.getTextLocalized(), viewWidth - 16);
-		int y = viewTop + 36;
-		for (FormattedCharSequence line : lines) {
-			if (y > viewTop + viewHeight - 24) break;
-			graphics.drawString(font, line, viewLeft + 8, y, 0xFFE0E0E0);
-			y += font.lineHeight + 1;
+		if (stages == null || stages.length == 0) {
+			readerPages.add(new ReaderPage());
+			return;
 		}
+
+		StringBuilder raw = new StringBuilder();
+		for (int i = 0; i < stages.length; i++) {
+			if (i > 0) raw.append("<PAGE>");
+			raw.append(stages[i].getTextLocalized().getString());
+		}
+		if (openEntry.getAddenda() != null) {
+			int ac = 0;
+			for (ResearchAddendum addendum : openEntry.getAddenda()) {
+				if (addendum.getResearch() == null || knowsAllStrict(addendum.getResearch())) {
+					ac++;
+					raw.append("<PAGE>").append(Component.translatable("tc.addendumtext", ac).getString())
+							.append("<BR>").append(addendum.getTextLocalized().getString());
+				}
+			}
+		}
+
+		String text = raw.toString();
+		text = text.replace("<BR/>", "~B\n").replace("<BR>", "~B\n");
+		text = text.replace("<LINE/>", "~L").replace("<LINE>", "~L");
+		text = text.replace("<DIV/>", "~D").replace("<DIV>", "~D");
+		text = text.replace("<PAGE/>", "~P").replace("<PAGE>", "~P");
+
+		List<ReaderImage> images = new ArrayList<>();
+		StringBuilder cleaned = new StringBuilder();
+		int idx = 0;
+		while (true) {
+			int start = text.indexOf("<IMG>", idx);
+			if (start < 0) {
+				cleaned.append(text, idx, text.length());
+				break;
+			}
+			cleaned.append(text, idx, start);
+			int end = text.indexOf("</IMG>", start);
+			if (end < 0) {
+				cleaned.append(text, start, text.length());
+				break;
+			}
+			ReaderImage img = parseInlineImage(text.substring(start + 5, end));
+			if (img != null) {
+				images.add(img);
+				cleaned.append("~I");
+			}
+			idx = end + 6;
+		}
+		text = cleaned.toString();
+
+		List<Object> stream = new ArrayList<>();
+		for (String token : tokenizeMarkup(text)) {
+			switch (token) {
+				case "~L" -> stream.add(DIVIDER_LINE);
+				case "~D" -> stream.add(DIVIDER_BIG);
+				case "~I" -> {
+					if (!images.isEmpty()) stream.add(images.remove(0));
+				}
+				case "~P" -> stream.add(PAGE_BREAK);
+				default -> {
+					for (String line : wrap(token, PAGE_TEXT_WIDTH)) {
+						if (!line.isEmpty()) stream.add(line);
+					}
+				}
+			}
+		}
+
+		int lineHeight = font.lineHeight;
+		int heightRemaining = 182;
+		ReaderPage current = new ReaderPage();
+		for (Object el : stream) {
+			if (el == PAGE_BREAK) {
+				readerPages.add(current);
+				current = new ReaderPage();
+				heightRemaining = 210;
+				continue;
+			}
+			if (el instanceof ReaderImage img) {
+				if (heightRemaining < img.ah() + 2 && !current.content.isEmpty()) {
+					readerPages.add(current);
+					current = new ReaderPage();
+					heightRemaining = 210;
+				}
+				current.content.add(img);
+				heightRemaining -= img.ah() + 2;
+				continue;
+			}
+			String line = (String) el;
+			current.content.add(line);
+			heightRemaining -= lineHeight;
+			if (line.endsWith("~B")) heightRemaining -= (int) (lineHeight * 0.66);
+			if (heightRemaining < lineHeight && !current.content.isEmpty()) {
+				readerPages.add(current);
+				current = new ReaderPage();
+				heightRemaining = 210;
+			}
+		}
+		if (!current.content.isEmpty()) readerPages.add(current);
+		if (readerPages.isEmpty()) readerPages.add(new ReaderPage());
+	}
+
+	private boolean knowsAllStrict(String[] keys) {
+		for (String key : keys) {
+			if (!knowsStrict(key)) return false;
+		}
+		return true;
+	}
+
+	/** Splits on the internal {@code ~P}/{@code ~D}/{@code ~L}/{@code ~I} markers, keeping each as its own
+	 * token (mirroring the original's own nested nothing-lost nothing-gained token split). */
+	private static List<String> tokenizeMarkup(String s) {
+		List<String> tokens = new ArrayList<>();
+		Matcher m = MARKUP_MARKER.matcher(s);
+		int last = 0;
+		while (m.find()) {
+			if (m.start() > last) tokens.add(s.substring(last, m.start()));
+			tokens.add(m.group());
+			last = m.end();
+		}
+		if (last < s.length()) tokens.add(s.substring(last));
+		return tokens;
+	}
+
+	/** Real word-wrap to a pixel width - the original delegates this to vanilla's own
+	 * {@code FontRenderer#listFormattedStringToWidth}; that exact call no longer exists in modern
+	 * {@code Font}, so this is a direct greedy re-implementation against {@link #font}. Treats {@code \n}
+	 * (from the {@code <BR>} replacement above) as a hard break, same as the original relied on. */
+	private List<String> wrap(String text, int maxWidth) {
+		List<String> out = new ArrayList<>();
+		for (String paragraph : text.split("\n", -1)) {
+			if (paragraph.isEmpty()) continue;
+			String remaining = paragraph;
+			while (!remaining.isEmpty()) {
+				if (font.width(remaining) <= maxWidth) {
+					out.add(remaining);
+					break;
+				}
+				int cut = remaining.length();
+				int lastSpace = -1;
+				for (int i = 1; i <= remaining.length(); i++) {
+					if (font.width(remaining.substring(0, i)) > maxWidth) {
+						cut = i - 1;
+						break;
+					}
+					if (i < remaining.length() && remaining.charAt(i) == ' ') lastSpace = i;
+				}
+				int breakAt = lastSpace > 0 ? lastSpace : Math.max(cut, 1);
+				out.add(remaining.substring(0, breakAt).stripTrailing());
+				remaining = remaining.substring(breakAt).stripLeading();
+			}
+		}
+		return out;
+	}
+
+	/** Parses the original's real {@code "namespace:path:x:y:w:h:scale"} inline-image format. The x/y/w/h
+	 * are always authored assuming a fixed 256x256 UV space - vanilla's own {@code Gui#drawTexturedModalRect}
+	 * hardcoded that divisor regardless of the bound texture's real size, and every real usage in this
+	 * port's lang files (256-wide item icons at 16x16 real size, research diagrams at up to 1024x1024 real
+	 * size) was authored against that same convention - so this is reproduced by always drawing these
+	 * through the plain 256-assuming {@code GuiGraphics#blit} overload rather than each file's real size. */
+	private ReaderImage parseInlineImage(String spec) {
+		String[] parts = spec.split(":");
+		if (parts.length != 7) return null;
+		try {
+			ResourceLocation tex = ResourceLocation.fromNamespaceAndPath(parts[0], parts[1]);
+			int x = Integer.parseInt(parts[2]);
+			int y = Integer.parseInt(parts[3]);
+			int w = Integer.parseInt(parts[4]);
+			int h = Integer.parseInt(parts[5]);
+			float scale = Float.parseFloat(parts[6]);
+			int aw = Math.round(w * scale);
+			int ah = Math.round(h * scale);
+			if (aw > PAGE_TEXT_WIDTH || ah > 208) return null;
+			return new ReaderImage(tex, x, y, w, h, scale, aw, ah);
+		} catch (Exception ex) {
+			return null;
+		}
+	}
+
+	private void playPageTurnSound() {
+		if (minecraft != null && minecraft.player != null) {
+			minecraft.player.playSound(SoundEvents.BOOK_PAGE_TURN, 0.66f, 1.0f);
+		}
+	}
+
+	private boolean mouseInsidePrevArrow(double mouseX, double mouseY) {
+		int sw = (width - BOOK_W) / 2;
+		int sh = (height - BOOK_H) / 2;
+		return mouseX >= sw - 16 && mouseX < sw - 4 && mouseY >= sh + 190 && mouseY < sh + 198;
+	}
+
+	private boolean mouseInsideNextArrow(double mouseX, double mouseY) {
+		int sw = (width - BOOK_W) / 2;
+		int sh = (height - BOOK_H) / 2;
+		return mouseX >= sw + BOOK_W + 6 && mouseX < sw + BOOK_W + 18 && mouseY >= sh + 190 && mouseY < sh + 198;
+	}
+
+	private void renderReader(GuiGraphics graphics, int mouseX, int mouseY) {
+		graphics.fill(0, 0, width, height, 0xFF000000);
+
+		int sw = (width - BOOK_W) / 2;
+		int sh = (height - BOOK_H) / 2;
+		float bx = (width - BOOK_W * 1.3f) / 2.0f;
+		float by = (height - BOOK_H * 1.3f) / 2.0f;
+		graphics.setColor(1f, 1f, 1f, 1f);
+		graphics.pose().pushPose();
+		graphics.pose().translate(bx, by, 0);
+		graphics.pose().scale(1.3f, 1.3f, 1f);
+		graphics.blit(BOOK_TEX, 0, 0, 0, 0, BOOK_W, BOOK_H);
+		graphics.pose().popPose();
+
+		if (readerPage < readerPages.size()) {
+			drawReaderPage(graphics, readerPages.get(readerPage), 0, sw, sh - 10);
+		}
+		if (readerPage + 1 < readerPages.size()) {
+			drawReaderPage(graphics, readerPages.get(readerPage + 1), 1, sw, sh - 10);
+		}
+
+		int totalSpreads = Math.max(1, (readerPages.size() + 1) / 2);
+		graphics.drawCenteredString(font, (readerPage / 2 + 1) + " / " + totalSpreads, sw + BOOK_W / 2, sh + BOOK_H + 8, 0xFFE0E0E0);
+
+		float bob = Mth.sin((minecraft.player != null ? minecraft.player.tickCount : 0) / 10f) * 0.15f + 0.1f;
+		graphics.setColor(1f, 1f, 1f, 1f);
+		if (readerPage > 0) {
+			drawBobbingArrow(graphics, sw - 16, sh + 190, 0, 184, bob);
+		}
+		if (readerPage + 2 < readerPages.size()) {
+			drawBobbingArrow(graphics, sw + BOOK_W + 6, sh + 190, 12, 184, bob);
+		}
+	}
+
+	private void drawBobbingArrow(GuiGraphics graphics, int x, int y, int u, int v, float bob) {
+		float s = 1f + bob;
+		graphics.pose().pushPose();
+		graphics.pose().translate(x + 6f, y + 4f, 0);
+		graphics.pose().scale(s, s, 1f);
+		graphics.pose().translate(-6f, -4f, 0);
+		graphics.blit(BOOK_TEX, 0, 0, u, v, 12, 8);
+		graphics.pose().popPose();
+	}
+
+	private void drawReaderPage(GuiGraphics graphics, ReaderPage page, int side, int x, int y) {
+		int px = x - 15 + side * 152;
+		if (readerPage == 0 && side == 0) {
+			String title = openEntry.getLocalizedName().getString();
+			int w = font.width(title);
+			if (w <= PAGE_TEXT_WIDTH) {
+				graphics.drawString(font, title, px + (PAGE_TEXT_WIDTH - w) / 2, y, 0x202020, false);
+			} else {
+				float s = (float) PAGE_TEXT_WIDTH / w;
+				graphics.pose().pushPose();
+				graphics.pose().translate(px, y + 1f, 0);
+				graphics.pose().scale(s, s, 1f);
+				graphics.drawString(font, title, 0, 0, 0x202020, false);
+				graphics.pose().popPose();
+			}
+			y += 28;
+		}
+		for (Object el : page.content) {
+			if (el instanceof String line) {
+				graphics.drawString(font, line.replace("~B", ""), px, y - 6, 0x000000, false);
+				y += font.lineHeight;
+				if (line.endsWith("~B")) y += (int) (font.lineHeight * 0.66);
+			} else if (el instanceof ReaderImage img) {
+				drawReaderImage(graphics, img, px, y - 5);
+				y += img.ah() + 2;
+			}
+		}
+	}
+
+	/** Always drawn through the plain (256x256-assuming) {@code blit} overload - see
+	 * {@link #parseInlineImage} for why that's correct even for the real, differently-sized textures these
+	 * reference. */
+	private void drawReaderImage(GuiGraphics graphics, ReaderImage img, int x, int y) {
+		int pad = (PAGE_TEXT_WIDTH - img.aw()) / 2;
+		graphics.pose().pushPose();
+		graphics.pose().translate(x + pad, y, 0);
+		graphics.pose().scale(img.scale(), img.scale(), 1f);
+		graphics.blit(img.tex(), 0, 0, img.u(), img.v(), img.w(), img.h());
+		graphics.pose().popPose();
 	}
 }
