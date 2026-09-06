@@ -1952,6 +1952,46 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
+	// Nitor - one small floating light per DyeColor, same real "one shared texture, tinted per-instance"
+	// shape as the candles above, minus the "needs support" behavior (it floats). The color-handler tint
+	// itself is client-only and not GameTest-observable here either.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void nitorEmitsFullLightAndCarriesItsOwnDye(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 4, 2);
+		helper.setBlock(pos, BlocksTC.nitor.get(net.minecraft.world.item.DyeColor.PURPLE).get());
+		BlockPos absolute = helper.absolutePos(pos);
+
+		int light = helper.getBlockState(pos).getLightEmission(helper.getLevel(), absolute);
+		helper.assertTrue(light == 15, "a placed nitor should emit full light, found: " + light);
+
+		net.minecraft.world.level.block.Block block = helper.getBlockState(pos).getBlock();
+		helper.assertTrue(block instanceof thaumcraft.common.blocks.misc.BlockNitor purple && purple.dye == net.minecraft.world.item.DyeColor.PURPLE,
+				"the purple nitor block should carry DyeColor.PURPLE");
+
+		helper.assertTrue(helper.getLevel().getBlockState(absolute.below()).isAir(),
+				"unlike a candle, nitor should have nothing to fall onto - it should real-float with no support block");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void nitorHasARealCrucibleBaseAndFifteenRealRecolorRecipes(GameTestHelper helper) {
+		helper.assertTrue(helper.getLevel().getRecipeManager()
+				.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "nitor_yellow")).isPresent(),
+				"a real Crucible recipe turning glowstone dust into base (yellow) nitor should be registered");
+
+		for (net.minecraft.world.item.DyeColor dye : net.minecraft.world.item.DyeColor.values()) {
+			if (dye == net.minecraft.world.item.DyeColor.YELLOW) continue;
+			String id = "nitor_" + thaumcraft.api.blocks.BlocksTC.candleDyeName(dye);
+			helper.assertTrue(helper.getLevel().getRecipeManager()
+					.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id)).isPresent(),
+					"a real shapeless recolor recipe for " + id + " should be registered");
+		}
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
 	// Phial - fills/empties at a Warded Jar via onItemUseFirst (a NeoForge IItemExtension hook, called
 	// before the jar's own right-click handling). Calls it directly with a real UseOnContext rather than
 	// simulating a full player interaction event.

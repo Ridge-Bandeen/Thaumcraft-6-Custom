@@ -222,6 +222,14 @@ public class ThaumcraftClient {
         }, BlocksTC.candles.values().stream().map(net.neoforged.neoforge.registries.DeferredBlock::get)
                 .toArray(net.minecraft.world.level.block.Block[]::new));
 
+        // Same real "one shared grayscale texture, tinted per-instance" shape as the candles above - see
+        // BlockNitor's own doc comment.
+        event.register((state, level, pos, tintIndex) -> {
+            net.minecraft.world.level.block.Block block = state.getBlock();
+            return block instanceof thaumcraft.common.blocks.misc.BlockNitor nitor ? nitor.dye.getTextureDiffuseColor() : -1;
+        }, BlocksTC.nitor.values().stream().map(net.neoforged.neoforge.registries.DeferredBlock::get)
+                .toArray(net.minecraft.world.level.block.Block[]::new));
+
         // tube_filter_core.json's center node (tintIndex 1) is colored by the tube's own current filter
         // aspect - neutral gray when unset, same "read the real block entity state" idea as the tint
         // handlers above, just via the tile instead of item data.
@@ -247,6 +255,12 @@ public class ThaumcraftClient {
             net.minecraft.world.level.block.Block block = net.minecraft.world.level.block.Block.byItem(stack.getItem());
             return block instanceof BlockCandle candle ? candle.dye.getTextureDiffuseColor() : -1;
         }, ItemsTC.candles.values().stream().map(net.neoforged.neoforge.registries.DeferredItem::get)
+                .toArray(net.minecraft.world.item.Item[]::new));
+
+        event.register((stack, tintIndex) -> {
+            net.minecraft.world.level.block.Block block = net.minecraft.world.level.block.Block.byItem(stack.getItem());
+            return block instanceof thaumcraft.common.blocks.misc.BlockNitor nitor ? nitor.dye.getTextureDiffuseColor() : -1;
+        }, ItemsTC.nitor.values().stream().map(net.neoforged.neoforge.registries.DeferredItem::get)
                 .toArray(net.minecraft.world.item.Item[]::new));
 
         event.register((stack, tintIndex) -> {

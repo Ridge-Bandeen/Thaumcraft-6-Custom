@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "minecraft:pink_dye" },
+    { "tag": "thaumcraft:nitor" }
+  ],
+  "result": { "id": "thaumcraft:nitor_pink" }
+}

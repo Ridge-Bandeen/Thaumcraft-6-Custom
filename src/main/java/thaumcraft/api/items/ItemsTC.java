@@ -576,6 +576,12 @@ public final class ItemsTC {
 		BlocksTC.candles.forEach((dye, block) -> candles.put(dye, ITEMS.registerSimpleBlockItem("candle_" + BlocksTC.candleDyeName(dye), block)));
 	}
 
+	/** See {@link BlocksTC#nitor}'s own doc comment. */
+	public static final java.util.Map<net.minecraft.world.item.DyeColor, DeferredItem<BlockItem>> nitor = new java.util.EnumMap<>(net.minecraft.world.item.DyeColor.class);
+	static {
+		BlocksTC.nitor.forEach((dye, block) -> nitor.put(dye, ITEMS.registerSimpleBlockItem("nitor_" + BlocksTC.candleDyeName(dye), block)));
+	}
+
 	public static final DeferredItem<Item> thaumiumHelm = ITEMS.registerItem("thaumium_helm",
 			props -> new ArmorItem(ThaumcraftArmorMaterials.THAUMIUM, ArmorItem.Type.HELMET,
 					props.durability(ArmorItem.Type.HELMET.getDurability(25))));

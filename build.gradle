@@ -42,6 +42,7 @@ sourceSets {
             include 'thaumcraft/common/blocks/devices/BlockCondenserLattice.java'
             include 'thaumcraft/common/blocks/basic/BlockPavingStoneTravel.java'
             include 'thaumcraft/common/blocks/basic/BlockCandle.java'
+            include 'thaumcraft/common/blocks/misc/BlockNitor.java'
             include 'thaumcraft/common/items/consumables/ItemPhial.java'
             include 'thaumcraft/common/items/resources/ItemCrystalEssence.java'
             include 'thaumcraft/common/items/consumables/ItemLabel.java'

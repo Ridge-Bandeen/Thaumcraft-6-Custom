@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/tinted_cross",
+  "textures": {
+    "cross": "thaumcraft:blocks/nitor",
+    "particle": "thaumcraft:blocks/nitor"
+  }
+}

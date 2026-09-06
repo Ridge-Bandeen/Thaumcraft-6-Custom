@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "minecraft:black_dye" },
+    { "tag": "thaumcraft:nitor" }
+  ],
+  "result": { "id": "thaumcraft:nitor_black" }
+}

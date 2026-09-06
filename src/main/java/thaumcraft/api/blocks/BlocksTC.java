@@ -411,6 +411,21 @@ public final class BlocksTC {
 		return dye.getSerializedName();
 	}
 
+	/** One small floating light per {@link DyeColor} - see
+	 * {@link thaumcraft.common.blocks.misc.BlockNitor}'s own doc comment. Same real "one shared grayscale
+	 * texture, tinted per-instance" shape the candles above already use, and the same real dye-naming
+	 * quirk ({@link #candleDyeName}) for matching the already-existing blockstate assets. */
+	public static final Map<DyeColor, DeferredBlock<thaumcraft.common.blocks.misc.BlockNitor>> nitor = new EnumMap<>(DyeColor.class);
+	static {
+		for (DyeColor dye : DyeColor.values()) {
+			String id = "nitor_" + candleDyeName(dye);
+			DeferredBlock<thaumcraft.common.blocks.misc.BlockNitor> block = BLOCKS.registerBlock(id,
+					props -> new thaumcraft.common.blocks.misc.BlockNitor(props, dye),
+					BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_GRAY).strength(0.1f).sound(SoundType.WOOL).noOcclusion().noCollission().lightLevel(state -> 15));
+			nitor.put(dye, block);
+		}
+	}
+
 	/** Mainly useful as the Crucible catalyst for Sanity Soap - see
 	 * {@link thaumcraft.common.blocks.misc.BlockFlesh}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockFlesh> fleshBlock = BLOCKS.registerBlock("flesh_block",
