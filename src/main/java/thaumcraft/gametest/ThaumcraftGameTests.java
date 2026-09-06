@@ -4974,6 +4974,7 @@ public class ThaumcraftGameTests {
 		props.setAddon(fighter);
 		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, floorAbs);
 		golem.initializeGolem(props, 0);
+		golem.restrictTo(floorAbs, 5); // keep this test golem's real task-search scoped to its own GameTest structure - see AIGoto's own class docs
 
 		thaumcraft.common.golems.ai.AIGotoEntity goal = new thaumcraft.common.golems.ai.AIGotoEntity(golem);
 		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the guard task");
@@ -5089,6 +5090,7 @@ public class ThaumcraftGameTests {
 		props.setHead(smartHead);
 		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, floorAbs);
 		golem.initializeGolem(props, 0);
+		golem.restrictTo(floorAbs, 5); // keep this test golem's real task-search scoped to its own GameTest structure - see AIGoto's own class docs
 
 		thaumcraft.common.golems.ai.AIGotoBlock goal = new thaumcraft.common.golems.ai.AIGotoBlock(golem);
 		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the chop task");
@@ -5175,6 +5177,7 @@ public class ThaumcraftGameTests {
 		props.setHead(smartHead);
 		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, dirtAbs);
 		golem.initializeGolem(props, 0);
+		golem.restrictTo(dirtAbs, 5); // keep this test golem's real task-search scoped to its own GameTest structure - see AIGoto's own class docs
 
 		thaumcraft.common.golems.ai.AIGotoBlock goal = new thaumcraft.common.golems.ai.AIGotoBlock(golem);
 		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the harvest task");
@@ -5231,6 +5234,7 @@ public class ThaumcraftGameTests {
 		props.setHead(smartHead);
 		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, floorAbs);
 		golem.initializeGolem(props, 0);
+		golem.restrictTo(floorAbs, 5); // keep this test golem's real task-search scoped to its own GameTest structure - see AIGoto's own class docs
 
 		thaumcraft.common.golems.ai.AIGotoEntity goal = new thaumcraft.common.golems.ai.AIGotoEntity(golem);
 		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the cull task");
@@ -5275,6 +5279,7 @@ public class ThaumcraftGameTests {
 		props.setArms(breakerArm);
 		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, anchorAbs);
 		golem.initializeGolem(props, 0);
+		golem.restrictTo(anchorAbs, 5); // keep this test golem's real task-search scoped to its own GameTest structure - see AIGoto's own class docs
 
 		thaumcraft.common.golems.ai.AIGotoBlock goal = new thaumcraft.common.golems.ai.AIGotoBlock(golem);
 		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the break task");
@@ -5328,6 +5333,7 @@ public class ThaumcraftGameTests {
 
 		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, floorAbs);
 		golem.initializeGolem(new thaumcraft.common.golems.GolemProperties(), 0);
+		golem.restrictTo(floorAbs, 5); // keep this test golem's real task-search scoped to its own GameTest structure - see AIGoto's own class docs
 
 		thaumcraft.common.golems.ai.AIGotoEntity goal = new thaumcraft.common.golems.ai.AIGotoEntity(golem);
 		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the pickup task");
@@ -5341,6 +5347,34 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Known intermittently flaky - real, understood, not yet fully fixed. Direct diagnosis (dumping
+	 * {@code GolemHelper.provisionRequests} at the point of failure) found this test's own fetch task
+	 * sometimes gets linked to a WRONG {@link thaumcraft.api.golems.ProvisionRequest} - one belonging to a
+	 * completely different, unrelated GameTest structure elsewhere in the world (confirmed via real distance:
+	 * the wrongly-linked request's position was ~157 blocks away). Root cause, fully traced: {@code
+	 * GolemHelper.provisionRequests} is real, dimension-wide, unscoped-by-design state (one player's whole
+	 * base is meant to share one provisioning economy), and {@code SealProvide#tickSeal}'s own real
+	 * request-matching loop just grabs the first unclaimed request whose item matches its own filter - with
+	 * no per-seal/per-structure scoping, by design, since that's not a real concept in actual gameplay.
+	 * {@code Thaumcraft#tickGolemSeals} (a real, level-tick-driven event) ticks EVERY seal ever placed via
+	 * {@code SealHandler.addSealEntity} for as long as the server keeps running, whether or not the test that
+	 * created it is still executing - and only 1 of the 16 seal-spawning tests in this file (as of this
+	 * writing) ever calls the matching {@code SealHandler.removeSealEntity} to clean up. So ANY other test in
+	 * this whole suite that ever configures a {@code SealStock} (or any other auto-provisioning seal) with a
+	 * real target count for IRON_INGOT specifically can - via completely normal, real, passive server
+	 * ticking, with no test code involved at all - eventually issue a real competing IRON_INGOT provisioning
+	 * request that this test's own SealProvide can grab instead of its own. The GOLD_INGOT switch on
+	 * sealStockRequestsProvisioningWhenBelowTargetCount above closed one confirmed such collision, but did
+	 * NOT fully resolve this test's own remaining flakiness - a further diagnostic run after that fix still
+	 * showed the exact same wrong-request symptom, meaning at least one more seal elsewhere in this file (an
+	 * audit of every {@code addSealEntity} call without a matching {@code removeSealEntity} is the concrete
+	 * next step) is also still contributing. The real, correctly-scoped fix is systemic, not local to this
+	 * test: give every seal-spawning test in this file a real cleanup step (removeSealEntity, or an
+	 * equivalent shared per-test teardown), not another one-off item swap - see the thaumcraft-1211-port
+	 * memory file's own write-up of this investigation for the full trace and reasoning. Left as-is rather
+	 * than attempting that broader audit in the same pass that found it.
+	 */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void sealProvideDeliversStockedItemsFromOneContainerToAnother(GameTestHelper helper) {
 		BlockPos provideChestPos = BlockPos.ZERO;
@@ -5383,6 +5417,7 @@ public class ThaumcraftGameTests {
 
 		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, provideChestAbs);
 		golem.initializeGolem(new thaumcraft.common.golems.GolemProperties(), 0);
+		golem.restrictTo(provideChestAbs, 5); // keep this test golem's real task-search scoped to its own GameTest structure - see AIGoto's own class docs
 
 		thaumcraft.common.golems.ai.AIGotoBlock fetchGoal = new thaumcraft.common.golems.ai.AIGotoBlock(golem);
 		helper.assertTrue(fetchGoal.canUse(), "the golem should be able to pick up the fetch task");
@@ -5391,6 +5426,13 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
 		helper.assertTrue(golem.isCarrying(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT)),
 				"completing the fetch task should have the golem really carrying the iron ingots");
+		// Real lifecycle hygiene, not what actually fixed this test's own flakiness (see the item-collision
+		// comment below on the GOLD_INGOT switch for that): completeTask itself already suspends a completed
+		// task via SealProvide#onTaskCompletion, so this is a no-op here, but it matches what a real
+		// GoalSelector always does once canContinueToUse() goes false, and this test drives canUse() directly
+		// without ever going through one - keeping that real step explicit rather than relying on the seal's
+		// own side effect to happen to cover for it.
+		fetchGoal.stop();
 
 		thaumcraft.api.golems.tasks.Task deliverTask = null;
 		for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
@@ -5422,11 +5464,19 @@ public class ThaumcraftGameTests {
 		BlockPos chestAbs = helper.absolutePos(chestPos);
 		helper.setBlock(chestPos, net.minecraft.world.level.block.Blocks.CHEST);
 		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(chestPos);
-		chest.setItem(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 2));
+		// GOLD_INGOT, not IRON_INGOT: GolemHelper.provisionRequests is real, dimension-wide, unscoped shared
+		// state (by design - one player's whole base is meant to share one provisioning economy), and
+		// SealProvide#tickSeal's own request-matching loop picks the first unclaimed request that matches
+		// its filter item, with no per-seal/per-test scoping at all. This test's SealStock and
+		// sealProvideDeliversStockedItemsFromOneContainerToAnother's own SealProvide (below) both used to
+		// request IRON_INGOT - a genuine collision this removes. This is a real, worthwhile fix on its own,
+		// but see that test's own doc comment for why it does NOT fully explain that test's own remaining
+		// flakiness - the actual full picture is bigger than a same-item collision between these two tests.
+		chest.setItem(0, new ItemStack(net.minecraft.world.item.Items.GOLD_INGOT, 2));
 
 		ServerPlayer owner = spawnCasterAt(helper, chestAbs.above(3));
 		thaumcraft.common.golems.seals.SealStock seal = new thaumcraft.common.golems.seals.SealStock();
-		seal.setFilterSlot(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT));
+		seal.setFilterSlot(0, new ItemStack(net.minecraft.world.item.Items.GOLD_INGOT));
 		seal.setFilterSlotSize(0, 8);
 		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), chestAbs, net.minecraft.core.Direction.UP, seal, owner),
 				"placing a fresh seal should succeed");
@@ -5460,6 +5510,7 @@ public class ThaumcraftGameTests {
 
 		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, chestAbs);
 		golem.initializeGolem(new thaumcraft.common.golems.GolemProperties(), 0);
+		golem.restrictTo(chestAbs, 5); // keep this test golem's real task-search scoped to its own GameTest structure - see AIGoto's own class docs
 		golem.holdItem(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 5));
 
 		boolean foundTask = false;
@@ -5512,6 +5563,7 @@ public class ThaumcraftGameTests {
 
 		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, chestAbs);
 		golem.initializeGolem(new thaumcraft.common.golems.GolemProperties(), 0);
+		golem.restrictTo(chestAbs, 5); // keep this test golem's real task-search scoped to its own GameTest structure - see AIGoto's own class docs
 
 		boolean foundTask = false;
 		thaumcraft.api.golems.tasks.Task emptyTask = null;
@@ -5573,6 +5625,7 @@ public class ThaumcraftGameTests {
 
 		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, leverAbs);
 		golem.initializeGolem(props, 0);
+		golem.restrictTo(leverAbs, 5); // keep this test golem's real task-search scoped to its own GameTest structure - see AIGoto's own class docs
 
 		boolean foundTask = false;
 		thaumcraft.api.golems.tasks.Task useTask = null;
@@ -5687,6 +5740,7 @@ public class ThaumcraftGameTests {
 		props.setArms(breakerArm);
 		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, anchorAbs);
 		golem.initializeGolem(props, 0);
+		golem.restrictTo(anchorAbs, 5); // keep this test golem's real task-search scoped to its own GameTest structure - see AIGoto's own class docs
 
 		thaumcraft.common.golems.ai.AIGotoBlock goal = new thaumcraft.common.golems.ai.AIGotoBlock(golem);
 		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the break task");
@@ -5731,6 +5785,7 @@ public class ThaumcraftGameTests {
 		props1.setHead(smartHead);
 		thaumcraft.common.golems.EntityThaumcraftGolem golem1 = spawnGolem(helper, chestAbs);
 		golem1.initializeGolem(props1, 0);
+		golem1.restrictTo(chestAbs, 5); // keep this test golem's real task-search scoped to its own GameTest structure - see AIGoto's own class docs
 
 		boolean foundFirst = false;
 		thaumcraft.api.golems.tasks.Task firstTask = null;
@@ -5755,6 +5810,7 @@ public class ThaumcraftGameTests {
 		props2.setHead(smartHead);
 		thaumcraft.common.golems.EntityThaumcraftGolem golem2 = spawnGolem(helper, chestAbs);
 		golem2.initializeGolem(props2, 0);
+		golem2.restrictTo(chestAbs, 5); // keep this test golem's real task-search scoped to its own GameTest structure - see AIGoto's own class docs
 
 		boolean foundSecond = false;
 		thaumcraft.api.golems.tasks.Task secondTask = null;
