@@ -3,6 +3,8 @@ package thaumcraft.common.golems.ai;
 import java.util.ArrayList;
 
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.pathfinder.Node;
+import net.minecraft.world.level.pathfinder.Path;
 import thaumcraft.api.golems.tasks.Task;
 import thaumcraft.common.golems.EntityThaumcraftGolem;
 import thaumcraft.common.golems.tasks.TaskHandler;
@@ -10,11 +12,9 @@ import thaumcraft.common.golems.tasks.TaskHandler;
 /**
  * Replaces the old (1.12.2) {@code AIGotoEntity} - the {@link AIGoto} that seeks out entity-targeted tasks
  * (currently {@code SealGuard}/{@code SealButcher}'s "target this entity" tasks and {@code SealPickup}'s
- * "grab this dropped item" tasks - see each class's own doc comment). Direct translation, with
- * {@link #canEasilyReach} simplified: the original checked how close the navigator's own computed path
- * actually ended up to the target; this checks real distance against a flat ceiling instead (see that
- * method's own doc comment for the real bug a GameTest caught in an earlier, too-generous version of this
- * check).
+ * "grab this dropped item" tasks - see each class's own doc comment). Direct translation, including its
+ * sibling {@link AIGotoBlock#canEasilyReach}'s own real pathfinding-based reachability check - see that
+ * method's own doc comment.
  */
 public class AIGotoEntity extends AIGoto {
 
@@ -49,9 +49,21 @@ public class AIGotoEntity extends AIGoto {
 		return false;
 	}
 
+	/** See {@link AIGotoBlock#canEasilyReach}'s own doc comment - same real pathfinding-based check, same
+	 * outer 6-block bound. */
 	private boolean canEasilyReach(Entity target) {
-		// See AIGotoBlock's own doc comment on its sibling method - same real fix, tightened from a 256
-		// (16-block) ceiling down to 36 (6 blocks), caught by cross-seal task interference in a GameTest.
-		return golem.distanceToSqr(target) < Math.max(minDist, 36.0);
+		double distSq = golem.distanceToSqr(target);
+		if (distSq < minDist) return true;
+		if (distSq >= Math.max(minDist, 36.0)) return false;
+		Path path = golem.getNavigation().createPath(target, 0);
+		if (path == null) return false;
+		Node end = path.getEndNode();
+		if (end == null) return false;
+		var pos = target.blockPosition();
+		int dx = end.x - pos.getX();
+		int dz = end.z - pos.getZ();
+		int dy = end.y - pos.getY();
+		if (dx == 0 && dz == 0 && dy == 2) dy--;
+		return dx * dx + dy * dy + dz * dz < 2.25;
 	}
 }

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.pathfinder.Node;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
 import thaumcraft.api.golems.tasks.Task;
 import thaumcraft.common.golems.EntityThaumcraftGolem;
@@ -14,9 +16,8 @@ import thaumcraft.common.golems.tasks.TaskHandler;
  * (currently {@code SealLumber}/{@code SealHarvest}/{@code SealBreaker}'s own block-position tasks, and
  * {@code SealProvide}'s "fetch"/"deliver" tasks - see each class's own doc comment). Direct translation of
  * the original's own "stand in whichever open horizontal space is closest to the target block" approach
- * ({@link #getAdjacentSpace}); {@link #canEasilyReach} is simplified the same way {@link AIGotoEntity}'s
- * own is - see that method's own doc comment for the real bug a GameTest caught in an earlier, too-generous
- * version of this check.
+ * ({@link #getAdjacentSpace}); {@link #canEasilyReach} restores the original's own real pathfinding-based
+ * check - see that method's own doc comment.
  */
 public class AIGotoBlock extends AIGoto {
 
@@ -70,15 +71,27 @@ public class AIGotoBlock extends AIGoto {
 		return closest;
 	}
 
+	/** Real port of the original's own real check, with one deliberate real addition: close enough outright,
+	 * or - for anything up to a flat 6-block outer bound - the navigator's own computed path actually has to
+	 * land within about a block and a half of the real target. Pure straight-line distance alone can't tell
+	 * "6 blocks away in the same room" from "6 blocks away through a solid wall", so a golem could "reach" a
+	 * task it could never actually walk to; a real computed path can't be fooled by a wall the same way. The
+	 * outer 6-block bound itself is new versus the original (which had none) - {@code getBlockTasksSorted}
+	 * hands back every block task in the whole dimension, so pathfinding unconditionally against all of them
+	 * would be a real performance risk for busy worlds, and it's also the original's own real precedent for
+	 * "too generous" (see the earlier doc comment history on this method) reused here as the outer cutoff. */
 	private boolean canEasilyReach(BlockPos pos) {
-		// A real, tightened-down real bug fix: this originally used a 256 (16-block) ceiling, but the
-		// original's own real gate here was tight (~4.0, `minDist`'s own default) before ever falling back
-		// to real path-endpoint proximity for farther targets - 16 blocks is dramatically more permissive
-		// than that. A too-generous radius isn't just an overshoot from the original: it made a golem
-		// happily "reach" a task 15 blocks away in a totally different area, caught for real by a GameTest
-		// where two unrelated seals' own tasks ended up within 16 blocks of each other and a golem grabbed
-		// the wrong one. 6 blocks is a real, deliberately tighter stand-in for the original's own
-		// pathfinding-based check without actually computing a path.
-		return golem.distanceToSqr(Vec3.atCenterOf(pos)) < Math.max(minDist, 36.0);
+		double distSq = golem.distanceToSqr(Vec3.atCenterOf(pos));
+		if (distSq < minDist) return true;
+		if (distSq >= Math.max(minDist, 36.0)) return false;
+		Path path = golem.getNavigation().createPath(pos, 0);
+		if (path == null) return false;
+		Node end = path.getEndNode();
+		if (end == null) return false;
+		int dx = end.x - pos.getX();
+		int dz = end.z - pos.getZ();
+		int dy = end.y - pos.getY();
+		if (dx == 0 && dz == 0 && dy == 2) dy--;
+		return dx * dx + dy * dy + dz * dz < 2.25;
 	}
 }
