@@ -59,7 +59,18 @@ public class ThaumonomiconMenu extends AbstractContainerMenu {
 			}
 			if (target != null) break;
 		}
-		if (target == null || !ThaumcraftApi.internalMethods.doesPlayerHaveRequisites(player, target.getKey())) {
+		if (target == null) return false;
+
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		if (knowledge.isResearchComplete(target.getKey())) {
+			// Real original behavior: opening an already-known entry's page just clears its "new" badges,
+			// same as GuiResearchBrowser's own real mouseClicked handler.
+			boolean clearedResearch = knowledge.clearResearchFlag(target.getKey(), IPlayerKnowledge.EnumResearchFlag.RESEARCH);
+			boolean clearedPage = knowledge.clearResearchFlag(target.getKey(), IPlayerKnowledge.EnumResearchFlag.PAGE);
+			return clearedResearch || clearedPage;
+		}
+
+		if (!ThaumcraftApi.internalMethods.doesPlayerHaveRequisites(player, target.getKey())) {
 			return false;
 		}
 		return ThaumcraftApi.internalMethods.completeResearch(player, target.getKey());

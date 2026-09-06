@@ -72,9 +72,16 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 		int stage = Math.max(0, knowledge.getResearchStage(researchkey));
 		if (stages != null) {
 			ResearchStage completedStage = stage > 0 ? stages[Math.min(stage, stages.length) - 1] : null;
-			knowledge.setResearchStage(researchkey, Math.min(stages.length + 1, stage + 1));
+			int newStage = Math.min(stages.length + 1, stage + 1);
+			knowledge.setResearchStage(researchkey, newStage);
 			if (completedStage != null && completedStage.getWarp() > 0) {
 				addWarpToPlayer(player, completedStage.getWarp(), IPlayerWarp.EnumWarpType.NORMAL);
+			}
+			if (newStage > stages.length) {
+				// Real "new research" badge - the hex-grid browser's own real per-entry/per-category
+				// indicator. The original's paired POPUP flag (triggers an in-game GUI popup) is dropped -
+				// no popup UI exists in this port.
+				knowledge.setResearchFlag(researchkey, IPlayerKnowledge.EnumResearchFlag.RESEARCH);
 			}
 		} else {
 			knowledge.setResearchStage(researchkey, Math.max(1, stage + 1));

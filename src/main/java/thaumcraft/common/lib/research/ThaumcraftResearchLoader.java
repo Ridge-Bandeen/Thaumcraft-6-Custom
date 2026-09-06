@@ -4,15 +4,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
@@ -34,13 +38,12 @@ import thaumcraft.api.research.ResearchStage.Knowledge;
  * the modern equivalent of the original's manual classpath resource scan - and re-populating the already-real
  * {@link ResearchCategories}/{@link ResearchCategory#research} registered by {@code ThaumcraftResearchCategories}.
  *
- * Deliberately narrower than the original parser for this pass, matching the same "simplified Thaumonomicon"
- * scope cut documented on the new research {@code Screen}: <b>icons</b>, <b>reward_item</b>/<b>reward_knowledge</b>
- * (unused by any of the 8 real content files - verified directly), and the <b>required_item</b>/<b>required_craft</b>
+ * Deliberately narrower than the original parser in one respect: <b>reward_item</b>/<b>reward_knowledge</b>
+ * (unused by any of the 8 real content files - verified directly) and the <b>required_item</b>/<b>required_craft</b>
  * stage gates (display-only without the crafting/possession-triggered auto-progression hook, itself a real,
- * separate, not-yet-ported system) are all skipped. Everything that drives the v1 GUI - key/name/category/
- * parents/siblings/meta/location, stage text, stage recipes, required_knowledge, required_research, warp, and
- * addenda - is parsed for real.
+ * separate, not-yet-ported system) are skipped. Everything else the real hex-grid browser needs - key/name/
+ * category/parents/siblings/meta/location, icons, stage text, stage recipes, required_knowledge,
+ * required_research, warp, and addenda - is parsed for real.
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID)
 public class ThaumcraftResearchLoader extends SimpleJsonResourceReloadListener {
@@ -97,6 +100,7 @@ public class ThaumcraftResearchLoader extends SimpleJsonResourceReloadListener {
 
 		if (obj.has("parents")) entry.setParents(stringArray(obj.getAsJsonArray("parents")));
 		if (obj.has("siblings")) entry.setSiblings(stringArray(obj.getAsJsonArray("siblings")));
+		if (obj.has("icons")) entry.setIcons(parseIcons(obj.getAsJsonArray("icons")));
 
 		if (obj.has("meta")) {
 			String[] metaStrings = stringArray(obj.getAsJsonArray("meta"));
@@ -199,6 +203,46 @@ public class ThaumcraftResearchLoader extends SimpleJsonResourceReloadListener {
 		category.minDisplayRow = Math.min(category.minDisplayRow, entry.getDisplayRow());
 		category.maxDisplayColumn = Math.max(category.maxDisplayColumn, entry.getDisplayColumn());
 		category.maxDisplayRow = Math.max(category.maxDisplayRow, entry.getDisplayRow());
+	}
+
+	/**
+	 * Real entry icons, needed by the real hex-grid browser: each real element is either a texture path
+	 * ({@code ResourceLocation}, e.g. {@code "thaumcraft:textures/items/thaumonomicon.png"}), a real item
+	 * ({@code ItemStack}, from a plain modern item id or the original's legacy {@code "id;count;damage"}
+	 * itemstack-command syntax - only the id half is kept, since damage-value item variants aren't a modern
+	 * concept), or a {@code "focus:key"} string (a {@link thaumcraft.api.casters.FocusEngine} element -
+	 * rendered as a generic placeholder for now, since no focus-part icon renderer exists outside the Focal
+	 * Manipulator's own simplified plain-text UI). Multiple icons cycle in the browser, matching the original.
+	 */
+	private static Object[] parseIcons(JsonArray array) {
+		if (array == null || array.isEmpty()) return null;
+		List<Object> out = new ArrayList<>();
+		for (JsonElement el : array) {
+			String s = el.getAsString();
+			if (s.startsWith("focus")) {
+				out.add(s);
+				continue;
+			}
+			String id = s.contains(";") ? s.substring(0, s.indexOf(';')) : s;
+			ItemStack stack = parseItemStack(id);
+			if (stack != null) {
+				out.add(stack);
+			} else {
+				try {
+					out.add(ResourceLocation.parse(id));
+				} catch (Exception ex) {
+					Thaumcraft.LOGGER.debug("Skipping unparseable research icon [{}]: {}", s, ex.toString());
+				}
+			}
+		}
+		return out.isEmpty() ? null : out.toArray();
+	}
+
+	@Nullable
+	private static ItemStack parseItemStack(String id) {
+		ResourceLocation rl = ResourceLocation.tryParse(id);
+		if (rl == null) return null;
+		return BuiltInRegistries.ITEM.getOptional(rl).map(ItemStack::new).orElse(null);
 	}
 
 	private static String[] stringArray(JsonArray array) {
