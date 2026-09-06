@@ -4442,6 +4442,13 @@ public class ThaumcraftGameTests {
 	// Research Table minigame, chunk 1: the theorycraft engine (ResearchTableData) + a first real,
 	// representative slice of the original's ~56 card/aid classes. No block/tile/GUI yet - see
 	// ResearchTableData's own doc comment for the rest of the arc.
+	//
+	// Chunk 2 (later): the real block/tile/menu/screen (researchTableConsumesInkAndPaperAndTracksARealTheory
+	// onward). Chunk 3: closes out the real api.research.theorycraft package (AidBookshelf) and starts the
+	// original's larger common.lib.research.theorycraft "extra content" tier - 3 more standalone cards
+	// (CardCalibrate/CardMeasure/CardSynergy) and 4 more real aids with their own aid-only cards (Beacon,
+	// Dragon Egg, Enchantment Table, both real Portal block variants) - see the tests right before the
+	// golem-construction section below.
 	// --------------------------------------------------------------------------------------------------
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
@@ -4554,7 +4561,7 @@ public class ThaumcraftGameTests {
 				.getKnowledge(thaumcraft.api.capabilities.IPlayerKnowledge.EnumKnowledgeType.THEORY, thaumcraft.api.research.ResearchCategories.getResearchCategory("BASICS"));
 		helper.assertTrue(theoryKnowledge >= 1, "a full 100% BASICS theory should grant at least 1 real THEORY knowledge point, found " + theoryKnowledge);
 
-		helper.assertTrue(tile.checkSurroundingAids().isEmpty(), "no aids are registered yet in this port, so the real (working) scan should always come back empty for now");
+		helper.assertTrue(tile.checkSurroundingAids().isEmpty(), "with real aids now registered but none of their trigger blocks/items/entities actually placed near this table, the real scan should still come back empty");
 		helper.succeed();
 	}
 
@@ -4630,6 +4637,97 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(menu.clickMenuButton(player, 0), "button 0 should start a real theory (each mutating action re-syncs, which must not crash against a mock player either)");
 		helper.assertTrue(tile.data != null, "starting a theory via the menu button should leave a real theory in progress");
 		helper.assertTrue(!menu.clickMenuButton(player, 0), "button 0 should refuse to start a second theory while one is already in progress");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void checkSurroundingAidsDetectsARealPlacedBookshelf(GameTestHelper helper) {
+		BlockPos tablePos = new BlockPos(3, 2, 3);
+		helper.setBlock(tablePos, thaumcraft.api.blocks.BlocksTC.researchTable.get());
+		thaumcraft.common.tiles.crafting.TileResearchTable tile = helper.getBlockEntity(tablePos);
+
+		helper.assertTrue(tile.checkSurroundingAids().isEmpty(), "with nothing placed nearby yet, the real scan should come back empty");
+
+		helper.setBlock(tablePos.offset(1, 0, 0), net.minecraft.world.level.block.Blocks.BOOKSHELF);
+		java.util.Set<String> found = tile.checkSurroundingAids();
+		helper.assertTrue(found.contains(thaumcraft.api.research.theorycraft.AidBookshelf.class.getName()),
+				"a real Bookshelf placed within the table's own 9x9x3 scan range should register AidBookshelf, found " + found);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void checkSurroundingAidsDetectsARealNetherPortalBlock(GameTestHelper helper) {
+		BlockPos tablePos = new BlockPos(3, 2, 3);
+		helper.setBlock(tablePos, thaumcraft.api.blocks.BlocksTC.researchTable.get());
+		thaumcraft.common.tiles.crafting.TileResearchTable tile = helper.getBlockEntity(tablePos);
+
+		helper.setBlock(tablePos.offset(-2, 0, 0), net.minecraft.world.level.block.Blocks.NETHER_PORTAL);
+		java.util.Set<String> found = tile.checkSurroundingAids();
+		helper.assertTrue(found.contains(thaumcraft.common.lib.research.theorycraft.AidPortal.AidPortalNether.class.getName()),
+				"a real Nether Portal block within scan range should register AidPortalNether, found " + found);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cardSynergyConvertsCombinedProgressIntoRealGolemancyProgress(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
+
+		thaumcraft.common.lib.research.theorycraft.CardSynergy card = new thaumcraft.common.lib.research.theorycraft.CardSynergy();
+		helper.assertTrue(!card.initialize(player, data), "with zero ARTIFICE/ALCHEMY/INFUSION progress, CardSynergy should have no real candidate");
+
+		data.categoryTotals.put("ARTIFICE", 5);
+		data.categoryTotals.put("ALCHEMY", 5);
+		data.categoryTotals.put("INFUSION", 5);
+		helper.assertTrue(card.initialize(player, data), "15 combined ARTIFICE+ALCHEMY+INFUSION progress should be a real candidate");
+
+		int penaltyBefore = data.penaltyStart;
+		helper.assertTrue(card.activate(player, data), "CardSynergy#activate should succeed with 15 combined progress available");
+		int remaining = data.getTotal("ARTIFICE") + data.getTotal("ALCHEMY") + data.getTotal("INFUSION");
+		helper.assertTrue(remaining == 0, "activating should spend the full 15 combined source progress, found " + remaining + " left");
+		helper.assertTrue(data.getTotal("GOLEMANCY") == 30, "activating should grant exactly 30 real GOLEMANCY progress, found " + data.getTotal("GOLEMANCY"));
+		helper.assertTrue(data.penaltyStart == penaltyBefore + 1, "activating should real-increment the completion penalty count");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cardCalibrateAndMeasureAddFlatProgressAndABonusDraw(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
+
+		int drawsBefore = data.bonusDraws;
+		helper.assertTrue(new thaumcraft.common.lib.research.theorycraft.CardCalibrate().activate(player, data), "CardCalibrate#activate should always succeed");
+		helper.assertTrue(data.getTotal("ARTIFICE") == 15, "CardCalibrate should add exactly 15 real ARTIFICE progress, found " + data.getTotal("ARTIFICE"));
+		helper.assertTrue(data.bonusDraws == drawsBefore + 1, "CardCalibrate should grant a real bonus draw");
+
+		helper.assertTrue(new thaumcraft.common.lib.research.theorycraft.CardMeasure().activate(player, data), "CardMeasure#activate should always succeed");
+		helper.assertTrue(data.getTotal("INFUSION") == 15, "CardMeasure should add exactly 15 real INFUSION progress, found " + data.getTotal("INFUSION"));
+		helper.assertTrue(data.bonusDraws == drawsBefore + 2, "CardMeasure should also grant a real bonus draw");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void aidOnlyCardsNeverSurfaceInARealNormalDraw(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
+		data.inspirationStart = 999;
+		data.inspiration = 999; // real inspiration ceiling high enough that no card's real cost ever blocks a draw
+		data.categoryTotals.put("BASICS", 50);
+		data.categoryTotals.put("ARTIFICE", 50);
+		data.categoryTotals.put("ALCHEMY", 50);
+		data.categoryTotals.put("INFUSION", 50);
+		data.categoryTotals.put("GOLEMANCY", 50);
+
+		// Real regression coverage for isAidOnly()'s own contract - draw a real large batch (aid-only cards
+		// are only ever added to cardChoices via the aidCards pool, never the normal per-card pool
+		// drawCards iterates) and confirm none of this chunk's 4 new aid-only cards ever appear.
+		for (int i = 0; i < 20; i++) {
+			data.drawCards(2, player);
+			for (thaumcraft.api.research.theorycraft.ResearchTableData.CardChoice cc : data.cardChoices) {
+				helper.assertTrue(!cc.fromAid, "no aids are in data.aidCards here, so no choice should ever be marked fromAid");
+				helper.assertTrue(!cc.card.isAidOnly(), "an aid-only card (" + cc.key + ") should never surface in a real normal draw");
+			}
+		}
 		helper.succeed();
 	}
 

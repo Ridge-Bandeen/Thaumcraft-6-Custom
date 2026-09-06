@@ -183,9 +183,11 @@ public class Thaumcraft {
         FocusEngine.registerElement(thaumcraft.common.items.casters.foci.FocusEffectRift.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/rift.png"), 3084645);
 
         // Theorycraft card registry (thaumcraft.api.research.theorycraft.TheorycraftManager) - see
-        // ResearchTableData's own doc comment. A first real, representative slice of the original's ~56
-        // card/aid classes (a much larger card deck is a real, separately-scoped follow-up, not attempted
-        // in one pass - see the port-tracking memory notes).
+        // ResearchTableData's own doc comment. The real api.research.theorycraft package (the extensible
+        // "core" tier) is now fully ported - all 9 of its cards plus AidBookshelf. What follows is the
+        // start of the original's much larger common.lib.research.theorycraft "extra content" tier (~37
+        // more cards/aids there alone) - a real, deliberately incremental follow-up, not attempted in one
+        // pass. See the port-tracking memory notes for the running scope.
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardStudy.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardAnalyze.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardPonder.class);
@@ -195,6 +197,20 @@ public class Thaumcraft {
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardNotation.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardExperimentation.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardBalance.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.api.research.theorycraft.AidBookshelf());
+
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardCalibrate.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardMeasure.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardSynergy.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardBeacon.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardDragonEgg.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardEnchantment.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardPortal.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidBeacon());
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidDragonEgg());
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidEnchantmentTable());
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidPortal.AidPortalEnd());
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidPortal.AidPortalNether());
     }
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {
