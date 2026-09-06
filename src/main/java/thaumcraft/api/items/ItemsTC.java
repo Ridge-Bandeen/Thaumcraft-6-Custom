@@ -519,6 +519,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> condenserLattice =
 			ITEMS.registerSimpleBlockItem("condenser_lattice", BlocksTC.condenserLattice);
 
+	public static final DeferredItem<BlockItem> potionSprayer =
+			ITEMS.registerSimpleBlockItem("potion_sprayer", BlocksTC.potionSprayer);
+
 	public static final DeferredItem<BlockItem> pavingStoneTravel =
 			ITEMS.registerSimpleBlockItem("paving_stone_travel", BlocksTC.pavingStoneTravel);
 

@@ -1917,6 +1917,91 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
+	// Potion Sprayer - banks essentia into charges (same suction-and-fill shape as TileCondenser#fill),
+	// then on a redstone pulse spends one charge to apply the held potion's effects to nearby entities
+	// without consuming it. Calls TilePotionSprayer.tick(...) directly, same "test the real entry point"
+	// precedent as every other ticking device above.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void potionSprayerBanksAChargeFromSuctionedEssentia(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.potionSprayer.get());
+
+		thaumcraft.common.tiles.devices.TilePotionSprayer tile = helper.getBlockEntity(pos);
+		net.minecraft.world.item.ItemStack potion = net.minecraft.world.item.alchemy.PotionContents.createItemStack(
+				net.minecraft.world.item.Items.SPLASH_POTION, net.minecraft.world.item.alchemy.Potions.SLOWNESS);
+		helper.assertTrue(tile.accepts(potion), "the sprayer should accept a real splash potion with effects");
+		tile.setItem(potion);
+		helper.assertTrue(tile.getCharges() == 0, "a freshly-loaded sprayer shouldn't already have a charge");
+
+		// Same test-only IEssentiaTransport source used for the Condenser's own fill() test, exposed on the
+		// sprayer's south face (fill() excludes only the facing side, which defaults to north).
+		helper.setBlock(pos.south(), TEST_ESSENTIA_SOURCE_BLOCK.get());
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(pos.south());
+		source.aspect = Aspect.ALCHEMY;
+		source.amount = 50;
+		source.outputFace = net.minecraft.core.Direction.NORTH;
+
+		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(pos);
+		for (int i = 0; i < 200 && tile.getCharges() == 0; i++) {
+			thaumcraft.common.tiles.devices.TilePotionSprayer.tick(helper.getLevel(), absolute, state, tile);
+		}
+
+		helper.assertTrue(tile.getCharges() > 0, "the sprayer should have banked at least 1 charge by now, found: " + tile.getCharges());
+		helper.assertTrue(source.amount < 50, "the sprayer should have pulled essentia from the source, source now has: " + source.amount);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void potionSprayerSpraysOnARedstonePulseWithoutConsumingThePotion(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos.below(), Blocks.STONE);
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.potionSprayer.get());
+
+		thaumcraft.common.tiles.devices.TilePotionSprayer tile = helper.getBlockEntity(pos);
+		net.minecraft.world.item.ItemStack potion = net.minecraft.world.item.alchemy.PotionContents.createItemStack(
+				net.minecraft.world.item.Items.SPLASH_POTION, net.minecraft.world.item.alchemy.Potions.SLOWNESS);
+		tile.setItem(potion);
+
+		helper.setBlock(pos.south(), TEST_ESSENTIA_SOURCE_BLOCK.get());
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(pos.south());
+		source.aspect = Aspect.ALCHEMY;
+		source.amount = 50;
+		source.outputFace = net.minecraft.core.Direction.NORTH;
+
+		net.minecraft.world.level.block.state.BlockState enabledState = helper.getBlockState(pos);
+		for (int i = 0; i < 200 && tile.getCharges() == 0; i++) {
+			thaumcraft.common.tiles.devices.TilePotionSprayer.tick(helper.getLevel(), absolute, enabledState, tile);
+		}
+		int chargesBefore = tile.getCharges();
+		helper.assertTrue(chargesBefore > 0, "the sprayer needs a banked charge before this test can pulse it");
+
+		// Default facing is north (BlockStateProperties default), so the spray lands 2 blocks north.
+		BlockPos targetPos = absolute.north(2);
+		net.minecraft.world.entity.monster.Zombie zombie = net.minecraft.world.entity.EntityType.ZOMBIE.create(helper.getLevel());
+		zombie.moveTo(targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, 0, 0);
+		helper.getLevel().addFreshEntity(zombie);
+		helper.assertFalse(zombie.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN), "the zombie shouldn't have Slowness before the spray");
+
+		net.minecraft.world.level.block.state.BlockState poweredState = enabledState.setValue(
+				net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED, false);
+		helper.getLevel().setBlock(absolute, poweredState, 3);
+		thaumcraft.common.tiles.devices.TilePotionSprayer.tick(helper.getLevel(), absolute, poweredState, tile);
+
+		helper.assertTrue(tile.getCharges() == chargesBefore - 1, "spraying should have spent exactly 1 charge, found: " + tile.getCharges());
+		helper.assertTrue(zombie.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN), "the zombie should have been sprayed with Slowness");
+		helper.assertFalse(tile.getItem().isEmpty(), "spraying shouldn't consume the stored potion");
+
+		// A second tick while still powered shouldn't spray again (edge-triggered, one spray per pulse).
+		thaumcraft.common.tiles.devices.TilePotionSprayer.tick(helper.getLevel(), absolute, poweredState, tile);
+		helper.assertTrue(tile.getCharges() == chargesBefore - 1, "holding the pulse shouldn't spend a second charge, found: " + tile.getCharges());
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
 	// Candles - one small block per DyeColor, all sharing BlockCandle. The color-handler tint itself is
 	// client-only and not GameTest-observable; these check the functional side instead (light level,
 	// falling off when unsupported).
