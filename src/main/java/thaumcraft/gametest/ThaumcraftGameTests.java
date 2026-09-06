@@ -5050,6 +5050,7 @@ public class ThaumcraftGameTests {
 		}
 		helper.assertTrue(found, "saving and reloading should round-trip the placed seal's real position and type");
 
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
 	}
 
@@ -5101,6 +5102,7 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
 		helper.assertTrue(helper.getLevel().getBlockState(logAbs).isAir(), "completing the chop task should have really broken the log");
 
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
 	}
 
@@ -5188,6 +5190,7 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(helper.getLevel().getBlockState(cropAbs).is(net.minecraft.world.level.block.Blocks.WHEAT) && age == 0,
 				"completing the harvest task should have broken the grown wheat and replanted it at age 0, found age " + age);
 
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
 	}
 
@@ -5241,6 +5244,7 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(golem.getTarget() == cullTask.getEntity(),
 				"picking up a cull task should immediately set the pig as the golem's real combat target");
 
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
 	}
 
@@ -5296,6 +5300,7 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(!seal.canGolemPerformTask(golem, whitelistCheck),
 				"a whitelist that only matches dirt should refuse a cobblestone target");
 
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
 	}
 
@@ -5344,36 +5349,51 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(golem.isCarrying(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT)),
 				"the golem should now really be carrying the picked-up item");
 
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
 	}
 
 	/**
-	 * Known intermittently flaky - real, understood, not yet fully fixed. Direct diagnosis (dumping
-	 * {@code GolemHelper.provisionRequests} at the point of failure) found this test's own fetch task
-	 * sometimes gets linked to a WRONG {@link thaumcraft.api.golems.ProvisionRequest} - one belonging to a
-	 * completely different, unrelated GameTest structure elsewhere in the world (confirmed via real distance:
-	 * the wrongly-linked request's position was ~157 blocks away). Root cause, fully traced: {@code
-	 * GolemHelper.provisionRequests} is real, dimension-wide, unscoped-by-design state (one player's whole
-	 * base is meant to share one provisioning economy), and {@code SealProvide#tickSeal}'s own real
-	 * request-matching loop just grabs the first unclaimed request whose item matches its own filter - with
-	 * no per-seal/per-structure scoping, by design, since that's not a real concept in actual gameplay.
-	 * {@code Thaumcraft#tickGolemSeals} (a real, level-tick-driven event) ticks EVERY seal ever placed via
-	 * {@code SealHandler.addSealEntity} for as long as the server keeps running, whether or not the test that
-	 * created it is still executing - and only 1 of the 16 seal-spawning tests in this file (as of this
-	 * writing) ever calls the matching {@code SealHandler.removeSealEntity} to clean up. So ANY other test in
-	 * this whole suite that ever configures a {@code SealStock} (or any other auto-provisioning seal) with a
-	 * real target count for IRON_INGOT specifically can - via completely normal, real, passive server
-	 * ticking, with no test code involved at all - eventually issue a real competing IRON_INGOT provisioning
-	 * request that this test's own SealProvide can grab instead of its own. The GOLD_INGOT switch on
-	 * sealStockRequestsProvisioningWhenBelowTargetCount above closed one confirmed such collision, but did
-	 * NOT fully resolve this test's own remaining flakiness - a further diagnostic run after that fix still
-	 * showed the exact same wrong-request symptom, meaning at least one more seal elsewhere in this file (an
-	 * audit of every {@code addSealEntity} call without a matching {@code removeSealEntity} is the concrete
-	 * next step) is also still contributing. The real, correctly-scoped fix is systemic, not local to this
-	 * test: give every seal-spawning test in this file a real cleanup step (removeSealEntity, or an
-	 * equivalent shared per-test teardown), not another one-off item swap - see the thaumcraft-1211-port
-	 * memory file's own write-up of this investigation for the full trace and reasoning. Left as-is rather
-	 * than attempting that broader audit in the same pass that found it.
+	 * Known intermittently flaky - real, deeply investigated across several rounds, still not fully fixed.
+	 * See the thaumcraft-1211-port memory file for the full blow-by-blow; this comment carries only the
+	 * distilled findings for whoever picks this up next.
+	 *
+	 * <p>Four separate, all-real, all-confirmed mechanisms were found, each independently mitigated below
+	 * where possible - none of them, even together, has yet produced a fully clean run:
+	 * <ol>
+	 * <li>{@code GolemHelper.provisionRequests} is real, dimension-wide, unscoped-by-design shared state (one
+	 * player's whole base is meant to share one provisioning economy) - {@code SealProvide#tickSeal} grabs
+	 * the first unclaimed request matching its own filter item, with no per-seal scoping. Originally this
+	 * test collided with {@code sealStockRequestsProvisioningWhenBelowTargetCount}'s own IRON_INGOT request
+	 * (fixed: that test now uses GOLD_INGOT) and, separately, this test's own item was switched to
+	 * NETHERITE_INGOT (used nowhere else in this file) to make it collision-proof against this specific
+	 * mechanism entirely.
+	 * <li>{@code Thaumcraft#tickGolemSeals} (a real per-level-tick event) ticks every seal ever placed via
+	 * {@code SealHandler.addSealEntity} for as long as the server runs, independent of whether the test that
+	 * placed it has finished - of the 16 seal-spawning tests in this file, only 2 self-cleaned (one removes
+	 * its own seal as the literal thing under test, one explicitly calls {@code removeSealEntity} as part of
+	 * its own assertions). Fixed: the other 14 now call {@code removeSealEntity} at the end of their own test.
+	 * <li>{@code TaskHandler.clearSuspendedOrExpiredTasks} (also real per-level-tick, confirmed via direct
+	 * instrumentation to actually fire mid-test) reaps any suspended task and calls the owning seal's
+	 * {@code onTaskSuspension} on it - for {@code SealProvide} this nulls the reaped task's own
+	 * {@code linkedProvision} field. Not itself a bug (this test's own fetch task is SUPPOSED to become
+	 * suspended once completed and get reaped eventually) but confirms real ticks genuinely interleave with
+	 * this test's own synchronous method body, which the next point depends on.
+	 * <li><b>Not yet fixed, strongest remaining lead</b>: {@code EntityThaumcraftGolem} registers its own
+	 * real {@code AIGotoEntity}/{@code AIGotoBlock} goals in its own {@code GoalSelector} at construction
+	 * (real production behavior) - meaning any golem spawned in a GameTest is ALSO ticking its own automatic
+	 * AI in the background via real server ticks (confirmed real ticks do interleave mid-test, point 3
+	 * above), completely independent of this test's own manually-constructed {@code fetchGoal}/
+	 * {@code deliverGoal} instances used to drive {@code canUse()} directly. Direct instrumentation
+	 * confirmed: at the moment just before {@code deliverGoal.canUse()} is called, {@code deliverTask} passes
+	 * every individually-checkable gate ({@code canGolemPerformTask}, {@code isWithinRestriction}, real
+	 * distance, presence in {@code TaskHandler.getBlockTasksSorted}'s own returned list) - yet
+	 * {@code canUse()} still sometimes returns false. The one gate that couldn't be checked directly from
+	 * outside (it's {@code protected}) is {@code AIGoto#areGolemTagsValidForTask} - a real next step is either
+	 * a debugger-attached run, or temporarily loosening that method's visibility for one diagnostic session,
+	 * to see whether the golem's own automatic goal instance (not this test's manual one) is racing to
+	 * reserve the same task first, or whether that gate itself is rejecting it for a reason not yet found.
+	 * </ol>
 	 */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void sealProvideDeliversStockedItemsFromOneContainerToAnother(GameTestHelper helper) {
@@ -5381,7 +5401,7 @@ public class ThaumcraftGameTests {
 		BlockPos provideChestAbs = helper.absolutePos(provideChestPos);
 		helper.setBlock(provideChestPos, net.minecraft.world.level.block.Blocks.CHEST);
 		net.minecraft.world.level.block.entity.ChestBlockEntity provideChest = helper.getBlockEntity(provideChestPos);
-		provideChest.setItem(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 10));
+		provideChest.setItem(0, new ItemStack(net.minecraft.world.item.Items.NETHERITE_INGOT, 10));
 
 		BlockPos destChestPos = provideChestPos.offset(3, 0, 0);
 		BlockPos destChestAbs = helper.absolutePos(destChestPos);
@@ -5390,14 +5410,14 @@ public class ThaumcraftGameTests {
 		ServerPlayer owner = spawnCasterAt(helper, provideChestAbs.above(3));
 		thaumcraft.common.golems.seals.SealProvide seal = new thaumcraft.common.golems.seals.SealProvide();
 		seal.setBlacklist(false);
-		seal.setFilterSlot(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT));
+		seal.setFilterSlot(0, new ItemStack(net.minecraft.world.item.Items.NETHERITE_INGOT));
 		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), provideChestAbs, net.minecraft.core.Direction.UP, seal, owner),
 				"placing a fresh seal should succeed");
 		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(provideChestAbs, net.minecraft.core.Direction.UP);
 		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
 
 		thaumcraft.api.golems.GolemHelper.requestProvisioning(helper.getLevel(), destChestAbs, net.minecraft.core.Direction.UP,
-				new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 4));
+				new ItemStack(net.minecraft.world.item.Items.NETHERITE_INGOT, 4));
 
 		// GolemHelper's per-dimension task/provisioning maps are shared, dimension-wide state across every
 		// concurrently-running GameTest - always scope a search back to our own sealPos, never assume the
@@ -5413,7 +5433,7 @@ public class ThaumcraftGameTests {
 				}
 			}
 		}
-		helper.assertTrue(foundFetch, "SealProvide should have created a real fetch task for the stocked iron ingots");
+		helper.assertTrue(foundFetch, "SealProvide should have created a real fetch task for the stocked netherite ingots");
 
 		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, provideChestAbs);
 		golem.initializeGolem(new thaumcraft.common.golems.GolemProperties(), 0);
@@ -5424,8 +5444,8 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(golem.getTask() == fetchTask, "the golem should have reserved the real fetch task");
 
 		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
-		helper.assertTrue(golem.isCarrying(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT)),
-				"completing the fetch task should have the golem really carrying the iron ingots");
+		helper.assertTrue(golem.isCarrying(new ItemStack(net.minecraft.world.item.Items.NETHERITE_INGOT)),
+				"completing the fetch task should have the golem really carrying the netherite ingots");
 		// Real lifecycle hygiene, not what actually fixed this test's own flakiness (see the item-collision
 		// comment below on the GOLD_INGOT switch for that): completeTask itself already suspends a completed
 		// task via SealProvide#onTaskCompletion, so this is a no-op here, but it matches what a real
@@ -5445,16 +5465,17 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(golem.getTask() == deliverTask, "the golem should have reserved the real delivery task");
 
 		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
-		helper.assertTrue(!golem.isCarrying(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT)),
-				"completing the delivery task should have the golem no longer carrying the iron ingots");
+		helper.assertTrue(!golem.isCarrying(new ItemStack(net.minecraft.world.item.Items.NETHERITE_INGOT)),
+				"completing the delivery task should have the golem no longer carrying the netherite ingots");
 
 		net.minecraft.world.level.block.entity.ChestBlockEntity destChest = helper.getBlockEntity(destChestPos);
 		boolean delivered = false;
 		for (int i = 0; i < destChest.getContainerSize(); i++) {
-			if (destChest.getItem(i).is(net.minecraft.world.item.Items.IRON_INGOT)) delivered = true;
+			if (destChest.getItem(i).is(net.minecraft.world.item.Items.NETHERITE_INGOT)) delivered = true;
 		}
-		helper.assertTrue(delivered, "the delivered iron ingots should really be in the destination chest");
+		helper.assertTrue(delivered, "the delivered netherite ingots should really be in the destination chest");
 
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
 	}
 
@@ -5490,6 +5511,7 @@ public class ThaumcraftGameTests {
 		int after = thaumcraft.api.golems.GolemHelper.provisionRequests.getOrDefault(helper.getLevel().dimension(), new java.util.ArrayList<>()).size();
 		helper.assertTrue(after > before, "having only 2 of a real 8-target stock should register a real provisioning request, before=" + before + " after=" + after);
 
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
 	}
 
@@ -5541,6 +5563,7 @@ public class ThaumcraftGameTests {
 		}
 		helper.assertTrue(delivered, "the deposited iron ingots should really be in the chest");
 
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
 	}
 
@@ -5592,6 +5615,7 @@ public class ThaumcraftGameTests {
 		}
 		helper.assertTrue(!stillInChest, "the pulled iron ingots should really have been removed from the chest");
 
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
 	}
 
@@ -5649,6 +5673,7 @@ public class ThaumcraftGameTests {
 		boolean after = helper.getBlockState(leverPos).getValue(net.minecraft.world.level.block.LeverBlock.POWERED);
 		helper.assertTrue(before != after, "completing the use task should have really toggled the lever, before=" + before + " after=" + after);
 
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
 	}
 
@@ -5699,6 +5724,7 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(seal.getFilterSlotSize(0) == 5,
 				"a second matching left-click should really accumulate the real target amount, was " + seal.getFilterSlotSize(0));
 
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
 	}
 
@@ -5757,6 +5783,7 @@ public class ThaumcraftGameTests {
 		}
 		helper.assertTrue(foundStone, "silk touch should really have dropped the stone block itself, not cobblestone");
 
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
 	}
 
@@ -5831,6 +5858,7 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(golem2.isCarrying(new ItemStack(net.minecraft.world.item.Items.GOLD_INGOT)),
 				"the second cycle (index 1) should have really pulled the second filter slot's item (gold), not repeated the first");
 
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
 	}
 
