@@ -465,6 +465,20 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemVoidSword> voidSword = ITEMS.registerItem("void_sword",
 			props -> new thaumcraft.common.items.tools.ItemVoidSword(TIER_VOID, props.attributes(SwordItem.createAttributes(TIER_VOID, 3, -2.4F))));
 
+	/** The rest of the real Void tool set - {@link thaumcraft.common.items.tools.ItemVoidPickaxe}'s own doc
+	 * comment covers the shared mechanics (self-repair, on-hit Weakness, +1 warp) every one of these has. */
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemVoidPickaxe> voidPick = ITEMS.registerItem("void_pick",
+			props -> new thaumcraft.common.items.tools.ItemVoidPickaxe(TIER_VOID, props.attributes(PickaxeItem.createAttributes(TIER_VOID, 1.0F, -2.8F))));
+
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemVoidAxe> voidAxe = ITEMS.registerItem("void_axe",
+			props -> new thaumcraft.common.items.tools.ItemVoidAxe(TIER_VOID, props.attributes(AxeItem.createAttributes(TIER_VOID, 5.0F, -3.0F))));
+
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemVoidShovel> voidShovel = ITEMS.registerItem("void_shovel",
+			props -> new thaumcraft.common.items.tools.ItemVoidShovel(TIER_VOID, props.attributes(ShovelItem.createAttributes(TIER_VOID, 1.5F, -3.0F))));
+
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemVoidHoe> voidHoe = ITEMS.registerItem("void_hoe",
+			props -> new thaumcraft.common.items.tools.ItemVoidHoe(TIER_VOID, props.attributes(HoeItem.createAttributes(TIER_VOID, -3.0F, 0.0F))));
+
 	/** {@code ItemCrimsonBlade.toolMatCrimsonVoid} from the original ("CVOID": 200 uses, 8.0 mining speed,
 	 * +3.5 attack damage, 20 enchantability) - same real repair-ingredient substitution as {@link
 	 * #TIER_VOID} (a Thaumium ingot instead of the unported void-metal chain's own ingot), same rationale

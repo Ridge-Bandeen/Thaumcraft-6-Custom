@@ -8353,6 +8353,44 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
+	 * Real coverage for the rest of the Void tool set (pickaxe/axe/shovel/hoe - the sword is already covered
+	 * elsewhere) - {@link thaumcraft.common.items.tools.ItemVoidPickaxe}'s own doc comment covers the shared
+	 * mechanics: real self-repair, real +1 warp, and (unlike the sword, which is mob-drop-only) a real
+	 * shaped crafting recipe for each, substituting a Thaumium ingot for the original's own unported
+	 * "Void Metal ingot" - same documented substitution {@link thaumcraft.api.items.ItemsTC}'s own
+	 * {@code TIER_VOID} already uses for repair.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void voidToolSetHasRealRecipesAndSharedMechanics(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+
+		for (String key : new String[] {"void_pick", "void_axe", "void_shovel", "void_hoe"}) {
+			helper.assertTrue(helper.getLevel().getRecipeManager()
+					.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, key)).isPresent(),
+					"a real shaped recipe for " + key + " should be registered");
+		}
+
+		thaumcraft.api.items.IWarpingGear pickWarp = (thaumcraft.api.items.IWarpingGear) ItemsTC.voidPick.get();
+		helper.assertTrue(pickWarp.getWarp(new ItemStack(ItemsTC.voidPick.get()), player) == 1, "void_pick should add a real 1 warp");
+		thaumcraft.api.items.IWarpingGear axeWarp = (thaumcraft.api.items.IWarpingGear) ItemsTC.voidAxe.get();
+		helper.assertTrue(axeWarp.getWarp(new ItemStack(ItemsTC.voidAxe.get()), player) == 1, "void_axe should add a real 1 warp");
+		thaumcraft.api.items.IWarpingGear shovelWarp = (thaumcraft.api.items.IWarpingGear) ItemsTC.voidShovel.get();
+		helper.assertTrue(shovelWarp.getWarp(new ItemStack(ItemsTC.voidShovel.get()), player) == 1, "void_shovel should add a real 1 warp");
+		thaumcraft.api.items.IWarpingGear hoeWarp = (thaumcraft.api.items.IWarpingGear) ItemsTC.voidHoe.get();
+		helper.assertTrue(hoeWarp.getWarp(new ItemStack(ItemsTC.voidHoe.get()), player) == 1, "void_hoe should add a real 1 warp");
+
+		ItemStack pick = new ItemStack(ItemsTC.voidPick.get());
+		pick.setDamageValue(10);
+		net.minecraft.server.level.ServerLevel level = helper.getLevel();
+		for (int i = 0; i < 20; i++) {
+			pick.getItem().inventoryTick(pick, level, player, 0, false);
+			player.tickCount++;
+		}
+		helper.assertTrue(pick.getDamageValue() == 9, "a held void_pick should really repair exactly 1 durability after 20 real ticks, found damage " + pick.getDamageValue());
+		helper.succeed();
+	}
+
+	/**
 	 * Names the real Fortress armor recipes (3 base pieces + 4 helm upgrades) and asserts each one is
 	 * actually registered - same "name every id" pattern as {@link #focusRecipesRegistered} and siblings.
 	 */
