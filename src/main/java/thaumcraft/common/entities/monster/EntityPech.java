@@ -95,11 +95,12 @@ import thaumcraft.common.items.casters.foci.FocusMediumProjectile;
  *
  * <b>Real, documented simplifications (forced by missing dependencies, not design choices)</b>:
  * <ul>
- * <li>Taming only recognizes {@code Items.ENDER_PEARL} as a "valued" item (the original's own single
- * explicit {@code valuedItems} entry, ported verbatim) - the original's *real* general case was a fallback
- * onto {@code ThaumcraftCraftingManager#getObjectTags}, the same thousands-of-entries item-aspect ("object
- * tag") database blocking the Potion Sprayer's real aspect cost (see the port-tracking memory's "config
- * system" gap) - not available, so no other item can raise a Pech's Desire score yet.</li>
+ * <li>{@code Items.ENDER_PEARL} is still the original's own single explicit {@code valuedItems} entry
+ * (ported verbatim), but the original's real general case - any item whose {@code Desire} aspect exceeds 1,
+ * via {@code ThaumcraftCraftingManager#getObjectTags} - is real now too, wired to
+ * {@link thaumcraft.api.aspects.AspectHelper#getObjectAspects} once {@code ThaumcraftObjectTags} existed to
+ * back it (added retroactively - this simplification was believed permanent when chunk 1 shipped, before
+ * that class was found already real and modern from an earlier session).</li>
  * <li>{@link #TRADE_REWARDS} is a real, representative reward set per type, not an exhaustive port of the
  * original's own {@code ConfigEntities#tradeInventory} tables - several original reward items (ore
  * clusters, the Eldritch Eye, the Void amulet, enchanted books) reference either unported items or the
@@ -535,12 +536,18 @@ public class EntityPech extends Monster implements RangedAttackMob {
 	}
 
 	public boolean isValued(ItemStack stack) {
-		return !stack.isEmpty() && VALUED_ITEMS.containsKey(stack.getItem());
+		if (stack.isEmpty()) return false;
+		if (VALUED_ITEMS.containsKey(stack.getItem())) return true;
+		thaumcraft.api.aspects.AspectList tags = thaumcraft.api.aspects.AspectHelper.getObjectAspects(stack);
+		return tags != null && tags.getAmount(thaumcraft.api.aspects.Aspect.DESIRE) > 1;
 	}
 
 	public int getValue(ItemStack stack) {
 		if (stack.isEmpty()) return 0;
-		return VALUED_ITEMS.getOrDefault(stack.getItem(), 0);
+		Integer explicit = VALUED_ITEMS.get(stack.getItem());
+		if (explicit != null) return explicit;
+		thaumcraft.api.aspects.AspectList tags = thaumcraft.api.aspects.AspectHelper.getObjectAspects(stack);
+		return tags == null ? 0 : Math.min(32, tags.getAmount(thaumcraft.api.aspects.Aspect.DESIRE) / 2);
 	}
 
 	public IItemHandler getTradeItems() {

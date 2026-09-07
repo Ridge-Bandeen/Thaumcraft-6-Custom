@@ -249,5 +249,20 @@ public final class ThaumcraftObjectTags {
 		register(Items.NETHER_STAR, new AspectList().add(Aspect.MAGIC, 25).add(Aspect.UNDEAD, 15).add(Aspect.DEATH, 10));
 		register(Items.ENCHANTED_BOOK, new AspectList().add(Aspect.MAGIC, 10).add(Aspect.MIND, 5));
 		register(Items.BOOK, new AspectList().add(Aspect.MIND, 5));
+
+		// This mod's own items - real ConfigAspects#registerItemAspects values carried forward for whichever
+		// of that method's ~30 ItemsTC entries have a real item to key against now (added alongside the
+		// entity-tag backfill for the same reason - see this class's own doc comment for the general shape).
+		register(thaumcraft.api.items.ItemsTC.crimsonRobeChest.get(), new AspectList().add(Aspect.MAGIC, 5).add(Aspect.ELDRITCH, 5));
+		register(thaumcraft.api.items.ItemsTC.crimsonRobeLegs.get(), new AspectList().add(Aspect.MAGIC, 5).add(Aspect.ELDRITCH, 5));
+		register(thaumcraft.api.items.ItemsTC.crimsonRobeHelm.get(), new AspectList().add(Aspect.MAGIC, 5).add(Aspect.ELDRITCH, 5));
+		register(thaumcraft.api.items.ItemsTC.crimsonPlateChest.get(), new AspectList().add(Aspect.METAL, 15).add(Aspect.ELDRITCH, 5));
+		register(thaumcraft.api.items.ItemsTC.crimsonBoots.get(), new AspectList().add(Aspect.METAL, 15).add(Aspect.ELDRITCH, 5));
+		register(thaumcraft.api.items.ItemsTC.crimsonBlade.get(), new AspectList().add(Aspect.METAL, 15).add(Aspect.ELDRITCH, 10).add(Aspect.DEATH, 10));
+		register(thaumcraft.api.items.ItemsTC.curio.get(), new AspectList().add(Aspect.MIND, 30));
+		register(thaumcraft.api.items.ItemsTC.amuletVisFound.get(), new AspectList().add(Aspect.AURA, 20).add(Aspect.METAL, 5).add(Aspect.MAGIC, 5));
+		register(thaumcraft.api.items.ItemsTC.amuletVisCrafted.get(), new AspectList().add(Aspect.AURA, 20).add(Aspect.METAL, 5).add(Aspect.MAGIC, 5));
+		register(thaumcraft.api.items.ItemsTC.curiosityBand.get(), new AspectList().add(Aspect.AURA, 5).add(Aspect.METAL, 5).add(Aspect.MAGIC, 20));
+		register(thaumcraft.api.items.ItemsTC.voidseerCharm.get(), new AspectList().add(Aspect.VOID, 15).add(Aspect.SENSES, 15).add(Aspect.MAGIC, 5));
 	}
 }

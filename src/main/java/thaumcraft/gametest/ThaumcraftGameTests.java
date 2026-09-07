@@ -3712,6 +3712,30 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void objectTagsCoversTheModsOwnItemsBackfilledAlongsideTheConfigChunk(GameTestHelper helper) {
+		AspectList curioTags = thaumcraft.api.aspects.AspectHelper.getObjectAspects(new ItemStack(ItemsTC.curio.get()));
+		helper.assertTrue(curioTags != null && curioTags.getAmount(Aspect.MIND) > 0, "a real curio should carry a real Mind aspect, got " + curioTags);
+
+		AspectList bladeTags = thaumcraft.api.aspects.AspectHelper.getObjectAspects(new ItemStack(ItemsTC.crimsonBlade.get()));
+		helper.assertTrue(bladeTags != null && bladeTags.getAmount(Aspect.ELDRITCH) > 0, "a real crimson blade should carry a real Eldritch aspect, got " + bladeTags);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void entityTagsCoversRealCustomMobsBackfilledAlongsideTheConfigChunk(GameTestHelper helper) {
+		thaumcraft.common.entities.monster.EntityWisp wisp =
+				new thaumcraft.common.entities.monster.EntityWisp(thaumcraft.common.registry.ThaumcraftEntities.WISP.get(), helper.getLevel());
+		AspectList wispTags = thaumcraft.api.aspects.AspectHelper.getEntityAspects(wisp);
+		helper.assertTrue(wispTags != null && wispTags.getAmount(Aspect.AURA) > 0, "a real Wisp should carry a real Aura aspect, got " + wispTags);
+
+		thaumcraft.common.entities.monster.EntityPech pech =
+				new thaumcraft.common.entities.monster.EntityPech(thaumcraft.common.registry.ThaumcraftEntities.PECH.get(), helper.getLevel());
+		AspectList pechTags = thaumcraft.api.aspects.AspectHelper.getEntityAspects(pech);
+		helper.assertTrue(pechTags != null && pechTags.getAmount(Aspect.MAN) > 0, "a real Pech should carry a real Man aspect, got " + pechTags);
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Smelter + Alembic - the whole point of this session's ThaumcraftObjectTags chunk. The smelter smelts
 	// an item's real object aspects into stored essentia, then feeds it one unit at a time to an alembic
@@ -9493,7 +9517,7 @@ public class ThaumcraftGameTests {
 
 		helper.assertFalse(pech.isTamed(), "a fresh pech shouldn't start tamed");
 		helper.assertTrue(pech.isValued(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ENDER_PEARL)), "an ender pearl should be a real valued item");
-		helper.assertFalse(pech.isValued(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK)), "a plain stick shouldn't be valued (no object-tag database yet)");
+		helper.assertFalse(pech.isValued(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK)), "a plain stick has no real object tag at all, so it shouldn't be valued");
 
 		net.minecraft.world.item.ItemStack pearl = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ENDER_PEARL);
 		net.minecraft.world.item.ItemStack leftover = pech.tryPickupItem(pearl);
@@ -9508,6 +9532,26 @@ public class ThaumcraftGameTests {
 			if (slot.is(net.minecraft.world.item.Items.STICK) && slot.getCount() == 3) foundSticks = true;
 		}
 		helper.assertTrue(foundSticks, "the 3 sticks should have landed in the pech's real loot bag");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void pechRecognizesAnyRealDesireAspectItemNotJustEnderPearls(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos.below(), Blocks.STONE);
+		BlockPos absolute = helper.absolutePos(pos);
+
+		thaumcraft.common.entities.monster.EntityPech pech =
+				new thaumcraft.common.entities.monster.EntityPech(thaumcraft.common.registry.ThaumcraftEntities.PECH.get(), helper.getLevel());
+		pech.setPos(absolute.getX() + 0.5, absolute.getY(), absolute.getZ() + 0.5);
+		helper.getLevel().addFreshEntity(pech);
+
+		// Gold ingot: not in the pech's own explicit valuedItems map, but ThaumcraftObjectTags carries a
+		// real Desire=10 tag for it - the original's real general-case fallback, backfilled once
+		// ThaumcraftObjectTags/AspectHelper#getObjectAspects turned out to already be real this session.
+		net.minecraft.world.item.ItemStack gold = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLD_INGOT);
+		helper.assertTrue(pech.isValued(gold), "a gold ingot's real Desire aspect should make it a valued item too");
+		helper.assertTrue(pech.getValue(gold) == 5, "getValue should derive from the real Desire aspect (10/2=5), found: " + pech.getValue(gold));
 		helper.succeed();
 	}
 
