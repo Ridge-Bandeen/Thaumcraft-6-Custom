@@ -9756,4 +9756,154 @@ public class ThaumcraftGameTests {
 		helper.assertFalse(pech.trading, "closing the menu should clear the trading flag");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// The 3 Eldritch bosses - EntityEldritchGuardian (mid-tier, no boss bar), EntityEldritchWarden (real
+	// boss, shares the Guardian's ranged attack), EntityEldritchGolem (real boss, real "headless" second
+	// phase). All 3 share EntityEldritchOrb as their real ranged projectile (Guardian/Warden) or
+	// EntityGolemOrb (Golem, once headless) - see each class's own doc comment for what's simplified.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void eldritchOrbBurstsOnImpactDamagingNearbyLivingEntitiesButNotTheThrower(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.EntityEldritchGuardian thrower =
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_GUARDIAN.get().create(level);
+		helper.assertTrue(thrower != null, "the entity type should really create an instance");
+		thrower.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(thrower);
+
+		net.minecraft.world.entity.npc.Villager victim = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+		helper.assertTrue(victim != null, "the villager entity type should really create an instance");
+		victim.moveTo(abs.getX() + 2.0, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(victim);
+
+		float healthBefore = victim.getHealth();
+		float throwerHealthBefore = thrower.getHealth();
+		thaumcraft.common.entities.projectile.EntityEldritchOrb orb = new thaumcraft.common.entities.projectile.EntityEldritchOrb(thrower);
+		orb.setPos(abs.getX() + 1.0, abs.getY() + 1.0, abs.getZ() + 0.5);
+		orb.shoot(1.0, 0.0, 0.0, 0.5f, 0.0f);
+		level.addFreshEntity(orb);
+		for (int i = 0; i < 20 && !orb.isRemoved(); i++) {
+			orb.tick();
+		}
+
+		helper.assertTrue(orb.isRemoved(), "the orb should discard itself once it bursts");
+		helper.assertTrue(victim.getHealth() < healthBefore, "a nearby living entity should take real burst damage, before=" + healthBefore + " after=" + victim.getHealth());
+		helper.assertTrue(victim.hasEffect(net.minecraft.world.effect.MobEffects.WEAKNESS), "a burst victim should really gain real Weakness");
+		helper.assertTrue(thrower.getHealth() == throwerHealthBefore, "the orb's own thrower shouldn't be hit by its own burst");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void eldritchGuardianRangedAttackEventuallyFiresARealOrbOrScreamsWitherAndWarp(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.EntityEldritchGuardian guardian =
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_GUARDIAN.get().create(level);
+		helper.assertTrue(guardian != null, "the entity type should really create an instance");
+		guardian.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(guardian);
+		helper.assertTrue(guardian.getMaxHealth() == 50.0f, "a real eldritch guardian should really have 50 max health");
+
+		ServerPlayer target = spawnCasterAt(helper, abs.offset(3, 0, 0));
+
+		boolean sawOrb = false;
+		boolean sawScream = false;
+		for (int i = 0; i < 60 && !(sawOrb && sawScream); i++) {
+			guardian.performRangedAttack(target, 1.0f);
+			if (!level.getEntitiesOfClass(thaumcraft.common.entities.projectile.EntityEldritchOrb.class, new AABB(abs).inflate(8)).isEmpty()) {
+				sawOrb = true;
+			}
+			if (target.hasEffect(net.minecraft.world.effect.MobEffects.WITHER)) {
+				sawScream = true;
+			}
+		}
+		helper.assertTrue(sawOrb, "a real eldritch guardian should really eventually fire a real eldritch orb");
+		helper.assertTrue(sawScream, "a real eldritch guardian should really eventually land its real Wither scream on a seen target");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void eldritchWardenIsARealBossThatIsAlliedToEldritchMobsAndImmuneToDrownAndWither(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.boss.EntityEldritchWarden warden =
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_WARDEN.get().create(level);
+		helper.assertTrue(warden != null, "the entity type should really create an instance");
+		warden.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(warden);
+		warden.finalizeSpawn(level, level.getCurrentDifficultyAt(abs), net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+
+		helper.assertTrue(warden.getMaxHealth() == 400.0f, "a real eldritch warden should really have 400 max health");
+		helper.assertTrue(!warden.getDisplayName().getString().isEmpty(), "a real eldritch warden should really have a real generated title name");
+
+		thaumcraft.common.entities.monster.EntityEldritchGuardian ally =
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_GUARDIAN.get().create(level);
+		helper.assertTrue(warden.isAlliedTo(ally), "a real eldritch warden should really be allied to other real eldritch mobs");
+
+		// real shared EntityThaumcraftBoss enrage cap: a single hit over 35 damage is really capped at 35.
+		float healthBefore = warden.getHealth();
+		warden.hurt(level.damageSources().generic(), 50.0f);
+		float lost = healthBefore - warden.getHealth();
+		helper.assertTrue(lost <= 35.01f, "a real single hit over 35 damage should really be capped at 35 against the warden, lost " + lost);
+
+		boolean drowned = warden.hurt(level.damageSources().drown(), 5.0f);
+		helper.assertFalse(drowned, "a real eldritch warden should really be immune to drowning damage");
+
+		boolean withered = warden.hurt(level.damageSources().wither(), 5.0f);
+		helper.assertFalse(withered, "a real eldritch warden should really be immune to wither damage");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void eldritchGolemSurvivesOneLethalHitByGoingHeadlessThenDiesNormallyAfterThat(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.boss.EntityEldritchGolem golem =
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_GOLEM.get().create(level);
+		helper.assertTrue(golem != null, "the entity type should really create an instance");
+		golem.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(golem);
+		helper.assertTrue(golem.getMaxHealth() == 400.0f, "a real eldritch golem should really have 400 max health");
+		helper.assertFalse(golem.isHeadless(), "a freshly spawned golem shouldn't already be headless");
+
+		golem.hurt(level.damageSources().generic(), golem.getHealth() + 50.0f);
+		helper.assertTrue(golem.isHeadless(), "the first would-be-lethal hit should really turn the golem headless instead of killing it");
+		helper.assertTrue(golem.isAlive(), "the golem should really survive its first lethal hit");
+		helper.assertTrue(golem.getHealth() == 1.0f, "a freshly-headless golem should really be left at exactly 1 health");
+
+		// real beam-charge ranged attack, headless-only. tickCount is advanced manually alongside aiStep -
+		// aiStep() alone doesn't touch it (that normally happens in the outer Entity#tick()), and leaving it
+		// stuck at a single value would fire the boss's own real "heal 1hp every 30 ticks" self-heal on
+		// every single one of these 200 iterations instead of ~6-7 times, defeating the second-hit check
+		// below.
+		ServerPlayer target = spawnCasterAt(helper, abs.offset(4, 0, 0));
+		for (int i = 0; i < 200; i++) {
+			golem.tickCount++;
+			golem.aiStep();
+		}
+		golem.performRangedAttack(target, 1.0f);
+		helper.assertTrue(!level.getEntitiesOfClass(thaumcraft.common.entities.projectile.EntityGolemOrb.class, new AABB(abs).inflate(8)).isEmpty(),
+				"a charged, headless golem's ranged attack should really spawn a real golem orb");
+
+		// a second lethal hit should really kill it now that it's already headless.
+		golem.hurt(level.damageSources().generic(), golem.getHealth() + 50.0f);
+		helper.assertFalse(golem.isAlive(), "a second would-be-lethal hit on an already-headless golem should really kill it for real");
+		helper.succeed();
+	}
 }

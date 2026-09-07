@@ -155,6 +155,12 @@ public class ThaumcraftClient {
         // Real geometry now - see ModelArcaneBore/RenderArcaneBore's own doc comments.
         event.registerEntityRenderer(ThaumcraftEntities.ARCANE_BORE.get(), thaumcraft.client.render.RenderArcaneBore::new);
         event.registerEntityRenderer(ThaumcraftEntities.PECH.get(), thaumcraft.client.render.RenderPech::new);
+        // No visible model - see RenderFocusProjectile's own doc comment (shared with FOCUS_PROJECTILE/GOLEM_ORB).
+        event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_ORB.get(), RenderFocusProjectile::new);
+        // Temporary placeholder body, not the real mesh - see ModelEldritchPlaceholder's own doc comment.
+        event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_GUARDIAN.get(), thaumcraft.client.render.RenderEldritchGuardian::new);
+        event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_WARDEN.get(), thaumcraft.client.render.RenderEldritchWarden::new);
+        event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_GOLEM.get(), thaumcraft.client.render.RenderEldritchGolem::new);
         // First real BlockEntityRenderer this whole port has needed - see its own doc comment.
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.BANNER.get(), thaumcraft.client.render.TileBannerRenderer::new);
     }

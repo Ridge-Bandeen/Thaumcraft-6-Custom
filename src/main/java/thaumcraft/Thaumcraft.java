@@ -320,6 +320,9 @@ public class Thaumcraft {
         event.put(ThaumcraftEntities.TURRET_CROSSBOW_ADVANCED.get(), thaumcraft.common.entities.construct.EntityTurretCrossbowAdvanced.createAttributes().build());
         event.put(ThaumcraftEntities.ARCANE_BORE.get(), thaumcraft.common.entities.construct.EntityArcaneBore.createAttributes().build());
         event.put(ThaumcraftEntities.PECH.get(), thaumcraft.common.entities.monster.EntityPech.createAttributes().build());
+        event.put(ThaumcraftEntities.ELDRITCH_GUARDIAN.get(), thaumcraft.common.entities.monster.EntityEldritchGuardian.createAttributes().build());
+        event.put(ThaumcraftEntities.ELDRITCH_WARDEN.get(), thaumcraft.common.entities.monster.boss.EntityEldritchWarden.createAttributes().build());
+        event.put(ThaumcraftEntities.ELDRITCH_GOLEM.get(), thaumcraft.common.entities.monster.boss.EntityEldritchGolem.createAttributes().build());
     }
 
     /**

@@ -340,6 +340,44 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("pech"));
 
+	/** {@link thaumcraft.common.entities.projectile.EntityEldritchOrb}'s own type - same short-lived,
+	 * server-only bolt shape as {@link #GOLEM_ORB}. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.projectile.EntityEldritchOrb>> ELDRITCH_ORB = ENTITY_TYPES.register("eldritch_orb",
+			() -> EntityType.Builder.<thaumcraft.common.entities.projectile.EntityEldritchOrb>of(thaumcraft.common.entities.projectile.EntityEldritchOrb::new, MobCategory.MISC)
+					.sized(0.25f, 0.25f)
+					.clientTrackingRange(64)
+					.updateInterval(10)
+					.noSave()
+					.build("eldritch_orb"));
+
+	/** The Eldritch dimension's mid-tier mob - see {@code EntityEldritchGuardian}'s own doc comment.
+	 * {@code sized(0.8f, 2.25f)} matches the original's own constructor-time {@code setSize(0.8f, 2.25f)}
+	 * exactly. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.EntityEldritchGuardian>> ELDRITCH_GUARDIAN = ENTITY_TYPES.register("eldritch_guardian",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.EntityEldritchGuardian>of(thaumcraft.common.entities.monster.EntityEldritchGuardian::new, MobCategory.MONSTER)
+					.sized(0.8f, 2.25f)
+					.clientTrackingRange(64)
+					.build("eldritch_guardian"));
+
+	/** The Eldritch dimension's real boss - see {@code EntityEldritchWarden}'s own doc comment. Same
+	 * {@code sized(0.8f, 2.25f)} as {@link #ELDRITCH_GUARDIAN} - the original's own constructor never called
+	 * {@code setSize} differently for this subclass either. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.boss.EntityEldritchWarden>> ELDRITCH_WARDEN = ENTITY_TYPES.register("eldritch_warden",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.boss.EntityEldritchWarden>of(thaumcraft.common.entities.monster.boss.EntityEldritchWarden::new, MobCategory.MONSTER)
+					.sized(0.8f, 2.25f)
+					.clientTrackingRange(64)
+					.build("eldritch_warden"));
+
+	/** The Eldritch dimension's second boss - see {@code EntityEldritchGolem}'s own doc comment.
+	 * {@code sized(1.75f, 3.5f)} matches the original's own constructor-time {@code setSize(1.75f, 3.5f)}
+	 * exactly. Fire-immune, matching the original's own {@code isImmuneToFire = true}. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.boss.EntityEldritchGolem>> ELDRITCH_GOLEM = ENTITY_TYPES.register("eldritch_golem",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.boss.EntityEldritchGolem>of(thaumcraft.common.entities.monster.boss.EntityEldritchGolem::new, MobCategory.MONSTER)
+					.sized(1.75f, 3.5f)
+					.clientTrackingRange(64)
+					.fireImmune()
+					.build("eldritch_golem"));
+
 	private ThaumcraftEntities() {
 	}
 }

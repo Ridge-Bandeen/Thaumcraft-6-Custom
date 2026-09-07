@@ -1,54 +1,95 @@
 package thaumcraft.common.entities.projectile;
-import java.util.List;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.SharedMonsterAttributes;
-import net.minecraft.entity.projectile.EntityThrowable;
-import net.minecraft.init.MobEffects;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.potion.PotionEffect;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.world.World;
 
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.tags.EntityTypeTags;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.projectile.ThrowableProjectile;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
+import thaumcraft.common.registry.ThaumcraftEntities;
 
-public class EntityEldritchOrb extends EntityThrowable
-{
-    public EntityEldritchOrb(World par1World) {
-        super(par1World);
-    }
-    
-    public EntityEldritchOrb(World par1World, EntityLivingBase p) {
-        super(par1World, p);
-        shoot(p, p.rotationPitch, p.rotationYaw, -5.0f, 0.75f, 0.0f);
-    }
-    
-    protected float getGravityVelocity() {
-        return 0.0f;
-    }
-    
-    public void onUpdate() {
-        super.onUpdate();
-        if (ticksExisted > 100) {
-            setDead();
-        }
-    }
-    
-    protected void onImpact(RayTraceResult mop) {
-        if (!world.isRemote && getThrower() != null) {
-            List<Entity> list = world.getEntitiesWithinAABBExcludingEntity(getThrower(), getEntityBoundingBox().grow(2.0, 2.0, 2.0));
-            for (int i = 0; i < list.size(); ++i) {
-                Entity entity1 = list.get(i);
-                if (entity1 != null && entity1 instanceof EntityLivingBase && !((EntityLivingBase)entity1).isEntityUndead()) {
-                    entity1.attackEntityFrom(DamageSource.causeIndirectMagicDamage(this, getThrower()), (float) getThrower().getEntityAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue() * 0.666f);
-                    try {
-                        ((EntityLivingBase)entity1).addPotionEffect(new PotionEffect(MobEffects.WEAKNESS, 160, 0));
-                    }
-                    catch (Exception ex) {}
-                }
-            }
-            playSound(SoundEvents.BLOCK_LAVA_EXTINGUISH, 0.5f, 2.6f + (rand.nextFloat() - rand.nextFloat()) * 0.8f);
-            setDead();
-        }
-    }
+/**
+ * Replaces the old (1.12.2) {@code EntityEldritchOrb} -
+ * {@link thaumcraft.common.entities.monster.EntityEldritchGuardian}/
+ * {@link thaumcraft.common.entities.monster.boss.EntityEldritchWarden}'s ranged attack projectile. Extends
+ * {@link ThrowableProjectile} like {@link EntityGolemOrb} (that class's own doc comment explains the real
+ * pattern reused here), but doesn't home - straight shot, matching the original's own plain {@code
+ * EntityThrowable}. The caller aims it via the inherited {@code shoot(x, y, z, velocity, inaccuracy)}
+ * right after construction, same as {@link thaumcraft.common.entities.monster.boss.EntityCultistLeader}
+ * already does for {@link EntityGolemOrb}.
+ *
+ * Real AoE burst on any impact (entity or block): every living, non-undead entity within 2 blocks of the
+ * orb takes indirect-magic damage (66.6% of the thrower's own Attack Damage) and a real 8-second Weakness -
+ * matches the original's own {@code onImpact} exactly (it scanned around the orb itself, not just whatever
+ * it directly hit - a real splash attack, not a single-target one). Real self-expiry at 100 ticks.
+ *
+ * Real, documented cuts: no impact/travel particle effects (tied to the unported {@code FXDispatcher}, same
+ * cut as every other projectile this port ships). Uses
+ * {@link thaumcraft.client.render.RenderFocusProjectile} (no visible model) for the same reason
+ * {@link EntityGolemOrb} does.
+ */
+public class EntityEldritchOrb extends ThrowableProjectile {
+
+	public EntityEldritchOrb(EntityType<? extends EntityEldritchOrb> type, Level level) {
+		super(type, level);
+	}
+
+	public EntityEldritchOrb(LivingEntity thrower) {
+		super(ThaumcraftEntities.ELDRITCH_ORB.get(), thrower, thrower.level());
+		setOwner(thrower);
+	}
+
+	@Override
+	protected void defineSynchedData(SynchedEntityData.Builder builder) {
+		// no per-entity synced state - see the class doc comment.
+	}
+
+	@Override
+	protected double getDefaultGravity() {
+		return 0.0;
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+		if (tickCount > 100) {
+			discard();
+		}
+	}
+
+	@Override
+	protected void onHitEntity(EntityHitResult result) {
+		super.onHitEntity(result);
+		burst();
+	}
+
+	@Override
+	protected void onHitBlock(BlockHitResult result) {
+		super.onHitBlock(result);
+		burst();
+	}
+
+	private void burst() {
+		if (level().isClientSide || isRemoved()) return;
+		if (getOwner() instanceof LivingEntity thrower) {
+			var atk = thrower.getAttribute(Attributes.ATTACK_DAMAGE);
+			float damage = atk != null ? (float) atk.getValue() * 0.666f : 4.0f;
+			AABB area = getBoundingBox().inflate(2.0);
+			for (LivingEntity victim : level().getEntitiesOfClass(LivingEntity.class, area, e -> e != thrower && e.isAlive())) {
+				if (!victim.getType().is(EntityTypeTags.UNDEAD)) {
+					victim.hurt(level().damageSources().indirectMagic(this, thrower), damage);
+					victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 160, 0));
+				}
+			}
+		}
+		playSound(SoundEvents.FIRE_EXTINGUISH, 0.5f, 2.6f + (random.nextFloat() - random.nextFloat()) * 0.8f);
+		discard();
+	}
 }
