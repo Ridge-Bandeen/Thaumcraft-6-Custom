@@ -392,6 +392,12 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.crafting.BlockVoidSiphon::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.METAL).noOcclusion());
 
+	/** Auto-crafting altar - finds and fills a matching Crucible recipe for whatever catalyst is inserted -
+	 * see {@link thaumcraft.common.tiles.crafting.TileThaumatorium}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.crafting.BlockThaumatorium> thaumatorium = BLOCKS.registerBlock("thaumatorium",
+			thaumcraft.common.blocks.crafting.BlockThaumatorium::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).explosionResistance(5.0f).sound(SoundType.STONE).noOcclusion());
+
 	/** Only the "travel" variant of the original's shared {@code BlockPavingStone} - see
 	 * {@link thaumcraft.common.blocks.basic.BlockPavingStoneTravel}'s own doc comment for why the
 	 * "barrier" variant (the warding-network floor tile) is deferred separately. */

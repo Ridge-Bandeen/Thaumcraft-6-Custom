@@ -1,501 +1,302 @@
 package thaumcraft.common.tiles.crafting;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
-import net.minecraft.block.Block;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.inventory.Container;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTBase;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-import net.minecraft.nbt.NBTTagString;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.ITickable;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraftforge.fml.common.FMLCommonHandler;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.api.ThaumcraftApi;
-import thaumcraft.api.ThaumcraftApiHelper;
+
+import java.util.Optional;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.aspects.IAspectContainer;
 import thaumcraft.api.aspects.IEssentiaTransport;
-import thaumcraft.api.blocks.BlocksTC;
-import thaumcraft.api.capabilities.ThaumcraftCapabilities;
 import thaumcraft.api.crafting.CrucibleRecipe;
-import thaumcraft.api.crafting.IThaumcraftRecipe;
-import thaumcraft.client.fx.FXDispatcher;
-import thaumcraft.common.blocks.IBlockFacing;
-import thaumcraft.common.container.InventoryFake;
-import thaumcraft.common.lib.utils.BlockStateUtils;
-import thaumcraft.common.lib.utils.InventoryUtils;
-import thaumcraft.common.tiles.TileThaumcraftInventory;
+import thaumcraft.api.crafting.CrucibleRecipeInput;
+import thaumcraft.api.crafting.ThaumcraftRecipeTypes;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 
+/**
+ * Replaces the old (1.12.2) {@code TileThaumatorium}. The original was an auto-crafting altar built on the
+ * same {@link CrucibleRecipe} type as {@link TileCrucible}: a 3-tall structure ({@code BlocksTC.crucible}
+ * required below it, a thin cosmetic "top" block above), gated on the player curating up to N (Brain-in-a-Jar
+ * upgradeable) recipes through a dedicated GUI, then sucking essentia from connected jars/tubes toward
+ * whichever selected recipe's aspect requirement matched the currently inserted catalyst.
+ *
+ * Real simplification, following {@code BlockInfernalFurnace}'s own "drop the multi-block illusion, pick the
+ * right vanilla-shaped block directly" precedent (see its doc comment): a single standalone block, no GUI
+ * (matching {@link thaumcraft.common.tiles.devices.TilePotionSprayer}/{@link TileVoidSiphon}'s no-menu
+ * convention - right-click inserts/removes the catalyst item directly), no Brain-in-a-Jar upgrade (nothing
+ * left to upgrade - see below), no required-crucible-below structure, no separate "top" block.
+ *
+ * The automation this device actually adds over the plain {@link TileCrucible} - the entire point of it - is
+ * preserved: instead of a player manually feeding essentia crystals in one at a time until a recipe's aspect
+ * cost happens to be met, this tile looks at whatever catalyst item is inserted, finds the first registered
+ * {@code CRUCIBLE_TYPE} recipe whose catalyst {@link net.minecraft.world.item.crafting.Ingredient} matches it
+ * (deterministic registration order stands in for the original's player-curated selection - a real
+ * simplification if two recipes ever share a catalyst but need different aspects, though no shipped recipe
+ * collides today; see the port-tracking memory), and actively sucks essentia from every connected
+ * {@link IEssentiaTransport} neighbor (any side but down, which is reserved for the heat source) toward
+ * exactly that recipe's requirement - same suction-and-fill shape as
+ * {@link thaumcraft.common.tiles.devices.TilePotionSprayer#fill} - until it's met, then crafts and ejects
+ * the result, consuming one catalyst.
+ */
+public class TileThaumatorium extends BlockEntity implements IAspectContainer, IEssentiaTransport {
 
-public class TileThaumatorium extends TileThaumcraftInventory implements IAspectContainer, IEssentiaTransport, ITickable
-{
-    public AspectList essentia;
-    public ArrayList<Integer> recipeHash;
-    public ArrayList<AspectList> recipeEssentia;
-    public ArrayList<String> recipePlayer;
-    public int currentCraft;
-    public int maxRecipes;
-    public Aspect currentSuction;
-    int venting;
-    int counter;
-    boolean heated;
-    CrucibleRecipe currentRecipe;
-    public Container eventHandler;
-    public ArrayList<CrucibleRecipe> recipes;
-    
-    public TileThaumatorium() {
-        super(1);
-        essentia = new AspectList();
-        recipeHash = new ArrayList<Integer>();
-        recipeEssentia = new ArrayList<AspectList>();
-        recipePlayer = new ArrayList<String>();
-        currentCraft = -1;
-        maxRecipes = 1;
-        currentSuction = null;
-        venting = 0;
-        counter = 0;
-        heated = false;
-        currentRecipe = null;
-        recipes = new ArrayList<CrucibleRecipe>();
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public AxisAlignedBB getRenderBoundingBox() {
-        return new AxisAlignedBB(getPos().getX() - 0.1, getPos().getY() - 0.1, getPos().getZ() - 0.1, getPos().getX() + 1.1, getPos().getY() + 2.1, getPos().getZ() + 1.1);
-    }
-    
-    public void readSyncNBT(NBTTagCompound nbttagcompound) {
-        essentia.readFromNBT(nbttagcompound);
-        maxRecipes = nbttagcompound.getByte("maxrec");
-        recipeEssentia = new ArrayList<AspectList>();
-        recipeHash = new ArrayList<Integer>();
-        recipePlayer = new ArrayList<String>();
-        int[] hashes = nbttagcompound.getIntArray("recipes");
-        if (hashes != null) {
-            for (int hash : hashes) {
-                CrucibleRecipe recipe = ThaumcraftApi.getCrucibleRecipeFromHash(hash);
-                if (recipe != null) {
-                    recipeEssentia.add(recipe.getAspects().copy());
-                    recipePlayer.add("");
-                    recipeHash.add(hash);
-                }
-            }
-        }
-    }
-    
-    public NBTTagCompound writeSyncNBT(NBTTagCompound nbttagcompound) {
-        nbttagcompound.setByte("maxrec", (byte) maxRecipes);
-        essentia.writeToNBT(nbttagcompound);
-        int[] hashes = new int[recipeHash.size()];
-        int a = 0;
-        for (Integer i : recipeHash) {
-            hashes[a] = i;
-            ++a;
-        }
-        nbttagcompound.setIntArray("recipes", hashes);
-        return nbttagcompound;
-    }
-    
-    @Override
-    public void readFromNBT(NBTTagCompound nbtCompound) {
-        super.readFromNBT(nbtCompound);
-        NBTTagList nbttaglist2 = nbtCompound.getTagList("OutputPlayer", 8);
-        for (int a = 0; a < nbttaglist2.tagCount(); ++a) {
-            if (recipePlayer.size() > a) {
-                recipePlayer.set(a, nbttaglist2.getStringTagAt(a));
-            }
-        }
-    }
-    
-    @Override
-    public NBTTagCompound writeToNBT(NBTTagCompound nbtCompound) {
-        super.writeToNBT(nbtCompound);
-        NBTTagList nbttaglist2 = new NBTTagList();
-        if (recipePlayer.size() > 0) {
-            for (int a = 0; a < recipePlayer.size(); ++a) {
-                if (recipePlayer.get(a) != null) {
-                    NBTTagString nbttagcompound1 = new NBTTagString(recipePlayer.get(a));
-                    nbttaglist2.appendTag(nbttagcompound1);
-                }
-            }
-        }
-        nbtCompound.setTag("OutputPlayer", nbttaglist2);
-        return nbtCompound;
-    }
-    
-    boolean checkHeat() {
-        Material mat = world.getBlockState(pos.down(2)).getMaterial();
-        Block bi = world.getBlockState(pos.down(2)).getBlock();
-        return mat == Material.LAVA || mat == Material.FIRE || BlocksTC.nitor.containsValue(bi) || bi == Blocks.MAGMA;
-    }
-    
-    public ItemStack getCurrentOutputRecipe() {
-        ItemStack out = ItemStack.EMPTY;
-        if (currentCraft >= 0 && recipeHash != null && recipeHash.size() > 0) {
-            CrucibleRecipe recipe = ThaumcraftApi.getCrucibleRecipeFromHash(recipeHash.get(currentCraft));
-            if (recipe != null) {
-                out = recipe.getRecipeOutput().copy();
-            }
-        }
-        return out;
-    }
-    
-    @Override
-    public void update() {
-        if (!world.isRemote) {
-            if (counter == 0 || counter % 40 == 0) {
-                heated = checkHeat();
-                getUpgrades();
-            }
-            ++counter;
-            if (heated && !gettingPower() && counter % 5 == 0 && recipeHash != null && recipeHash.size() > 0) {
-                if (getStackInSlot(0).isEmpty()) {
-                    currentSuction = null;
-                    return;
-                }
-                if (currentCraft < 0 || currentCraft >= recipeHash.size() || currentRecipe == null || !currentRecipe.catalystMatches(getStackInSlot(0))) {
-                    for (int a = 0; a < recipeHash.size(); ++a) {
-                        CrucibleRecipe recipe = ThaumcraftApi.getCrucibleRecipeFromHash(recipeHash.get(a));
-                        if (recipe.catalystMatches(getStackInSlot(0))) {
-                            currentCraft = a;
-                            currentRecipe = recipe;
-                            break;
-                        }
-                    }
-                }
-                if (currentCraft < 0 || currentCraft >= recipeHash.size()) {
-                    return;
-                }
-                boolean done = true;
-                currentSuction = null;
-                for (Aspect aspect : recipeEssentia.get(currentCraft).getAspectsSortedByName()) {
-                    if (essentia.getAmount(aspect) < recipeEssentia.get(currentCraft).getAmount(aspect)) {
-                        currentSuction = aspect;
-                        done = false;
-                        break;
-                    }
-                }
-                if (done) {
-                    completeRecipe();
-                }
-                else if (currentSuction != null) {
-                    fill();
-                }
-            }
-        }
-        else if (venting > 0) {
-            --venting;
-            float fx = 0.1f - world.rand.nextFloat() * 0.2f;
-            float fz = 0.1f - world.rand.nextFloat() * 0.2f;
-            float fy = 0.1f - world.rand.nextFloat() * 0.2f;
-            float fx2 = 0.1f - world.rand.nextFloat() * 0.2f;
-            float fz2 = 0.1f - world.rand.nextFloat() * 0.2f;
-            float fy2 = 0.1f - world.rand.nextFloat() * 0.2f;
-            int color = 16777215;
-            EnumFacing facing = BlockStateUtils.getFacing(getBlockMetadata());
-            FXDispatcher.INSTANCE.drawVentParticles(pos.getX() + 0.5f + fx + facing.getFrontOffsetX() / 2.0f, pos.getY() + 0.5f + fy, pos.getZ() + 0.5f + fz + facing.getFrontOffsetZ() / 2.0f, facing.getFrontOffsetX() / 4.0f + fx2, fy2, facing.getFrontOffsetZ() / 4.0f + fz2, color);
-        }
-    }
-    
-    private void completeRecipe() {
-        if (currentRecipe != null && currentCraft < recipeHash.size() && currentRecipe.matches(essentia, getStackInSlot(0)) && decrStackSize(0, 1) != null) {
-            essentia = new AspectList();
-            ItemStack dropped = getCurrentOutputRecipe();
-            EntityPlayer p = world.getPlayerEntityByName(recipePlayer.get(currentCraft));
-            if (p != null) {
-                FMLCommonHandler.instance().firePlayerCraftingEvent(p, dropped, new InventoryFake(getStackInSlot(0)));
-            }
-            EnumFacing facing = BlockStateUtils.getFacing(getBlockMetadata());
-            InventoryUtils.ejectStackAt(getWorld(), getPos(), facing, dropped);
-            world.playSound(null, pos, SoundEvents.BLOCK_LAVA_EXTINGUISH, SoundCategory.BLOCKS, 0.25f, 2.6f + (world.rand.nextFloat() - world.rand.nextFloat()) * 0.8f);
-            currentCraft = -1;
-            syncTile(false);
-            markDirty();
-        }
-    }
-    
-    void fill() {
-        EnumFacing facing = BlockStateUtils.getFacing(getBlockMetadata());
-        TileEntity te = null;
-        IEssentiaTransport ic = null;
-        for (int y = 0; y <= 1; ++y) {
-            for (EnumFacing dir : EnumFacing.VALUES) {
-                if (dir != facing && dir != EnumFacing.DOWN) {
-                    if (y != 0 || dir != EnumFacing.UP) {
-                        te = ThaumcraftApiHelper.getConnectableTile(world, pos.up(y), dir);
-                        if (te != null) {
-                            ic = (IEssentiaTransport)te;
-                            if (ic.getEssentiaAmount(dir.getOpposite()) > 0 && ic.getSuctionAmount(dir.getOpposite()) < getSuctionAmount(null) && getSuctionAmount(null) >= ic.getMinimumSuction()) {
-                                int ess = ic.takeEssentia(currentSuction, 1, dir.getOpposite());
-                                if (ess > 0) {
-                                    addToContainer(currentSuction, ess);
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    @Override
-    public int addToContainer(Aspect tt, int am) {
-        int ce = currentRecipe.getAspects().getAmount(tt) - essentia.getAmount(tt);
-        if (currentRecipe == null || ce <= 0) {
-            return am;
-        }
-        int add = Math.min(ce, am);
-        essentia.add(tt, add);
-        syncTile(false);
-        markDirty();
-        return am - add;
-    }
-    
-    @Override
-    public boolean takeFromContainer(Aspect tt, int am) {
-        if (essentia.getAmount(tt) >= am) {
-            essentia.remove(tt, am);
-            syncTile(false);
-            markDirty();
-            return true;
-        }
-        return false;
-    }
-    
-    @Override
-    public boolean takeFromContainer(AspectList ot) {
-        return false;
-    }
-    
-    @Override
-    public boolean doesContainerContain(AspectList ot) {
-        return false;
-    }
-    
-    @Override
-    public boolean doesContainerContainAmount(Aspect tt, int am) {
-        return essentia.getAmount(tt) >= am;
-    }
-    
-    @Override
-    public int containerContains(Aspect tt) {
-        return essentia.getAmount(tt);
-    }
-    
-    @Override
-    public boolean doesContainerAccept(Aspect tag) {
-        return true;
-    }
-    
-    public boolean receiveClientEvent(int i, int j) {
-        if (i >= 0) {
-            if (world.isRemote) {
-                venting = 7;
-            }
-            return true;
-        }
-        return super.receiveClientEvent(i, j);
-    }
-    
-    @Override
-    public boolean isConnectable(EnumFacing face) {
-        return face != BlockStateUtils.getFacing(getBlockMetadata());
-    }
-    
-    @Override
-    public boolean canInputFrom(EnumFacing face) {
-        return face != BlockStateUtils.getFacing(getBlockMetadata());
-    }
-    
-    @Override
-    public boolean canOutputTo(EnumFacing face) {
-        return false;
-    }
-    
-    @Override
-    public void setSuction(Aspect aspect, int amount) {
-        currentSuction = aspect;
-    }
-    
-    @Override
-    public Aspect getSuctionType(EnumFacing loc) {
-        return currentSuction;
-    }
-    
-    @Override
-    public int getSuctionAmount(EnumFacing loc) {
-        return (currentSuction != null) ? 128 : 0;
-    }
-    
-    @Override
-    public Aspect getEssentiaType(EnumFacing loc) {
-        return null;
-    }
-    
-    @Override
-    public int getEssentiaAmount(EnumFacing loc) {
-        return 0;
-    }
-    
-    @Override
-    public int takeEssentia(Aspect aspect, int amount, EnumFacing face) {
-        return (canOutputTo(face) && takeFromContainer(aspect, amount)) ? amount : 0;
-    }
-    
-    @Override
-    public int addEssentia(Aspect aspect, int amount, EnumFacing face) {
-        return canInputFrom(face) ? (amount - addToContainer(aspect, amount)) : 0;
-    }
-    
-    @Override
-    public int getMinimumSuction() {
-        return 0;
-    }
-    
-    @Override
-    public AspectList getAspects() {
-        return essentia;
-    }
-    
-    @Override
-    public void setAspects(AspectList aspects) {
-        essentia = aspects;
-    }
-    
-    public void markDirty() {
-        super.markDirty();
-        if (eventHandler != null) {
-            eventHandler.onCraftMatrixChanged(this);
-        }
-    }
-    
-    @Override
-    public int[] getSlotsForFace(EnumFacing side) {
-        return new int[] { 0 };
-    }
-    
-    public boolean gettingPower() {
-        return world.isBlockIndirectlyGettingPowered(pos) > 0 || world.isBlockIndirectlyGettingPowered(pos.down()) > 0 || world.isBlockIndirectlyGettingPowered(pos.up()) > 0;
-    }
-    
-    public void getUpgrades() {
-        EnumFacing facing = BlockStateUtils.getFacing(getBlockMetadata());
-        int mr = 1;
-        for (int yy = 0; yy <= 1; ++yy) {
-            for (EnumFacing dir : EnumFacing.VALUES) {
-                if (dir != EnumFacing.DOWN) {
-                    if (dir != facing) {
-                        int xx = pos.getX() + dir.getFrontOffsetX();
-                        int zz = pos.getZ() + dir.getFrontOffsetZ();
-                        BlockPos bp = new BlockPos(xx, pos.getY() + yy + dir.getFrontOffsetY(), zz);
-                        IBlockState bs = world.getBlockState(bp);
-                        if (bs == BlocksTC.brainBox.getDefaultState().withProperty((IProperty)IBlockFacing.FACING, (Comparable)dir.getOpposite())) {
-                            mr += 2;
-                        }
-                    }
-                }
-            }
-        }
-        if (mr != maxRecipes) {
-            maxRecipes = mr;
-            while (recipeHash.size() > maxRecipes) {
-                recipeHash.remove(recipeHash.size() - 1);
-            }
-            syncTile(false);
-            markDirty();
-        }
-    }
-    
-    @Override
-    public String getName() {
-        return "container.alchemyfurnace";
-    }
-    
-    @Override
-    public boolean hasCustomName() {
-        return false;
-    }
-    
-    @Override
-    public ITextComponent getDisplayName() {
-        return null;
-    }
-    
-    public void updateRecipes(EntityPlayer player) {
-        recipes.clear();
-        ArrayList<CrucibleRecipe> recipesTemp = new ArrayList<CrucibleRecipe>();
-        if (getStackInSlot(0) != null && !getStackInSlot(0).isEmpty() && recipeHash != null) {
-            for (Object r : ThaumcraftApi.getCraftingRecipes().values()) {
-                if (r instanceof CrucibleRecipe) {
-                    CrucibleRecipe creps = (CrucibleRecipe)r;
-                    if (ThaumcraftCapabilities.knowsResearchStrict(player, creps.getResearch()) && creps.catalystMatches(getStackInSlot(0))) {
-                        recipesTemp.add(creps);
-                    }
-                    else {
-                        if (recipeHash == null || recipeHash.size() <= 0) {
-                            continue;
-                        }
-                        for (Integer hash : recipeHash) {
-                            if (creps.hash == hash) {
-                                recipesTemp.add(creps);
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        recipes = recipesTemp.stream().sorted(new RecipeOutputComparator()).collect(Collectors.toCollection(ArrayList::new));
-    }
-    
-    public ArrayList<Integer> generateRecipeHashlist() {
-        ArrayList<Integer> hashList = new ArrayList<Integer>();
-    Label_0016:
-        for (int hash : recipeHash) {
-            for (CrucibleRecipe cr : recipes) {
-                if (cr.hash == hash) {
-                    continue Label_0016;
-                }
-            }
-            hashList.add(hash);
-        }
-        for (CrucibleRecipe cr2 : recipes) {
-            hashList.add(cr2.hash);
-        }
-        return hashList;
-    }
-    
-    private class RecipeOutputComparator implements Comparator<CrucibleRecipe>
-    {
-        public RecipeOutputComparator() {
-        }
-        
-        @Override
-        public int compare(CrucibleRecipe a, CrucibleRecipe b) {
-            if (a.equals(b)) {
-                return 0;
-            }
-            return a.getRecipeOutput().getDisplayName().compareTo(b.getRecipeOutput().getDisplayName());
-        }
-    }
+	private final ItemStackHandler catalyst = new ItemStackHandler(1) {
+		@Override
+		public boolean isItemValid(int slot, ItemStack stack) {
+			return level != null && findMatchingRecipe(level, stack).isPresent();
+		}
+	};
+
+	private AspectList aspects = new AspectList();
+	private Aspect currentSuction;
+	private int counter;
+
+	public TileThaumatorium(BlockPos pos, BlockState state) {
+		super(ThaumcraftBlockEntities.THAUMATORIUM.get(), pos, state);
+	}
+
+	public ItemStack getItem() {
+		return catalyst.getStackInSlot(0);
+	}
+
+	public void setItem(ItemStack stack) {
+		catalyst.setStackInSlot(0, stack);
+	}
+
+	public boolean accepts(ItemStack stack) {
+		return catalyst.isItemValid(0, stack);
+	}
+
+	public IItemHandler getItemHandler() {
+		return catalyst;
+	}
+
+	public Aspect getCurrentSuction() {
+		return currentSuction;
+	}
+
+	private static boolean isHot(Level level, BlockPos pos) {
+		BlockState below = level.getBlockState(pos.below());
+		return below.is(Blocks.LAVA) || below.is(Blocks.FIRE) || below.is(Blocks.MAGMA_BLOCK) || below.is(Blocks.SOUL_FIRE);
+	}
+
+	private static Optional<RecipeHolder<CrucibleRecipe>> findMatchingRecipe(Level level, ItemStack held) {
+		if (held.isEmpty()) return Optional.empty();
+		for (RecipeHolder<CrucibleRecipe> holder : level.getRecipeManager().getAllRecipesFor(ThaumcraftRecipeTypes.CRUCIBLE_TYPE.get())) {
+			if (holder.value().catalystMatches(held)) return Optional.of(holder);
+		}
+		return Optional.empty();
+	}
+
+	public static void tick(Level level, BlockPos pos, BlockState state, TileThaumatorium tile) {
+		if (level.isClientSide) return;
+		tile.counter++;
+		if (tile.counter % 5 != 0) return;
+
+		ItemStack held = tile.catalyst.getStackInSlot(0);
+		if (held.isEmpty() || !isHot(level, pos)) {
+			tile.currentSuction = null;
+			return;
+		}
+
+		Optional<RecipeHolder<CrucibleRecipe>> match = findMatchingRecipe(level, held);
+		if (match.isEmpty()) {
+			tile.currentSuction = null;
+			return;
+		}
+
+		CrucibleRecipe recipe = match.get().value();
+		AspectList target = recipe.getAspects();
+		Aspect missing = null;
+		for (Aspect tag : target.getAspects()) {
+			if (tile.aspects.getAmount(tag) < target.getAmount(tag)) {
+				missing = tag;
+				break;
+			}
+		}
+
+		if (missing == null) {
+			CrucibleRecipeInput input = new CrucibleRecipeInput(held, tile.aspects);
+			ItemStack out = recipe.assemble(input, level.registryAccess());
+			tile.aspects = recipe.removeMatching(tile.aspects);
+			tile.catalyst.extractItem(0, 1, false);
+			tile.ejectItem(level, pos, out);
+			tile.currentSuction = null;
+			level.playSound(null, pos, SoundEvents.BREWING_STAND_BREW, SoundSource.BLOCKS, 0.6f, 1.0f);
+			tile.setChanged();
+		} else {
+			tile.currentSuction = missing;
+			tile.fill(level, pos);
+		}
+	}
+
+	private void fill(Level level, BlockPos pos) {
+		for (Direction dir : Direction.values()) {
+			if (dir == Direction.DOWN) continue;
+			if (!(level.getBlockEntity(pos.relative(dir)) instanceof IEssentiaTransport neighbor)) continue;
+			if (!neighbor.isConnectable(dir.getOpposite()) || !neighbor.canOutputTo(dir.getOpposite())) continue;
+			if (neighbor.getEssentiaAmount(dir.getOpposite()) <= 0) continue;
+			if (neighbor.getSuctionAmount(dir.getOpposite()) >= getSuctionAmount(dir)) continue;
+			if (getSuctionAmount(dir) < neighbor.getMinimumSuction()) continue;
+			int taken = neighbor.takeEssentia(currentSuction, 1, dir.getOpposite());
+			if (taken > 0) {
+				aspects.add(currentSuction, taken);
+				setChanged();
+				return;
+			}
+		}
+	}
+
+	private void ejectItem(Level level, BlockPos pos, ItemStack stack) {
+		if (stack.isEmpty()) return;
+		ItemEntity out = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 1.1, pos.getZ() + 0.5, stack);
+		out.setDeltaMovement(0, 0.075, 0);
+		level.addFreshEntity(out);
+	}
+
+	@Override
+	public AspectList getAspects() {
+		return aspects;
+	}
+
+	@Override
+	public void setAspects(AspectList aspects) {
+		this.aspects = aspects;
+	}
+
+	@Override
+	public boolean doesContainerAccept(Aspect tag) {
+		return true;
+	}
+
+	@Override
+	public int addToContainer(Aspect tag, int amount) {
+		aspects.add(tag, amount);
+		setChanged();
+		return 0;
+	}
+
+	@Override
+	public boolean takeFromContainer(Aspect tag, int amount) {
+		return aspects.reduce(tag, amount);
+	}
+
+	@Override
+	public boolean takeFromContainer(AspectList ot) {
+		return false;
+	}
+
+	@Override
+	public boolean doesContainerContainAmount(Aspect tag, int amount) {
+		return aspects.getAmount(tag) >= amount;
+	}
+
+	@Override
+	public boolean doesContainerContain(AspectList ot) {
+		return false;
+	}
+
+	@Override
+	public int containerContains(Aspect tag) {
+		return aspects.getAmount(tag);
+	}
+
+	@Override
+	public boolean isConnectable(Direction face) {
+		return face != Direction.DOWN;
+	}
+
+	@Override
+	public boolean canInputFrom(Direction face) {
+		return face != Direction.DOWN;
+	}
+
+	@Override
+	public boolean canOutputTo(Direction face) {
+		return false;
+	}
+
+	@Override
+	public void setSuction(Aspect aspect, int amount) {
+		currentSuction = aspect;
+	}
+
+	@Override
+	public Aspect getSuctionType(Direction face) {
+		return currentSuction;
+	}
+
+	@Override
+	public int getSuctionAmount(Direction face) {
+		return currentSuction != null ? 128 : 0;
+	}
+
+	@Override
+	public Aspect getEssentiaType(Direction face) {
+		return null;
+	}
+
+	@Override
+	public int getEssentiaAmount(Direction face) {
+		return 0;
+	}
+
+	@Override
+	public int takeEssentia(Aspect aspect, int amount, Direction face) {
+		return 0;
+	}
+
+	@Override
+	public int addEssentia(Aspect aspect, int amount, Direction face) {
+		if (!canInputFrom(face)) return 0;
+		aspects.add(aspect, amount);
+		setChanged();
+		return amount;
+	}
+
+	@Override
+	public int getMinimumSuction() {
+		return 0;
+	}
+
+	@Override
+	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.saveAdditional(tag, registries);
+		tag.put("Items", catalyst.serializeNBT(registries));
+		aspects.writeToNBT(tag);
+	}
+
+	@Override
+	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.loadAdditional(tag, registries);
+		catalyst.deserializeNBT(registries, tag.getCompound("Items"));
+		aspects = new AspectList();
+		aspects.readFromNBT(tag);
+	}
+
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public Packet<ClientGamePacketListener> getUpdatePacket() {
+		return ClientboundBlockEntityDataPacket.create(this);
+	}
 }

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "bottom": "thaumcraft:blocks/crucible_bottom",
+    "top": "thaumcraft:blocks/crucible_top",
+    "side": "thaumcraft:blocks/crucible_side"
+  }
+}

@@ -1,123 +1,114 @@
 package thaumcraft.common.blocks.crafting;
-import java.util.Random;
-import net.minecraft.block.Block;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.state.BlockFaceShape;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.Container;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.Item;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumBlockRenderType;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import thaumcraft.Thaumcraft;
-import thaumcraft.api.blocks.BlocksTC;
-import thaumcraft.common.blocks.BlockTCDevice;
-import thaumcraft.common.blocks.IBlockFacingHorizontal;
+
+import javax.annotation.Nullable;
+
+import com.mojang.serialization.MapCodec;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.Containers;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 import thaumcraft.common.tiles.crafting.TileThaumatorium;
-import thaumcraft.common.tiles.crafting.TileThaumatoriumTop;
 
+/**
+ * Replaces the old (1.12.2) {@code BlockThaumatorium} - see {@link TileThaumatorium}'s own doc comment for
+ * the auto-crafting mechanic and what's simplified (single standalone block, no GUI, no Brain-in-a-Jar, no
+ * required-crucible-below structure or cosmetic "top" block). Full cube, no facing needed. Right-click
+ * inserts/removes the catalyst item directly, same no-menu convention as
+ * {@link thaumcraft.common.blocks.devices.BlockPotionSprayer}/{@link BlockVoidSiphon}.
+ *
+ * Texture note: the original's real look came from a hand-modeled {@code .obj} mesh with its own UV atlas
+ * (see {@code thaumatorium.png}/{@code .mtl}/{@code .obj} still sitting in assets, unused). Reconstructing
+ * that mesh as vanilla block-model elements is real, separate work (unlike {@code BlockInfernalFurnace}/
+ * {@code BlockVoidSiphon}, nobody has done that reconstruction for this block yet) - not worth blocking this
+ * chunk on, so this reuses {@link BlockCrucible}'s own per-face textures (thematically the closest existing
+ * device: another heat-fired essentia vessel) as a plain cube for now.
+ */
+public class BlockThaumatorium extends Block implements EntityBlock {
 
-public class BlockThaumatorium extends BlockTCDevice implements IBlockFacingHorizontal
-{
-    boolean top;
-    
-    public BlockThaumatorium(boolean top) {
-        super(Material.IRON, null, top ? "thaumatorium_top" : "thaumatorium");
-        setSoundType(SoundType.METAL);
-        setCreativeTab(null);
-        this.top = top;
-    }
-    
-    @Override
-    public TileEntity createNewTileEntity(World world, int metadata) {
-        if (!top) {
-            return new TileThaumatorium();
-        }
-        if (top) {
-            return new TileThaumatoriumTop();
-        }
-        return null;
-    }
-    
-    @Override
-    public void onBlockAdded(World worldIn, BlockPos pos, IBlockState state) {
-    }
-    
-    public boolean isOpaqueCube(IBlockState state) {
-        return false;
-    }
-    
-    public BlockFaceShape getBlockFaceShape(IBlockAccess worldIn, IBlockState state, BlockPos pos, EnumFacing face) {
-        return BlockFaceShape.UNDEFINED;
-    }
-    
-    public boolean isFullCube(IBlockState state) {
-        return false;
-    }
-    
-    public EnumBlockRenderType getRenderType(IBlockState state) {
-        return top ? EnumBlockRenderType.INVISIBLE : EnumBlockRenderType.MODEL;
-    }
-    
-    public boolean onBlockActivated(World world, BlockPos pos, IBlockState state, EntityPlayer player, EnumHand hand, EnumFacing side, float hitX, float hitY, float hitZ) {
-        if (!world.isRemote && !player.isSneaking()) {
-            if (!top) {
-                player.openGui(Thaumcraft.instance, 3, world, pos.getX(), pos.getY(), pos.getZ());
-            }
-            else {
-                player.openGui(Thaumcraft.instance, 3, world, pos.down().getX(), pos.down().getY(), pos.down().getZ());
-            }
-        }
-        return true;
-    }
-    
-    public Item getItemDropped(IBlockState state, Random rand, int fortune) {
-        return Item.getItemFromBlock(BlocksTC.metalAlchemical);
-    }
-    
-    @Override
-    public int damageDropped(IBlockState state) {
-        return 0;
-    }
-    
-    @Override
-    public void breakBlock(World worldIn, BlockPos pos, IBlockState state) {
-        if (top && worldIn.getBlockState(pos.down()).getBlock() == BlocksTC.thaumatorium) {
-            worldIn.setBlockState(pos.down(), BlocksTC.metalAlchemical.getDefaultState());
-        }
-        if (!top && worldIn.getBlockState(pos.up()).getBlock() == BlocksTC.thaumatoriumTop) {
-            worldIn.setBlockState(pos.up(), BlocksTC.metalAlchemical.getDefaultState());
-        }
-        super.breakBlock(worldIn, pos, state);
-    }
-    
-    @Override
-    public void neighborChanged(IBlockState state, World worldIn, BlockPos pos, Block blockIn, BlockPos pos2) {
-        if (!top && worldIn.getBlockState(pos.down()).getBlock() != BlocksTC.crucible) {
-            worldIn.setBlockState(pos, BlocksTC.metalAlchemical.getDefaultState());
-            if (worldIn.getBlockState(pos.up()).getBlock() == BlocksTC.thaumatoriumTop) {
-                worldIn.setBlockState(pos.up(), BlocksTC.metalAlchemical.getDefaultState());
-            }
-        }
-    }
-    
-    public boolean hasComparatorInputOverride(IBlockState state) {
-        return !top;
-    }
-    
-    public int getComparatorInputOverride(IBlockState state, World world, BlockPos pos) {
-        TileEntity tile = world.getTileEntity(pos);
-        if (tile != null && tile instanceof TileThaumatorium) {
-            return Container.calcRedstoneFromInventory((IInventory)tile);
-        }
-        return super.getComparatorInputOverride(state, world, pos);
-    }
+	public static final MapCodec<BlockThaumatorium> CODEC = simpleCodec(BlockThaumatorium::new);
+
+	public BlockThaumatorium(BlockBehaviour.Properties properties) {
+		super(properties);
+	}
+
+	@Override
+	protected MapCodec<? extends Block> codec() {
+		return CODEC;
+	}
+
+	@Nullable
+	@Override
+	public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+		return new TileThaumatorium(pos, state);
+	}
+
+	@Nullable
+	@Override
+	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+		return type == ThaumcraftBlockEntities.THAUMATORIUM.get()
+				? (lvl, pos, st, be) -> TileThaumatorium.tick(lvl, pos, st, (TileThaumatorium) be)
+				: null;
+	}
+
+	@Override
+	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+		return interact(level, pos, player, ItemStack.EMPTY);
+	}
+
+	@Override
+	protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+			net.minecraft.world.InteractionHand hand, BlockHitResult hitResult) {
+		InteractionResult result = interact(level, pos, player, stack);
+		return result == InteractionResult.SUCCESS ? ItemInteractionResult.SUCCESS
+				: ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+	}
+
+	private InteractionResult interact(Level level, BlockPos pos, Player player, ItemStack held) {
+		if (level.isClientSide) return InteractionResult.SUCCESS;
+		if (!(level.getBlockEntity(pos) instanceof TileThaumatorium tile)) return InteractionResult.PASS;
+
+		if (tile.getItem().isEmpty() && tile.accepts(held)) {
+			ItemStack single = held.copyWithCount(1);
+			tile.setItem(single);
+			held.shrink(1);
+			level.playSound(null, pos, SoundEvents.ITEM_FRAME_ADD_ITEM, SoundSource.BLOCKS, 0.4f, 1.0f);
+			return InteractionResult.SUCCESS;
+		}
+		if (!tile.getItem().isEmpty()) {
+			ItemStack returned = tile.getItem();
+			tile.setItem(ItemStack.EMPTY);
+			if (!player.getInventory().add(returned)) {
+				player.drop(returned, false);
+			}
+			level.playSound(null, pos, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 0.4f, 1.0f);
+			return InteractionResult.SUCCESS;
+		}
+		return InteractionResult.PASS;
+	}
+
+	@Override
+	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+		if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TileThaumatorium tile) {
+			ItemStack held = tile.getItem();
+			if (!held.isEmpty()) {
+				Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, held);
+			}
+		}
+		super.onRemove(state, level, pos, newState, movedByPiston);
+	}
 }

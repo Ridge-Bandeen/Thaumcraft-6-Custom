@@ -107,6 +107,9 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.crafting.TileVoidSiphon>> VOID_SIPHON = BLOCK_ENTITIES.register("void_siphon",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TileVoidSiphon::new, BlocksTC.voidSiphon.get()).build(null));
 
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.crafting.TileThaumatorium>> THAUMATORIUM = BLOCK_ENTITIES.register("thaumatorium",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TileThaumatorium::new, BlocksTC.thaumatorium.get()).build(null));
+
 	/** Also backs {@link BlocksTC#pedestalEldritch} - see that field's own doc comment. Same tile, same
 	 * behavior, purely a themed reskin (matches the original's own "Eldritch" pedestal tier). */
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.crafting.TilePedestal>> PEDESTAL = BLOCK_ENTITIES.register("pedestal",

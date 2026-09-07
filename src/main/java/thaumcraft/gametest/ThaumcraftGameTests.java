@@ -2062,6 +2062,73 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
+	// Thaumatorium - auto-crafting altar built on the same CrucibleRecipe type as TileCrucible. Given a
+	// heat source below and a catalyst matching a registered recipe, it sucks essentia from connected
+	// neighbors (same suction-and-fill shape as TilePotionSprayer#fill) toward that recipe's requirement
+	// and crafts automatically, no GUI/curation needed. Calls TileThaumatorium.tick(...) directly, same
+	// "test the real entry point" precedent as every other ticking device above.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumatoriumAutoCraftsAFocusFromACrucibleRecipeWhenHeatedWithMatchingCatalystAndEssentia(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos.below(), Blocks.LAVA);
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.thaumatorium.get());
+
+		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
+		// focus_air_crucible.json: catalyst feather, aspects vitreus:5/praecantatio:3/aer:3, result Focus: Air.
+		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
+		helper.assertFalse(tile.getItem().isEmpty(), "the feather catalyst should have been accepted");
+
+		helper.setBlock(pos.north(), TEST_ESSENTIA_SOURCE_BLOCK.get());
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(pos.north());
+		source.amount = 200;
+		source.outputFace = net.minecraft.core.Direction.SOUTH;
+
+		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(pos);
+		for (int i = 0; i < 500 && !tile.getItem().isEmpty(); i++) {
+			// A real tube network would have one source per aspect - this single test fixture only ever
+			// emits one aspect at a time, so keep pointing it at whatever the tile currently wants.
+			if (tile.getCurrentSuction() != null) source.aspect = tile.getCurrentSuction();
+			thaumcraft.common.tiles.crafting.TileThaumatorium.tick(helper.getLevel(), absolute, state, tile);
+		}
+
+		helper.assertTrue(tile.getItem().isEmpty(), "the feather catalyst should have been consumed crafting the focus");
+		java.util.List<net.minecraft.world.entity.item.ItemEntity> drops = helper.getLevel().getEntitiesOfClass(
+				net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(absolute).inflate(2));
+		boolean foundFocus = drops.stream().anyMatch(e -> e.getItem().is(thaumcraft.api.items.ItemsTC.focusAir.get()));
+		helper.assertTrue(foundFocus, "the thaumatorium should have crafted and ejected a Focus: Air");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumatoriumDoesNothingWithoutHeatEvenWithAMatchingCatalystAndEssentiaAvailable(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos.below(), Blocks.STONE);
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.thaumatorium.get());
+
+		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
+		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
+
+		helper.setBlock(pos.north(), TEST_ESSENTIA_SOURCE_BLOCK.get());
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(pos.north());
+		source.aspect = Aspect.EARTH;
+		source.amount = 200;
+		source.outputFace = net.minecraft.core.Direction.SOUTH;
+
+		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(pos);
+		for (int i = 0; i < 100; i++) {
+			thaumcraft.common.tiles.crafting.TileThaumatorium.tick(helper.getLevel(), absolute, state, tile);
+		}
+
+		helper.assertFalse(tile.getItem().isEmpty(), "without a heat source below, the catalyst shouldn't be consumed");
+		helper.assertTrue(tile.getAspects().size() == 0, "without a heat source below, no essentia should have been drawn in");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
 	// Candles - one small block per DyeColor, all sharing BlockCandle. The color-handler tint itself is
 	// client-only and not GameTest-observable; these check the functional side instead (light level,
 	// falling off when unsupported).
