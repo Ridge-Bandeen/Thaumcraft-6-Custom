@@ -289,6 +289,13 @@ public class Thaumcraft {
         registrar.playToClient(thaumcraft.common.lib.network.ClientboundPlayerKnowledgePacket.TYPE,
                 thaumcraft.common.lib.network.ClientboundPlayerKnowledgePacket.STREAM_CODEC,
                 (payload, context) -> thaumcraft.client.ClientPlayerKnowledgeCache.handle(payload));
+
+        // The real focus-radial HUD's own selection packet - see ServerboundChangeCasterFocusPacket's own
+        // doc comment.
+        registrar.playToServer(thaumcraft.common.lib.network.ServerboundChangeCasterFocusPacket.TYPE,
+                thaumcraft.common.lib.network.ServerboundChangeCasterFocusPacket.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> thaumcraft.common.items.casters.CasterFocusHelper
+                        .handleChangeFocus(payload, (net.minecraft.server.level.ServerPlayer) context.player())));
     }
 
     /** First real living {@code Mob} this port has registered ({@link thaumcraft.common.entities.monster.EntityWisp})

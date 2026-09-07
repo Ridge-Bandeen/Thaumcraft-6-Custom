@@ -10193,4 +10193,96 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(tile.getItemHandler().getStackInSlot(0).isEmpty(), "placing purifying fluid should really have consumed the real bath salt");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// CasterFocusHelper - the real common-side logic backing the focus-radial HUD's actual bind/swap
+	// (FocusRadialOverlay's own rendering/hover/hit-test is client-only and has no automated coverage at
+	// all - see its own doc comment and the port-tracking memory's UI-visual-parity checklist for the
+	// manual playtest it still needs).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void casterFocusHelperFindsCarriedFociSortedByRealDisplayName(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.getInventory().clearContent();
+		player.getInventory().setItem(3, new ItemStack(thaumcraft.api.items.ItemsTC.focusFireball.get()));
+		player.getInventory().setItem(7, new ItemStack(thaumcraft.api.items.ItemsTC.focus1.get()));
+		player.getInventory().setItem(20, new ItemStack(Items.STICK));
+
+		java.util.List<ItemStack> foci = thaumcraft.common.items.casters.CasterFocusHelper.findCarriedFoci(player);
+
+		helper.assertTrue(foci.size() == 2, "only the 2 real carried foci should really be found, found " + foci.size());
+		helper.assertTrue(foci.get(0).getHoverName().getString().compareTo(foci.get(1).getHoverName().getString()) <= 0,
+				"real carried foci should really be sorted by real display name");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void casterFocusHelperChangeFocusBindsAndReturnsThePreviousFocus(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.getInventory().clearContent();
+
+		ItemStack casterStack = new ItemStack(thaumcraft.api.items.ItemsTC.casterBasic.get());
+		thaumcraft.api.casters.ICaster caster = (thaumcraft.api.casters.ICaster) casterStack.getItem();
+		caster.setFocus(casterStack, new ItemStack(thaumcraft.api.items.ItemsTC.focus1.get()));
+
+		player.getInventory().setItem(5, new ItemStack(thaumcraft.api.items.ItemsTC.focusFireball.get(), 2));
+		thaumcraft.common.items.casters.CasterFocusHelper.changeFocus(casterStack, player, 5);
+
+		helper.assertTrue(caster.getFocus(casterStack) == thaumcraft.api.items.ItemsTC.focusFireball.get(),
+				"the caster should really now have the real newly-selected focus bound");
+		// makeMockServerPlayerInLevel's player is unavoidably creative (see the port-tracking memory) - real
+		// creative players don't lose the consumed item, matching changeFocus's own real instabuild check.
+		int expectedCount = player.getAbilities().instabuild ? 2 : 1;
+		helper.assertTrue(player.getInventory().getItem(5).getCount() == expectedCount,
+				"selecting a real focus should really consume exactly 1 from its real stack outside creative, found "
+						+ player.getInventory().getItem(5).getCount() + " (expected " + expectedCount + ")");
+		boolean gotOldFocusBack = false;
+		for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+			if (player.getInventory().getItem(i).is(thaumcraft.api.items.ItemsTC.focus1.get())) gotOldFocusBack = true;
+		}
+		helper.assertTrue(gotOldFocusBack, "the real previously-bound focus should really have been returned to the player's inventory");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void casterFocusHelperChangeFocusRemovesWithoutBindingWhenSlotNegative(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.getInventory().clearContent();
+
+		ItemStack casterStack = new ItemStack(thaumcraft.api.items.ItemsTC.casterBasic.get());
+		thaumcraft.api.casters.ICaster caster = (thaumcraft.api.casters.ICaster) casterStack.getItem();
+		caster.setFocus(casterStack, new ItemStack(thaumcraft.api.items.ItemsTC.focus1.get()));
+
+		thaumcraft.common.items.casters.CasterFocusHelper.changeFocus(casterStack, player, -1);
+
+		helper.assertTrue(caster.getFocus(casterStack) == null, "a real negative slot should really unbind the caster's focus");
+		boolean gotOldFocusBack = false;
+		for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+			if (player.getInventory().getItem(i).is(thaumcraft.api.items.ItemsTC.focus1.get())) gotOldFocusBack = true;
+		}
+		helper.assertTrue(gotOldFocusBack, "the real unbound focus should really have been returned to the player's inventory");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void casterFocusHelperChangeFocusIsANoOpForARealInvalidSlot(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.getInventory().clearContent();
+
+		ItemStack casterStack = new ItemStack(thaumcraft.api.items.ItemsTC.casterBasic.get());
+		thaumcraft.api.casters.ICaster caster = (thaumcraft.api.casters.ICaster) casterStack.getItem();
+		caster.setFocus(casterStack, new ItemStack(thaumcraft.api.items.ItemsTC.focus1.get()));
+
+		player.getInventory().setItem(5, new ItemStack(Items.STICK));
+		thaumcraft.common.items.casters.CasterFocusHelper.changeFocus(casterStack, player, 5);
+
+		helper.assertTrue(caster.getFocus(casterStack) == thaumcraft.api.items.ItemsTC.focus1.get(),
+				"a real slot that isn't a real focus should really be a no-op, leaving the original focus bound");
+		helper.succeed();
+	}
 }

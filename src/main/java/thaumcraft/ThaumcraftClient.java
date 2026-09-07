@@ -9,6 +9,7 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.item.ItemProperties;
@@ -38,6 +39,11 @@ import thaumcraft.common.registry.ThaumcraftMenus;
 @EventBusSubscriber(modid = Thaumcraft.MODID, value = Dist.CLIENT)
 public class ThaumcraftClient {
     public ThaumcraftClient(ModContainer container) {
+    }
+
+    @SubscribeEvent
+    static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
+        event.register(thaumcraft.client.gui.KeyBindings.CHANGE_CASTER_FOCUS);
     }
 
     @SubscribeEvent

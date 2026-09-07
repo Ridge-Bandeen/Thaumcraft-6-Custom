@@ -1067,6 +1067,7 @@
   "button.up": "Scroll up",
   "button.down": "Scroll down",
   "key.categories.thaumcraft": "Thaumcraft",
+  "key.thaumcraft.change_focus": "Change Caster Focus",
   "card.study.name": "Study %1$s",
   "card.study.text": "A large part of research is simply hitting the books and putting in the work. You study %1$s and gain 15 to 25 progress.",
   "card.reject.name": "Reject %1$s findings",
