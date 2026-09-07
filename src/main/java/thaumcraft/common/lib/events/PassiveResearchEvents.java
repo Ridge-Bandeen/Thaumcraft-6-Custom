@@ -12,9 +12,12 @@ import net.minecraft.world.entity.projectile.LlamaSpit;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
 import thaumcraft.Thaumcraft;
 import thaumcraft.api.capabilities.IPlayerKnowledge;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
+import thaumcraft.common.items.curios.ItemThaumonomicon;
+import thaumcraft.common.items.resources.ItemCrystalEssence;
 
 /**
  * Replaces the "gameplay experience teaches you something" fragment of the old (1.12.2) {@code EntityEvents}'
@@ -32,6 +35,15 @@ import thaumcraft.api.capabilities.ThaumcraftCapabilities;
  * Real, documented cut: no direct-fire-damage vs. real "isFireDamage()" distinction beyond the tag check
  * itself - {@code DamageTypeTags.IS_FIRE} is the real modern equivalent of the original's
  * {@code DamageSource#isFireDamage()}.
+ *
+ * Also covers 2 of the old {@code PlayerEvents#pickupItem}'s own real "gameplay experience" flags for the
+ * same reason - picking up a real {@link ItemCrystalEssence} grants "!gotcrystals" (with the original's own
+ * real status message), picking up a real {@link ItemThaumonomicon} grants "!gotthaumonomicon" (no message
+ * in the original either). Real, documented cut: the original's own "!gotcrystals" branch also gave the
+ * player a Dream Journal book (via the wake-up-triggered {@code giveDreamJournal}, itself gated on
+ * {@code ModConfig.CONFIG_MISC.noSleep}) - dropped here, {@code ConfigItems.startBook} isn't ported (part of
+ * the still-open config-system gap tracked elsewhere in this session's memory), and the flag itself is the
+ * part with real, independent value (nothing currently requires the Dream Journal item specifically).
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID)
 public class PassiveResearchEvents {
@@ -57,11 +69,25 @@ public class PassiveResearchEvents {
 		}
 	}
 
+	@SubscribeEvent
+	public static void onItemPickup(ItemEntityPickupEvent.Post event) {
+		if (!(event.getPlayer() instanceof ServerPlayer player)) return;
+
+		if (event.getOriginalStack().getItem() instanceof ItemCrystalEssence) {
+			grant(player, "!gotcrystals", "got.crystals");
+		}
+		if (event.getOriginalStack().getItem() instanceof ItemThaumonomicon) {
+			grant(player, "!gotthaumonomicon", null);
+		}
+	}
+
 	private static void grant(ServerPlayer player, String researchKey, String messageKey) {
 		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
 		if (knowledge.isResearchKnown(researchKey)) return;
 		knowledge.addResearch(researchKey);
 		knowledge.sync(player);
-		player.displayClientMessage(Component.translatable(messageKey).withStyle(ChatFormatting.DARK_PURPLE), true);
+		if (messageKey != null) {
+			player.displayClientMessage(Component.translatable(messageKey).withStyle(ChatFormatting.DARK_PURPLE), true);
+		}
 	}
 }

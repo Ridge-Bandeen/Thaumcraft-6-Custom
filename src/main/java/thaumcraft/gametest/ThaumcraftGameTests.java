@@ -10033,4 +10033,51 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(gotCurio, "a real cultist killed by a real player should really eventually drop a real Curio within a generous number of chance rolls");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// WornGearEvents' newly-closed Traveller's Boots fall-damage half, and PassiveResearchEvents' 2
+	// pickup-triggered research flags - continuing the events-audit chunk begun with
+	// PassiveResearchEvents/MobDeathDropEvents above.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void travellerBootsHalveRealFallDamage(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, new ItemStack(thaumcraft.api.items.ItemsTC.travellerBoots.get()));
+
+		net.minecraft.world.damagesource.DamageSource fall = level.damageSources().fall();
+		net.neoforged.neoforge.common.damagesource.DamageContainer container =
+				new net.neoforged.neoforge.common.damagesource.DamageContainer(fall, 10.0f);
+		container.setNewDamage(10.0f);
+		net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent event =
+				new net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent(player, container);
+		thaumcraft.common.lib.events.WornGearEvents.fallDamage(event);
+
+		helper.assertTrue(event.getAmount() == 4.0f, "10.0 fall damage should really be halved-minus-1 by real traveller's boots to 4.0, found " + event.getAmount());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void passiveResearchGrantsFlagsOnCrystalAndThaumonomiconPickup(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+
+		net.minecraft.world.entity.item.ItemEntity crystalEntity = new net.minecraft.world.entity.item.ItemEntity(
+				level, player.getX(), player.getY(), player.getZ(), new ItemStack(thaumcraft.api.items.ItemsTC.crystalEssence.get()));
+		net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent.Post crystalEvent =
+				new net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent.Post(player, crystalEntity, crystalEntity.getItem());
+		thaumcraft.common.lib.events.PassiveResearchEvents.onItemPickup(crystalEvent);
+		helper.assertTrue(ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("!gotcrystals"),
+				"picking up a real crystal essence should really grant the real !gotcrystals flag");
+
+		net.minecraft.world.entity.item.ItemEntity bookEntity = new net.minecraft.world.entity.item.ItemEntity(
+				level, player.getX(), player.getY(), player.getZ(), new ItemStack(thaumcraft.api.items.ItemsTC.thaumonomicon.get()));
+		net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent.Post bookEvent =
+				new net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent.Post(player, bookEntity, bookEntity.getItem());
+		thaumcraft.common.lib.events.PassiveResearchEvents.onItemPickup(bookEvent);
+		helper.assertTrue(ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("!gotthaumonomicon"),
+				"picking up a real thaumonomicon should really grant the real !gotthaumonomicon flag");
+		helper.succeed();
+	}
 }

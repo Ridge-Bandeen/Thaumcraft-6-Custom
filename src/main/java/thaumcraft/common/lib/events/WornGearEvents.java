@@ -3,6 +3,7 @@ package thaumcraft.common.lib.events;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -63,12 +64,27 @@ public class WornGearEvents {
 		}
 	}
 
-	/** Real port of the Cloud Ring half of the original's {@code PlayerEvents#onFallDamage} (the other half,
-	 * Traveller's Boots' own fall-damage reduction, was never ported to this handler's modern predecessor
-	 * either - a separate, pre-existing gap, not something this pass introduces or fixes). */
+	/** Real port of both halves of the original's {@code PlayerEvents#onFallDamage} - the Cloud Ring (Baubles
+	 * slot, now {@link WornGearHelper#getWornItems}) and Traveller's Boots (a real armor piece, checked
+	 * directly off {@link EquipmentSlot#FEET} - it was never a Baubles item to begin with). Traveller's Boots
+	 * was previously a real, flagged, still-open gap noted right here in this method's own earlier doc
+	 * comment; now closed. Matches the original exactly: Traveller's Boots halves the raw amount (minus 1,
+	 * floored at 0) unconditionally (no charge check - that's a separate mechanic, the speed/jump boost
+	 * {@code ItemBootsTraveller#inventoryTick} already owns); the Cloud Ring's own reduction is applied
+	 * afterward, on top of whatever Traveller's Boots already left. */
 	@SubscribeEvent
 	public static void fallDamage(LivingIncomingDamageEvent event) {
 		if (!event.getSource().is(DamageTypes.FALL) || !(event.getEntity() instanceof Player player)) return;
+
+		if (player.getItemBySlot(EquipmentSlot.FEET).getItem() == ItemsTC.travellerBoots.get()) {
+			float reduced = Math.max(0.0f, event.getAmount() / 2.0f - 1.0f);
+			if (reduced < 1.0f) {
+				event.setCanceled(true);
+				return;
+			}
+			event.setAmount(reduced);
+		}
+
 		boolean wearingRing = false;
 		for (ItemStack stack : WornGearHelper.getWornItems(player)) {
 			if (stack.getItem() == ItemsTC.cloudRing.get()) { wearingRing = true; break; }
