@@ -10532,4 +10532,80 @@ public class ThaumcraftGameTests {
 		}
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// ItemFocusPouch / FocusPouchMenu - the real 18-slot portable focus container.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focusPouchContentsRoundTripThroughTheRealContainerComponent(GameTestHelper helper) {
+		ItemStack pouch = new ItemStack(thaumcraft.api.items.ItemsTC.focusPouch.get());
+		net.minecraft.core.NonNullList<ItemStack> contents = thaumcraft.common.items.casters.ItemFocusPouch.getContents(pouch);
+		helper.assertTrue(contents.size() == 18, "a real fresh pouch should really report 18 real slots, found " + contents.size());
+		helper.assertTrue(contents.stream().allMatch(ItemStack::isEmpty), "a real fresh pouch should really start with every real slot empty");
+
+		contents.set(3, new ItemStack(thaumcraft.api.items.ItemsTC.focusAir.get()));
+		thaumcraft.common.items.casters.ItemFocusPouch.setContents(pouch, contents);
+
+		net.minecraft.core.NonNullList<ItemStack> readBack = thaumcraft.common.items.casters.ItemFocusPouch.getContents(pouch);
+		helper.assertTrue(readBack.get(3).is(thaumcraft.api.items.ItemsTC.focusAir.get()), "the real focus placed in slot 3 should really round-trip through the real container component, found " + readBack.get(3));
+		helper.assertTrue(readBack.get(0).isEmpty(), "an untouched real slot should really still read back empty");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focusPouchMenuSeedsItsRealSlotsFromTheRealPouchStack(GameTestHelper helper) {
+		ItemStack pouch = new ItemStack(thaumcraft.api.items.ItemsTC.focusPouch.get());
+		net.minecraft.core.NonNullList<ItemStack> contents = thaumcraft.common.items.casters.ItemFocusPouch.getContents(pouch);
+		contents.set(0, new ItemStack(thaumcraft.api.items.ItemsTC.focusAir.get()));
+		thaumcraft.common.items.casters.ItemFocusPouch.setContents(pouch, contents);
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.common.container.FocusPouchMenu menu = new thaumcraft.common.container.FocusPouchMenu(1, player.getInventory(), pouch);
+		helper.assertTrue(menu.getSlot(0).getItem().is(thaumcraft.api.items.ItemsTC.focusAir.get()), "the real menu's slot 0 should really be seeded from the real pouch stack's own real contents, found " + menu.getSlot(0).getItem());
+		helper.assertTrue(menu.getSlot(1).getItem().isEmpty(), "an untouched real pouch slot should really seed an empty real menu slot");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focusPouchMenuRejectsNonFocusItemsInItsRealSlots(GameTestHelper helper) {
+		ItemStack pouch = new ItemStack(thaumcraft.api.items.ItemsTC.focusPouch.get());
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.common.container.FocusPouchMenu menu = new thaumcraft.common.container.FocusPouchMenu(1, player.getInventory(), pouch);
+
+		helper.assertTrue(!menu.getSlot(0).mayPlace(new ItemStack(Items.STICK)), "a real non-focus item should really be rejected by a real pouch slot");
+		helper.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(thaumcraft.api.items.ItemsTC.focusAir.get())), "a real focus item should really be accepted by a real pouch slot");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focusPouchMenuWritesItsRealSlotsBackToThePouchStackOnClose(GameTestHelper helper) {
+		ItemStack pouch = new ItemStack(thaumcraft.api.items.ItemsTC.focusPouch.get());
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.common.container.FocusPouchMenu menu = new thaumcraft.common.container.FocusPouchMenu(1, player.getInventory(), pouch);
+
+		menu.getSlot(5).set(new ItemStack(thaumcraft.api.items.ItemsTC.focusAir.get()));
+		menu.removed(player);
+
+		net.minecraft.core.NonNullList<ItemStack> contents = thaumcraft.common.items.casters.ItemFocusPouch.getContents(pouch);
+		helper.assertTrue(contents.get(5).is(thaumcraft.api.items.ItemsTC.focusAir.get()), "closing a real pouch menu should really write its real slot contents back to the real pouch stack, found " + contents.get(5));
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@code ItemFocusPouch#use} opening a real menu without throwing - matches
+	 * {@code openingTheThaumonomiconGrantsGotThaumonomiconResearch}'s own established "call the real item's
+	 * use() directly against a mock player" approach (GameTest is server-only, so the real client-side Screen
+	 * itself is never exercised here - see the checklist memory for the manual playtest this still needs).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void openingTheFocusPouchDoesNotThrow(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		ItemStack pouch = new ItemStack(thaumcraft.api.items.ItemsTC.focusPouch.get());
+		player.setItemInHand(hand, pouch);
+
+		pouch.getItem().use(helper.getLevel(), player, hand);
+		helper.succeed();
+	}
 }

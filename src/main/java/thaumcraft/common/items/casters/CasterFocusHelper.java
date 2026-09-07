@@ -16,9 +16,11 @@ import thaumcraft.common.lib.network.ServerboundChangeCasterFocusPacket;
  * renders the same real list this class computes) and its real server-side handler - replaces the relevant
  * parts of the old (1.12.2) {@code CasterManager}.
  *
- * {@link #findCarriedFoci} drops the original's Focus Pouch scan - {@code ItemFocusPouch} isn't ported yet,
- * same real "no Baubles/bag items, plain inventory scan" simplification {@link thaumcraft.api.items.WornGearHelper}
- * already established elsewhere in this port. Sorted by real display name (a stable, real ordering) rather
+ * {@link #findCarriedFoci} still drops the original's Focus Pouch scan - {@link ItemFocusPouch} is real and
+ * ported now, but reaching into one from the radial quick-switch would need its own addressing scheme (a
+ * pouch slot isn't a plain inventory slot, so {@link #changeFocus}'s real {@code slot} parameter couldn't
+ * address it) - a real, separate, larger follow-up. Opening the pouch's own real GUI is the way to move foci
+ * in and out of it directly for now. Sorted by real display name (a stable, real ordering) rather
  * than the original's own {@code getSortingHelper} string key, which this port's {@code ItemFocus} never
  * carried over - display name serves the same real "consistent radial ordering" purpose.
  */

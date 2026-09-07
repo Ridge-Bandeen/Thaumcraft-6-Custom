@@ -1,60 +1,34 @@
 package thaumcraft.client.gui;
-import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.entity.player.InventoryPlayer;
-import net.minecraft.inventory.Container;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import org.lwjgl.opengl.GL11;
-import thaumcraft.common.container.ContainerFocusPouch;
 
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Inventory;
 
-@SideOnly(Side.CLIENT)
-public class GuiFocusPouch extends GuiContainer
-{
-    private int blockSlot;
-    ResourceLocation tex;
-    
-    public GuiFocusPouch(InventoryPlayer par1InventoryPlayer, World world, int x, int y, int z) {
-        super(new ContainerFocusPouch(par1InventoryPlayer, world, x, y, z));
-        tex = new ResourceLocation("thaumcraft", "textures/gui/gui_focuspouch.png");
-        blockSlot = par1InventoryPlayer.currentItem;
-        xSize = 175;
-        ySize = 232;
-    }
-    
-    public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-        drawDefaultBackground();
-        super.drawScreen(mouseX, mouseY, partialTicks);
-        renderHoveredToolTip(mouseX, mouseY);
-    }
-    
-    protected void drawGuiContainerForegroundLayer(int par1, int par2) {
-        mc.renderEngine.bindTexture(tex);
-        float t = zLevel;
-        zLevel = 300.0f;
-        GL11.glEnable(3042);
-        drawTexturedModalRect(8 + blockSlot * 18, 209, 240, 0, 16, 16);
-        GL11.glDisable(3042);
-        zLevel = t;
-    }
-    
-    protected boolean checkHotbarKeys(int par1) {
-        return false;
-    }
-    
-    protected void drawGuiContainerBackgroundLayer(float par1, int par2, int par3) {
-        if (mc.player.inventory.mainInventory.get(blockSlot).isEmpty()) {
-            mc.player.closeScreen();
-        }
-        mc.renderEngine.bindTexture(tex);
-        GL11.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-        int var5 = (width - xSize) / 2;
-        int var6 = (height - ySize) / 2;
-        GL11.glEnable(3042);
-        drawTexturedModalRect(var5, var6, 0, 0, xSize, ySize);
-        GL11.glDisable(3042);
-    }
+import thaumcraft.common.container.FocusPouchMenu;
+
+/**
+ * Replaces the old (1.12.2) {@code GuiFocusPouch}. Same "lighter, real simplification" treatment every
+ * client-only screen this session has gotten - see {@code GuiPechTrade}'s own doc comment. Real background
+ * texture ({@code gui_focuspouch.png}, 175x232) and real 18 focus slots; the original's own extra "which
+ * hotbar slot is this pouch in" icon overlay is dropped - a purely decorative readout of state the player
+ * already knows (they just clicked the item), same "drop the dynamic overlay, keep the real mechanic"
+ * precedent as every other device screen this session.
+ */
+public class GuiFocusPouch extends AbstractContainerScreen<FocusPouchMenu> {
+
+	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/gui/gui_focuspouch.png");
+
+	public GuiFocusPouch(FocusPouchMenu menu, Inventory playerInventory, Component title) {
+		super(menu, playerInventory, title);
+		imageWidth = 175;
+		imageHeight = 232;
+		inventoryLabelY = imageHeight - 94;
+	}
+
+	@Override
+	protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+		graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight);
+	}
 }

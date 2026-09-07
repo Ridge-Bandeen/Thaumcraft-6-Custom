@@ -569,6 +569,9 @@ sourceSets {
             include 'thaumcraft/common/lib/crafting/RunicArmorRecipe.java'
             include 'thaumcraft/common/lib/events/RunicShieldEvents.java'
             include 'thaumcraft/common/config/ThaumcraftConfig.java'
+            include 'thaumcraft/common/items/casters/ItemFocusPouch.java'
+            include 'thaumcraft/common/container/FocusPouchMenu.java'
+            include 'thaumcraft/client/gui/GuiFocusPouch.java'
 
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }

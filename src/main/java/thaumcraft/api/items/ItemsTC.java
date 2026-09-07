@@ -151,6 +151,10 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.items.casters.ItemFocusBlank> focusBlank3 =
 			ITEMS.registerItem("focus_blank_3", props -> new thaumcraft.common.items.casters.ItemFocusBlank(props, 50));
 
+	/** The real 18-slot portable focus container - see {@code ItemFocusPouch}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.casters.ItemFocusPouch> focusPouch =
+			ITEMS.registerItem("focus_pouch", props -> new thaumcraft.common.items.casters.ItemFocusPouch(props.stacksTo(1)));
+
 	public static final DeferredItem<BlockItem> oreAmber =
 			ITEMS.registerSimpleBlockItem("ore_amber", BlocksTC.oreAmber);
 

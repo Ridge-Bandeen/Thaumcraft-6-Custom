@@ -49,6 +49,12 @@ public final class ThaumcraftMenus {
 	public static final Supplier<MenuType<thaumcraft.common.container.SpaMenu>> SPA = MENUS.register("spa",
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.SpaMenu(windowId, inv)));
 
+	/** Like {@link #PECH_TRADE} above, this menu isn't attached to a block position either - {@code
+	 * FocusPouchMenu}'s own real pouch stack is item-carried, not block-carried. The client constructor
+	 * ignores the buffer; every real slot gets synced right after construction regardless. */
+	public static final Supplier<MenuType<thaumcraft.common.container.FocusPouchMenu>> FOCUS_POUCH = MENUS.register("focus_pouch",
+			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.FocusPouchMenu(windowId, inv)));
+
 	private ThaumcraftMenus() {
 	}
 }
