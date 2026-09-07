@@ -2284,6 +2284,38 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	// --------------------------------------------------------------------------------------------------
+	// Real, small pieces salvaged from the still-stale CraftingEvents (Thaumcraft.onAnvilUpdate/
+	// blocksAnvilOperation) and a real data-driven furnace_fuels contribution (Alumentum/Greatwood/
+	// Silverwood logs) - see the port-tracking memory for why the rest of that file (and most of
+	// common/lib/events generally) turned out to already be superseded elsewhere.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void anvilOperationsInvolvingThePrimordialPearlAreBlocked(GameTestHelper helper) {
+		ItemStack pearl = new ItemStack(ItemsTC.primordialPearl.get());
+		ItemStack iron = new ItemStack(Items.IRON_INGOT);
+
+		helper.assertTrue(thaumcraft.Thaumcraft.blocksAnvilOperation(pearl, iron), "the pearl on the left input should block the anvil operation");
+		helper.assertTrue(thaumcraft.Thaumcraft.blocksAnvilOperation(iron, pearl), "the pearl on the right input should block the anvil operation");
+		helper.assertFalse(thaumcraft.Thaumcraft.blocksAnvilOperation(iron, ItemStack.EMPTY), "a plain iron ingot shouldn't block anything");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void alumentumIsRegisteredAsRealFurnaceFuel(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, Blocks.FURNACE);
+
+		net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity furnace =
+				(net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity) helper.getBlockEntity(pos);
+		furnace.setItem(0, new ItemStack(Blocks.COBBLESTONE));
+		furnace.setItem(1, new ItemStack(ItemsTC.alumentum.get()));
+
+		helper.succeedWhen(() -> helper.assertTrue(furnace.cookingProgress > 0,
+				"a real furnace fed alumentum (via the real data/thaumcraft/data_maps/item/furnace_fuels.json contribution) should light and actually cook - progress=" + furnace.cookingProgress));
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void sanitySoapClearsAllWarpWhenUsedUp(GameTestHelper helper) {
 		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));

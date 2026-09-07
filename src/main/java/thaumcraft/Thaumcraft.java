@@ -436,6 +436,22 @@ public class Thaumcraft {
         }
     }
 
+    /** Replaces the old (1.12.2) {@code CraftingEvents#onAnvil} - the Primordial Pearl carries real NBT
+     * charge state an anvil repair/rename/combine could corrupt or duplicate, so any anvil operation
+     * touching it is blocked outright, matching the original exactly. Real logic lives in the static
+     * {@link #blocksAnvilOperation}, the same "extract a static, directly testable helper out of the
+     * instance event method" shape {@link #rollZombieBrainDrop} already established. */
+    @SubscribeEvent
+    public void onAnvilUpdate(net.neoforged.neoforge.event.AnvilUpdateEvent event) {
+        if (blocksAnvilOperation(event.getLeft(), event.getRight())) {
+            event.setCanceled(true);
+        }
+    }
+
+    public static boolean blocksAnvilOperation(net.minecraft.world.item.ItemStack left, net.minecraft.world.item.ItemStack right) {
+        return left.is(thaumcraft.api.items.ItemsTC.primordialPearl.get()) || right.is(thaumcraft.api.items.ItemsTC.primordialPearl.get());
+    }
+
     /** A real vanilla Zombie kill has a chance to drop a Zombie Brain - see {@code ItemZombieBrain}'s own
      * doc comment. Simplified vs the original: no looting-level scaling (that event field isn't exposed by
      * NeoForge's modern {@code LivingDropsEvent} the same way) and no exclusion for the original's own
