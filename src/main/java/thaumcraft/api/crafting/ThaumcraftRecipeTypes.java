@@ -62,6 +62,12 @@ public final class ThaumcraftRecipeTypes {
 	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.InfusionPotionRecipe>> INFUSION_POTION_SERIALIZER =
 			RECIPE_SERIALIZERS.register("infusion_potion", () -> new thaumcraft.common.lib.crafting.InfusionPotionRecipe.Serializer());
 
+	/** A 6th shape sharing {@link #INFUSION_TYPE} - see {@link thaumcraft.common.lib.crafting.RunicArmorRecipe}'s
+	 * own doc comment: one level of Runic Charge per craft, with a real escalating Amber cost computed from
+	 * the central item's own current level rather than a fixed JSON component list. */
+	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.RunicArmorRecipe>> RUNIC_ARMOR_SERIALIZER =
+			RECIPE_SERIALIZERS.register("runic_armor", () -> new thaumcraft.common.lib.crafting.RunicArmorRecipe.Serializer());
+
 	private static <T extends net.minecraft.world.item.crafting.Recipe<?>> Supplier<RecipeType<T>> registerType(String name) {
 		return RECIPE_TYPES.register(name, () -> new RecipeType<T>() {
 			@Override

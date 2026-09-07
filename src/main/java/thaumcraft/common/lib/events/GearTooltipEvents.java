@@ -18,6 +18,7 @@ import thaumcraft.api.items.IRechargable;
 import thaumcraft.api.items.IVisDiscountGear;
 import thaumcraft.api.items.IWarpingGear;
 import thaumcraft.api.items.RechargeHelper;
+import thaumcraft.api.items.ThaumcraftDataComponents;
 import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
 
 /**
@@ -35,11 +36,15 @@ import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
  * loaded crystal essence, via its own real {@link AspectList}), and infused-tool enchantment names (any real
  * tool carrying {@link EnumInfusionEnchantment} data, matching {@code ToolEvents}' own real accessor).
  *
- * Real, documented cuts: no runic-charge line - the original's other half of this same method read a
- * {@code "TC.RUNIC"} NBT tag, and no equivalent data component exists in this port yet (nothing can currently
- * hold a runic charge value at all - same real, currently-unbuilt "runic armor" gap noted in this session's
- * memory). No "TC.WARP" NBT/data-component addend to the Warping total either, same missing-component reason
- * - only the real {@link IWarpingGear} interface value is shown.
+ * Runic charge (any real item carrying {@link ThaumcraftDataComponents#RUNIC_CHARGE}, e.g. armor infused by
+ * {@link thaumcraft.common.lib.crafting.RunicArmorRecipe}) is also shown now - the original's other half of
+ * this same method read a {@code "TC.RUNIC"} NBT tag, and this port's own equivalent data component didn't
+ * exist yet when this class was first written; closed once {@code RunicArmorRecipe}/{@code RunicShieldEvents}
+ * shipped.
+ *
+ * Real, documented cut: no "TC.WARP" NBT/data-component addend to the Warping total - only the real
+ * {@link IWarpingGear} interface value is shown, same missing-component reason as before (nothing currently
+ * writes a bonus warp value onto an item stack in this port).
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID, value = Dist.CLIENT)
 public class GearTooltipEvents {
@@ -53,6 +58,11 @@ public class GearTooltipEvents {
 		if (stack.getItem() instanceof IRechargable) {
 			int charge = RechargeHelper.getCharge(stack);
 			tooltip.add(Component.translatable("tc.charge").append(" " + charge).withStyle(ChatFormatting.YELLOW));
+		}
+
+		Integer runicCharge = stack.get(ThaumcraftDataComponents.RUNIC_CHARGE.get());
+		if (runicCharge != null && runicCharge > 0) {
+			tooltip.add(Component.translatable("item.runic.charge").append(" +" + runicCharge).withStyle(ChatFormatting.GOLD));
 		}
 
 		if (stack.getItem() instanceof IWarpingGear warpingGear) {

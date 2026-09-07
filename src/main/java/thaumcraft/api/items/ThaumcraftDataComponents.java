@@ -194,6 +194,17 @@ public final class ThaumcraftDataComponents {
 					.networkSynchronized(ByteBufCodecs.VAR_INT)
 					.build());
 
+	/** Was the {@code "TC.RUNIC"} NBT byte tag - how many times a real
+	 * {@link thaumcraft.common.lib.crafting.RunicArmorRecipe} craft has augmented this item. Absent (or 0)
+	 * means no runic charge at all. See that recipe class's own doc comment, and
+	 * {@code thaumcraft.common.lib.events.RunicShieldEvents} for the real periodic-absorption-shield payoff
+	 * this drives. */
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> RUNIC_CHARGE = DATA_COMPONENTS.register("runic_charge",
+			() -> DataComponentType.<Integer>builder()
+					.persistent(Codec.INT)
+					.networkSynchronized(ByteBufCodecs.VAR_INT)
+					.build());
+
 	/** Was the {@code "goggles"} NBT tag (presence-only) on the original {@code ItemFortressArmor} - the
 	 * Helm of Revealing upgrade. See {@link #FORTRESS_MASK}'s own doc comment. */
 	public static final DeferredHolder<DataComponentType<?>, DataComponentType<Boolean>> FORTRESS_GOGGLES = DATA_COMPONENTS.register("fortress_goggles",

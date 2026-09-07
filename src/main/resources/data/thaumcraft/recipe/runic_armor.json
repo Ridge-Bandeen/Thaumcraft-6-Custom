@@ -1,0 +1,14 @@
+{
+  "type": "thaumcraft:runic_armor",
+  "research": "RUNICSHIELDING",
+  "instability": 5,
+  "aspects": {
+    "praemunio": 40,
+    "vitreus": 20,
+    "potentia": 20
+  },
+  "components": [
+    { "item": "thaumcraft:salis_mundus" },
+    { "item": "thaumcraft:amber" }
+  ]
+}

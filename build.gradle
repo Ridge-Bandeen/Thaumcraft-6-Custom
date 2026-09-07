@@ -566,6 +566,8 @@ sourceSets {
             include 'thaumcraft/common/items/casters/CasterFocusHelper.java'
             include 'thaumcraft/client/gui/KeyBindings.java'
             include 'thaumcraft/client/gui/FocusRadialOverlay.java'
+            include 'thaumcraft/common/lib/crafting/RunicArmorRecipe.java'
+            include 'thaumcraft/common/lib/events/RunicShieldEvents.java'
 
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }

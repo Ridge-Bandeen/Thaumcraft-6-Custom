@@ -10285,4 +10285,120 @@ public class ThaumcraftGameTests {
 				"a real slot that isn't a real focus should really be a no-op, leaving the original focus bound");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// RunicArmorRecipe - real 6th shape sharing INFUSION_TYPE, escalating Amber cost computed from the
+	// central item's own current real RUNIC_CHARGE level. Same real "getRecipeManager().getRecipeFor"
+	// lookup precedent as the infusion enchantment tests above.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void runicArmorRecipeMatchesRealArmorAndRaisesTheRunicChargeLevel(GameTestHelper helper) {
+		ItemStack helmet = new ItemStack(Items.LEATHER_HELMET);
+		thaumcraft.api.crafting.InfusionRecipeInput input = new thaumcraft.api.crafting.InfusionRecipeInput(
+				helmet,
+				java.util.List.of(new ItemStack(thaumcraft.api.items.ItemsTC.salisMundus.get()), new ItemStack(thaumcraft.api.items.ItemsTC.amber.get())));
+
+		var match = helper.getLevel().getRecipeManager().getRecipeFor(thaumcraft.api.crafting.ThaumcraftRecipeTypes.INFUSION_TYPE.get(), input, helper.getLevel());
+		helper.assertTrue(match.isPresent(), "the runic_armor recipe should match a fresh leather helmet with its real base components");
+
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(0, 2, 0)));
+		ItemStack result = match.get().value().getRecipeOutput(player, helmet, input.components());
+		helper.assertTrue(result.get(thaumcraft.api.items.ThaumcraftDataComponents.RUNIC_CHARGE.get()) != null
+				&& result.get(thaumcraft.api.items.ThaumcraftDataComponents.RUNIC_CHARGE.get()) == 1,
+				"crafting the recipe should really raise a fresh helmet's real Runic Charge to 1");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void runicArmorRecipeEscalatesItsRealAmberCostWithCurrentLevel(GameTestHelper helper) {
+		ItemStack chargedHelmet = new ItemStack(Items.LEATHER_HELMET);
+		chargedHelmet.set(thaumcraft.api.items.ThaumcraftDataComponents.RUNIC_CHARGE.get(), 2);
+
+		thaumcraft.api.crafting.InfusionRecipeInput tooFewAmber = new thaumcraft.api.crafting.InfusionRecipeInput(
+				chargedHelmet,
+				java.util.List.of(new ItemStack(thaumcraft.api.items.ItemsTC.salisMundus.get()), new ItemStack(thaumcraft.api.items.ItemsTC.amber.get())));
+		var noMatch = helper.getLevel().getRecipeManager().getRecipeFor(thaumcraft.api.crafting.ThaumcraftRecipeTypes.INFUSION_TYPE.get(), tooFewAmber, helper.getLevel());
+		helper.assertTrue(noMatch.isEmpty(), "a real level-2 helmet should really need more than the real base 1 Amber, found a match: " + noMatch);
+
+		thaumcraft.api.crafting.InfusionRecipeInput enoughAmber = new thaumcraft.api.crafting.InfusionRecipeInput(
+				chargedHelmet,
+				java.util.List.of(new ItemStack(thaumcraft.api.items.ItemsTC.salisMundus.get()),
+						new ItemStack(thaumcraft.api.items.ItemsTC.amber.get()),
+						new ItemStack(thaumcraft.api.items.ItemsTC.amber.get()),
+						new ItemStack(thaumcraft.api.items.ItemsTC.amber.get())));
+		var match = helper.getLevel().getRecipeManager().getRecipeFor(thaumcraft.api.crafting.ThaumcraftRecipeTypes.INFUSION_TYPE.get(), enoughAmber, helper.getLevel());
+		helper.assertTrue(match.isPresent(), "a real level-2 helmet with the real full escalated Amber cost (1 base + 2 extra) should really match");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void runicArmorRecipeRefusesARealNonArmorCentralItem(GameTestHelper helper) {
+		thaumcraft.api.crafting.InfusionRecipeInput input = new thaumcraft.api.crafting.InfusionRecipeInput(
+				new ItemStack(Items.STICK),
+				java.util.List.of(new ItemStack(thaumcraft.api.items.ItemsTC.salisMundus.get()), new ItemStack(thaumcraft.api.items.ItemsTC.amber.get())));
+		var match = helper.getLevel().getRecipeManager().getRecipeFor(thaumcraft.api.crafting.ThaumcraftRecipeTypes.INFUSION_TYPE.get(), input, helper.getLevel());
+		helper.assertTrue(match.isEmpty(), "a real non-armor central item should never match the real runic_armor recipe, found: " + match);
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// RunicShieldEvents - the real payoff for RUNIC_CHARGE: a real vis-fed absorption shield.
+	// --------------------------------------------------------------------------------------------------
+
+	/**
+	 * Real, documented mock-player limitation (a second one alongside the already-known "unavoidably
+	 * creative" flag - see the port-tracking memory's GameTest-framework-notes entry, updated alongside this
+	 * test): {@code setAbsorptionAmount}/{@code getAbsorptionAmount} don't round-trip at all on a real
+	 * {@code helper.makeMockServerPlayerInLevel()} player (confirmed directly - setting 7.0f and immediately
+	 * reading it back returns 0.0f). So this test can't assert on the real Absorption value the shield
+	 * actually grants; it asserts on the other real, independently observable side effect instead - real vis
+	 * is drawn from the local aura exactly when the shield mechanic decides to regen, and NOT drawn when
+	 * there's no real Runic Charge to regen towards.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void runicShieldEventsDrawsRealVisOnlyWhenWearingRealRunicArmor(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.tickCount = 0;
+		// Guard against a stale cooldown left by an unrelated earlier test's own mock player reusing this
+		// same real entity id in this same JVM run - see RunicShieldEvents#forget's own doc comment.
+		thaumcraft.common.lib.events.RunicShieldEvents.forget(player);
+
+		// No runic armor at all - the shield has no real max to regen towards, so no vis should be drawn.
+		float visBeforeBare = thaumcraft.common.world.aura.AuraHandler.getVis(level, player.blockPosition());
+		thaumcraft.common.lib.events.RunicShieldEvents.checkRunicShield(player);
+		helper.assertTrue(thaumcraft.common.world.aura.AuraHandler.getVis(level, player.blockPosition()) == visBeforeBare,
+				"a player with no real runic armor at all shouldn't have any real vis drawn for a shield");
+
+		ItemStack helmet = new ItemStack(Items.LEATHER_HELMET);
+		helmet.set(thaumcraft.api.items.ThaumcraftDataComponents.RUNIC_CHARGE.get(), 3);
+		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, helmet);
+
+		float visBefore = thaumcraft.common.world.aura.AuraHandler.getVis(level, player.blockPosition());
+		thaumcraft.common.lib.events.RunicShieldEvents.checkRunicShield(player);
+		float visAfter = thaumcraft.common.world.aura.AuraHandler.getVis(level, player.blockPosition());
+		helper.assertTrue(visAfter < visBefore, "wearing a real runic-charged helmet should really have drawn real vis from the local aura to regen the shield");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void gearTooltipShowsRealRunicChargeOnlyWhenPresent(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+
+		ItemStack plainHelmet = new ItemStack(Items.LEATHER_HELMET);
+		java.util.List<net.minecraft.network.chat.Component> plainTooltip = new java.util.ArrayList<>();
+		thaumcraft.common.lib.events.GearTooltipEvents.onItemTooltip(new net.neoforged.neoforge.event.entity.player.ItemTooltipEvent(
+				plainHelmet, player, plainTooltip, net.minecraft.world.item.TooltipFlag.NORMAL, net.minecraft.world.item.Item.TooltipContext.EMPTY));
+		helper.assertTrue(plainTooltip.stream().noneMatch(c -> c.getString().contains("+")), "an unenchanted helmet's tooltip shouldn't show a real runic charge line, found: " + plainTooltip);
+
+		ItemStack runicHelmet = new ItemStack(Items.LEATHER_HELMET);
+		runicHelmet.set(thaumcraft.api.items.ThaumcraftDataComponents.RUNIC_CHARGE.get(), 2);
+		java.util.List<net.minecraft.network.chat.Component> runicTooltip = new java.util.ArrayList<>();
+		thaumcraft.common.lib.events.GearTooltipEvents.onItemTooltip(new net.neoforged.neoforge.event.entity.player.ItemTooltipEvent(
+				runicHelmet, player, runicTooltip, net.minecraft.world.item.TooltipFlag.NORMAL, net.minecraft.world.item.Item.TooltipContext.EMPTY));
+		helper.assertTrue(runicTooltip.stream().anyMatch(c -> c.getString().contains("+2")),
+				"a real level-2 runic helmet's tooltip should really show its real runic charge, found: " + runicTooltip);
+		helper.succeed();
+	}
 }
