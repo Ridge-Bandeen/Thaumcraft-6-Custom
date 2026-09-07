@@ -9906,4 +9906,60 @@ public class ThaumcraftGameTests {
 		helper.assertFalse(golem.isAlive(), "a second would-be-lethal hit on an already-headless golem should really kill it for real");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// PassiveResearchEvents - real coverage for the "gameplay experience teaches you something" hook that
+	// data/thaumcraft/research/auromancy.json's f_onfire/f_arrow/f_fireball/f_spit prerequisite flags
+	// actually depend on. Constructs a real LivingIncomingDamageEvent directly, same DamageContainer pattern
+	// FortressMaskEvents' own tests already established.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void passiveResearchGrantsOnFireFlagOnlyWithTheRightPrerequisiteResearch(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+
+		net.minecraft.world.damagesource.DamageSource fire = level.damageSources().inFire();
+		net.neoforged.neoforge.common.damagesource.DamageContainer container1 =
+				new net.neoforged.neoforge.common.damagesource.DamageContainer(fire, 5.0f);
+		container1.setNewDamage(5.0f);
+		thaumcraft.common.lib.events.PassiveResearchEvents.onIncomingDamage(
+				new net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent(player, container1));
+		helper.assertFalse(ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("f_onfire"),
+				"burning shouldn't grant f_onfire without the real BASEAUROMANCY@2 prerequisite");
+
+		// isResearchKnown/knowsResearchStrict parse "KEY@N" as a real stage check (researchProgress.get(KEY)
+		// >= N), not a literal string key - addResearch("BASEAUROMANCY") alone leaves the stage at 0.
+		ThaumcraftCapabilities.getKnowledge(player).addResearch("BASEAUROMANCY");
+		ThaumcraftCapabilities.getKnowledge(player).setResearchStage("BASEAUROMANCY", 2);
+		net.neoforged.neoforge.common.damagesource.DamageContainer container2 =
+				new net.neoforged.neoforge.common.damagesource.DamageContainer(fire, 5.0f);
+		container2.setNewDamage(5.0f);
+		thaumcraft.common.lib.events.PassiveResearchEvents.onIncomingDamage(
+				new net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent(player, container2));
+		helper.assertTrue(ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("f_onfire"),
+				"burning with the real BASEAUROMANCY@2 prerequisite should really grant the real f_onfire flag");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void passiveResearchGrantsArrowFlagWhenHitByARealArrowWithTheRightPrerequisiteResearch(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		ThaumcraftCapabilities.getKnowledge(player).addResearch("FOCUSPROJECTILE");
+		ThaumcraftCapabilities.getKnowledge(player).setResearchStage("FOCUSPROJECTILE", 2);
+
+		net.minecraft.world.entity.projectile.Arrow arrow = new net.minecraft.world.entity.projectile.Arrow(level, player, net.minecraft.world.item.ItemStack.EMPTY, null);
+		level.addFreshEntity(arrow);
+		net.minecraft.world.damagesource.DamageSource arrowSource = level.damageSources().arrow(arrow, player);
+		net.neoforged.neoforge.common.damagesource.DamageContainer container =
+				new net.neoforged.neoforge.common.damagesource.DamageContainer(arrowSource, 3.0f);
+		container.setNewDamage(3.0f);
+		thaumcraft.common.lib.events.PassiveResearchEvents.onIncomingDamage(
+				new net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent(player, container));
+
+		helper.assertTrue(ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("f_arrow"),
+				"getting hit by a real arrow with the real FOCUSPROJECTILE@2 prerequisite should really grant the real f_arrow flag");
+		helper.succeed();
+	}
 }
