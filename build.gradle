@@ -555,6 +555,7 @@ sourceSets {
             include 'thaumcraft/common/lib/events/WarpEvents.java'
             include 'thaumcraft/common/lib/events/PassiveResearchEvents.java'
             include 'thaumcraft/common/lib/events/MobDeathDropEvents.java'
+            include 'thaumcraft/common/lib/events/GearTooltipEvents.java'
 
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }

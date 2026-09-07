@@ -10080,4 +10080,59 @@ public class ThaumcraftGameTests {
 				"picking up a real thaumonomicon should really grant the real !gotthaumonomicon flag");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// GearTooltipEvents - real coverage for the cross-cutting item-info tooltip lines. Constructs a real
+	// ItemTooltipEvent directly (real constructor: ItemStack, Player, List<Component>, TooltipFlag,
+	// Item.TooltipContext - confirmed via javap on the real compiled classes).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void gearTooltipShowsChargeWarpDiscountEssentiaAndInfusionEnchantments(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+
+		// IRechargable - a real traveller's boots with some real charge.
+		ItemStack boots = new ItemStack(thaumcraft.api.items.ItemsTC.travellerBoots.get());
+		thaumcraft.api.items.RechargeHelper.rechargeItemBlindly(boots, player, 5);
+		java.util.List<net.minecraft.network.chat.Component> bootsTooltip = new java.util.ArrayList<>();
+		thaumcraft.common.lib.events.GearTooltipEvents.onItemTooltip(new net.neoforged.neoforge.event.entity.player.ItemTooltipEvent(
+				boots, player, bootsTooltip, net.minecraft.world.item.TooltipFlag.NORMAL, net.minecraft.world.item.Item.TooltipContext.EMPTY));
+		helper.assertTrue(bootsTooltip.stream().anyMatch(c -> c.getString().contains("5")), "a real charged item's tooltip should really show its real charge, found: " + bootsTooltip);
+
+		// IWarpingGear (void helm, real fixed +1 warp) and IVisDiscountGear (goggles, real fixed 5%).
+		ItemStack voidHelm = new ItemStack(thaumcraft.api.items.ItemsTC.voidHelm.get());
+		java.util.List<net.minecraft.network.chat.Component> voidTooltip = new java.util.ArrayList<>();
+		thaumcraft.common.lib.events.GearTooltipEvents.onItemTooltip(new net.neoforged.neoforge.event.entity.player.ItemTooltipEvent(
+				voidHelm, player, voidTooltip, net.minecraft.world.item.TooltipFlag.NORMAL, net.minecraft.world.item.Item.TooltipContext.EMPTY));
+		helper.assertTrue(voidTooltip.stream().anyMatch(c -> c.getString().contains("1")), "a real warping item's tooltip should really show its real warp value, found: " + voidTooltip);
+
+		ItemStack goggles = new ItemStack(thaumcraft.api.items.ItemsTC.goggles.get());
+		java.util.List<net.minecraft.network.chat.Component> gogglesTooltip = new java.util.ArrayList<>();
+		thaumcraft.common.lib.events.GearTooltipEvents.onItemTooltip(new net.neoforged.neoforge.event.entity.player.ItemTooltipEvent(
+				goggles, player, gogglesTooltip, net.minecraft.world.item.TooltipFlag.NORMAL, net.minecraft.world.item.Item.TooltipContext.EMPTY));
+		helper.assertTrue(gogglesTooltip.stream().anyMatch(c -> c.getString().contains("5%")), "a real vis-discount item's tooltip should really show its real discount, found: " + gogglesTooltip);
+
+		// IEssentiaContainerItem - a real crystal essence loaded with a real aspect.
+		ItemStack crystal = new ItemStack(thaumcraft.api.items.ItemsTC.crystalEssence.get());
+		((thaumcraft.api.aspects.IEssentiaContainerItem) crystal.getItem()).setAspects(crystal, new thaumcraft.api.aspects.AspectList().add(Aspect.FIRE, 4));
+		java.util.List<net.minecraft.network.chat.Component> crystalTooltip = new java.util.ArrayList<>();
+		thaumcraft.common.lib.events.GearTooltipEvents.onItemTooltip(new net.neoforged.neoforge.event.entity.player.ItemTooltipEvent(
+				crystal, player, crystalTooltip, net.minecraft.world.item.TooltipFlag.NORMAL, net.minecraft.world.item.Item.TooltipContext.EMPTY));
+		// Aspect.getName() returns the capitalized Latin tag, not an English name - FIRE's real tag is "ignis".
+		helper.assertTrue(crystalTooltip.stream().anyMatch(c -> c.getString().contains("Ignis") && c.getString().contains("4")),
+				"a real loaded essentia container's tooltip should really list its real aspects, found: " + crystalTooltip);
+
+		// EnumInfusionEnchantment - a real infused tool.
+		ItemStack pickaxe = new ItemStack(net.minecraft.world.item.Items.IRON_PICKAXE);
+		thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.addInfusionEnchantment(pickaxe,
+				thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.LAMPLIGHT, 1);
+		java.util.List<net.minecraft.network.chat.Component> pickaxeTooltip = new java.util.ArrayList<>();
+		thaumcraft.common.lib.events.GearTooltipEvents.onItemTooltip(new net.neoforged.neoforge.event.entity.player.ItemTooltipEvent(
+				pickaxe, player, pickaxeTooltip, net.minecraft.world.item.TooltipFlag.NORMAL, net.minecraft.world.item.Item.TooltipContext.EMPTY));
+		helper.assertTrue(pickaxeTooltip.stream().anyMatch(c -> c.getString().equals("Lamplighter")),
+				"a real infused tool's tooltip should really name its real infusion enchantment, found: " + pickaxeTooltip);
+
+		helper.succeed();
+	}
 }
