@@ -9962,4 +9962,75 @@ public class ThaumcraftGameTests {
 				"getting hit by a real arrow with the real FOCUSPROJECTILE@2 prerequisite should really grant the real f_arrow flag");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// MobDeathDropEvents - real coverage for the 2 small death-drop fragments extracted from the old
+	// EntityEvents. Constructs a real LivingDropsEvent directly (real constructor, confirmed via javap:
+	// (LivingEntity, DamageSource, Collection<ItemEntity>, boolean recentlyHit) - no lootingLevel param in
+	// this version, matching the class's own doc comment on that dropped modifier).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void mobDeathDropEventsGrantsABrainFromARegularZombieButNeverFromABrainyZombie(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos abs = helper.absolutePos(BlockPos.ZERO);
+		net.minecraft.world.entity.monster.Zombie zombie = net.minecraft.world.entity.EntityType.ZOMBIE.create(level);
+		helper.assertTrue(zombie != null, "the zombie entity type should really create an instance");
+		zombie.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(zombie);
+
+		net.minecraft.world.damagesource.DamageSource source = level.damageSources().generic();
+		boolean gotBrain = false;
+		for (int i = 0; i < 300 && !gotBrain; i++) {
+			java.util.List<net.minecraft.world.entity.item.ItemEntity> drops = new java.util.ArrayList<>();
+			net.neoforged.neoforge.event.entity.living.LivingDropsEvent event =
+					new net.neoforged.neoforge.event.entity.living.LivingDropsEvent(zombie, source, drops, true);
+			thaumcraft.common.lib.events.MobDeathDropEvents.onLivingDrops(event);
+			gotBrain = drops.stream().anyMatch(d -> d.getItem().is(thaumcraft.api.items.ItemsTC.brain.get()));
+		}
+		helper.assertTrue(gotBrain, "a real regular zombie should really eventually drop a real Brain within a generous number of chance rolls");
+
+		thaumcraft.common.entities.monster.EntityBrainyZombie brainy =
+				thaumcraft.common.registry.ThaumcraftEntities.BRAINY_ZOMBIE.get().create(level);
+		helper.assertTrue(brainy != null, "the brainy zombie entity type should really create an instance");
+		brainy.moveTo(abs.getX() + 2.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(brainy);
+		boolean brainyGotBrain = false;
+		for (int i = 0; i < 300; i++) {
+			java.util.List<net.minecraft.world.entity.item.ItemEntity> drops = new java.util.ArrayList<>();
+			net.neoforged.neoforge.event.entity.living.LivingDropsEvent event =
+					new net.neoforged.neoforge.event.entity.living.LivingDropsEvent(brainy, source, drops, true);
+			thaumcraft.common.lib.events.MobDeathDropEvents.onLivingDrops(event);
+			if (drops.stream().anyMatch(d -> d.getItem().is(thaumcraft.api.items.ItemsTC.brain.get()))) {
+				brainyGotBrain = true;
+				break;
+			}
+		}
+		helper.assertFalse(brainyGotBrain, "a real brainy zombie should really never drop an extra real Brain from this hook");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void mobDeathDropEventsGrantsACurioFromARealCultistKillByAPlayer(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos abs = helper.absolutePos(BlockPos.ZERO);
+		thaumcraft.common.entities.monster.cult.EntityCultistKnight cultist =
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_KNIGHT.get().create(level);
+		helper.assertTrue(cultist != null, "the entity type should really create an instance");
+		cultist.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(cultist);
+
+		ServerPlayer killer = spawnCasterAt(helper, abs.offset(2, 0, 0));
+		net.minecraft.world.damagesource.DamageSource source = level.damageSources().playerAttack(killer);
+		boolean gotCurio = false;
+		for (int i = 0; i < 300 && !gotCurio; i++) {
+			java.util.List<net.minecraft.world.entity.item.ItemEntity> drops = new java.util.ArrayList<>();
+			net.neoforged.neoforge.event.entity.living.LivingDropsEvent event =
+					new net.neoforged.neoforge.event.entity.living.LivingDropsEvent(cultist, source, drops, true);
+			thaumcraft.common.lib.events.MobDeathDropEvents.onLivingDrops(event);
+			gotCurio = drops.stream().anyMatch(d -> d.getItem().is(thaumcraft.api.items.ItemsTC.curio.get()));
+		}
+		helper.assertTrue(gotCurio, "a real cultist killed by a real player should really eventually drop a real Curio within a generous number of chance rolls");
+		helper.succeed();
+	}
 }
