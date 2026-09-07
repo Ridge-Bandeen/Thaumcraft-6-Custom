@@ -10113,4 +10113,84 @@ public class ThaumcraftGameTests {
 
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// The Spa device - a real fluid-tank (IFluidHandler/FluidTank, same reference implementation
+	// TileWaterJug already established) + Bath Salts slot, auto-placing real BlockPurifyingFluid nearby on
+	// a timer. BlockPurifyingFluid itself reuses BlockFluxGoo's own real conserved-quanta flow engine (see
+	// its own doc comment) - state.tick(level, pos, random)/state.entityInside(level, pos, entity) are the
+	// same real dispatch pattern fluxGooFallsSpreadsDecaysAndAffectsEntities above already established.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void purifyingFluidGrantsWarpWardOnTouchThenConsumesItself(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = helper.absolutePos(BlockPos.ZERO);
+		level.setBlockAndUpdate(pos, BlocksTC.purifyingFluid.get().defaultBlockState()
+				.setValue(thaumcraft.common.blocks.misc.BlockPurifyingFluid.LEVEL, thaumcraft.common.blocks.misc.BlockPurifyingFluid.MAX_LEVEL));
+
+		ServerPlayer player = spawnCasterAt(helper, pos);
+		ThaumcraftCapabilities.getWarp(player).set(thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.PERMANENT, 4);
+		helper.assertFalse(player.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.WARP_WARD), "the player shouldn't have Warp Ward before touching the fluid");
+
+		level.getBlockState(pos).entityInside(level, pos, player);
+
+		helper.assertTrue(player.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.WARP_WARD),
+				"touching a real full-level purifying fluid block should really grant a real Warp Ward");
+		helper.assertTrue(level.getBlockState(pos).isAir(), "a real full-level purifying fluid block should really consume itself on a real dip");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void purifyingFluidDoesNothingWhenNotFullLevelOrWardAlreadyActive(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos partialPos = helper.absolutePos(BlockPos.ZERO);
+		level.setBlockAndUpdate(partialPos, BlocksTC.purifyingFluid.get().defaultBlockState()
+				.setValue(thaumcraft.common.blocks.misc.BlockPurifyingFluid.LEVEL, 3));
+		ServerPlayer player = spawnCasterAt(helper, partialPos);
+		level.getBlockState(partialPos).entityInside(level, partialPos, player);
+		helper.assertFalse(player.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.WARP_WARD),
+				"a real partial-level purifying fluid block shouldn't grant a real Warp Ward");
+		helper.assertTrue(level.getBlockState(partialPos).is(BlocksTC.purifyingFluid.get()), "a real partial-level block shouldn't have consumed itself");
+
+		BlockPos fullPos = helper.absolutePos(new BlockPos(2, 0, 0));
+		level.setBlockAndUpdate(fullPos, BlocksTC.purifyingFluid.get().defaultBlockState()
+				.setValue(thaumcraft.common.blocks.misc.BlockPurifyingFluid.LEVEL, thaumcraft.common.blocks.misc.BlockPurifyingFluid.MAX_LEVEL));
+		player.addEffect(new net.minecraft.world.effect.MobEffectInstance(thaumcraft.common.registry.ThaumcraftMobEffects.WARP_WARD, 200));
+		level.getBlockState(fullPos).entityInside(level, fullPos, player);
+		helper.assertTrue(level.getBlockState(fullPos).is(BlocksTC.purifyingFluid.get()),
+				"a real full-level block shouldn't consume itself on a player who already has a real active Warp Ward");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tileSpaConsumesWaterAndBathSaltsToAutoPlaceRealPurifyingFluidNearby(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.spa.get());
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.tiles.devices.TileSpa tile = helper.getBlockEntity(pos);
+		tile.tank.fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 5000),
+				net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+		tile.getItemHandler().insertItem(0, new ItemStack(thaumcraft.api.items.ItemsTC.bathSalts.get()), false);
+		int waterBefore = tile.tank.getFluidAmount();
+
+		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(pos);
+		boolean placed = false;
+		for (int i = 0; i < 3000 && !placed; i++) {
+			thaumcraft.common.tiles.devices.TileSpa.tick(level, abs, state, tile);
+			for (BlockPos p : BlockPos.betweenClosed(abs.above().offset(-2, 0, -2), abs.above().offset(2, 0, 2))) {
+				if (level.getBlockState(p).is(BlocksTC.purifyingFluid.get())) {
+					placed = true;
+					break;
+				}
+			}
+		}
+
+		helper.assertTrue(placed, "a real spa with real banked water and a real bath salt should really eventually place a real purifying fluid block nearby");
+		helper.assertTrue(tile.tank.getFluidAmount() < waterBefore, "placing purifying fluid should really have drawn down the real water tank");
+		helper.assertTrue(tile.getItemHandler().getStackInSlot(0).isEmpty(), "placing purifying fluid should really have consumed the real bath salt");
+		helper.succeed();
+	}
 }

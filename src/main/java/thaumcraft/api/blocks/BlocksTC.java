@@ -600,6 +600,21 @@ public final class BlocksTC {
 					.noCollission().liquid().noLootTable().noOcclusion()
 					.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
 
+	/** Real, from-scratch finite-fluid block - see {@link thaumcraft.common.blocks.misc.BlockPurifyingFluid}'s
+	 * own doc comment, same real precedent as {@link #fluxGoo} above (a plain {@code Block}, not a real
+	 * vanilla {@code Fluid}/{@code FluidType} - no bucket, {@code .noLootTable()} since fluids don't drop
+	 * themselves). */
+	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockPurifyingFluid> purifyingFluid = BLOCKS.registerBlock("purifying_fluid",
+			thaumcraft.common.blocks.misc.BlockPurifyingFluid::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.SNOW).sound(SoundType.SLIME_BLOCK)
+					.noCollission().liquid().noLootTable().noOcclusion()
+					.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
+
+	/** The Spa - see {@link thaumcraft.common.tiles.devices.TileSpa}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockSpa> spa = BLOCKS.registerBlock("spa",
+			thaumcraft.common.blocks.devices.BlockSpa::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE));
+
 	/** {@code lightLevel(9)} is the real modern equivalent of the original's own {@code setLightLevel(0.625f)}
 	 * (a 0-1 brightness fraction the original engine itself converted to a 0-15 int - {@code (int)(0.625*15)}
 	 * really is 9). */

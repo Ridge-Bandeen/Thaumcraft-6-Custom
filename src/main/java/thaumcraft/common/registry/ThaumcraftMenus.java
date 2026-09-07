@@ -46,6 +46,9 @@ public final class ThaumcraftMenus {
 	public static final Supplier<MenuType<thaumcraft.common.container.PechMenu>> PECH_TRADE = MENUS.register("pech_trade",
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.PechMenu(windowId, inv)));
 
+	public static final Supplier<MenuType<thaumcraft.common.container.SpaMenu>> SPA = MENUS.register("spa",
+			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.SpaMenu(windowId, inv)));
+
 	private ThaumcraftMenus() {
 	}
 }

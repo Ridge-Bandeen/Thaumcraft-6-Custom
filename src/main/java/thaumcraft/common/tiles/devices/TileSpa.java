@@ -1,214 +1,151 @@
 package thaumcraft.common.tiles.devices;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import net.minecraft.block.Block;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.init.Blocks;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.world.IBlockAccess;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.fluids.BlockFluidBase;
-import net.minecraftforge.fluids.FluidRegistry;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.FluidTank;
-import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.fluids.capability.IFluidTankProperties;
-import thaumcraft.api.blocks.BlocksTC;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluids;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemStackHandler;
+import thaumcraft.common.blocks.misc.BlockPurifyingFluid;
+import thaumcraft.common.container.SpaMenu;
 import thaumcraft.common.items.consumables.ItemBathSalts;
-import thaumcraft.common.lib.utils.BlockUtils;
-import thaumcraft.common.tiles.TileThaumcraftInventory;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 
+/**
+ * Replaces the old (1.12.2) {@code TileSpa}. Real {@link FluidTank} (water-only, same real reference
+ * implementation {@link TileWaterJug} already established - see that class's own doc comment) plus a real
+ * Bath Salts slot; every 40 ticks, while unpowered, with a real Bath Salt loaded and at least 1000 mB of real
+ * water banked, it consumes both and places a real full-level {@link BlockPurifyingFluid} in the first open
+ * spot it finds in a real 5x5 area above itself (checked directly above first, matching the original's own
+ * priority).
+ *
+ * Real, documented cut: the original's own "unmix" mode - a generic utility that drained the tank's
+ * currently-held fluid (whatever it happened to be, water/lava/anything) back into the world as plain source
+ * blocks - is dropped. That's a generic fluid-placement utility layered on top of the device's actual
+ * thematic identity (making purifying fluid), not the mechanic that makes a Spa a Spa, and modern NeoForge's
+ * own "place an arbitrary Fluid in the world" API shape differs enough from the original's
+ * {@code BlockFluidBase}-based one that reusing it here isn't a simple swap. The real core mechanic - bank
+ * water, spend Bath Salts, produce real purifying fluid nearby on a timer - is kept in full.
+ */
+public class TileSpa extends BlockEntity implements MenuProvider {
 
-public class TileSpa extends TileThaumcraftInventory implements IFluidHandler
-{
-    private boolean mix;
-    private int counter;
-    public FluidTank tank;
-    
-    public TileSpa() {
-        super(1);
-        mix = true;
-        counter = 0;
-        tank = new FluidTank(5000);
-    }
-    
-    public void toggleMix() {
-        mix = !mix;
-        syncTile(false);
-        markDirty();
-    }
-    
-    public boolean getMix() {
-        return mix;
-    }
-    
-    public void readSyncNBT(NBTTagCompound nbttagcompound) {
-        mix = nbttagcompound.getBoolean("mix");
-        tank.readFromNBT(nbttagcompound);
-    }
-    
-    public NBTTagCompound writeSyncNBT(NBTTagCompound nbttagcompound) {
-        nbttagcompound.setBoolean("mix", mix);
-        tank.writeToNBT(nbttagcompound);
-        return nbttagcompound;
-    }
-    
-    @Override
-    public boolean isItemValidForSlot(int par1, ItemStack stack) {
-        return stack.getItem() instanceof ItemBathSalts;
-    }
-    
-    @Override
-    public String getName() {
-        return "thaumcraft.spa";
-    }
-    
-    @Override
-    public boolean hasCustomName() {
-        return false;
-    }
-    
-    @Override
-    public ITextComponent getDisplayName() {
-        return null;
-    }
-    
-    @Override
-    public int[] getSlotsForFace(EnumFacing side) {
-        return (side != EnumFacing.UP) ? new int[] { 0 } : new int[0];
-    }
-    
-    @Override
-    public boolean canInsertItem(int index, ItemStack itemStackIn, EnumFacing side) {
-        return side != EnumFacing.UP;
-    }
-    
-    @Override
-    public boolean canExtractItem(int index, ItemStack stack, EnumFacing side) {
-        return side != EnumFacing.UP;
-    }
-    
-    @Override
-    public void update() {
-        super.update();
-        Label_0267: {
-            if (!world.isRemote && counter++ % 40 == 0 && !world.isBlockPowered(pos) && hasIngredients()) {
-                Block b = world.getBlockState(pos.up()).getBlock();
-                int m = b.getMetaFromState(world.getBlockState(pos.up()));
-                Block tb = null;
-                if (mix) {
-                    tb = BlocksTC.purifyingFluid;
-                }
-                else {
-                    tb = tank.getFluid().getFluid().getBlock();
-                }
-                if (b == tb && m == 0) {
-                    for (int xx = -2; xx <= 2; ++xx) {
-                        for (int zz = -2; zz <= 2; ++zz) {
-                            BlockPos p = getPos().add(xx, 1, zz);
-                            if (isValidLocation(p, true, tb)) {
-                                consumeIngredients();
-                                world.setBlockState(p, tb.getDefaultState());
-                                checkQuanta(p);
-                                break Label_0267;
-                            }
-                        }
-                    }
-                }
-                else if (isValidLocation(pos.up(), false, tb)) {
-                    consumeIngredients();
-                    world.setBlockState(pos.up(), tb.getDefaultState());
-                    checkQuanta(pos.up());
-                }
-            }
-        }
-    }
-    
-    private void checkQuanta(BlockPos pos) {
-        Block b = world.getBlockState(pos).getBlock();
-        if (b instanceof BlockFluidBase) {
-            float p = ((BlockFluidBase)b).getQuantaPercentage(world, pos);
-            if (p < 1.0f) {
-                int md = (int)(1.0f / p) - 1;
-                if (md >= 0 && md < 16) {
-                    world.setBlockState(pos, b.getStateFromMeta(md));
-                }
-            }
-        }
-    }
-    
-    private boolean hasIngredients() {
-        if (mix) {
-            if (tank.getInfo().fluid == null || !tank.getInfo().fluid.containsFluid(new FluidStack(FluidRegistry.WATER, 1000))) {
-                return false;
-            }
-            if (!(getStackInSlot(0).getItem() instanceof ItemBathSalts)) {
-                return false;
-            }
-        }
-        else if (tank.getInfo().fluid == null || !tank.getFluid().getFluid().canBePlacedInWorld() || tank.getFluidAmount() < 1000) {
-            return false;
-        }
-        return true;
-    }
-    
-    private void consumeIngredients() {
-        if (mix) {
-            decrStackSize(0, 1);
-        }
-        drain(1000, true);
-    }
-    
-    private boolean isValidLocation(BlockPos pos, boolean mustBeAdjacent, Block target) {
-        if ((target == Blocks.WATER || target == Blocks.FLOWING_WATER) && world.provider.doesWaterVaporize()) {
-            return false;
-        }
-        Block b = world.getBlockState(pos).getBlock();
-        IBlockState bb = world.getBlockState(pos.down());
-        int m = b.getMetaFromState(world.getBlockState(pos));
-        return bb.isSideSolid(world, pos.down(), EnumFacing.UP) && b.isReplaceable(world, pos) && (b != target || m != 0) && (!mustBeAdjacent || BlockUtils.isBlockTouching(world, pos, target.getStateFromMeta(0)));
-    }
-    
-    @Override
-    public boolean hasCapability(@Nonnull Capability<?> capability, @Nullable EnumFacing facing) {
-        return capability == CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY || super.hasCapability(capability, facing);
-    }
-    
-    @Nullable
-    @Override
-    public <T> T getCapability(@Nonnull Capability<T> capability, @Nullable EnumFacing facing) {
-        if (capability == CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY) {
-            return (T) tank;
-        }
-        return super.getCapability(capability, facing);
-    }
-    
-    public IFluidTankProperties[] getTankProperties() {
-        return tank.getTankProperties();
-    }
-    
-    public int fill(FluidStack resource, boolean doFill) {
-        markDirty();
-        syncTile(false);
-        return tank.fill(resource, doFill);
-    }
-    
-    public FluidStack drain(FluidStack resource, boolean doDrain) {
-        FluidStack fs = tank.drain(resource, doDrain);
-        markDirty();
-        syncTile(false);
-        return fs;
-    }
-    
-    public FluidStack drain(int maxDrain, boolean doDrain) {
-        FluidStack fs = tank.drain(maxDrain, doDrain);
-        markDirty();
-        syncTile(false);
-        return fs;
-    }
+	private static final int CAPACITY = 5000;
+	private static final int WATER_COST = 1000;
+
+	private final ItemStackHandler items = new ItemStackHandler(1) {
+		@Override
+		public boolean isItemValid(int slot, ItemStack stack) {
+			return stack.getItem() instanceof ItemBathSalts;
+		}
+
+		@Override
+		protected void onContentsChanged(int slot) {
+			setChanged();
+		}
+	};
+
+	public final FluidTank tank = new FluidTank(CAPACITY, stack -> stack.getFluid() == Fluids.WATER) {
+		@Override
+		protected void onContentsChanged() {
+			setChanged();
+		}
+	};
+
+	private int counter;
+
+	public TileSpa(BlockPos pos, BlockState state) {
+		super(ThaumcraftBlockEntities.SPA.get(), pos, state);
+	}
+
+	public IItemHandler getItemHandler() {
+		return items;
+	}
+
+	@Override
+	public Component getDisplayName() {
+		return Component.translatable("block.thaumcraft.spa");
+	}
+
+	@Override
+	public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
+		return new SpaMenu(containerId, inventory, this);
+	}
+
+	public static void tick(Level level, BlockPos pos, BlockState state, TileSpa tile) {
+		if (level.isClientSide) return;
+		tile.counter++;
+		if (tile.counter % 40 != 0) return;
+		if (level.hasNeighborSignal(pos)) return;
+		if (tile.tank.getFluidAmount() < WATER_COST) return;
+		if (!(tile.items.getStackInSlot(0).getItem() instanceof ItemBathSalts)) return;
+
+		BlockPos target = findOpenSpot(level, pos);
+		if (target == null) return;
+
+		tile.tank.drain(WATER_COST, IFluidHandler.FluidAction.EXECUTE);
+		tile.items.extractItem(0, 1, false);
+		level.setBlockAndUpdate(target, thaumcraft.api.blocks.BlocksTC.purifyingFluid.get().defaultBlockState()
+				.setValue(BlockPurifyingFluid.LEVEL, BlockPurifyingFluid.MAX_LEVEL));
+		tile.setChanged();
+	}
+
+	private static BlockPos findOpenSpot(Level level, BlockPos pos) {
+		BlockPos direct = pos.above();
+		if (isOpenSpot(level, direct)) return direct;
+		for (int xx = -2; xx <= 2; xx++) {
+			for (int zz = -2; zz <= 2; zz++) {
+				if (xx == 0 && zz == 0) continue;
+				BlockPos p = pos.above().offset(xx, 0, zz);
+				if (isOpenSpot(level, p)) return p;
+			}
+		}
+		return null;
+	}
+
+	private static boolean isOpenSpot(Level level, BlockPos pos) {
+		BlockState here = level.getBlockState(pos);
+		if (!here.isAir() && !here.canBeReplaced()) return false;
+		return level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), Direction.UP);
+	}
+
+	@Override
+	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.saveAdditional(tag, registries);
+		tag.put("Items", items.serializeNBT(registries));
+		CompoundTag tankTag = new CompoundTag();
+		tank.writeToNBT(registries, tankTag);
+		tag.put("Tank", tankTag);
+	}
+
+	@Override
+	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+		super.loadAdditional(tag, registries);
+		items.deserializeNBT(registries, tag.getCompound("Items"));
+		if (tag.contains("Tank")) {
+			tank.readFromNBT(registries, tag.getCompound("Tank"));
+		}
+	}
+
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
 }

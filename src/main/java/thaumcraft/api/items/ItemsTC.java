@@ -760,6 +760,13 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> fluxGoo =
 			ITEMS.registerSimpleBlockItem("flux_goo", BlocksTC.fluxGoo);
 
+	public static final DeferredItem<BlockItem> spa =
+			ITEMS.registerSimpleBlockItem("spa", BlocksTC.spa);
+
+	/** See {@link thaumcraft.common.items.consumables.ItemBathSalts}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.consumables.ItemBathSalts> bathSalts =
+			ITEMS.registerItem("bath_salts", thaumcraft.common.items.consumables.ItemBathSalts::new);
+
 	public static final DeferredItem<BlockItem> stonePorous =
 			ITEMS.registerSimpleBlockItem("stone_porous", BlocksTC.stonePorous);
 
