@@ -443,7 +443,7 @@ public class Thaumcraft {
      * charge state an anvil repair/rename/combine could corrupt or duplicate, so any anvil operation
      * touching it is blocked outright, matching the original exactly. Real logic lives in the static
      * {@link #blocksAnvilOperation}, the same "extract a static, directly testable helper out of the
-     * instance event method" shape {@link #rollZombieBrainDrop} already established. */
+     * instance event method" shape {@link #rollLootBagDrop} already established. */
     @SubscribeEvent
     public void onAnvilUpdate(net.neoforged.neoforge.event.AnvilUpdateEvent event) {
         if (blocksAnvilOperation(event.getLeft(), event.getRight())) {
@@ -455,33 +455,6 @@ public class Thaumcraft {
         return left.is(thaumcraft.api.items.ItemsTC.primordialPearl.get()) || right.is(thaumcraft.api.items.ItemsTC.primordialPearl.get());
     }
 
-    /** A real vanilla Zombie kill has a chance to drop a Zombie Brain - see {@code ItemZombieBrain}'s own
-     * doc comment. Simplified vs the original: no looting-level scaling (that event field isn't exposed by
-     * NeoForge's modern {@code LivingDropsEvent} the same way) and no exclusion for the original's own
-     * {@code EntityBrainyZombie} variant (not built) - a flat 15% chance on any recently-hit vanilla Zombie
-     * death, roughly the middle of the original's own looting-scaled ~10-30% range.
-     */
-    @SubscribeEvent
-    public void onLivingDrops(net.neoforged.neoforge.event.entity.living.LivingDropsEvent event) {
-        if (event.getEntity().level().isClientSide) return;
-        if (!event.isRecentlyHit()) return;
-        if (event.getEntity() instanceof net.minecraft.world.entity.monster.Zombie zombie) {
-            rollZombieBrainDrop(zombie, event.getDrops());
-        }
-        if (event.getEntity() instanceof net.minecraft.world.entity.monster.Monster monster) {
-            rollLootBagDrop(monster, event.getDrops());
-        }
-    }
-
-    /** The real drop-roll logic, split out so GameTests can call it directly with a fixed random draw
-     * rather than depending on a real, statistically-rare combat kill. */
-    public static void rollZombieBrainDrop(net.minecraft.world.entity.monster.Zombie zombie, java.util.Collection<net.minecraft.world.entity.item.ItemEntity> drops) {
-        if (zombie.getRandom().nextFloat() >= 0.15f) return;
-        drops.add(new net.minecraft.world.entity.item.ItemEntity(
-                zombie.level(), zombie.getX(), zombie.getY() + zombie.getEyeHeight(), zombie.getZ(),
-                new net.minecraft.world.item.ItemStack(thaumcraft.api.items.ItemsTC.brain.get())));
-    }
-
     /** A recently-hit vanilla hostile mob has a chance to drop a loot bag - see {@code ItemLootBag}'s own
      * doc comment. Simplified vs the original: the real original gate was actually the "champion" mutation
      * system (a whole separate Taint subsystem this session hasn't built - the champion attribute it checks
@@ -491,7 +464,22 @@ public class Thaumcraft {
      * looting-level scaling - that event field isn't exposed by NeoForge's modern {@code LivingDropsEvent}
      * the same way (deriving it from the weapon's own Looting enchantment level is possible but adds real
      * complexity for a flavor-only scaling factor).
+     *
+     * (Zombie -&gt; Brain drops used to be rolled from this same {@code LivingDropsEvent} subscriber too -
+     * removed once {@code MobDeathDropEvents#onLivingDrops} shipped a more complete real version, correctly
+     * excluding the real {@code EntityBrainyZombie} variant; both existed together for a while and rolled a
+     * real duplicate chance on every Zombie kill until this fix, caught while scoping an unrelated later
+     * chunk - see the port-tracking memory.)
      */
+    @SubscribeEvent
+    public void onLivingDrops(net.neoforged.neoforge.event.entity.living.LivingDropsEvent event) {
+        if (event.getEntity().level().isClientSide) return;
+        if (!event.isRecentlyHit()) return;
+        if (event.getEntity() instanceof net.minecraft.world.entity.monster.Monster monster) {
+            rollLootBagDrop(monster, event.getDrops());
+        }
+    }
+
     public static void rollLootBagDrop(net.minecraft.world.entity.monster.Monster monster, java.util.Collection<net.minecraft.world.entity.item.ItemEntity> drops) {
         net.minecraft.util.RandomSource random = monster.getRandom();
         if (random.nextFloat() >= 0.08f) return;
