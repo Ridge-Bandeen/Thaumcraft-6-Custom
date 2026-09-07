@@ -17,6 +17,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import thaumcraft.Thaumcraft;
+import thaumcraft.common.config.ThaumcraftConfig;
 import thaumcraft.common.entities.monster.mods.ChampionModifier;
 import thaumcraft.common.lib.utils.ChampionUtils;
 import thaumcraft.api.ThaumcraftAttributes;
@@ -27,11 +28,12 @@ import thaumcraft.api.ThaumcraftAttributes;
  * their own focused class rather than porting that whole file (which also handles a dozen unrelated
  * mechanics, most already ported elsewhere for real, some genuinely unported).
  *
- * <p>Real, deliberate cuts from the original's spawn-roll formula: the original's whole
- * {@code ConfigEntities.championModWhitelist} per-species weighting and the world-config on/off toggle are
- * dropped (no modern config system exists yet in this port - matches this session's established "drop
- * config-driven complexity, keep the real core mechanic" pattern), and {@code isDangerousLocation} was
- * already dead code (an unconditional {@code return false}) even in the real original. The core real formula
+ * <p>The world-config on/off toggle ({@code allowChampionMobs}) is now a real, live {@link
+ * thaumcraft.common.config.ThaumcraftConfig#ALLOW_CHAMPION_MOBS} check, wired in {@link #onJoinLevel} - since
+ * {@code isDangerousLocation} was already dead code (an unconditional {@code return false}) even in the real
+ * original, disabling the toggle there meant champions never spawned at all, which is exactly what this
+ * does too. Real, deliberate cut kept: the original's whole {@code ConfigEntities.championModWhitelist}
+ * per-species weighting is dropped (no per-species config surface in this port). The core real formula
  * - base roll, difficulty adjustment, nether/end adjustment, a real minimum-health floor - is kept as-is.
  * "Spooky" biomes (1.12's {@code BiomeDictionary.Type.SPOOKY}) have no direct modern tag equivalent and are
  * dropped rather than guessed at.
@@ -46,6 +48,11 @@ public class ChampionModEvents {
 
 		AttributeInstance championAttr = mob.getAttribute(ThaumcraftAttributes.CHAMPION_MOD);
 		if (championAttr == null || championAttr.getValue() > -2.0) return;
+
+		if (!ThaumcraftConfig.ALLOW_CHAMPION_MOBS.get()) {
+			ChampionUtils.markNotChampion(mob);
+			return;
+		}
 
 		Level level = event.getLevel();
 		int c = mob.getRandom().nextInt(100);

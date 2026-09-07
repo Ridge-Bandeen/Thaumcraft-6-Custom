@@ -10401,4 +10401,135 @@ public class ThaumcraftGameTests {
 				"a real level-2 runic helmet's tooltip should really show its real runic charge, found: " + runicTooltip);
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// ThaumcraftConfig - the real modern (ModConfigSpec) replacement for the old (1.12.2) ModConfig's real
+	// remaining open thread. See ThaumcraftConfig's own doc comment for why every OTHER old ModConfig field
+	// is left out (zero real modern consumer). RunicShieldEvents' own real config coverage (shieldRecharge/
+	// shieldWait/shieldCost) is exercised indirectly by the existing runicShieldEventsDrawsRealVisOnlyWhenWearingRealRunicArmor
+	// test above; the 3 tests below cover the newly-wired WUSS_MODE/ALLOW_CHAMPION_MOBS/TAINT_SPREAD_* gates.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumcraftConfigDefaultsMatchTheOriginalsRealShippedDefaults(GameTestHelper helper) {
+		helper.assertTrue(!thaumcraft.common.config.ThaumcraftConfig.WUSS_MODE.get(), "wussMode should default to false, matching the original");
+		helper.assertTrue(thaumcraft.common.config.ThaumcraftConfig.ALLOW_CHAMPION_MOBS.get(), "allowChampionMobs should default to true, matching the original");
+		helper.assertTrue(thaumcraft.common.config.ThaumcraftConfig.SHIELD_RECHARGE_MS.get() == 2000, "shieldRecharge should default to 2000, matching the original");
+		helper.assertTrue(thaumcraft.common.config.ThaumcraftConfig.SHIELD_WAIT_MS.get() == 4000, "shieldWait should default to 4000, matching the original");
+		helper.assertTrue(thaumcraft.common.config.ThaumcraftConfig.SHIELD_COST.get() == 1.0, "shieldCost should default to 1.0, matching the original");
+		helper.assertTrue(thaumcraft.common.config.ThaumcraftConfig.TAINT_SPREAD_RATE.get() == 100.0, "taintSpreadRate should default to 100.0, matching the original");
+		helper.assertTrue(thaumcraft.common.config.ThaumcraftConfig.TAINT_SPREAD_AREA.get() == 32, "taintSpreadArea should default to 32, matching the original");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.config.ThaumcraftConfig#WUSS_MODE} gating
+	 * {@link thaumcraft.common.lib.events.WarpEvents#checkWarpEvent} - reuses the exact same deterministic
+	 * setup as {@code checkWarpEventTriggersARealMisfortuneWithoutThrowing} above (counter 10000 -&gt; sqrt
+	 * 100, guaranteeing the real {@code r <= sqrt(warpCounter)} roll succeeds every time), but proves the real
+	 * early-return: with wussMode on, the real warp counter should never move at all; with it off (the real
+	 * default), the exact same setup should really move it, same as that other test already established.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void wussModeSuppressesTheRealWarpMisfortuneCheckEntirely(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		thaumcraft.api.capabilities.IPlayerWarp wc = thaumcraft.api.capabilities.ThaumcraftCapabilities.getWarp(player);
+		wc.set(thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.PERMANENT, 50);
+		wc.setCounter(10000);
+
+		try {
+			thaumcraft.common.config.ThaumcraftConfig.WUSS_MODE.set(true);
+			thaumcraft.common.lib.events.WarpEvents.checkWarpEvent(player);
+			helper.assertTrue(wc.getCounter() == 10000, "with wussMode on, checkWarpEvent should really be a total no-op, found counter " + wc.getCounter());
+
+			thaumcraft.common.config.ThaumcraftConfig.WUSS_MODE.set(false);
+			thaumcraft.common.lib.events.WarpEvents.checkWarpEvent(player);
+			helper.assertTrue(wc.getCounter() < 10000, "with wussMode off (the real default), the exact same setup should really trigger a misfortune, found counter " + wc.getCounter());
+		} finally {
+			thaumcraft.common.config.ThaumcraftConfig.WUSS_MODE.set(false);
+		}
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.config.ThaumcraftConfig#WUSS_MODE} gating
+	 * {@link thaumcraft.common.blocks.world.taint.TaintHelper#spreadFibres} - reuses the same real seed/floor
+	 * setup as {@code taintFibreConnectsSpreadsAndDiesWithoutARealSeed} above. With wussMode on, {@code
+	 * ignore=true} should NOT be enough to force a spread (the gate is checked before the rate roll); with it
+	 * off, the exact same real seed should really let it spread within a handful of tries, same as that other
+	 * test already established.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void wussModeSuppressesRealTaintFibreSpreadEntirely(GameTestHelper helper) {
+		BlockPos floorPos = BlockPos.ZERO;
+		BlockPos floorAbs = helper.absolutePos(floorPos);
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				helper.setBlock(floorPos.offset(dx, 0, dz), net.minecraft.world.level.block.Blocks.STONE);
+			}
+		}
+		ServerLevel level = helper.getLevel();
+		BlockPos fibrePos = floorAbs.above();
+		level.setBlockAndUpdate(fibrePos, thaumcraft.common.blocks.world.taint.BlockTaintFibre.computeState(
+				thaumcraft.api.blocks.BlocksTC.taintFibre.get().defaultBlockState(), level, fibrePos));
+		thaumcraft.common.blocks.world.taint.TaintHelper.addTaintSeed(level, fibrePos);
+
+		try {
+			thaumcraft.common.config.ThaumcraftConfig.WUSS_MODE.set(true);
+			for (int i = 0; i < 100; i++) {
+				thaumcraft.common.blocks.world.taint.TaintHelper.spreadFibres(level, fibrePos, true);
+			}
+			boolean spreadWhileWuss = false;
+			for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+				if (level.getBlockState(fibrePos.relative(dir)).is(thaumcraft.api.blocks.BlocksTC.taintFibre.get())) {
+					spreadWhileWuss = true;
+				}
+			}
+			helper.assertTrue(!spreadWhileWuss, "with wussMode on, taint fibre spread should really never happen even with ignore=true");
+
+			thaumcraft.common.config.ThaumcraftConfig.WUSS_MODE.set(false);
+			boolean spread = false;
+			for (int i = 0; i < 300 && !spread; i++) {
+				thaumcraft.common.blocks.world.taint.TaintHelper.spreadFibres(level, fibrePos, true);
+				for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+					if (level.getBlockState(fibrePos.relative(dir)).is(thaumcraft.api.blocks.BlocksTC.taintFibre.get())) {
+						spread = true;
+						break;
+					}
+				}
+			}
+			helper.assertTrue(spread, "with wussMode off (the real default), the exact same real seed should really eventually let a fibre spread");
+		} finally {
+			thaumcraft.common.config.ThaumcraftConfig.WUSS_MODE.set(false);
+			thaumcraft.common.blocks.world.taint.TaintHelper.removeTaintSeed(level, fibrePos);
+		}
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.config.ThaumcraftConfig#ALLOW_CHAMPION_MOBS} gating
+	 * {@link thaumcraft.common.lib.events.ChampionModEvents#onJoinLevel} - with the toggle off, every real
+	 * freshly-spawned Monster should be marked "not champion" outright (a real negative attribute value, never
+	 * a real 0-13 mod id), matching {@code freshlySpawnedMonsterRollsRealChampionStatus}'s own real "roll
+	 * either way" baseline above but forcing the "way" deterministically.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void allowChampionMobsOffForcesEveryRealMonsterToNotChampion(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+
+		try {
+			thaumcraft.common.config.ThaumcraftConfig.ALLOW_CHAMPION_MOBS.set(false);
+			for (int i = 0; i < 30; i++) {
+				Zombie zombie = new Zombie(EntityType.ZOMBIE, level);
+				zombie.setPos(origin.getX() + 0.5, origin.getY() + 1, origin.getZ() + 0.5);
+				level.addFreshEntity(zombie);
+				double id = zombie.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD).getValue();
+				helper.assertTrue(id < 0, "with allowChampionMobs off, a real freshly-spawned monster should never roll a real champion id, found " + id);
+			}
+		} finally {
+			thaumcraft.common.config.ThaumcraftConfig.ALLOW_CHAMPION_MOBS.set(true);
+		}
+		helper.succeed();
+	}
 }

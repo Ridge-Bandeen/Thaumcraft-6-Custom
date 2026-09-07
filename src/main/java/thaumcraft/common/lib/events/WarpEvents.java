@@ -25,6 +25,7 @@ import thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
 import thaumcraft.api.items.IWarpingGear;
 import thaumcraft.api.items.WornGearHelper;
+import thaumcraft.common.config.ThaumcraftConfig;
 import thaumcraft.common.items.armor.ItemFortressArmor;
 import thaumcraft.common.registry.ThaumcraftEntities;
 import thaumcraft.common.registry.ThaumcraftMobEffects;
@@ -45,6 +46,9 @@ import thaumcraft.common.registry.ThaumcraftMobEffects;
  * {@code getWarpFromGear} is rebuilt around {@link WornGearHelper} (hotbar/offhand) plus armor, replacing
  * the original's Baubles-slot scan - same real substitution this session's whole bauble-adaptation pass
  * already established.
+ *
+ * {@link ThaumcraftConfig#WUSS_MODE} is now honored for real (in {@link #checkWarpEvent}) - matching the
+ * original's own {@code !ModConfig.CONFIG_MISC.wussMode} gate around this same misfortune roll.
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID)
 public class WarpEvents {
@@ -64,6 +68,7 @@ public class WarpEvents {
 	}
 
 	public static void checkWarpEvent(Player player) {
+		if (ThaumcraftConfig.WUSS_MODE.get()) return;
 		IPlayerWarp wc = ThaumcraftCapabilities.getWarp(player);
 		ThaumcraftApi.internalMethods.addWarpToPlayer(player, -1, EnumWarpType.TEMPORARY);
 		int tw = wc.get(EnumWarpType.TEMPORARY);

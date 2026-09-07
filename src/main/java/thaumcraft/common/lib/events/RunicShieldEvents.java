@@ -14,6 +14,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import thaumcraft.Thaumcraft;
 import thaumcraft.api.items.ThaumcraftDataComponents;
+import thaumcraft.common.config.ThaumcraftConfig;
 import thaumcraft.common.world.aura.AuraHandler;
 
 /**
@@ -31,11 +32,9 @@ import thaumcraft.common.world.aura.AuraHandler;
  * point; a real longer cooldown kicks in specifically once the shield hits 0 (fully spent), matching the
  * original's own real two-speed "trickle regen, but a real pause right after being fully broken" pacing.
  *
- * Real, documented cuts: {@code ModConfig.CONFIG_MISC.shieldRecharge}/{@code shieldWait}/{@code shieldCost}
- * aren't configurable yet (no modern config system - see the port-tracking memory's own `ModConfig` entry) -
- * {@link #SHIELD_RECHARGE_MS}/{@link #SHIELD_WAIT_MS}/{@link #SHIELD_COST} are the original's own real
- * default values, hardcoded, same "no config system yet, use the original's own real default" pattern
- * already used elsewhere this session. Per-player tracking uses plain maps keyed by real entity id, same
+ * {@code shieldRecharge}/{@code shieldWait}/{@code shieldCost} are now real, live {@link ThaumcraftConfig}
+ * values (COMMON config, `runicShielding` category) - the original's own real default values remain the
+ * shipped defaults, but are no longer hardcoded now that {@link ThaumcraftConfig} exists. Per-player tracking uses plain maps keyed by real entity id, same
  * real shape the original itself used - unlike the original, real logout cleanup ({@link #onLogout}) is
  * included here for real: a real, persistent server can reuse a low entity id for a completely different
  * player after one logs off, and a leftover cooldown timestamp under that id would otherwise wrongly gate
@@ -45,10 +44,6 @@ import thaumcraft.common.world.aura.AuraHandler;
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID)
 public class RunicShieldEvents {
-
-	private static final int SHIELD_RECHARGE_MS = 2000;
-	private static final int SHIELD_WAIT_MS = 4000;
-	private static final float SHIELD_COST = 1.0f;
 
 	private static final EquipmentSlot[] ARMOR_SLOTS = { EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET };
 
@@ -112,18 +107,19 @@ public class RunicShieldEvents {
 		int charge = (int) player.getAbsorptionAmount();
 		Integer previousCharge = lastCharge.get(id);
 		if (charge == 0 && previousCharge != null && previousCharge > 0) {
-			nextCycle.put(id, time + SHIELD_WAIT_MS);
+			nextCycle.put(id, time + ThaumcraftConfig.SHIELD_WAIT_MS.get());
 			lastCharge.put(id, 0);
 		}
 
 		long next = nextCycle.getOrDefault(id, 0L);
 		Level level = player.level();
 		BlockPos pos = player.blockPosition();
+		double cost = ThaumcraftConfig.SHIELD_COST.get();
 		if (charge < max && next < time
 				&& !AuraHandler.shouldPreserveAura(level, player, pos)
-				&& AuraHandler.getVis(level, pos) >= SHIELD_COST) {
-			AuraHandler.drainVis(level, pos, SHIELD_COST, false);
-			nextCycle.put(id, time + SHIELD_RECHARGE_MS);
+				&& AuraHandler.getVis(level, pos) >= cost) {
+			AuraHandler.drainVis(level, pos, (float) cost, false);
+			nextCycle.put(id, time + ThaumcraftConfig.SHIELD_RECHARGE_MS.get());
 			player.setAbsorptionAmount(charge + 1);
 			lastCharge.put(id, charge + 1);
 		}

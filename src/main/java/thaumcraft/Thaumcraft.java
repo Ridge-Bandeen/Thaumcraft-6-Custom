@@ -99,6 +99,8 @@ public class Thaumcraft {
         // mainly). Done here (constructor) rather than commonSetup since AuraHelper could plausibly be
         // called very early.
         ThaumcraftApi.internalMethods = new ThaumcraftInternalMethodHandler();
+
+        thaumcraft.common.config.ThaumcraftConfig.register(modContainer);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

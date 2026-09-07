@@ -11,6 +11,7 @@ import net.minecraft.world.level.block.SaplingBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import thaumcraft.api.aura.AuraHelper;
 import thaumcraft.api.blocks.BlocksTC;
+import thaumcraft.common.config.ThaumcraftConfig;
 
 /**
  * Replaces the old (1.12.2) {@code TaintHelper} - the shared "is this position near an active taint seed,
@@ -33,22 +34,20 @@ import thaumcraft.api.blocks.BlocksTC;
  * Real, documented cuts vs the original: no leaf -&gt; {@code taintFeature} conversion, no hemmed-in-taint
  * -&gt; {@code taintLog}/{@code taintCrust}/{@code taintSoil}/{@code taintRock} conversions, and no {@code
  * EntityTaintSeed} spawning at the seed-zone's own edge - all of those target blocks/entities aren't ported
- * yet (later sub-chunks of this same arc). No config system exists in this port yet either, so the original's
- * own {@code ModConfig.CONFIG_WORLD.taintSpreadRate}/{@code taintSpreadArea} are hardcoded here to the exact
- * same default values the original itself shipped with (100.0/32).
+ * yet (later sub-chunks of this same arc). {@code taintSpreadRate}/{@code taintSpreadArea} are now real, live
+ * {@link ThaumcraftConfig} values (COMMON config, `world` category) rather than hardcoded - same defaults the
+ * original shipped with (100.0/32). {@link ThaumcraftConfig#WUSS_MODE} is also honored for real now, in
+ * {@link #spreadFibres} - matching the original's own {@code !ModConfig.CONFIG_MISC.wussMode} gate.
  */
 public class TaintHelper {
 
-	private static final float TAINT_SPREAD_RATE = 100.0f;
-	private static final int TAINT_SPREAD_AREA = 32;
-
 	private static final ConcurrentHashMap<ResourceKey<Level>, List<BlockPos>> taintSeeds = new ConcurrentHashMap<>();
 
-	/** Real accessor for {@link #TAINT_SPREAD_AREA} - {@code EntityTaintSeed} (a different package) needs
-	 * the exact same real value for its own real "don't spawn too close to another real seed" check, matching
-	 * the original's own {@code ModConfig.CONFIG_WORLD.taintSpreadArea} reference. */
+	/** Real accessor for the live {@link ThaumcraftConfig#TAINT_SPREAD_AREA} - {@code EntityTaintSeed} (a
+	 * different package) needs the exact same real value for its own real "don't spawn too close to another
+	 * real seed" check, matching the original's own {@code ModConfig.CONFIG_WORLD.taintSpreadArea} reference. */
 	public static int spreadArea() {
-		return TAINT_SPREAD_AREA;
+		return ThaumcraftConfig.TAINT_SPREAD_AREA.get();
 	}
 
 	public static void addTaintSeed(Level level, BlockPos pos) {
@@ -63,7 +62,8 @@ public class TaintHelper {
 	}
 
 	public static boolean isNearTaintSeed(Level level, BlockPos pos) {
-		double area = (double) TAINT_SPREAD_AREA * TAINT_SPREAD_AREA;
+		int spreadArea = spreadArea();
+		double area = (double) spreadArea * spreadArea;
 		List<BlockPos> locs = taintSeeds.get(level.dimension());
 		if (locs != null) {
 			for (BlockPos p : locs) {
@@ -76,8 +76,9 @@ public class TaintHelper {
 	}
 
 	public static boolean isAtTaintSeedEdge(Level level, BlockPos pos) {
-		double area = (double) TAINT_SPREAD_AREA * TAINT_SPREAD_AREA;
-		double fringe = TAINT_SPREAD_AREA * 0.8 * (TAINT_SPREAD_AREA * 0.8);
+		int spreadArea = spreadArea();
+		double area = (double) spreadArea * spreadArea;
+		double fringe = spreadArea * 0.8 * (spreadArea * 0.8);
 		List<BlockPos> locs = taintSeeds.get(level.dimension());
 		if (locs != null) {
 			for (BlockPos p : locs) {
@@ -95,8 +96,12 @@ public class TaintHelper {
 	}
 
 	public static void spreadFibres(Level level, BlockPos pos, boolean ignore) {
+		if (ThaumcraftConfig.WUSS_MODE.get()) {
+			return;
+		}
 		float mod = 0.001f + thaumcraft.common.world.aura.AuraHandler.getFluxSaturation(level, pos) * 2.0f;
-		if (!ignore && level.random.nextFloat() > TAINT_SPREAD_RATE / 100.0f * mod) {
+		float spreadRate = ThaumcraftConfig.TAINT_SPREAD_RATE.get().floatValue();
+		if (!ignore && level.random.nextFloat() > spreadRate / 100.0f * mod) {
 			return;
 		}
 		if (!isNearTaintSeed(level, pos)) {
