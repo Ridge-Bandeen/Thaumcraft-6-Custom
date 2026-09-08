@@ -4815,6 +4815,45 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real regression guard for the sync fix found while scoping the Infusion Matrix renderer (see this
+	 * tile's own doc comment): before that fix, this tile never overrode {@code getUpdateTag}/
+	 * {@code getUpdatePacket} at all, so a real client never saw the held focus or staged crystals - not even
+	 * on initial chunk load - which meant {@code TileFocalManipulatorRenderer}'s spinning focus and orbiting
+	 * crystals could never actually render. GameTest can't observe a real network sync, but it can assert the
+	 * real payload {@code getUpdateTag} would send is now correct.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focalManipulatorUpdateTagCarriesTheRealFocusAndStagedCrystals(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(3, 2, 3);
+		BlockPos absPos = helper.absolutePos(pos);
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.focalManipulator.get());
+		thaumcraft.common.tiles.crafting.TileFocalManipulator tile = helper.getBlockEntity(pos);
+
+		net.minecraft.nbt.CompoundTag emptyTag = tile.getUpdateTag(helper.getLevel().registryAccess());
+		helper.assertTrue(emptyTag != null && emptyTag.getList("crystals", net.minecraft.nbt.Tag.TAG_COMPOUND).isEmpty(),
+				"with no real craft staged, the real update tag should carry no real crystal entries, found " + emptyTag);
+
+		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "UNLOCKALCHEMY");
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "UNLOCKAUROMANCY");
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "BASEAUROMANCY");
+		player.getInventory().add(makeAspectCrystal(thaumcraft.api.aspects.Aspect.FIRE));
+
+		tile.setFocus(new ItemStack(ItemsTC.focusBlank1.get()));
+		thaumcraft.common.tiles.crafting.FocusElementNode root = new thaumcraft.common.tiles.crafting.FocusElementNode();
+		root.id = 0;
+		root.node = (thaumcraft.api.casters.FocusNode) thaumcraft.api.casters.FocusEngine.getElement("thaumcraft.FIRE");
+		tile.nodes.put(0, root);
+
+		helper.assertTrue(tile.startCraft(player), "startCraft should succeed once research/vis/crystals/xp are all satisfiable");
+		net.minecraft.nbt.CompoundTag filledTag = tile.getUpdateTag(helper.getLevel().registryAccess());
+		helper.assertTrue(filledTag.contains("Items"), "the real update tag should carry the held focus once one is placed, got " + filledTag);
+		helper.assertTrue(!filledTag.getList("crystals", net.minecraft.nbt.Tag.TAG_COMPOUND).isEmpty(),
+				"the real update tag should carry the real staged crystals once a craft is started, got " + filledTag);
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void focalManipulatorMenuAcceptsAFocusAndReflectsTheTilesSlot(GameTestHelper helper) {
 		BlockPos pos = new BlockPos(3, 2, 3);

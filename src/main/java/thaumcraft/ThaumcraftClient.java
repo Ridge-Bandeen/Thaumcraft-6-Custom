@@ -177,6 +177,7 @@ public class ThaumcraftClient {
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.RESEARCH_TABLE.get(), thaumcraft.client.render.TileResearchTableRenderer::new);
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.THAUMATORIUM.get(), thaumcraft.client.render.TileThaumatoriumRenderer::new);
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.INFUSION_MATRIX.get(), thaumcraft.client.render.TileInfusionMatrixRenderer::new);
+        event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.FOCAL_MANIPULATOR.get(), thaumcraft.client.render.TileFocalManipulatorRenderer::new);
     }
 
     /** One real "additional" model per {@link GolemMaterial} (the trunk/limbs silhouette every golem has),

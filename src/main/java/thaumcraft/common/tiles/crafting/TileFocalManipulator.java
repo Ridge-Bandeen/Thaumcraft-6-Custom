@@ -56,6 +56,12 @@ import thaumcraft.common.world.aura.AuraHandler;
  * {@code InventoryUtils}/{@code ThaumcraftApiHelper} crystal-cost helpers aren't ported (still 1.12.2) -
  * {@link #hasCrystals}/{@link #consumeCrystals} below do the same "does the player carry N crystals of
  * aspect X" check directly against vanilla's own {@link net.minecraft.world.entity.player.Inventory#clearOrCountMatchingItems}.
+ *
+ * {@link #getUpdateTag}/{@link #getUpdatePacket}/{@link #setChanged()} are overridden below - the same real
+ * client-sync fix found while scoping the Infusion Matrix renderer (see
+ * {@link thaumcraft.common.tiles.crafting.TilePedestal#setChanged()}'s own doc comment): without them, this
+ * tile's held focus and staged crystals would never reach any client at all, which
+ * {@link thaumcraft.client.render.TileFocalManipulatorRenderer} needs to show either.
  */
 public class TileFocalManipulator extends BlockEntity implements MenuProvider {
 
@@ -332,6 +338,26 @@ public class TileFocalManipulator extends BlockEntity implements MenuProvider {
 			FocusElementNode node = new FocusElementNode();
 			node.deserialize(nodeList.getCompound(i));
 			nodes.put(node.id, node);
+		}
+	}
+
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	/** See {@link thaumcraft.common.tiles.crafting.TilePedestal#setChanged()}'s own doc comment - same real
+	 * fix, same reason. */
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
 		}
 	}
 }
