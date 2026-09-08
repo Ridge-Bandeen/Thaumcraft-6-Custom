@@ -423,6 +423,18 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.basic.BlockPavingStoneTravel::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.5f).sound(SoundType.STONE).noOcclusion());
 
+	/** The real Barrier Stone warding-network tile - see {@code TileBarrierStone}'s own doc comment. Real,
+	 * verified against a documented former hang risk - see {@code BlockBarrier}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.basic.BlockPavingStoneBarrier> pavingStoneBarrier = BLOCKS.registerBlock("paving_stone_barrier",
+			thaumcraft.common.blocks.basic.BlockPavingStoneBarrier::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.5f).sound(SoundType.STONE).noOcclusion());
+
+	/** The invisible, self-managed half of the Barrier Stone network - never placed by a player, only ever
+	 * auto-placed/healed by a real {@code TileBarrierStone}. See {@code BlockBarrier}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockBarrier> barrier = BLOCKS.registerBlock("barrier",
+			thaumcraft.common.blocks.misc.BlockBarrier::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.NONE).strength(-1.0f, 3600000.8f).noLootTable().noOcclusion());
+
 	/** One small candle per {@link DyeColor} - see {@link thaumcraft.common.blocks.basic.BlockCandle}'s
 	 * own doc comment for the color-handler tinting this needs. Registry ids match
 	 * the original's own 1.12.2 dye names exactly ({@code candle_silver} for {@code LIGHT_GRAY}, etc.),

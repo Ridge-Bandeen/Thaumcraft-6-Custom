@@ -583,6 +583,12 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> pavingStoneTravel =
 			ITEMS.registerSimpleBlockItem("paving_stone_travel", BlocksTC.pavingStoneTravel);
 
+	/** No item for {@code BlocksTC.barrier} - matches the original's own real {@code getSubBlocks} (does
+	 * nothing) and {@code getPickBlock}/{@code getItemDropped} (both empty) - it's never player-placed or
+	 * player-obtained, only ever auto-placed/healed by a real {@code TileBarrierStone}. */
+	public static final DeferredItem<BlockItem> pavingStoneBarrier =
+			ITEMS.registerSimpleBlockItem("paving_stone_barrier", BlocksTC.pavingStoneBarrier);
+
 	/** A Crucible byproduct (rotten flesh + 1 fire) - the precursor for {@link BlocksTC#candles}. */
 	public static final DeferredItem<Item> tallow =
 			ITEMS.registerSimpleItem("tallow");

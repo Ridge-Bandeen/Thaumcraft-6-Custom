@@ -10809,4 +10809,114 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(checker.getRarity() == net.minecraft.world.item.Rarity.UNCOMMON, "a real Sanity Checker should really be Uncommon rarity, found " + checker.getRarity());
 		helper.succeed();
 	}
+
+	/**
+	 * Real, deliberate minimal-repro regression test for a documented former hang (see the port-tracking
+	 * memory's own Barrier Stone entry, and {@code BlockBarrier}'s own doc comment): a real Barrier Stone
+	 * paving tile, a real Barrier block directly above it, and an adjacent real redstone power source, all
+	 * placed together with zero entities and no manual tick() calls - an earlier attempt at this exact real
+	 * combination reproducibly hung the whole GameTestServer here. Kept as its own tiny, isolated test
+	 * (rather than folded into a larger fixture) specifically so a future regression shows up fast and
+	 * unambiguously if this combination ever breaks again.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void barrierStoneRedstoneMinimalReproDoesNotHang(GameTestHelper helper) {
+		BlockPos pavingPos = new BlockPos(3, 2, 3);
+		helper.setBlock(pavingPos, thaumcraft.api.blocks.BlocksTC.pavingStoneBarrier.get());
+		helper.setBlock(pavingPos.above(), thaumcraft.api.blocks.BlocksTC.barrier.get());
+		helper.setBlock(pavingPos.east(), Blocks.REDSTONE_BLOCK);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void barrierStoneTileAutoPlacesAndHealsTheRealBarrierBlocksAboveIt(GameTestHelper helper) {
+		BlockPos pavingPos = new BlockPos(3, 2, 3);
+		helper.setBlock(pavingPos, thaumcraft.api.blocks.BlocksTC.pavingStoneBarrier.get());
+		BlockPos abs = helper.absolutePos(pavingPos);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.tiles.misc.TileBarrierStone tile = helper.getBlockEntity(pavingPos);
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(abs);
+		for (int i = 0; i < 105; i++) {
+			thaumcraft.common.tiles.misc.TileBarrierStone.tick(level, abs, state, tile);
+		}
+
+		helper.assertTrue(level.getBlockState(abs.above(1)).is(thaumcraft.api.blocks.BlocksTC.barrier.get()),
+				"the real Barrier Stone tile should really auto-place a real Barrier block 1 above itself within 105 ticks");
+		helper.assertTrue(level.getBlockState(abs.above(2)).is(thaumcraft.api.blocks.BlocksTC.barrier.get()),
+				"the real Barrier Stone tile should really auto-place a real Barrier block 2 above itself within 105 ticks");
+
+		// Real healing: break the lower real Barrier block by hand, tick past the next real 100-cycle, confirm
+		// it comes back - matches the original's own real self-healing intent.
+		level.removeBlock(abs.above(1), false);
+		for (int i = 0; i < 100; i++) {
+			thaumcraft.common.tiles.misc.TileBarrierStone.tick(level, abs, state, tile);
+		}
+		helper.assertTrue(level.getBlockState(abs.above(1)).is(thaumcraft.api.blocks.BlocksTC.barrier.get()),
+				"a real broken Barrier block should really be healed back within the next real 100-tick cycle");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void barrierBlockCollidesWithNonPlayerLivingEntitiesButNotPlayers(GameTestHelper helper) {
+		BlockPos pavingPos = new BlockPos(3, 2, 3);
+		helper.setBlock(pavingPos, thaumcraft.api.blocks.BlocksTC.pavingStoneBarrier.get());
+		BlockPos barrierPos = helper.absolutePos(pavingPos).above();
+		helper.setBlock(pavingPos.above(), thaumcraft.api.blocks.BlocksTC.barrier.get());
+		ServerLevel level = helper.getLevel();
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(barrierPos);
+
+		Pig pig = EntityType.PIG.create(level);
+		pig.moveTo(barrierPos.getX() + 0.5, barrierPos.getY(), barrierPos.getZ() + 0.5);
+		level.addFreshEntity(pig);
+		net.minecraft.world.phys.shapes.VoxelShape pigCollision = state.getCollisionShape(level, barrierPos, net.minecraft.world.phys.shapes.CollisionContext.of(pig));
+		helper.assertTrue(!pigCollision.isEmpty(), "a real non-player LivingEntity should really collide with a real unpowered Barrier block");
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		net.minecraft.world.phys.shapes.VoxelShape playerCollision = state.getCollisionShape(level, barrierPos, net.minecraft.world.phys.shapes.CollisionContext.of(player));
+		helper.assertTrue(playerCollision.isEmpty(), "a real player should really pass straight through a real Barrier block");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void barrierBlockBecomesPassableWhileThePavingStoneIsRedstonePowered(GameTestHelper helper) {
+		BlockPos pavingPos = new BlockPos(3, 2, 3);
+		helper.setBlock(pavingPos, thaumcraft.api.blocks.BlocksTC.pavingStoneBarrier.get());
+		helper.setBlock(pavingPos.above(), thaumcraft.api.blocks.BlocksTC.barrier.get());
+		helper.setBlock(pavingPos.east(), Blocks.REDSTONE_BLOCK);
+		BlockPos barrierPos = helper.absolutePos(pavingPos).above();
+		ServerLevel level = helper.getLevel();
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(barrierPos);
+
+		Pig pig = EntityType.PIG.create(level);
+		pig.moveTo(barrierPos.getX() + 0.5, barrierPos.getY(), barrierPos.getZ() + 0.5);
+		level.addFreshEntity(pig);
+		net.minecraft.world.phys.shapes.VoxelShape pigCollision = state.getCollisionShape(level, barrierPos, net.minecraft.world.phys.shapes.CollisionContext.of(pig));
+		helper.assertTrue(pigCollision.isEmpty(), "a real redstone-powered paving stone should really let even non-player creatures pass through its real Barrier blocks");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void barrierStonePushesBackAirborneNonPlayerIntrudersWhileUnpowered(GameTestHelper helper) {
+		BlockPos pavingPos = new BlockPos(3, 2, 3);
+		helper.setBlock(pavingPos, thaumcraft.api.blocks.BlocksTC.pavingStoneBarrier.get());
+		BlockPos abs = helper.absolutePos(pavingPos);
+		ServerLevel level = helper.getLevel();
+
+		Pig pig = EntityType.PIG.create(level);
+		pig.moveTo(abs.getX() + 0.5, abs.getY() + 1.5, abs.getZ() + 0.5);
+		pig.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+		level.addFreshEntity(pig);
+		helper.assertTrue(!pig.onGround(), "the real pig should really be airborne (spawned mid-air) for this real test to be meaningful");
+
+		thaumcraft.common.tiles.misc.TileBarrierStone tile = helper.getBlockEntity(pavingPos);
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(abs);
+		net.minecraft.world.phys.Vec3 before = pig.getDeltaMovement();
+		for (int i = 0; i < 6; i++) {
+			thaumcraft.common.tiles.misc.TileBarrierStone.tick(level, abs, state, tile);
+		}
+		net.minecraft.world.phys.Vec3 after = pig.getDeltaMovement();
+		helper.assertTrue(!after.equals(before), "a real airborne non-player creature above an unpowered real Barrier Stone should really get pushed, found velocity unchanged at " + after);
+		helper.succeed();
+	}
 }

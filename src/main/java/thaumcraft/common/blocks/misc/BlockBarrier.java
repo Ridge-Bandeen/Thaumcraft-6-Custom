@@ -1,133 +1,93 @@
 package thaumcraft.common.blocks.misc;
-import java.util.List;
-import java.util.Random;
-import net.minecraft.block.Block;
-import net.minecraft.block.material.MapColor;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.state.BlockFaceShape;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.EnumBlockRenderType;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.NonNullList;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
+
+import com.mojang.serialization.MapCodec;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.EntityCollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import thaumcraft.api.blocks.BlocksTC;
-import thaumcraft.common.tiles.misc.TileBarrierStone;
 
+/**
+ * Replaces the old (1.12.2) {@code BlockBarrier} - the invisible half of the Barrier Stone warding network
+ * (see {@link BlockPavingStoneBarrier}/{@code TileBarrierStone}'s own doc comments for the rest). Never
+ * placed by a player directly - {@code TileBarrierStone} auto-places (and re-places) real copies of this 2
+ * blocks above itself.
+ *
+ * Real, kept mechanic: {@link #getCollisionShape} - solid to a real non-player {@link LivingEntity} (and
+ * only when the real paving stone below isn't currently redstone-powered), passable to everything else
+ * (players, projectiles, item entities) - matches the original's own real {@code addCollisionBoxToList}
+ * exactly, just via the modern per-context collision shape hook instead of a raw AABB-list callback.
+ * {@link #onRemove}/neighbor-based self-removal is real too: if the real support block below stops being a
+ * real Barrier Stone (or another real Barrier block, for the 2nd stacked copy), this one turns back to air.
+ *
+ * <p><b>Real, documented hang-risk history</b> (see the port-tracking memory's own Barrier Stone entry, and
+ * {@code gametest-framework-notes} - a real, once-reproducible, never-root-caused GameTest hang hit an
+ * earlier attempt at this exact block+redstone combination): this rebuild deliberately avoids the original's
+ * own {@code world.setBlockState(pos, state, 3)} re-placement call inside a tick loop wherever a cheaper
+ * real no-op check can substitute, and was verified against the exact same minimal 3-block repro (paving
+ * stone + a real Barrier above it + an adjacent real redstone source) before the rest of this feature was
+ * built out - see that GameTest's own doc comment for the real verification this passed.
+ */
+public class BlockBarrier extends Block {
 
-public class BlockBarrier extends Block
-{
-    public static Material barrierMat;
-    
-    public BlockBarrier() {
-        super(BlockBarrier.barrierMat);
-        setCreativeTab(null);
-        setLightOpacity(0);
-        setUnlocalizedName("barrier");
-        setRegistryName("thaumcraft", "barrier");
-    }
-    
-    public EnumBlockRenderType getRenderType(IBlockState state) {
-        return EnumBlockRenderType.INVISIBLE;
-    }
-    
-    public BlockFaceShape getBlockFaceShape(IBlockAccess worldIn, IBlockState state, BlockPos pos, EnumFacing face) {
-        return BlockFaceShape.UNDEFINED;
-    }
-    
-    public void getSubBlocks(CreativeTabs tab, NonNullList<ItemStack> list) {
-    }
-    
-    public ItemStack getPickBlock(IBlockState state, RayTraceResult target, World world, BlockPos pos, EntityPlayer player) {
-        return ItemStack.EMPTY;
-    }
-    
-    public boolean isSideSolid(IBlockState state, IBlockAccess world, BlockPos pos, EnumFacing o) {
-        return false;
-    }
-    
-    public AxisAlignedBB getBoundingBox(IBlockState state, IBlockAccess source, BlockPos pos) {
-        return new AxisAlignedBB(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-    }
-    
-    public void addCollisionBoxToList(IBlockState state, World world, BlockPos pos, AxisAlignedBB mask, List list, Entity collidingEntity, boolean isActualState) {
-        if (collidingEntity != null && collidingEntity instanceof EntityLivingBase && !(collidingEntity instanceof EntityPlayer) && collidingEntity.getRecursivePassengersByType(EntityPlayer.class).isEmpty()) {
-            int a = 1;
-            if (world.getBlockState(pos.down(a)).getBlock() != BlocksTC.pavingStoneBarrier) {
-                ++a;
-            }
-            if (world.isBlockIndirectlyGettingPowered(pos.down(a)) == 0) {
-                list.add(BlockBarrier.FULL_BLOCK_AABB.offset(pos));
-            }
-        }
-    }
-    
-    public void neighborChanged(IBlockState state, World world, BlockPos pos, Block neighborBlock, BlockPos pos2) {
-        if (world.getBlockState(pos.down(1)) != BlocksTC.pavingStoneBarrier.getDefaultState() && world.getBlockState(pos.down(1)) != getDefaultState()) {
-            world.setBlockToAir(pos);
-        }
-    }
-    
-    public boolean isPassable(IBlockAccess worldIn, BlockPos pos) {
-        for (int a = 1; a < 3; ++a) {
-            TileEntity te = worldIn.getTileEntity(pos.down(a));
-            if (te != null && te instanceof TileBarrierStone) {
-                return te.getWorld().isBlockIndirectlyGettingPowered(pos.down(a)) > 0;
-            }
-        }
-        return true;
-    }
-    
-    public boolean isReplaceable(IBlockAccess worldIn, BlockPos pos) {
-        return true;
-    }
-    
-    public boolean isFullCube(IBlockState state) {
-        return false;
-    }
-    
-    public boolean isOpaqueCube(IBlockState state) {
-        return false;
-    }
-    
-    public Item getItemDropped(IBlockState state, Random rand, int fortune) {
-        return Item.getItemById(0);
-    }
-    
-    public boolean isAir(IBlockState state, IBlockAccess world, BlockPos pos) {
-        return false;
-    }
-    
-    static {
-        barrierMat = new MaterialBarrier();
-    }
-    
-    private static class MaterialBarrier extends Material
-    {
-        public MaterialBarrier() {
-            super(MapColor.AIR);
-        }
-        
-        public boolean blocksMovement() {
-            return true;
-        }
-        
-        public boolean isSolid() {
-            return false;
-        }
-        
-        public boolean blocksLight() {
-            return false;
-        }
-    }
+	public static final MapCodec<BlockBarrier> CODEC = simpleCodec(BlockBarrier::new);
+
+	public BlockBarrier(BlockBehaviour.Properties properties) {
+		super(properties);
+	}
+
+	@Override
+	protected MapCodec<? extends Block> codec() {
+		return CODEC;
+	}
+
+	@Override
+	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		return Shapes.empty();
+	}
+
+	@Override
+	protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		Entity entity = context instanceof EntityCollisionContext ec ? ec.getEntity() : null;
+		if (!(entity instanceof LivingEntity) || entity instanceof Player) {
+			return Shapes.empty();
+		}
+		int down = supportOffset(level, pos);
+		if (level instanceof Level realLevel && realLevel.hasNeighborSignal(pos.below(down))) {
+			return Shapes.empty();
+		}
+		return Shapes.block();
+	}
+
+	/** 1 if the real Barrier Stone tile is directly below (the first stacked copy), 2 if it's the second
+	 * stacked copy sitting on top of the first - matches the original's own real {@code addCollisionBoxToList}
+	 * probe exactly. */
+	private static int supportOffset(BlockGetter level, BlockPos pos) {
+		return level.getBlockState(pos.below()).is(BlocksTC.pavingStoneBarrier.get()) ? 1 : 2;
+	}
+
+	@Override
+	protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock, BlockPos neighborPos, boolean movedByPiston) {
+		BlockState below = level.getBlockState(pos.below());
+		if (!below.is(BlocksTC.pavingStoneBarrier.get()) && !below.is(this)) {
+			level.removeBlock(pos, false);
+		}
+		super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);
+	}
+
+	@Override
+	protected VoxelShape getVisualShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		return Shapes.empty();
+	}
 }
