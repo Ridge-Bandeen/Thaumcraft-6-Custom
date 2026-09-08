@@ -322,6 +322,7 @@ sourceSets {
             include 'thaumcraft/client/render/TileCrucibleRenderer.java'
             include 'thaumcraft/client/render/TileAlembicRenderer.java'
             include 'thaumcraft/client/render/TileDioptraRenderer.java'
+            include 'thaumcraft/client/render/TileHungryChestRenderer.java'
             include 'thaumcraft/common/entities/monster/tainted/EntityTaintCrawler.java'
             include 'thaumcraft/client/render/RenderTaintCrawler.java'
             include 'thaumcraft/common/entities/monster/tainted/EntityTaintSwarm.java'
