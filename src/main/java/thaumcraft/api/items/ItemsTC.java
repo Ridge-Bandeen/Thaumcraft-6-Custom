@@ -178,20 +178,21 @@ public final class ItemsTC {
 	 * {@code data/thaumcraft/recipe/mechanism_simple.json} - plate_brass+plate_iron+a stick - and
 	 * {@code mechanism_complex.json} - mechanism_simple wrapped in plate_thaumium around a vanilla piston).
 	 * {@link #plateIron}'s own real recipe closed right after, so the whole chain is genuinely reachable end
-	 * to end now. {@code plateVoid}/{@code mindClockwork}/{@code mindBiothaumic}/{@code moduleVision} still
-	 * have no real recipe - each needs its own real multi-ingredient device-assembly recipe, a different,
-	 * larger task. */
+	 * to end now. {@link #plateVoid} got its own real recipe too, once {@link #ingotVoid}'s chain existed to
+	 * feed it (see its own doc comment). {@code mindClockwork}/{@code mindBiothaumic}/{@code moduleVision}
+	 * still have no real recipe - each needs its own real multi-ingredient device-assembly recipe, a
+	 * different, larger task. */
 	public static final DeferredItem<Item> mechanismSimple =
 			ITEMS.registerSimpleItem("mechanism_simple");
 
 	/** See {@link #mechanismSimple}'s own doc comment - both got real recipes this pass. Unblocks the
-	 * Condenser's own real recipe (see {@code data/thaumcraft/recipe/condenser.json}) and the Stabilizer's
-	 * (see {@code data/thaumcraft/recipe/stabilizer.json}). The Void Siphon's own real recipe also uses it but
-	 * stays genuinely blocked on {@code metalBlockVoid} (never ported); Arcane Bore's own turret-placer recipe
-	 * uses it too, but that whole 3-item turret-placer family
-	 * ({@link thaumcraft.common.entities.construct.ItemTurretPlacer}) has no recipe of any kind yet - its own
-	 * real base recipe needs a golem {@code mind} item, never ported this session, a genuine forced gap this
-	 * ingredient alone doesn't clear. Neither chased down this pass. */
+	 * Condenser's own real recipe (see {@code data/thaumcraft/recipe/condenser.json}), the Stabilizer's
+	 * (see {@code data/thaumcraft/recipe/stabilizer.json}), and - once {@link #ingotVoid}'s own chain closed
+	 * {@code metalBlockVoid} right after - the Void Siphon's too (see
+	 * {@code data/thaumcraft/recipe/void_siphon.json}). Arcane Bore's own turret-placer recipe uses it too,
+	 * but that whole 3-item turret-placer family ({@link thaumcraft.common.entities.construct.ItemTurretPlacer})
+	 * has no recipe of any kind yet - its own real base recipe needs a golem {@code mind} item, never ported
+	 * this session, a genuine forced gap this ingredient alone doesn't clear. Not chased down this pass. */
 	public static final DeferredItem<Item> mechanismComplex =
 			ITEMS.registerSimpleItem("mechanism_complex");
 
@@ -222,6 +223,9 @@ public final class ItemsTC {
 	public static final DeferredItem<Item> plateIron =
 			ITEMS.registerSimpleItem("plate_iron");
 	// plateThaumium already registered above (see ingotThaumium's own section) - reused here as-is.
+
+	/** Real recipe now (see {@code data/thaumcraft/recipe/plate_void.json}) - same plain 3-ingot-row shape as
+	 * every other plate tier, batching {@link #ingotVoid}. */
 	public static final DeferredItem<Item> plateVoid =
 			ITEMS.registerSimpleItem("plate_void");
 	public static final DeferredItem<Item> mindClockwork =
@@ -544,6 +548,19 @@ public final class ItemsTC {
 
 	public static final DeferredItem<BlockItem> metalBlockBrass =
 			ITEMS.registerSimpleBlockItem("metal_block_brass", BlocksTC.metalBlockBrass);
+
+	/** Void - the mod's Eldritch-tier metal, obtained by dissolving a {@link #voidSeed} (a real, already-
+	 * obtainable {@code EntityFluxRift} collapse drop) in a Crucible with metal+flux aspects, gated on the
+	 * real {@code BASEELDRITCH} research. See {@code data/thaumcraft/recipe/ingot_void.json}. Just the raw
+	 * material chain this pass (ingot/block/plate, matching {@link #ingotThaumium}'s own precedent - no
+	 * nugget, same "not needed by anything real yet" call already made for {@code nuggetVoid}). Unblocks the
+	 * Void Siphon's own real recipe ({@code data/thaumcraft/recipe/void_siphon.json}); tools/armor and the
+	 * Essentia Smelter's own Void tier both still need their own separate, larger work. */
+	public static final DeferredItem<Item> ingotVoid =
+			ITEMS.registerSimpleItem("ingot_void");
+
+	public static final DeferredItem<BlockItem> metalBlockVoid =
+			ITEMS.registerSimpleBlockItem("metal_block_void", BlocksTC.metalBlockVoid);
 
 	/** {@code ThaumcraftMaterials.TOOLMAT_THAUMIUM} from the original: harvest level 3 (diamond-equivalent -
 	 * modern Minecraft has no numeric harvest level any more, blocks are gated by a "can't be harvested by"

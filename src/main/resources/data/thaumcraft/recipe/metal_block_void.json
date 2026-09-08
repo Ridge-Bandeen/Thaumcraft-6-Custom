@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "###",
+    "###",
+    "###"
+  ],
+  "key": {
+    "#": { "item": "thaumcraft:ingot_void" }
+  },
+  "result": { "id": "thaumcraft:metal_block_void", "count": 1 }
+}

@@ -8,11 +8,11 @@
     "vacuos": 100,
     "fabrico": 50
   },
-  "central": { "item": "thaumcraft:metal_block_thaumium" },
+  "central": { "item": "thaumcraft:metal_block_void" },
   "components": [
     { "item": "thaumcraft:stone_arcane" },
     { "item": "thaumcraft:stone_arcane" },
-    { "item": "thaumcraft:mechanism_simple" },
+    { "item": "thaumcraft:mechanism_complex" },
     { "item": "thaumcraft:plate_brass" },
     { "item": "thaumcraft:plate_brass" },
     { "item": "minecraft:nether_star" }

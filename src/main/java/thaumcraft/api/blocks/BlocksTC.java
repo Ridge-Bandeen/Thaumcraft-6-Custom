@@ -380,6 +380,12 @@ public final class BlocksTC {
 			Block::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_ORANGE).strength(5.0f, 6.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
+	/** Storage block for Void ingots - see {@link thaumcraft.api.items.ItemsTC#ingotVoid}'s own doc comment
+	 * for the real raw-material chain this closes. Same shape as {@link #metalBlockThaumium}. */
+	public static final DeferredBlock<Block> metalBlockVoid = BLOCKS.registerBlock("metal_block_void",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(5.0f, 6.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
+
 	/** A redstone-triggered vis store, no tile entity - see {@link thaumcraft.common.blocks.devices.BlockVisBattery}'s
 	 * own doc comment for the full scheduled-tick cycle. Light level tracks its CHARGE property directly, same
 	 * as the original computed it from meta. */
