@@ -72,6 +72,12 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> golemBuilder =
 			ITEMS.registerSimpleBlockItem("golem_builder", BlocksTC.golemBuilder);
 
+	public static final DeferredItem<BlockItem> tableWood =
+			ITEMS.registerSimpleBlockItem("table_wood", BlocksTC.tableWood);
+
+	public static final DeferredItem<BlockItem> tableStone =
+			ITEMS.registerSimpleBlockItem("table_stone", BlocksTC.tableStone);
+
 	public static final DeferredItem<BlockItem> oreQuartz =
 			ITEMS.registerSimpleBlockItem("ore_quartz", BlocksTC.oreQuartz);
 
@@ -167,9 +173,29 @@ public final class ItemsTC {
 	 * they craft into. Plain items, same as the original ({@code ItemTCBase} with metadata subtypes, split
 	 * into separate items here matching every other metadata-variant item this port has ported). No real
 	 * recipes yet - shipped as real, obtainable-in-creative components first, matching the precedent
-	 * already set for {@link #amber} and others (ship the item, the recipe chain is real follow-up work). */
+	 * already set for {@link #amber} and others (ship the item, the recipe chain is real follow-up work).
+	 * {@link #plateBrass} is the one exception - its own real raw-material chain (ingot/nugget/block/plate)
+	 * is now real, see {@link #ingotBrass}'s own doc comment; {@code mechanismSimple}/{@code plateIron}/
+	 * {@code plateVoid}/{@code mindClockwork}/{@code mindBiothaumic}/{@code moduleVision} still have no real
+	 * recipe - each needs its own real multi-ingredient device-assembly recipe, a different, larger task. */
 	public static final DeferredItem<Item> mechanismSimple =
 			ITEMS.registerSimpleItem("mechanism_simple");
+
+	/** Brass - real raw-material chain closed this pass (ingot/nugget/block/plate, matching
+	 * {@link #ingotThaumium}'s own real precedent exactly). Real, load-bearing gap this closes: the already-
+	 * real {@code data/thaumcraft/research/alchemy.json}'s own METALLURGY research node already references a
+	 * real {@code thaumcraft:brassingot} recipe (its own stage-1 recipe list) - that recipe never existed
+	 * until now, so {@link #plateBrass} (needed by several already-shipped devices' own real recipes -
+	 * Potion Sprayer, Void Siphon, the Charm of Undying infusion, Tube Filter/Restrict, Arcane Ear) was
+	 * genuinely unobtainable in survival before this. See {@code data/thaumcraft/recipe/brassingot.json} -
+	 * a real Crucible recipe (iron ingot + 5 real Instrumentum, matching the original's own real formula)
+	 * gated on the real METALLURGY research, same shape {@code ingot_thaumium.json} already established. */
+	public static final DeferredItem<Item> ingotBrass =
+			ITEMS.registerSimpleItem("ingot_brass");
+
+	public static final DeferredItem<Item> nuggetBrass =
+			ITEMS.registerSimpleItem("nugget_brass");
+
 	public static final DeferredItem<Item> plateBrass =
 			ITEMS.registerSimpleItem("plate_brass");
 	public static final DeferredItem<Item> plateIron =
@@ -429,6 +455,9 @@ public final class ItemsTC {
 
 	public static final DeferredItem<BlockItem> metalBlockThaumium =
 			ITEMS.registerSimpleBlockItem("metal_block_thaumium", BlocksTC.metalBlockThaumium);
+
+	public static final DeferredItem<BlockItem> metalBlockBrass =
+			ITEMS.registerSimpleBlockItem("metal_block_brass", BlocksTC.metalBlockBrass);
 
 	/** {@code ThaumcraftMaterials.TOOLMAT_THAUMIUM} from the original: harvest level 3 (diamond-equivalent -
 	 * modern Minecraft has no numeric harvest level any more, blocks are gated by a "can't be harvested by"

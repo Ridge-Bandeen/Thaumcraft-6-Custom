@@ -416,7 +416,10 @@ public class ThaumcraftGameTests {
 				"candle_orange", "candle_pink", "candle_purple", "candle_red", "candle_silver", "candle_yellow",
 				"phial", "label",
 				"flesh_block", "rotten_flesh_from_block", "sanity_soap",
-				"arcane_workbench_charger", "tube_filter", "tube_restrict"
+				"arcane_workbench_charger", "tube_filter", "tube_restrict",
+				"brassingot", "nugget_brass", "ingot_brass_from_nuggets",
+				"metal_block_brass", "ingot_brass_from_block", "plate_brass",
+				"table_wood", "table_stone"
 		};
 		// loot_bag_common/uncommon/rare have no crafting recipe (mob-drop only, matching the original) so
 		// they aren't in expectedIds above - their loot tables are exercised directly instead, see
@@ -774,6 +777,85 @@ public class ThaumcraftGameTests {
 		boolean foundThaumium = ejected.stream().anyMatch(e -> e.getItem().is(ItemsTC.ingotThaumium.get()));
 		helper.assertTrue(foundThaumium, "completing ingot_thaumium should have ejected a thaumcraft:ingot_thaumium item near the crucible, found: "
 				+ ejected.stream().map(e -> e.getItem().toString()).toList());
+		helper.succeed();
+	}
+
+	/**
+	 * Brass - real regression coverage for the material chain's actual root, same shape as the Thaumium test
+	 * above. Real, load-bearing: the already-real METALLURGY research node references this exact recipe id
+	 * ({@code thaumcraft:brassingot}) in its own stage-1 recipe list - see {@code ItemsTC.ingotBrass}'s own
+	 * doc comment for the full real gap this closed (several already-shipped devices' own real recipes need
+	 * a real Brass Plate, which needs a real Brass Ingot to exist at all).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleCompletesTheBrassIngotRecipe(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		TileCrucible crucible = placeActiveCrucible(helper, pos);
+		crucible.setAspects(new AspectList().add(Aspect.TOOL, 5));
+
+		ItemStack catalyst = new ItemStack(Items.IRON_INGOT);
+		ItemStack remainder = crucible.attemptSmelt(catalyst, helper.getLevel());
+
+		helper.assertTrue(remainder.getCount() == 0, "the iron ingot catalyst should have been fully consumed");
+
+		BlockPos absolute = helper.absolutePos(pos);
+		List<ItemEntity> ejected = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0));
+		boolean foundBrass = ejected.stream().anyMatch(e -> e.getItem().is(thaumcraft.api.items.ItemsTC.ingotBrass.get()));
+		helper.assertTrue(foundBrass, "completing brassingot should have ejected a thaumcraft:ingot_brass item near the crucible, found: "
+				+ ejected.stream().map(e -> e.getItem().toString()).toList());
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.blocks.basic.BlockTable}'s own real Wood Table upgrade -
+	 * right-clicking it with a real scribing tool should really replace it with a real Research Table,
+	 * carrying the scribing tool into the new tile's own slot 0. The Stone Table has no such upgrade,
+	 * matching the original's own real hardcoded "wood variant only" check.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void woodTableUpgradesIntoARealResearchTableWithAScribingTool(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.tableWood.get());
+		BlockPos abs = helper.absolutePos(pos);
+		ServerLevel level = helper.getLevel();
+
+		ServerPlayer player = spawnCasterAt(helper, abs.above());
+		ItemStack scribingTools = new ItemStack(thaumcraft.api.items.ItemsTC.scribingTools.get());
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, scribingTools);
+
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(abs);
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(abs), net.minecraft.core.Direction.UP, abs, false);
+		state.useItemOn(scribingTools, level, player, hand, hit);
+
+		helper.assertTrue(level.getBlockState(abs).is(thaumcraft.api.blocks.BlocksTC.researchTable.get()),
+				"right-clicking a real Wood Table with a real scribing tool should really upgrade it into a real Research Table");
+		helper.assertTrue(level.getBlockEntity(abs) instanceof thaumcraft.common.tiles.crafting.TileResearchTable tile
+						&& tile.getItemHandler().getStackInSlot(0).is(thaumcraft.api.items.ItemsTC.scribingTools.get()),
+				"the real scribing tool should really carry over into the new Research Table's own slot 0");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void stoneTableDoesNotUpgradeWithAScribingTool(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.tableStone.get());
+		BlockPos abs = helper.absolutePos(pos);
+		ServerLevel level = helper.getLevel();
+
+		ServerPlayer player = spawnCasterAt(helper, abs.above());
+		ItemStack scribingTools = new ItemStack(thaumcraft.api.items.ItemsTC.scribingTools.get());
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, scribingTools);
+
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(abs);
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(abs), net.minecraft.core.Direction.UP, abs, false);
+		state.useItemOn(scribingTools, level, player, hand, hit);
+
+		helper.assertTrue(level.getBlockState(abs).is(thaumcraft.api.blocks.BlocksTC.tableStone.get()),
+				"a real Stone Table should really never upgrade, matching the original's own real wood-only check");
 		helper.succeed();
 	}
 

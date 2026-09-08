@@ -59,6 +59,7 @@ sourceSets {
             include 'thaumcraft/common/container/PechMenu.java'
             include 'thaumcraft/client/gui/GuiPechTrade.java'
             include 'thaumcraft/common/blocks/basic/BlockPavingStoneTravel.java'
+            include 'thaumcraft/common/blocks/basic/BlockTable.java'
             include 'thaumcraft/common/blocks/basic/BlockCandle.java'
             include 'thaumcraft/common/blocks/misc/BlockNitor.java'
             include 'thaumcraft/common/items/consumables/ItemPhial.java'

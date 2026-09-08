@@ -51,6 +51,18 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.crafting.BlockResearchTable::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD).noOcclusion());
 
+	/** See {@link thaumcraft.common.blocks.basic.BlockTable}'s own doc comment - right-clicking this one with
+	 * a real scribing tool upgrades it in place into a real {@link #researchTable}. */
+	public static final DeferredBlock<thaumcraft.common.blocks.basic.BlockTable> tableWood = BLOCKS.registerBlock("table_wood",
+			thaumcraft.common.blocks.basic.BlockTable::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD).noOcclusion());
+
+	/** Purely decorative - see {@link thaumcraft.common.blocks.basic.BlockTable}'s own doc comment for why
+	 * only the wood variant has the real research-table upgrade. */
+	public static final DeferredBlock<thaumcraft.common.blocks.basic.BlockTable> tableStone = BLOCKS.registerBlock("table_stone",
+			thaumcraft.common.blocks.basic.BlockTable::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.5f).sound(SoundType.STONE).noOcclusion());
+
 	/** See {@code TileGolemBuilder}/{@code BlockGolemBuilder}'s own doc comments. */
 	public static final DeferredBlock<thaumcraft.common.blocks.crafting.BlockGolemBuilder> golemBuilder = BLOCKS.registerBlock("golem_builder",
 			thaumcraft.common.blocks.crafting.BlockGolemBuilder::new,
@@ -346,6 +358,12 @@ public final class BlocksTC {
 	public static final DeferredBlock<Block> metalBlockThaumium = BLOCKS.registerBlock("metal_block_thaumium",
 			Block::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE).strength(5.0f, 6.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
+
+	/** Storage block for Brass ingots - see {@link thaumcraft.api.items.ItemsTC#ingotBrass}'s own doc comment
+	 * for the real raw-material chain this closes. Same shape as {@link #metalBlockThaumium}. */
+	public static final DeferredBlock<Block> metalBlockBrass = BLOCKS.registerBlock("metal_block_brass",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_ORANGE).strength(5.0f, 6.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
 	/** A redstone-triggered vis store, no tile entity - see {@link thaumcraft.common.blocks.devices.BlockVisBattery}'s
 	 * own doc comment for the full scheduled-tick cycle. Light level tracks its CHARGE property directly, same
