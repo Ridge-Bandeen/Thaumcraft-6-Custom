@@ -4235,6 +4235,139 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	// --------------------------------------------------------------------------------------------------
+	// Smelter Aux/Vent + real Bellows integration - restored while reviewing this port's own "dead/blocked"
+	// candidates (see BlockSmelterAux/TileSmelter's own doc comments and the port-tracking memory for the
+	// fuller review). Real second essentia output point (aux), real bellows speed boost, and a placement
+	// restriction test covering the shared canSurvive rule both auxiliary blocks use.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void smelterAuxAndVentCanOnlyBePlacedAgainstARealSmelterNonFacingSide(GameTestHelper helper) {
+		BlockPos smelterPos = new BlockPos(2, 2, 2);
+		helper.setBlock(smelterPos, BlocksTC.smelter.get()); // defaults to facing NORTH
+		net.minecraft.world.level.Level level = helper.getLevel();
+
+		// East/south/west are real non-facing sides - a real attachment there should survive.
+		for (net.minecraft.core.Direction side : new net.minecraft.core.Direction[] {
+				net.minecraft.core.Direction.EAST, net.minecraft.core.Direction.SOUTH, net.minecraft.core.Direction.WEST }) {
+			BlockPos attachPos = helper.absolutePos(smelterPos.relative(side));
+			net.minecraft.world.level.block.state.BlockState auxState = BlocksTC.smelterAux.get().defaultBlockState()
+					.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, side.getOpposite());
+			helper.assertTrue(auxState.canSurvive(level, attachPos), "a real smelterAux on the smelter's real " + side + " side should survive");
+			net.minecraft.world.level.block.state.BlockState ventState = BlocksTC.smelterVent.get().defaultBlockState()
+					.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, side.getOpposite());
+			helper.assertTrue(ventState.canSurvive(level, attachPos), "a real smelterVent on the smelter's real " + side + " side should survive");
+		}
+
+		// North is the smelter's own facing ("door") side - a real attachment there should NOT survive.
+		BlockPos frontPos = helper.absolutePos(smelterPos.relative(net.minecraft.core.Direction.NORTH));
+		net.minecraft.world.level.block.state.BlockState auxAtFront = BlocksTC.smelterAux.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, net.minecraft.core.Direction.SOUTH);
+		helper.assertFalse(auxAtFront.canSurvive(level, frontPos), "a smelterAux on the smelter's own facing side should NOT survive");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void smelterAuxProvidesARealSecondSimultaneousEssentiaOutputPoint(GameTestHelper helper) {
+		BlockPos smelterPos = new BlockPos(2, 2, 2);
+		helper.setBlock(smelterPos, BlocksTC.smelter.get()); // facing NORTH
+
+		// Attach a real smelterAux on the east side, facing back (west) at the smelter, and stack a real
+		// alembic above the AUX block instead of above the smelter itself - proves this specific output path.
+		BlockPos auxPos = smelterPos.relative(net.minecraft.core.Direction.EAST);
+		helper.setBlock(auxPos, BlocksTC.smelterAux.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, net.minecraft.core.Direction.WEST));
+		BlockPos alembicPos = auxPos.above();
+		helper.setBlock(alembicPos, BlocksTC.alembic.get());
+
+		thaumcraft.common.tiles.essentia.TileSmelter smelter = helper.getBlockEntity(smelterPos);
+		smelter.setItem(0, new ItemStack(Items.IRON_INGOT));
+		smelter.setItem(1, new ItemStack(Items.COAL));
+		thaumcraft.common.tiles.essentia.TileAlembic alembic = helper.getBlockEntity(alembicPos);
+
+		BlockPos smelterAbs = helper.absolutePos(smelterPos);
+		net.minecraft.world.level.block.state.BlockState smelterState = helper.getBlockState(smelterPos);
+		for (int i = 0; i < 400; i++) {
+			thaumcraft.common.tiles.essentia.TileSmelter.tick(helper.getLevel(), smelterAbs, smelterState, smelter);
+		}
+
+		helper.assertTrue(smelter.getItem(0).isEmpty(), "the input item should have been consumed once smelted");
+		helper.assertTrue(alembic.getEssentiaAmount(net.minecraft.core.Direction.UP) > 0,
+				"the alembic above the real smelterAux (not above the smelter itself) should have received real essentia, found " + alembic.getEssentiaAmount(net.minecraft.core.Direction.UP));
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void bellowsOnASmelterRealSpeedUpTheSmelt(GameTestHelper helper) {
+		BlockPos plainPos = new BlockPos(2, 2, 2);
+		BlockPos boostedPos = new BlockPos(2, 2, 8);
+		helper.setBlock(plainPos, BlocksTC.smelter.get());
+		helper.setBlock(boostedPos, BlocksTC.smelter.get());
+
+		// 3 real enabled bellows on all 3 of the boosted smelter's non-facing sides, each facing back at it.
+		for (net.minecraft.core.Direction side : new net.minecraft.core.Direction[] {
+				net.minecraft.core.Direction.EAST, net.minecraft.core.Direction.SOUTH, net.minecraft.core.Direction.WEST }) {
+			helper.setBlock(boostedPos.relative(side), BlocksTC.bellows.get().defaultBlockState()
+					.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, side.getOpposite())
+					.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED, true));
+		}
+
+		thaumcraft.common.tiles.essentia.TileSmelter plain = helper.getBlockEntity(plainPos);
+		plain.setItem(0, new ItemStack(Items.IRON_INGOT));
+		plain.setItem(1, new ItemStack(Items.COAL));
+		thaumcraft.common.tiles.essentia.TileSmelter boosted = helper.getBlockEntity(boostedPos);
+		boosted.setItem(0, new ItemStack(Items.IRON_INGOT));
+		boosted.setItem(1, new ItemStack(Items.COAL));
+
+		BlockPos plainAbs = helper.absolutePos(plainPos);
+		BlockPos boostedAbs = helper.absolutePos(boostedPos);
+		net.minecraft.world.level.block.state.BlockState plainState = helper.getBlockState(plainPos);
+		net.minecraft.world.level.block.state.BlockState boostedState = helper.getBlockState(boostedPos);
+
+		int plainTicksToConsume = -1;
+		int boostedTicksToConsume = -1;
+		for (int i = 0; i < 400; i++) {
+			thaumcraft.common.tiles.essentia.TileSmelter.tick(helper.getLevel(), plainAbs, plainState, plain);
+			thaumcraft.common.tiles.essentia.TileSmelter.tick(helper.getLevel(), boostedAbs, boostedState, boosted);
+			if (plainTicksToConsume < 0 && plain.getItem(0).isEmpty()) plainTicksToConsume = i;
+			if (boostedTicksToConsume < 0 && boosted.getItem(0).isEmpty()) boostedTicksToConsume = i;
+		}
+
+		helper.assertTrue(plainTicksToConsume > 0, "the unboosted smelter should have finished smelting within the test window");
+		helper.assertTrue(boostedTicksToConsume > 0, "the bellows-boosted smelter should have finished smelting within the test window");
+		helper.assertTrue(boostedTicksToConsume < plainTicksToConsume,
+				"3 real bellows should really speed up the smelt (boosted=" + boostedTicksToConsume + " ticks, unboosted=" + plainTicksToConsume + " ticks)");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void smelterWithNoVentStillCompletesRepeatedSmeltsWithoutHanging(GameTestHelper helper) {
+		// Regression guard for the true original's own apparent infinite-loop bug (see TileSmelter#ventOrPollute's
+		// own doc comment) - no smelterVent anywhere nearby, so every flux unit generated across many real
+		// smelts must fall back to direct aura pollution instead of retrying forever. A hang here would freeze
+		// this whole test (and the GameTest server run), not just fail an assertion.
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.smelter.get());
+		thaumcraft.common.tiles.essentia.TileSmelter smelter = helper.getBlockEntity(pos);
+		BlockPos abs = helper.absolutePos(pos);
+		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(pos);
+
+		int completedSmelts = 0;
+		for (int i = 0; i < 4000; i++) {
+			if (smelter.getItem(0).isEmpty()) {
+				if (completedSmelts >= 5) break;
+				smelter.setItem(0, new ItemStack(Items.IRON_INGOT));
+				smelter.setItem(1, new ItemStack(Items.COAL));
+				completedSmelts++;
+			}
+			thaumcraft.common.tiles.essentia.TileSmelter.tick(helper.getLevel(), abs, state, smelter);
+		}
+
+		helper.assertTrue(completedSmelts >= 5, "should have cycled through several real smelts (with real flux-prone efficiency loss) without ever hanging, completed " + completedSmelts);
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void alembicCanBeLabelledToOneAspectAndCleared(GameTestHelper helper) {
 		BlockPos pos = new BlockPos(2, 2, 2);

@@ -727,6 +727,12 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> bellows =
 			ITEMS.registerSimpleBlockItem("bellows", BlocksTC.bellows);
 
+	public static final DeferredItem<BlockItem> smelterAux =
+			ITEMS.registerSimpleBlockItem("smelter_aux", BlocksTC.smelterAux);
+
+	public static final DeferredItem<BlockItem> smelterVent =
+			ITEMS.registerSimpleBlockItem("smelter_vent", BlocksTC.smelterVent);
+
 	/** See {@link thaumcraft.common.blocks.devices.BlockMirrorItem}'s own doc comment - a custom
 	 * {@code BlockItem} rather than {@code registerSimpleBlockItem}, since it doubles as its own linking
 	 * tool. */

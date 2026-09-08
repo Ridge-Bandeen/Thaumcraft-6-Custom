@@ -1,106 +1,87 @@
 package thaumcraft.common.blocks.essentia;
-import java.util.ArrayList;
-import net.minecraft.block.Block;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.properties.IProperty;
-import net.minecraft.block.state.BlockFaceShape;
-import net.minecraft.block.state.BlockStateContainer;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import thaumcraft.common.blocks.BlockTC;
-import thaumcraft.common.blocks.IBlockFacingHorizontal;
-import thaumcraft.common.lib.utils.BlockStateUtils;
 
+import java.util.Map;
+import javax.annotation.Nullable;
 
-public class BlockSmelterVent extends BlockTC implements IBlockFacingHorizontal
-{
-    public BlockSmelterVent() {
-        super(Material.IRON, "smelter_vent");
-        setSoundType(SoundType.METAL);
-        setDefaultState(blockState.getBaseState().withProperty((IProperty)IBlockFacingHorizontal.FACING, (Comparable)EnumFacing.NORTH));
-        setHardness(1.0f);
-        setResistance(10.0f);
-    }
-    
-    public boolean rotateBlock(World world, BlockPos pos, EnumFacing axis) {
-        return false;
-    }
-    
-    public boolean canHarvestBlock(IBlockAccess world, BlockPos pos, EntityPlayer player) {
-        return true;
-    }
-    
-    public BlockFaceShape getBlockFaceShape(IBlockAccess worldIn, IBlockState state, BlockPos pos, EnumFacing face) {
-        return BlockFaceShape.UNDEFINED;
-    }
-    
-    @Override
-    public int damageDropped(IBlockState state) {
-        return 0;
-    }
-    
-    public void onBlockAdded(World worldIn, BlockPos pos, IBlockState state) {
-    }
-    
-    public boolean canPlaceBlockOnSide(World worldIn, BlockPos pos, EnumFacing side) {
-        return super.canPlaceBlockOnSide(worldIn, pos, side) && side.getAxis().isHorizontal() && worldIn.getBlockState(pos.offset(side.getOpposite())).getBlock() instanceof BlockSmelter && BlockStateUtils.getFacing(worldIn.getBlockState(pos.offset(side.getOpposite()))) != side;
-    }
-    
-    public IBlockState getStateForPlacement(World worldIn, BlockPos pos, EnumFacing facing, float hitX, float hitY, float hitZ, int meta, EntityLivingBase placer) {
-        IBlockState bs = getDefaultState();
-        if (!facing.getAxis().isHorizontal()) {
-            facing = EnumFacing.NORTH;
-        }
-        bs = bs.withProperty((IProperty)IBlockFacingHorizontal.FACING, (Comparable)facing.getOpposite());
-        return bs;
-    }
-    
-    public IBlockState getStateFromMeta(int meta) {
-        IBlockState bs = getDefaultState();
-        bs = bs.withProperty((IProperty)IBlockFacingHorizontal.FACING, (Comparable)EnumFacing.getHorizontal(BlockStateUtils.getFacing(meta).getHorizontalIndex()));
-        return bs;
-    }
-    
-    public int getMetaFromState(IBlockState state) {
-        return 0x0 | ((EnumFacing)state.getValue((IProperty)IBlockFacingHorizontal.FACING)).getIndex();
-    }
-    
-    protected BlockStateContainer createBlockState() {
-        ArrayList<IProperty> ip = new ArrayList<IProperty>();
-        ip.add(IBlockFacingHorizontal.FACING);
-        return (ip.size() == 0) ? super.createBlockState() : new BlockStateContainer(this, ip.toArray(new IProperty[ip.size()]));
-    }
-    
-    public boolean isOpaqueCube(IBlockState state) {
-        return false;
-    }
-    
-    public boolean isFullCube(IBlockState state) {
-        return false;
-    }
-    
-    public AxisAlignedBB getBoundingBox(IBlockState state, IBlockAccess source, BlockPos pos) {
-        EnumFacing facing = BlockStateUtils.getFacing(state);
-        switch (facing.ordinal()) {
-            default: {
-                return new AxisAlignedBB(0.125, 0.125, 0.0, 0.875, 0.875, 0.5);
-            }
-            case 3: {
-                return new AxisAlignedBB(0.125, 0.125, 0.5, 0.875, 0.875, 1.0);
-            }
-            case 4: {
-                return new AxisAlignedBB(0.0, 0.125, 0.125, 0.5, 0.875, 0.875);
-            }
-            case 5: {
-                return new AxisAlignedBB(0.5, 0.125, 0.125, 1.0, 0.875, 0.875);
-            }
-        }
-    }
+import com.google.common.collect.Maps;
+import com.mojang.serialization.MapCodec;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import thaumcraft.api.blocks.BlocksTC;
+
+/**
+ * Replaces the old (1.12.2) {@code BlockSmelterVent}. Same real placement restriction as
+ * {@link BlockSmelterAux} (only against a real {@link BlockSmelter}, on a non-facing side) - found and
+ * restored alongside it while reviewing this port's own "dead/blocked" candidates (see
+ * {@link thaumcraft.common.tiles.essentia.TileSmelter}'s own doc comment).
+ *
+ * Unlike aux, vent's own gameplay effect (see the true pre-port original's own {@code TileSmelter#smeltItem})
+ * turned out to be a client-only FX/sound trigger with an apparent infinite-loop bug in the decompiled
+ * source when NO vent block is present at all (an unconditioned {@code while(true)} retry with no fallback
+ * exit) - fixed, not mechanically translated, same class of correction as the earlier `.split("||")`
+ * research-gate bug fix this session: {@link thaumcraft.common.tiles.essentia.TileSmelter}'s own vent-or-pollute
+ * logic bounds each flux unit to a single roll against whatever real vent sides exist, falling back to direct
+ * aura pollution instead of retrying forever.
+ */
+public class BlockSmelterVent extends Block {
+
+	public static final MapCodec<BlockSmelterVent> CODEC = simpleCodec(BlockSmelterVent::new);
+
+	private static final Map<Direction, VoxelShape> SHAPES = Maps.newEnumMap(Direction.class);
+	static {
+		// Each shape is the half of the block nearest the smelter this vent points at (FACING), matching the
+		// true original's own per-facing AxisAlignedBB exactly (a short pipe stub flush against the smelter).
+		SHAPES.put(Direction.NORTH, Shapes.box(0.125, 0.125, 0.0, 0.875, 0.875, 0.5));
+		SHAPES.put(Direction.SOUTH, Shapes.box(0.125, 0.125, 0.5, 0.875, 0.875, 1.0));
+		SHAPES.put(Direction.WEST, Shapes.box(0.0, 0.125, 0.125, 0.5, 0.875, 0.875));
+		SHAPES.put(Direction.EAST, Shapes.box(0.5, 0.125, 0.125, 1.0, 0.875, 0.875));
+	}
+
+	public BlockSmelterVent(BlockBehaviour.Properties properties) {
+		super(properties);
+		registerDefaultState(getStateDefinition().any().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH));
+	}
+
+	@Override
+	protected MapCodec<? extends Block> codec() {
+		return CODEC;
+	}
+
+	@Override
+	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+		builder.add(BlockStateProperties.HORIZONTAL_FACING);
+	}
+
+	@Override
+	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		return SHAPES.get(state.getValue(BlockStateProperties.HORIZONTAL_FACING));
+	}
+
+	@Nullable
+	@Override
+	public BlockState getStateForPlacement(BlockPlaceContext context) {
+		Direction clicked = context.getClickedFace();
+		Direction towardSmelter = clicked.getAxis().isHorizontal() ? clicked.getOpposite() : Direction.NORTH;
+		return defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, towardSmelter);
+	}
+
+	@Override
+	protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
+		Direction towardSmelter = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
+		BlockState smelterState = level.getBlockState(pos.relative(towardSmelter));
+		return smelterState.is(BlocksTC.smelter.get())
+				&& smelterState.getValue(BlockStateProperties.HORIZONTAL_FACING) != towardSmelter.getOpposite();
+	}
 }

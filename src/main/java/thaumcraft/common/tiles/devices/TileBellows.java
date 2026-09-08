@@ -19,12 +19,20 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * used so this still behaves correctly against a modded/data-pack-changed smelting recipe with a different
  * total cook time.
  *
- * Dropped: the client-side "breathing bag" animation (a render-bounding-box-driven scale value the original
- * tracked purely for its custom TESR) and {@code getBellows} (a static "how many enabled bellows point at
- * this position" helper with no caller anywhere in the original's own shipped code - presumably meant for an
- * unbuilt multiblock furnace tier). No custom {@link net.minecraft.client.renderer.blockentity.BlockEntityRenderer}
- * for this device - same "keep the function, skip the custom renderer" precedent every device this session
- * has kept, now including its own animation.
+ * <p><b>Correction (found while reviewing this port's own "dead/blocked" candidates, see the port-tracking
+ * memory):</b> {@link #getBellows} was previously dropped here with the doc-comment claim that it "had no
+ * caller anywhere in the original's own shipped code" - false. The true pre-port original's own
+ * {@code TileSmelter#checkNeighbours} calls it directly (confirmed via
+ * {@code git show 31baee9:...TileSmelter.java}), for the real bellows speed-boost on the Smelter (see
+ * {@link thaumcraft.common.tiles.essentia.TileSmelter}'s own doc comment) - it just hadn't been wired up yet
+ * because {@code TileSmelter} was ported before this method's real caller was re-checked. Restored below,
+ * same real formula/signature as the original.
+ *
+ * <p>Dropped: the client-side "breathing bag" animation (a render-bounding-box-driven scale value the
+ * original tracked purely for its custom TESR). No custom
+ * {@link net.minecraft.client.renderer.blockentity.BlockEntityRenderer} for this device - same "keep the
+ * function, skip the custom renderer" precedent every device this session has kept, now including its own
+ * animation.
  */
 public class TileBellows extends BlockEntity {
 
@@ -52,5 +60,22 @@ public class TileBellows extends BlockEntity {
 				furnace.setChanged();
 			}
 		}
+	}
+
+	/**
+	 * How many enabled bellows, among the given candidate directions from {@code pos}, are a real
+	 * {@link TileBellows} facing back toward {@code pos}. Real direct port of the true original's own static
+	 * helper - see this class's own doc comment for why it was previously (incorrectly) dropped as dead code.
+	 */
+	public static int getBellows(Level level, BlockPos pos, Direction[] directions) {
+		int bellows = 0;
+		for (Direction dir : directions) {
+			if (level.getBlockEntity(pos.relative(dir)) instanceof TileBellows
+					&& level.getBlockState(pos.relative(dir)).getValue(BlockStateProperties.FACING) == dir.getOpposite()
+					&& level.getBlockState(pos.relative(dir)).getValue(BlockStateProperties.ENABLED)) {
+				bellows++;
+			}
+		}
+		return bellows;
 	}
 }

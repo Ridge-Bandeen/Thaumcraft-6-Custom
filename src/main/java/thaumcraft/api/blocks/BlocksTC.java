@@ -563,6 +563,16 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.devices.BlockBellows::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(1.0f).sound(SoundType.WOOD).noOcclusion());
 
+	/** See {@link thaumcraft.common.blocks.essentia.BlockSmelterAux}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockSmelterAux> smelterAux = BLOCKS.registerBlock("smelter_aux",
+			thaumcraft.common.blocks.essentia.BlockSmelterAux::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f, 10.0f).sound(SoundType.METAL).noOcclusion());
+
+	/** See {@link thaumcraft.common.blocks.essentia.BlockSmelterVent}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockSmelterVent> smelterVent = BLOCKS.registerBlock("smelter_vent",
+			thaumcraft.common.blocks.essentia.BlockSmelterVent::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f, 10.0f).sound(SoundType.METAL).noOcclusion());
+
 	/** See {@link thaumcraft.common.blocks.devices.BlockMirror}'s own doc comment - the item-transport Node
 	 * Transducer (the essentia-transport variant isn't ported this pass). */
 	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockMirror> mirror = BLOCKS.registerBlock("mirror",

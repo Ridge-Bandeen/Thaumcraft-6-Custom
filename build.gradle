@@ -89,6 +89,8 @@ sourceSets {
             include 'thaumcraft/common/blocks/essentia/BlockAlembic.java'
             include 'thaumcraft/common/tiles/essentia/TileSmelter.java'
             include 'thaumcraft/common/blocks/essentia/BlockSmelter.java'
+            include 'thaumcraft/common/blocks/essentia/BlockSmelterAux.java'
+            include 'thaumcraft/common/blocks/essentia/BlockSmelterVent.java'
             include 'thaumcraft/common/items/armor/ItemBootsTraveller.java'
             include 'thaumcraft/common/items/armor/ItemRobeArmor.java'
             include 'thaumcraft/common/blocks/world/plants/BlockPlantCinderpearl.java'
