@@ -591,6 +591,7 @@ sourceSets {
             include 'thaumcraft/common/lib/events/WarpEvents.java'
             include 'thaumcraft/common/lib/events/PassiveResearchEvents.java'
             include 'thaumcraft/common/lib/events/MobDeathDropEvents.java'
+            include 'thaumcraft/common/lib/scheduling/BlockScheduler.java'
             include 'thaumcraft/common/lib/events/GearTooltipEvents.java'
             include 'thaumcraft/common/blocks/misc/BlockPurifyingFluid.java'
             include 'thaumcraft/common/blocks/devices/BlockSpa.java'

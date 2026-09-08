@@ -1,27 +1,38 @@
 package thaumcraft.common.items.casters.foci;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.casters.FocusEffect;
 import thaumcraft.api.casters.NodeSetting;
 import thaumcraft.api.casters.Trajectory;
+import thaumcraft.common.lib.scheduling.BlockScheduler;
 
 /**
  * Replaces the old (1.12.2) {@code FocusEffectEarth}. Plain physical damage on an entity hit -
  * {@code DamageSource.causeThrownDamage} is {@link net.minecraft.world.damagesource.DamageSources#thrown}
  * now.
  *
- * Simplified: dropped the original's block-hit branch entirely (queuing a soft-enough block for gradual
- * breaking via {@code ServerEvents.addBreaker}) - same gradual-mining scheduler subsystem Focus:
- * Excavation's own doc comment explains isn't ported. Unlike Excavation, this one doesn't get an instant-
- * break substitute either - Earth's original design was "a cheap side effect of an attack focus," not a
- * dedicated mining tool the way Excavation is, so a block hit is just a no-op here, consistent with every
- * other entity-only focus in this package.
+ * Real port of the original's own block-hit branch, restored via {@link BlockScheduler#addBreaker} (this
+ * class's own doc comment previously said this branch was dropped entirely - a real, felt gameplay
+ * difference from the original that went out without a check-in; see the port-tracking memory for why it's
+ * being corrected now). Matches the original's own exact real formula, confirmed against that class's real
+ * pre-port source: a soft-enough block (hardness &lt;= {@code getDamageForDisplay(finalPower) / 25.0f}) gets
+ * queued with {@code strength=1.0f}, {@code durabilityCurrent=0.0f}, {@code durabilityMax=1.0f} - since
+ * {@code durabilityCurrent} already starts at (and stays) 0 or below, this isn't a real multi-tick grind the
+ * way Focus: Excavation's own break is; it's a real single delayed break, staggered by {@code num} ticks
+ * (via {@code delay}) so a multi-target cast doesn't break every soft block in the same tick. No FX overlay
+ * (matches the original's own real {@code fx=false}), a small real 0.1 vis cost. Earth's original design was
+ * "a cheap side effect of an attack focus," not a dedicated mining tool - the original itself never returns
+ * {@code true} for a block hit (only an entity hit ends the cast successfully), kept as-is.
  */
 public class FocusEffectEarth extends FocusEffect {
 
@@ -55,12 +66,21 @@ public class FocusEffectEarth extends FocusEffect {
 		Level level = getPackage().world;
 		if (level == null) return false;
 
-		if (!(target instanceof EntityHitResult entityHit)) return false;
+		if (target instanceof EntityHitResult entityHit) {
+			float damage = getDamageForDisplay(finalPower);
+			Entity caster = getPackage().getCaster();
+			entityHit.getEntity().hurt(level.damageSources().thrown(caster, caster), damage);
+			return true;
+		}
 
-		float damage = getDamageForDisplay(finalPower);
-		Entity caster = getPackage().getCaster();
-		entityHit.getEntity().hurt(level.damageSources().thrown(caster, caster), damage);
-		return true;
+		if (target instanceof BlockHitResult blockHit && getPackage().getCaster() instanceof Player player) {
+			BlockPos pos = blockHit.getBlockPos();
+			BlockState state = level.getBlockState(pos);
+			if (state.getDestroySpeed(level, pos) <= getDamageForDisplay(finalPower) / 25.0f) {
+				BlockScheduler.addBreaker(level, pos, state, player, false, false, 0, 1.0f, 0.0f, 1.0f, num, 0.1f);
+			}
+		}
+		return false;
 	}
 
 	@Override

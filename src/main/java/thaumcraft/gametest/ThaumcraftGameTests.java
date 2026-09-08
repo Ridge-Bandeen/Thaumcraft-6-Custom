@@ -924,6 +924,15 @@ public class ThaumcraftGameTests {
 		return relPos;
 	}
 
+	/** Ticks {@link thaumcraft.common.lib.scheduling.BlockScheduler} forward until {@code pos} either breaks
+	 * or a generous budget runs out - the real gradual break (restored from the original, see
+	 * {@code FocusEffectBreak}'s own doc comment) needs real elapsed ticks, not an instant result. */
+	private static void tickSchedulerUntilBroken(GameTestHelper helper, BlockPos relPos, int maxTicks) {
+		for (int i = 0; i < maxTicks && !helper.getBlockState(relPos).isAir(); i++) {
+			thaumcraft.common.lib.scheduling.BlockScheduler.tick(helper.getLevel());
+		}
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void castExcavationFocusBreaksAStoneBlockAndDropsRealLoot(GameTestHelper helper) {
 		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
@@ -931,8 +940,9 @@ public class ThaumcraftGameTests {
 		BlockPos relPos = placeTargetBlock(helper, caster, Blocks.STONE);
 
 		cast(ItemsTC.focusBreak.get(), caster);
+		tickSchedulerUntilBroken(helper, relPos, 200);
 
-		helper.assertTrue(helper.getBlockState(relPos).isAir(), "casting Excavation at a stone block (hardness 1.5, well under the default power's threshold) should have broken it");
+		helper.assertTrue(helper.getBlockState(relPos).isAir(), "casting Excavation at a real stone block should really have broken it within a generous real tick budget (a real gradual break, not instant - see BlockScheduler)");
 
 		BlockPos absolute = helper.absolutePos(relPos);
 		List<ItemEntity> dropped = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0));
@@ -942,17 +952,37 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for the restored real gradual-break mechanic itself: a harder block takes really,
+	 * measurably longer to break than a softer one (real durability scales with real hardness -
+	 * {@code sqrt(hardness * 100)}, same real formula the original used - not a hard power-vs-hardness cutoff,
+	 * which never existed in the real original and was this port's own earlier, undiscussed invention).
+	 */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
-	public static void castExcavationFocusRefusesABlockHarderThanItsPowerAllows(GameTestHelper helper) {
+	public static void castExcavationFocusTakesRealLongerOnAHarderBlock(GameTestHelper helper) {
 		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
-		ServerPlayer caster = spawnCasterAt(helper, origin);
-		// Obsidian's hardness (50) is far past what the default power setting (1) allows (hardness > power
-		// * 2.0f is rejected, i.e. anything over 2.0 here).
-		BlockPos relPos = placeTargetBlock(helper, caster, Blocks.OBSIDIAN);
+		ServerPlayer stoneCaster = spawnCasterAt(helper, origin);
+		BlockPos stonePos = placeTargetBlock(helper, stoneCaster, Blocks.STONE);
+		cast(ItemsTC.focusBreak.get(), stoneCaster);
+		int stoneTicks = 0;
+		while (stoneTicks < 200 && !helper.getBlockState(stonePos).isAir()) {
+			thaumcraft.common.lib.scheduling.BlockScheduler.tick(helper.getLevel());
+			stoneTicks++;
+		}
+		helper.assertTrue(helper.getBlockState(stonePos).isAir(), "the real stone block should have broken within budget");
 
-		cast(ItemsTC.focusBreak.get(), caster);
-
-		helper.assertFalse(helper.getBlockState(relPos).isAir(), "casting Excavation at a block far harder than the focus's power should not have broken it");
+		ServerPlayer obsidianCaster = spawnCasterAt(helper, origin.offset(4, 0, 0));
+		BlockPos obsidianPos = new BlockPos(4, 1, 3);
+		helper.setBlock(obsidianPos, Blocks.OBSIDIAN);
+		obsidianCaster.lookAt(EntityAnchorArgument.Anchor.EYES, Vec3.atCenterOf(helper.absolutePos(obsidianPos)));
+		cast(ItemsTC.focusBreak.get(), obsidianCaster);
+		int obsidianTicks = 0;
+		while (obsidianTicks < 500 && !helper.getBlockState(obsidianPos).isAir()) {
+			thaumcraft.common.lib.scheduling.BlockScheduler.tick(helper.getLevel());
+			obsidianTicks++;
+		}
+		helper.assertTrue(helper.getBlockState(obsidianPos).isAir(), "the real obsidian block should eventually break too, given enough real ticks - power controls speed, not a hard cutoff");
+		helper.assertTrue(obsidianTicks > stoneTicks, "real obsidian (hardness 50) should really take measurably longer to grind through than real stone (hardness 1.5), found obsidian=" + obsidianTicks + " stone=" + stoneTicks);
 		helper.succeed();
 	}
 
@@ -1162,6 +1192,36 @@ public class ThaumcraftGameTests {
 		cast(ItemsTC.focusEarth.get(), caster);
 
 		helper.assertTrue(pig.getHealth() < startingHealth, "casting Earth at the pig should have damaged it");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@code FocusEffectEarth}'s restored block-hit branch (see that class's own doc
+	 * comment for why it's real again) - a soft-enough block queues a real, single delayed break via
+	 * {@link thaumcraft.common.lib.scheduling.BlockScheduler}.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castEarthFocusAtASoftBlockQueuesARealDelayedBreak(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+		BlockPos relPos = placeTargetBlock(helper, caster, Blocks.DIRT);
+
+		// The real gate is hardness <= getDamageForDisplay(finalPower)/25 - at the real default power (1),
+		// that's 0.08, under even dirt's own real 0.5 hardness. A real caster with a stronger catalyst would
+		// clear it easily; multiplyPower stands in for that here rather than inventing a softer-than-real
+		// target block just to make the default power work.
+		ItemStack focusStack = new ItemStack(ItemsTC.focusEarth.get());
+		FocusPackage core = ItemsTC.focusEarth.get().getPackage(focusStack);
+		core.initialize(caster);
+		core.multiplyPower(20.0f);
+		FocusEngine.castFocusPackage(caster, core, true);
+
+		helper.assertFalse(helper.getBlockState(relPos).isAir(), "the block should not break the same tick it's queued - it's a real delayed break, not instant");
+
+		for (int i = 0; i < 20 && !helper.getBlockState(relPos).isAir(); i++) {
+			thaumcraft.common.lib.scheduling.BlockScheduler.tick(helper.getLevel());
+		}
+		helper.assertTrue(helper.getBlockState(relPos).isAir(), "a real soft block hit by Focus: Earth should really have broken within a generous real tick budget");
 		helper.succeed();
 	}
 
@@ -1704,6 +1764,15 @@ public class ThaumcraftGameTests {
 		return ItemsTC.salisMundus.get().useOn(context);
 	}
 
+	/** Ticks {@link thaumcraft.common.lib.scheduling.BlockScheduler} forward past the real 50-tick delay plus
+	 * the swap itself - see {@code DustTriggerSimple}'s own doc comment for why this is a real delayed,
+	 * animated swap again, not instant. */
+	private static void tickSchedulerPastDustTriggerDelay(GameTestHelper helper) {
+		for (int i = 0; i < 55; i++) {
+			thaumcraft.common.lib.scheduling.BlockScheduler.tick(helper.getLevel());
+		}
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void salisMundusConvertsACraftingTableIntoAnArcaneWorkbench(GameTestHelper helper) {
 		BlockPos relPos = new BlockPos(2, 1, 2);
@@ -1712,9 +1781,11 @@ public class ThaumcraftGameTests {
 		player.getAbilities().instabuild = false;
 
 		useSalisMundusOn(helper, player, relPos);
+		helper.assertTrue(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).isEmpty(), "the single-count dust should have been consumed in survival mode immediately, regardless of the real delayed swap");
+		helper.assertTrue(helper.getBlockState(relPos).is(Blocks.CRAFTING_TABLE), "the table should still be a real crafting table the same tick - the real swap is delayed ~2.5 real seconds, not instant");
 
-		helper.assertTrue(helper.getBlockState(relPos).is(BlocksTC.arcaneWorkbench.get()), "the crafting table should have become an arcane workbench");
-		helper.assertTrue(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).isEmpty(), "the single-count dust should have been consumed in survival mode");
+		tickSchedulerPastDustTriggerDelay(helper);
+		helper.assertTrue(helper.getBlockState(relPos).is(BlocksTC.arcaneWorkbench.get()), "the crafting table should really have become an arcane workbench after the real delayed swap completes");
 		helper.succeed();
 	}
 
@@ -1725,8 +1796,9 @@ public class ThaumcraftGameTests {
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
 
 		useSalisMundusOn(helper, player, relPos);
+		tickSchedulerPastDustTriggerDelay(helper);
 
-		helper.assertTrue(helper.getBlockState(relPos).is(BlocksTC.crucible.get()), "the cauldron should have become a crucible");
+		helper.assertTrue(helper.getBlockState(relPos).is(BlocksTC.crucible.get()), "the cauldron should really have become a crucible after the real delayed swap completes");
 		helper.succeed();
 	}
 
@@ -1741,6 +1813,59 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(helper.getBlockState(relPos).is(Blocks.DIRT), "an unrelated block should be untouched");
 		helper.assertFalse(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).isEmpty(), "the dust should not have been consumed when no trigger matched");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// BlockScheduler - the real, direct port of the old (1.12.2) ServerEvents' own gradual block-break/swap
+	// scheduler (see that class's own doc comment for the fuller story). FocusEffectBreak/FocusEffectEarth/
+	// DustTriggerSimple's own tests above already exercise addBreaker and a life=0 addSwapper end-to-end;
+	// these cover the 2 real mechanics nothing else currently exercises - addRunnableServer's own delay
+	// countdown, and addSwapper's real neighbor-spreading (life > 0).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void blockSchedulerRunnableFiresOnlyAfterItsRealDelayElapses(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		java.util.concurrent.atomic.AtomicInteger fired = new java.util.concurrent.atomic.AtomicInteger();
+		thaumcraft.common.lib.scheduling.BlockScheduler.addRunnableServer(level, fired::incrementAndGet, 5);
+
+		for (int i = 0; i < 5; i++) {
+			thaumcraft.common.lib.scheduling.BlockScheduler.tick(level);
+			helper.assertTrue(fired.get() == 0, "a real runnable queued with delay 5 should not have fired yet after only " + (i + 1) + " real tick(s)");
+		}
+		thaumcraft.common.lib.scheduling.BlockScheduler.tick(level);
+		helper.assertTrue(fired.get() == 1, "the real runnable should have fired exactly once after its real delay fully elapsed, found " + fired.get());
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.lib.scheduling.BlockScheduler#addSwapper}'s own real
+	 * neighbor-spreading (a real {@code life > 0}) - not exercised by any currently-shipped caller
+	 * ({@code DustTriggerSimple} only ever uses {@code life=0}, a single block). Places a 2-long strip of
+	 * real matching source blocks and confirms a real spread reaches the second one, one real tick later than
+	 * the first.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void blockSchedulerSwapperRealSpreadsToAMatchingExposedNeighbor(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos originRel = new BlockPos(2, 1, 2);
+		BlockPos neighborRel = originRel.east();
+		helper.setBlock(originRel, Blocks.CRAFTING_TABLE);
+		helper.setBlock(neighborRel, Blocks.CRAFTING_TABLE);
+		BlockPos originAbs = helper.absolutePos(originRel);
+		BlockPos neighborAbs = helper.absolutePos(neighborRel);
+		net.minecraft.world.level.block.state.BlockState source = level.getBlockState(originAbs);
+
+		thaumcraft.common.lib.scheduling.BlockScheduler.addSwapper(level, originAbs, source, new ItemStack(BlocksTC.arcaneWorkbench.get()),
+				false, 1, null, false, false, -9999, false, false, 0, thaumcraft.common.lib.scheduling.BlockScheduler.DEFAULT_PREDICATE, 0.0f);
+
+		thaumcraft.common.lib.scheduling.BlockScheduler.tick(level);
+		helper.assertTrue(level.getBlockState(originAbs).is(BlocksTC.arcaneWorkbench.get()), "the real origin block should really have swapped on the first real tick");
+		helper.assertTrue(level.getBlockState(neighborAbs).is(Blocks.CRAFTING_TABLE), "the real neighbor should not have swapped yet - real spreading takes one more real tick");
+
+		thaumcraft.common.lib.scheduling.BlockScheduler.tick(level);
+		helper.assertTrue(level.getBlockState(neighborAbs).is(BlocksTC.arcaneWorkbench.get()), "the real matching, exposed neighbor should really have been reached by the real spread on the second tick");
 		helper.succeed();
 	}
 

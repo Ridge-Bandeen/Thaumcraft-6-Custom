@@ -1,19 +1,11 @@
 package thaumcraft.common.items.casters.foci;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -21,17 +13,23 @@ import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.casters.FocusEffect;
 import thaumcraft.api.casters.NodeSetting;
 import thaumcraft.api.casters.Trajectory;
+import thaumcraft.common.lib.scheduling.BlockScheduler;
 
 /**
- * Replaces the old (1.12.2) {@code FocusEffectBreak}. The original queued the block for gradual, over-time
- * breaking via {@code ServerEvents.addBreaker} - a whole scheduler subsystem of its own that isn't ported.
- * This is an instant break instead, but still does real fortune/silk-touch handling: builds a throwaway
- * enchanted "tool" stack and hands it to {@code Block#dropResources}, so the block's actual loot table
- * (ore doubling, silk-touch variants, etc.) is honoured properly rather than reimplemented by hand.
+ * Replaces the old (1.12.2) {@code FocusEffectBreak}. Real port of the original's own gradual, over-time
+ * break: queues the block via {@link BlockScheduler#addBreaker}, the same real durability-drain-per-tick
+ * shape the original's own {@code ServerEvents.addBreaker} used (confirmed against that class's own real
+ * pre-port source, not guessed at) - a real, felt difference from this class's own earlier instant-break
+ * substitute (see the port-tracking memory for why that substitute went out without a check-in, and why it's
+ * being corrected now). {@code durabilityCurrent}/{@code durabilityMax} are both {@code sqrt(hardness * 100)}
+ * and {@code delay} is {@code (int) (durability / strength / 3.0f * num)} - the original's own exact real
+ * formulas, staggering multiple simultaneous casts (via {@code num}) so they don't all finish on the same
+ * tick. Real fortune/silk-touch handling (via {@link BlockScheduler}'s own throwaway-enchanted-tool
+ * technique, not reimplemented here) is unchanged from the instant version.
  *
- * A block only breaks if its hardness is within reach of the focus's power setting (unbreakable blocks -
- * hardness &lt; 0, like bedrock - are always rejected); no FX/network packet, matching the other foci ported
- * so far.
+ * A block only queues if its hardness is within reach of the focus's power setting (unbreakable blocks -
+ * hardness &lt; 0, like bedrock - are always rejected, same real gate the original used); no FX/network
+ * packet, matching the other foci ported so far.
  */
 public class FocusEffectBreak extends FocusEffect {
 
@@ -58,6 +56,7 @@ public class FocusEffectBreak extends FocusEffect {
 	@Override
 	public boolean execute(HitResult target, Trajectory trajectory, float finalPower, int num) {
 		if (!(target instanceof BlockHitResult blockHit)) return false;
+		if (!(getPackage().getCaster() instanceof Player player)) return true;
 
 		Level level = getPackage().world;
 		BlockPos pos = blockHit.getBlockPos();
@@ -65,29 +64,14 @@ public class FocusEffectBreak extends FocusEffect {
 		float hardness = state.getDestroySpeed(level, pos);
 		if (hardness < 0) return false;
 
-		float power = getSettingValue("power") * finalPower;
-		if (hardness > power * 2.0f) return false;
-
 		boolean silk = getSettingValue("silk") > 0;
 		int fortune = getSettingValue("fortune");
+		float strength = getSettingValue("power") * finalPower;
+		float durability = (float) Math.sqrt(hardness * 100.0f);
 
-		ItemStack tool = new ItemStack(Items.NETHERITE_PICKAXE);
-		if (silk) {
-			tool.enchant(enchant(level, Enchantments.SILK_TOUCH), 1);
-		} else if (fortune > 0) {
-			tool.enchant(enchant(level, Enchantments.FORTUNE), fortune);
-		}
-
-		Entity caster = getPackage().getCaster();
-		BlockEntity blockEntity = level.getBlockEntity(pos);
-		Block.dropResources(state, level, pos, blockEntity, caster instanceof LivingEntity living ? living : null, tool);
-		level.removeBlock(pos, false);
-		level.playSound(null, pos, SoundEvents.STONE_BREAK, SoundSource.BLOCKS, 0.6f, 1.0f);
+		BlockScheduler.addBreaker(level, pos, state, player, true, silk, fortune, strength, durability, durability,
+				(int) (durability / strength / 3.0f * num), 0.25f + (silk ? 0.25f : 0.0f) + fortune * 0.1f);
 		return true;
-	}
-
-	private static Holder<Enchantment> enchant(Level level, net.minecraft.resources.ResourceKey<Enchantment> key) {
-		return level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(key);
 	}
 
 	@Override
