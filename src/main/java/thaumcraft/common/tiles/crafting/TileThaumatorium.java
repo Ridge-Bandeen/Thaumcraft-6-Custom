@@ -91,6 +91,19 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 		return currentSuction;
 	}
 
+	/** Real accessor for {@link thaumcraft.client.render.TileThaumatoriumRenderer} - the real output the
+	 * currently-inserted catalyst will craft into, or empty if there's no catalyst or no real matching
+	 * recipe. Unlike the original's own real {@code recipeHash} list (cycling through every recipe the
+	 * player had curated for this device), this only ever has at most one real candidate - see this class's
+	 * own doc comment for why (deterministic first-match instead of player curation) - so there's nothing to
+	 * cycle through, just a real static preview. Not gated on {@link #isHot}, matching the original's own
+	 * real renderer (which showed the preview regardless of current heat). Safe to call client-side - real
+	 * recipes are synced to the client, and {@link #getItem} reads the already-synced real catalyst stack. */
+	public ItemStack getPreviewResult() {
+		if (level == null) return ItemStack.EMPTY;
+		return findMatchingRecipe(level, getItem()).map(holder -> holder.value().getRecipeOutput()).orElse(ItemStack.EMPTY);
+	}
+
 	private static boolean isHot(Level level, BlockPos pos) {
 		BlockState below = level.getBlockState(pos.below());
 		return below.is(Blocks.LAVA) || below.is(Blocks.FIRE) || below.is(Blocks.MAGMA_BLOCK) || below.is(Blocks.SOUL_FIRE);

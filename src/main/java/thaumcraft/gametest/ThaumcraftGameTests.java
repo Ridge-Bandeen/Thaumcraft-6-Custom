@@ -2210,6 +2210,32 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for {@link thaumcraft.common.tiles.crafting.TileThaumatorium#getPreviewResult()} - the
+	 * real accessor added for {@link thaumcraft.client.render.TileThaumatoriumRenderer}'s own real floating
+	 * preview. Real and immediate regardless of heat/essentia state - matches the original's own real
+	 * renderer, which showed its own preview unconditionally too.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumatoriumPreviewResultShowsTheRealMatchingRecipeOutput(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.thaumatorium.get());
+		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
+
+		helper.assertTrue(tile.getPreviewResult().isEmpty(), "with no real catalyst inserted, the real preview should really be empty");
+
+		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK));
+		helper.assertTrue(tile.getPreviewResult().isEmpty(), "with a real catalyst that matches no real recipe, the real preview should really be empty");
+
+		// focus_air_crucible.json: catalyst feather, result Focus: Air - same real recipe the other real
+		// Thaumatorium tests above already exercise.
+		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
+		ItemStack preview = tile.getPreviewResult();
+		helper.assertTrue(preview.is(thaumcraft.api.items.ItemsTC.focusAir.get()),
+				"with a real matching feather catalyst, the real preview should really show Focus: Air, found " + preview);
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Candles - one small block per DyeColor, all sharing BlockCandle. The color-handler tint itself is
 	// client-only and not GameTest-observable; these check the functional side instead (light level,
