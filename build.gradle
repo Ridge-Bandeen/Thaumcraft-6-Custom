@@ -535,6 +535,8 @@ sourceSets {
             include 'thaumcraft/common/tiles/devices/TileHungryChest.java'
 
             include 'thaumcraft/common/lib/crafting/DustTriggerSimple.java'
+            include 'thaumcraft/common/lib/crafting/DustTriggerMultiblock.java'
+            include 'thaumcraft/common/lib/crafting/Matrix.java'
             include 'thaumcraft/common/items/resources/ItemMagicDust.java'
             include 'thaumcraft/common/registry/ThaumcraftDustTriggers.java'
 

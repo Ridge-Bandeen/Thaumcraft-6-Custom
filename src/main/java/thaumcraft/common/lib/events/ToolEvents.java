@@ -128,6 +128,31 @@ public class ToolEvents {
 	private static boolean destructiveRecursion;
 	private static boolean burrowingRecursion;
 
+	/** Real port of the true original's own {@code blockedBlocks}/{@code addBlockedBlock}/
+	 * {@code clearBlockedBlock} - protects a position mid-conversion (e.g.
+	 * {@link thaumcraft.common.lib.crafting.DustTriggerMultiblock}'s own real delayed swap) from being broken
+	 * out from under the pending swap. Restored alongside {@code DustTriggerMultiblock} - this port's own
+	 * {@code ToolEvents} never carried it since nothing needed it until now. */
+	private static final Map<net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level>, Set<BlockPos>> BLOCKED_BLOCKS = new HashMap<>();
+
+	public static void addBlockedBlock(net.minecraft.world.level.Level level, BlockPos pos) {
+		BLOCKED_BLOCKS.computeIfAbsent(level.dimension(), k -> new HashSet<>()).add(pos.immutable());
+	}
+
+	public static void clearBlockedBlock(net.minecraft.world.level.Level level, BlockPos pos) {
+		Set<BlockPos> blocked = BLOCKED_BLOCKS.get(level.dimension());
+		if (blocked != null) blocked.remove(pos);
+	}
+
+	@SubscribeEvent
+	public static void onBlockBreak(net.neoforged.neoforge.event.level.BlockEvent.BreakEvent event) {
+		if (!(event.getLevel() instanceof net.minecraft.world.level.Level level)) return;
+		Set<BlockPos> blocked = BLOCKED_BLOCKS.get(level.dimension());
+		if (blocked != null && blocked.contains(event.getPos())) {
+			event.setCanceled(true);
+		}
+	}
+
 	/** How far (in blocks, each axis) BURROWING's vein-walk is allowed to search from the block actually
 	 * mined, and how many blocks it's allowed to visit doing so - both real caps the original also had
 	 * (~24/48/24), the second one a modern addition (the original's own restart-the-whole-cube-scan approach

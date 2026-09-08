@@ -297,6 +297,15 @@ public final class BlocksTC {
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0f).sound(SoundType.STONE)
 					.lightLevel(state -> 14).noOcclusion());
 
+	/** The Infernal Furnace's real multiblock-ritual shell blocks (see
+	 * {@link thaumcraft.common.registry.ThaumcraftDustTriggers}) - visually identical to plain vanilla nether
+	 * bricks/obsidian (same real texture, a different block id) so a finished furnace's own shell no longer
+	 * matches the blueprint's real nether-brick/obsidian source and can't be accidentally re-converted. */
+	public static final DeferredBlock<Block> placeholderNetherbrick = BLOCKS.registerBlock("placeholder_netherbrick",
+			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(2.0f, 6.0f).sound(SoundType.NETHER_BRICKS));
+	public static final DeferredBlock<Block> placeholderObsidian = BLOCKS.registerBlock("placeholder_obsidian",
+			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(50.0f, 1200.0f).sound(SoundType.STONE));
+
 	/** See {@link thaumcraft.common.blocks.devices.BlockRedstoneRelay}'s own doc comment - a real
 	 * configurable-threshold/strength redstone repeater variant, no tile entity needed. */
 	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockRedstoneRelay> redstoneRelay = BLOCKS.registerBlock("redstone_relay",

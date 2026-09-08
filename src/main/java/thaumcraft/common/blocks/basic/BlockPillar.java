@@ -24,13 +24,13 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * {@code BlockPillar}-typed blocks at the altar's corners, and a uniform set of all-Ancient or all-Eldritch
  * pillars gave a real cycle-time/cost/stability bonus - none of that was a deliberate cut, just never built.
  *
- * <b>Deliberately NOT built via the original's own {@code DustTriggerMultiblock} wand-conversion ritual</b>
- * (the true original's real path: build a whole 3x3x3 blueprint of plain {@code stoneArcane}/etc. blocks, then
- * a wand ability converts the corners into pillars all at once) - that whole subsystem was never ported, and
- * this class instead follows the SAME precedent already set for the Arcane Workbench and Crucible (both
- * originally wand-converted too, both ported as plain directly-placeable blocks instead, with the
- * dust-trigger conversion flagged as a deferred TODO in their own doc comments). {@code pillarArcane} gets a
- * real, if simplified, direct crafting recipe from {@code stoneArcane} instead.
+ * <b>Real acquisition path restored:</b> {@code pillarArcane} was briefly given an invented direct-crafting
+ * recipe from {@code stoneArcane} (skipping the original's own real {@code DustTriggerMultiblock} wand-
+ * conversion ritual, matching the Arcane Workbench/Crucible's own precedent at the time) - that recipe is gone
+ * now that the real multiblock subsystem exists (see the port-tracking memory): the real path is building the
+ * Infusion Altar's own real 3x3x3 blueprint (a {@code stoneArcane}/{@code infusionMatrix}/{@code pedestal}
+ * structure) and right-clicking it with Salis Mundus, converting all 4 corners into real, correctly-facing
+ * pillars at once - see {@code ThaumcraftDustTriggers#infusionAltarBlueprint}.
  *
  * The other two tiers ({@code pillarAncient}/{@code pillarEldritch}) are still registered here as real blocks
  * with real tier-bonus behavior (see {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix#getSurroundings}) -

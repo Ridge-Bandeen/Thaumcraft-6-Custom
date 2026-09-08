@@ -201,8 +201,22 @@ public final class BlockScheduler {
 	 * Mundus converting a matching material patch, not just a single block). */
 	public static void addSwapper(Level level, BlockPos pos, Object source, ItemStack target, boolean consumeTarget, int life, Player player,
 			boolean fx, boolean fancy, int color, boolean pickup, boolean silk, int fortune, Predicate<SwapContext> allowSwap, float visCost) {
+		addSwapper(level, pos, source, target, null, consumeTarget, life, player, fx, fancy, color, pickup, silk, fortune, allowSwap, visCost);
+	}
+
+	/**
+	 * Same real swap as the other overload, but placing {@code explicitTargetState} verbatim instead of
+	 * {@code target}'s block's own {@code defaultBlockState()} - needed for a real, specific orientation (e.g.
+	 * {@link thaumcraft.common.lib.crafting.DustTriggerMultiblock}'s own real per-cell facing), which
+	 * {@code target}'s plain item form can't carry on its own. {@code target} is still used for the real
+	 * inventory-consumption/silk-drop bookkeeping the base overload already has - only the placed
+	 * {@code BlockState} itself changes.
+	 */
+	public static void addSwapper(Level level, BlockPos pos, Object source, ItemStack target, BlockState explicitTargetState, boolean consumeTarget,
+			int life, Player player, boolean fx, boolean fancy, int color, boolean pickup, boolean silk, int fortune,
+			Predicate<SwapContext> allowSwap, float visCost) {
 		if (level.isClientSide) return;
-		queueFor(SWAPS, level.dimension()).add(new SwapEntry(pos, source, target, consumeTarget, life, player, fx, fancy, color, pickup, silk, fortune, allowSwap, visCost));
+		queueFor(SWAPS, level.dimension()).add(new SwapEntry(pos, source, target, explicitTargetState, consumeTarget, life, player, fx, fancy, color, pickup, silk, fortune, allowSwap, visCost));
 	}
 
 	private static void tickSwaps(Level level, ResourceKey<Level> dim) {
@@ -244,7 +258,9 @@ public final class BlockScheduler {
 			}
 		}
 
-		if (entry.target == null || entry.target.isEmpty()) {
+		if (entry.explicitTargetState != null) {
+			level.setBlockAndUpdate(entry.pos, entry.explicitTargetState);
+		} else if (entry.target == null || entry.target.isEmpty()) {
 			level.removeBlock(entry.pos, false);
 		} else if (entry.target.getItem() instanceof net.minecraft.world.item.BlockItem blockItem) {
 			level.setBlockAndUpdate(entry.pos, blockItem.getBlock().defaultBlockState());
@@ -289,7 +305,7 @@ public final class BlockScheduler {
 			BlockState neighborState = level.getBlockState(neighborPos);
 			if (!matches(neighborState, entry.source)) continue;
 			if (!isExposed(level, neighborPos)) continue;
-			next.add(new SwapEntry(neighborPos, entry.source, entry.target, entry.consumeTarget, entry.life - 1, entry.player, entry.fx, entry.fancy,
+			next.add(new SwapEntry(neighborPos, entry.source, entry.target, entry.explicitTargetState, entry.consumeTarget, entry.life - 1, entry.player, entry.fx, entry.fancy,
 					entry.color, entry.pickup, entry.silk, entry.fortune, entry.allowSwap, entry.visCost));
 		}
 	}
@@ -303,6 +319,7 @@ public final class BlockScheduler {
 
 	private static boolean matches(BlockState state, Object source) {
 		if (source instanceof BlockState blockState) return state.equals(blockState);
+		if (source instanceof Block block) return state.is(block);
 		if (source instanceof TagKey<?> tag) {
 			@SuppressWarnings("unchecked")
 			TagKey<Block> blockTag = (TagKey<Block>) tag;
@@ -353,6 +370,7 @@ public final class BlockScheduler {
 		final BlockPos pos;
 		final Object source;
 		final ItemStack target;
+		final BlockState explicitTargetState;
 		final boolean consumeTarget;
 		int life;
 		final Player player;
@@ -365,11 +383,12 @@ public final class BlockScheduler {
 		final Predicate<SwapContext> allowSwap;
 		final float visCost;
 
-		SwapEntry(BlockPos pos, Object source, ItemStack target, boolean consumeTarget, int life, Player player, boolean fx, boolean fancy,
+		SwapEntry(BlockPos pos, Object source, ItemStack target, BlockState explicitTargetState, boolean consumeTarget, int life, Player player, boolean fx, boolean fancy,
 				int color, boolean pickup, boolean silk, int fortune, Predicate<SwapContext> allowSwap, float visCost) {
 			this.pos = pos;
 			this.source = source;
 			this.target = target;
+			this.explicitTargetState = explicitTargetState;
 			this.consumeTarget = consumeTarget;
 			this.life = life;
 			this.player = player;

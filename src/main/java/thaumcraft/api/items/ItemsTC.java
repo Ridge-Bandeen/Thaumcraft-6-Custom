@@ -427,6 +427,23 @@ public final class ItemsTC {
 	public static final DeferredItem<Item> nuggetQuartz =
 			ITEMS.registerSimpleItem("nugget_quartz");
 
+	/** A real, previously-missing {@code BlockItem} for {@code infernalFurnace} - its own stale
+	 * {@code data/thaumcraft/recipe/infernal_furnace.json} (an invented direct-crafting substitute for the
+	 * real multiblock ritual, removed now that {@code DustTriggerMultiblock} is real - see
+	 * {@link thaumcraft.common.registry.ThaumcraftDustTriggers}) referenced this exact item id and had been
+	 * silently failing to load with no real item behind it (confirmed via a real
+	 * {@code JsonParseException: Unknown registry key ... thaumcraft:infernal_furnace} at every past GameTest
+	 * boot this whole session - noted, not chased down, until now). Still needed regardless of acquisition
+	 * method, for basic break/drop/creative-tab functionality. */
+	public static final DeferredItem<BlockItem> infernalFurnace =
+			ITEMS.registerSimpleBlockItem("infernal_furnace", BlocksTC.infernalFurnace);
+
+	public static final DeferredItem<BlockItem> placeholderNetherbrick =
+			ITEMS.registerSimpleBlockItem("placeholder_netherbrick", BlocksTC.placeholderNetherbrick);
+
+	public static final DeferredItem<BlockItem> placeholderObsidian =
+			ITEMS.registerSimpleBlockItem("placeholder_obsidian", BlocksTC.placeholderObsidian);
+
 	/** A crafting component for the Centrifuge, Condenser, Arcane Bore and Causality Collapser (see
 	 * {@code data/thaumcraft/recipe/morphic_resonator.json} for its own real recipe - a glass pane, a brass
 	 * plate and a {@link #nuggetRareearth}). Only the Causality Collapser's own Infusion recipe has been

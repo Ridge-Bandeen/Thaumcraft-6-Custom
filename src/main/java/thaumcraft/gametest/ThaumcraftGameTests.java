@@ -1830,6 +1830,108 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for {@link thaumcraft.common.lib.crafting.DustTriggerMultiblock} - the real Infernal
+	 * Furnace ritual restored while going back to build the real multiblock subsystem (see the port-tracking
+	 * memory). Builds the true original's own real 3x3x3 blueprint unrotated (matching the blueprint array's
+	 * own literal layout - see {@code ThaumcraftDustTriggers#infernalFurnaceBlueprint}), right-clicks the lava
+	 * core with Salis Mundus, and confirms the real delayed conversion: the lava becomes a real
+	 * {@code infernalFurnace}, the lone iron-bars slot becomes real air, and the shell becomes the real
+	 * placeholder blocks (not left as plain nether brick/obsidian, which could be re-converted).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void salisMundusConvertsARealInfernalFurnaceStructure(GameTestHelper helper) {
+		BlockPos base = new BlockPos(2, 1, 2);
+		// y=0 (top) -> Y offset 2; y=1 (middle) -> Y offset 1; y=2 (bottom) -> Y offset 0.
+		net.minecraft.world.level.block.Block[][][] shell = {
+				{ { Blocks.NETHER_BRICKS, Blocks.OBSIDIAN, Blocks.NETHER_BRICKS },
+						{ Blocks.OBSIDIAN, null, Blocks.OBSIDIAN },
+						{ Blocks.NETHER_BRICKS, Blocks.OBSIDIAN, Blocks.NETHER_BRICKS } },
+				{ { Blocks.NETHER_BRICKS, Blocks.OBSIDIAN, Blocks.NETHER_BRICKS },
+						{ Blocks.OBSIDIAN, Blocks.LAVA, Blocks.OBSIDIAN },
+						{ Blocks.NETHER_BRICKS, Blocks.IRON_BARS, Blocks.NETHER_BRICKS } },
+				{ { Blocks.NETHER_BRICKS, Blocks.OBSIDIAN, Blocks.NETHER_BRICKS },
+						{ Blocks.OBSIDIAN, Blocks.OBSIDIAN, Blocks.OBSIDIAN },
+						{ Blocks.NETHER_BRICKS, Blocks.OBSIDIAN, Blocks.NETHER_BRICKS } },
+		};
+		for (int y = 0; y < 3; y++) {
+			for (int x = 0; x < 3; x++) {
+				for (int z = 0; z < 3; z++) {
+					net.minecraft.world.level.block.Block block = shell[y][x][z];
+					if (block != null) {
+						helper.setBlock(base.offset(x, 2 - y, z), block.defaultBlockState());
+					}
+				}
+			}
+		}
+
+		BlockPos lavaPos = base.offset(1, 1, 1);
+		BlockPos barsPos = base.offset(2, 1, 1);
+		BlockPos shellCornerPos = base.offset(0, 2, 0);
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		useSalisMundusOn(helper, player, lavaPos);
+		helper.assertTrue(helper.getBlockState(lavaPos).is(Blocks.LAVA), "the lava core should still be real lava the same tick - the real conversion is delayed, not instant");
+
+		tickSchedulerPastDustTriggerDelay(helper);
+
+		helper.assertTrue(helper.getBlockState(lavaPos).is(BlocksTC.infernalFurnace.get()), "the lava core should really have become a real Infernal Furnace after the real delayed conversion, found " + helper.getBlockState(lavaPos));
+		helper.assertTrue(helper.getBlockState(barsPos).isAir(), "the real iron-bars slot should really have become air");
+		helper.assertTrue(helper.getBlockState(shellCornerPos).is(BlocksTC.placeholderNetherbrick.get()), "the real nether-brick shell should really have become the real placeholder block (not left re-convertible)");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.lib.crafting.DustTriggerMultiblock}'s other real registered
+	 * blueprint - the Arcane-tier Infusion Altar. Pre-places a real {@code infusionMatrix}/{@code pedestal}
+	 * (the original's own real "these already exist, the ritual doesn't touch them" validity cells - see
+	 * {@code ThaumcraftDustTriggers#infusionAltarBlueprint}'s own doc comment) plus a real
+	 * {@code stoneArcane} shell, converts it, and confirms the 4 corner pillars land with their own real,
+	 * distinct, fixed facings (not all defaulting to the same orientation) - then ties it back to item #4 of
+	 * this session's own parity review: {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix#validLocation}
+	 * should now really accept the ritual's own real output, not just a hand-placed pillar set.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void salisMundusConvertsARealInfusionAltarStructure(GameTestHelper helper) {
+		BlockPos base = new BlockPos(2, 1, 2);
+		helper.setBlock(base.offset(1, 2, 1), BlocksTC.infusionMatrix.get());
+		helper.setBlock(base.offset(1, 0, 1), BlocksTC.pedestal.get());
+		for (BlockPos scaffold : new BlockPos[] { base.offset(0, 1, 0), base.offset(0, 1, 2), base.offset(2, 1, 0), base.offset(2, 1, 2) }) {
+			helper.setBlock(scaffold, BlocksTC.stoneArcane.get());
+		}
+		BlockPos eastPos = base.offset(0, 0, 0);
+		BlockPos northPos = base.offset(0, 0, 2);
+		BlockPos southPos = base.offset(2, 0, 0);
+		BlockPos westPos = base.offset(2, 0, 2);
+		for (BlockPos corner : new BlockPos[] { eastPos, northPos, southPos, westPos }) {
+			helper.setBlock(corner, BlocksTC.stoneArcane.get());
+		}
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		useSalisMundusOn(helper, player, base.offset(1, 2, 1));
+		tickSchedulerPastDustTriggerDelay(helper);
+
+		// Which of the 4 rotations fitMultiblock lands on is an internal implementation detail (this
+		// structure's SOURCE blocks are identical at all 4 corners, so the geometric fit itself can't tell
+		// rotations apart - only the real, fixed, absolute per-corner TARGET facings, unaffected by rotation,
+		// actually distinguish them) - so this checks the real invariant (4 pillars, 4 distinct real facings)
+		// rather than assuming which specific corner lands which specific facing.
+		java.util.Set<net.minecraft.core.Direction> facings = new java.util.HashSet<>();
+		for (BlockPos corner : new BlockPos[] { eastPos, northPos, southPos, westPos }) {
+			net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(corner);
+			helper.assertTrue(state.is(BlocksTC.pillarArcane.get()), "every real corner should really have become a real pillarArcane, found " + state + " at " + corner);
+			facings.add(state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING));
+		}
+		helper.assertTrue(facings.size() == 4, "the 4 real corner pillars should each really have their own distinct real facing, found " + facings);
+		helper.assertTrue(helper.getBlockState(base.offset(0, 1, 0)).isAir(), "the real scaffolding stoneArcane ring should really have become air");
+		helper.assertTrue(helper.getBlockState(base.offset(1, 2, 1)).is(BlocksTC.infusionMatrix.get()), "the pre-placed real infusionMatrix should be untouched");
+		helper.assertTrue(helper.getBlockState(base.offset(1, 0, 1)).is(BlocksTC.pedestal.get()), "the pre-placed real pedestal should be untouched");
+
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(base.offset(1, 2, 1));
+		helper.assertTrue(matrix.validLocation(helper.getLevel()), "the real ritual's own real output should satisfy TileInfusionMatrix's own real validLocation check");
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// BlockScheduler - the real, direct port of the old (1.12.2) ServerEvents' own gradual block-break/swap
 	// scheduler (see that class's own doc comment for the fuller story). FocusEffectBreak/FocusEffectEarth/

@@ -1,27 +1,26 @@
 package thaumcraft.common.registry;
 
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.api.crafting.IDustTrigger;
+import thaumcraft.api.crafting.Part;
+import thaumcraft.common.lib.crafting.DustTriggerMultiblock;
 import thaumcraft.common.lib.crafting.DustTriggerSimple;
 
 /**
- * Registers this port's Salis Mundus dust triggers - see {@code DustTriggerSimple}'s own doc comment.
- * Both convert a plain vanilla block into a real Thaumcraft device, closing loops flagged much earlier this
- * session: the Arcane Workbench was originally built as a directly-registered block "with the dust-
- * conversion + research-gate explicitly flagged as a TODO to restore once research exists" - it does now.
- *
- * Only the two simple 1:1 block-swap triggers from the original are ported (crafting table -> Arcane
- * Workbench, cauldron -> Crucible); the ore-dictionary-tag variant ({@code DustTriggerOre}, matching e.g.
- * "any modded crafting table") and the multiblock-structure variant ({@code DustTriggerMultiblock}, behind
- * Infernal Furnace/Infusion Altar/etc. - see the port-tracking memory notes on why those are still deferred)
- * aren't ported.
+ * Registers this port's Salis Mundus dust triggers - see {@code DustTriggerSimple}'s own doc comment for the
+ * simple 1:1 kind, {@link DustTriggerMultiblock}'s own doc comment for the structure-based kind restored
+ * alongside it (see the port-tracking memory for the fuller "go back and build the real subsystem" context).
+ * The ore-dictionary-tag variant ({@code DustTriggerOre}, matching e.g. "any modded crafting table") still
+ * isn't ported - no real registered trigger in the original ever needed it for anything this port has built.
  *
  * Research gates: the original's Arcane Workbench trigger used {@code FIRSTSTEPS@1}, already in every
- * player's default knowledge (see {@code PlayerKnowledge}), so it's reachable as-is. The original's
- * Crucible trigger used {@code UNLOCKALCHEMY@1} - not reachable with no Thaumonomicon to grant it, so this
- * substitutes {@code FIRSTSTEPS} instead, the same "stay reachable given no research-granting path yet"
+ * player's default knowledge (see {@code PlayerKnowledge}), so it's reachable as-is. The Crucible
+ * ({@code UNLOCKALCHEMY@1}), Infernal Furnace ({@code INFERNALFURNACE}), and Infusion Altar ({@code INFUSION})
+ * triggers all used research keys that aren't reachable with no Thaumonomicon to grant them, so all three
+ * substitute {@code FIRSTSTEPS} instead, the same "stay reachable given no research-granting path yet"
  * deviation used everywhere else this session.
  */
 public final class ThaumcraftDustTriggers {
@@ -29,6 +28,63 @@ public final class ThaumcraftDustTriggers {
 	public static void register() {
 		IDustTrigger.registerDustTrigger(new DustTriggerSimple("FIRSTSTEPS@1", Blocks.CRAFTING_TABLE, new ItemStack(BlocksTC.arcaneWorkbench.get())));
 		IDustTrigger.registerDustTrigger(new DustTriggerSimple("FIRSTSTEPS", Blocks.CAULDRON, new ItemStack(BlocksTC.crucible.get())));
+		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", infernalFurnaceBlueprint()));
+		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", infusionAltarBlueprint()));
+	}
+
+	/**
+	 * Real port of the true original's own {@code infernalFurnaceBlueprint} (a 3x3x3 nether-brick/obsidian
+	 * shell with a lava core) - exact same shape, exact same source/target blocks, just {@code Blocks.LAVA}
+	 * standing in for the original's {@code Material.LAVA} source (see {@code DustTriggerMultiblock}'s own
+	 * doc comment for why that's a clean, direct real equivalent now). The {@code "AIR"} target (real, same
+	 * literal sentinel string the original used) is a real "convert to air" cell - a Java {@code null} target
+	 * means something different (a validity-only cell, present but never touched, used by the blueprints this
+	 * unlocks for the Infusion Altar's own central pedestal/matrix), a real bug caught while verifying this
+	 * exact blueprint (the iron-bars slot silently never converted with a {@code null} target instead).
+	 */
+	private static Part[][][] infernalFurnaceBlueprint() {
+		Part nb = new Part(Blocks.NETHER_BRICKS, new ItemStack(BlocksTC.placeholderNetherbrick.get()));
+		Part ob = new Part(Blocks.OBSIDIAN, new ItemStack(BlocksTC.placeholderObsidian.get()));
+		Part ib = new Part(Blocks.IRON_BARS, "AIR");
+		Part la = new Part((Block) Blocks.LAVA, BlocksTC.infernalFurnace.get(), true);
+		return new Part[][][] {
+				{ { nb, ob, nb }, { ob, null, ob }, { nb, ob, nb } },
+				{ { nb, ob, nb }, { ob, la, ob }, { nb, ib, nb } },
+				{ { nb, ob, nb }, { ob, ob, ob }, { nb, ob, nb } },
+		};
+	}
+
+	/**
+	 * Real port of the true original's own {@code infusionAltarNormalBlueprint} (the Arcane-tier Infusion
+	 * Altar) - a real {@code infusionMatrix}/real {@code pedestal} the player already placed themselves stay
+	 * completely untouched (both real {@code null}-target validity cells - see {@code DustTriggerMultiblock}'s
+	 * own doc comment on why that's different from a real {@code "AIR"}-target removal), a ring of
+	 * {@code stoneArcane} scaffolding at the 4 corners one layer up vanishes, and the 4 corner
+	 * {@code stoneArcane} blocks 2 below the matrix become real {@code pillarArcane} - each with its own real,
+	 * fixed absolute facing (a {@link BlockState}-typed target, not a relative one - see that same doc comment)
+	 * exactly matching the original's own per-corner facing assignment. The Ancient/Eldritch tiers aren't
+	 * ported here - {@code stoneAncient}/{@code stoneEldritchTile} were never ported either (a genuine forced
+	 * block, see {@code BlockPillar}'s own doc comment), so there's no real source material to build them from
+	 * yet.
+	 */
+	private static Part[][][] infusionAltarBlueprint() {
+		Part im = new Part(BlocksTC.infusionMatrix.get(), null);
+		Part snt = new Part(BlocksTC.stoneArcane.get(), "AIR");
+		Part snb1 = new Part(BlocksTC.stoneArcane.get(), pillarFacing(net.minecraft.core.Direction.EAST));
+		Part snb2 = new Part(BlocksTC.stoneArcane.get(), pillarFacing(net.minecraft.core.Direction.NORTH));
+		Part snb3 = new Part(BlocksTC.stoneArcane.get(), pillarFacing(net.minecraft.core.Direction.SOUTH));
+		Part snb4 = new Part(BlocksTC.stoneArcane.get(), pillarFacing(net.minecraft.core.Direction.WEST));
+		Part pn = new Part(BlocksTC.pedestal.get().defaultBlockState(), null);
+		return new Part[][][] {
+				{ { null, null, null }, { null, im, null }, { null, null, null } },
+				{ { snt, null, snt }, { null, null, null }, { snt, null, snt } },
+				{ { snb1, null, snb2 }, { null, pn, null }, { snb3, null, snb4 } },
+		};
+	}
+
+	private static net.minecraft.world.level.block.state.BlockState pillarFacing(net.minecraft.core.Direction facing) {
+		return BlocksTC.pillarArcane.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, facing);
 	}
 
 	private ThaumcraftDustTriggers() {

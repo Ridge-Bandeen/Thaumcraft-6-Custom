@@ -194,6 +194,8 @@
   "block.thaumcraft.smelter": "Essentia Smeltery",
   "block.thaumcraft.bellows": "Arcane Bellows",
   "block.thaumcraft.infernal_furnace": "Infernal Furnace",
+  "block.thaumcraft.placeholder_netherbrick": "Nether Brick",
+  "block.thaumcraft.placeholder_obsidian": "Obsidian",
   "block.thaumcraft.mirror": "Node Transducer",
   "item.thaumcraft.mirror.already_linked": "That mirror is already linked to a valid destination.",
   "item.thaumcraft.resonator": "Essentia Resonator",

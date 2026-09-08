@@ -1,9 +1,0 @@
-{
-  "type": "thaumcraft:arcane_shapeless",
-  "research": "INFUSION",
-  "vis": 20,
-  "ingredients": [
-    { "item": "thaumcraft:stone_arcane" }
-  ],
-  "result": { "id": "thaumcraft:pillar_arcane" }
-}

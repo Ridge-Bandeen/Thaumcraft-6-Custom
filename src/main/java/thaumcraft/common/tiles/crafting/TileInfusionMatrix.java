@@ -71,7 +71,9 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * formula/positions, confirmed via the true pre-port original source. {@code pillarAncient}/
  * {@code pillarEldritch}/{@code matrixSpeed} are real, functional blocks but currently uncraftable (their own
  * true source materials/recipe were never real, even in the original - see each block's own doc comment);
- * {@code pillarArcane}/{@code matrixCost} are both real and craftable.</li>
+ * {@code matrixCost} is real and craftable via a direct recipe; {@code pillarArcane} is real and reachable via
+ * the real Infusion Altar multiblock ritual (see {@code BlockPillar}'s own doc comment) rather than a direct
+ * recipe.</li>
  * <li><b>No {@code TileStabilizer}/{@code BlockInlay} charge-network "instability mitigator".</b> The
  * original could redirect an instability-event item ejection into a nearby stabilizer block instead of
  * dropping it, if a charge-network path existed. That whole subsystem (candle/skull-adjacent charge
