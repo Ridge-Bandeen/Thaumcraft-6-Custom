@@ -9,14 +9,16 @@
   },
   "pattern": [
     "SRS",
-    " V ",
-    "SBS"
+    "BVB",
+    "IMI"
   ],
   "key": {
     "S": { "item": "thaumcraft:stone_arcane_slab" },
     "R": { "item": "minecraft:redstone_block" },
+    "B": { "item": "thaumcraft:stone_arcane" },
     "V": { "item": "thaumcraft:vis_resonator" },
-    "B": { "item": "thaumcraft:stone_arcane" }
+    "I": { "item": "thaumcraft:inlay" },
+    "M": { "item": "thaumcraft:mechanism_complex" }
   },
   "result": { "id": "thaumcraft:stabilizer" }
 }

@@ -1,0 +1,20 @@
+{
+  "type": "thaumcraft:arcane_shaped",
+  "research": "BASEARTIFICE",
+  "vis": 10,
+  "crystals": {
+    "ignis": 1,
+    "aqua": 1
+  },
+  "pattern": [
+    " B ",
+    "ISI",
+    " B "
+  ],
+  "key": {
+    "B": { "item": "thaumcraft:plate_brass" },
+    "I": { "item": "thaumcraft:plate_iron" },
+    "S": { "item": "minecraft:stick" }
+  },
+  "result": { "id": "thaumcraft:mechanism_simple" }
+}

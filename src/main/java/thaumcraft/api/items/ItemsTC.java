@@ -171,15 +171,29 @@ public final class ItemsTC {
 
 	/** Golem construction components - see {@code GolemProperties}' own doc comment for the parts system
 	 * they craft into. Plain items, same as the original ({@code ItemTCBase} with metadata subtypes, split
-	 * into separate items here matching every other metadata-variant item this port has ported). No real
-	 * recipes yet - shipped as real, obtainable-in-creative components first, matching the precedent
-	 * already set for {@link #amber} and others (ship the item, the recipe chain is real follow-up work).
-	 * {@link #plateBrass} is the one exception - its own real raw-material chain (ingot/nugget/block/plate)
-	 * is now real, see {@link #ingotBrass}'s own doc comment; {@code mechanismSimple}/{@code plateIron}/
-	 * {@code plateVoid}/{@code mindClockwork}/{@code mindBiothaumic}/{@code moduleVision} still have no real
-	 * recipe - each needs its own real multi-ingredient device-assembly recipe, a different, larger task. */
+	 * into separate items here matching every other metadata-variant item this port has ported).
+	 * {@link #plateBrass} closed its own real raw-material chain (ingot/nugget/block/plate) earlier this
+	 * session, see {@link #ingotBrass}'s own doc comment; {@code mechanismSimple} (this item) and
+	 * {@link #mechanismComplex} both got their own real recipes this pass too (see
+	 * {@code data/thaumcraft/recipe/mechanism_simple.json}/{@code mechanism_complex.json} - a glass-and-stick
+	 * assembly bottoming out on {@code plateIron}, and mechanismSimple wrapped around a vanilla piston,
+	 * respectively) - both still ultimately bottom out on {@code plateIron}, which has no real recipe of its
+	 * own yet. {@code plateVoid}/{@code mindClockwork}/{@code mindBiothaumic}/{@code moduleVision} still have
+	 * no real recipe - each needs its own real multi-ingredient device-assembly recipe, a different, larger
+	 * task. */
 	public static final DeferredItem<Item> mechanismSimple =
 			ITEMS.registerSimpleItem("mechanism_simple");
+
+	/** See {@link #mechanismSimple}'s own doc comment - both got real recipes this pass. Unblocks the
+	 * Condenser's own real recipe (see {@code data/thaumcraft/recipe/condenser.json}) and the Stabilizer's
+	 * (see {@code data/thaumcraft/recipe/stabilizer.json}). The Void Siphon's own real recipe also uses it but
+	 * stays genuinely blocked on {@code metalBlockVoid} (never ported); Arcane Bore's own turret-placer recipe
+	 * uses it too, but that whole 3-item turret-placer family
+	 * ({@link thaumcraft.common.entities.construct.ItemTurretPlacer}) has no recipe of any kind yet - its own
+	 * real base recipe needs a golem {@code mind} item, never ported this session, a genuine forced gap this
+	 * ingredient alone doesn't clear. Neither chased down this pass. */
+	public static final DeferredItem<Item> mechanismComplex =
+			ITEMS.registerSimpleItem("mechanism_complex");
 
 	/** Brass - real raw-material chain closed this pass (ingot/nugget/block/plate, matching
 	 * {@link #ingotThaumium}'s own real precedent exactly). Real, load-bearing gap this closes: the already-

@@ -1,6 +1,6 @@
 {
   "type": "thaumcraft:arcane_shaped",
-  "research": "FIRSTSTEPS",
+  "research": "FLUXCLEANUP",
   "vis": 500,
   "crystals": {
     "aer": 5,
@@ -13,10 +13,10 @@
     "BTB"
   ],
   "key": {
-    "B": { "item": "thaumcraft:plate_thaumium" },
-    "C": { "item": "minecraft:comparator" },
+    "B": { "item": "thaumcraft:plate_brass" },
+    "C": { "item": "thaumcraft:morphic_resonator" },
     "W": { "tag": "minecraft:planks" },
-    "M": { "item": "minecraft:redstone_block" },
+    "M": { "item": "thaumcraft:mechanism_complex" },
     "T": { "item": "thaumcraft:tube" }
   },
   "result": { "id": "thaumcraft:condenser" }
