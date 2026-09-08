@@ -712,6 +712,21 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> infusionMatrix =
 			ITEMS.registerSimpleBlockItem("infusion_matrix", BlocksTC.infusionMatrix);
 
+	public static final DeferredItem<BlockItem> pillarArcane =
+			ITEMS.registerSimpleBlockItem("pillar_arcane", BlocksTC.pillarArcane);
+
+	public static final DeferredItem<BlockItem> pillarAncient =
+			ITEMS.registerSimpleBlockItem("pillar_ancient", BlocksTC.pillarAncient);
+
+	public static final DeferredItem<BlockItem> pillarEldritch =
+			ITEMS.registerSimpleBlockItem("pillar_eldritch", BlocksTC.pillarEldritch);
+
+	public static final DeferredItem<BlockItem> matrixSpeed =
+			ITEMS.registerSimpleBlockItem("matrix_speed", BlocksTC.matrixSpeed);
+
+	public static final DeferredItem<BlockItem> matrixCost =
+			ITEMS.registerSimpleBlockItem("matrix_cost", BlocksTC.matrixCost);
+
 	public static final DeferredItem<BlockItem> stabilizer =
 			ITEMS.registerSimpleBlockItem("stabilizer", BlocksTC.stabilizer);
 

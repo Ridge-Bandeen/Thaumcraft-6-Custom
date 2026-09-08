@@ -529,6 +529,39 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.crafting.BlockInfusionMatrix::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0f).sound(SoundType.STONE).noOcclusion());
 
+	/** See {@link thaumcraft.common.blocks.basic.BlockPillar}'s own doc comment. Real, craftable (a real
+	 * simplified recipe from {@link #stoneArcane}, matching the Arcane Workbench/Crucible's own precedent for
+	 * skipping the original's wand-conversion ritual). */
+	public static final DeferredBlock<thaumcraft.common.blocks.basic.BlockPillar> pillarArcane = BLOCKS.registerBlock("pillar_arcane",
+			thaumcraft.common.blocks.basic.BlockPillar::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.5f).sound(SoundType.STONE).noOcclusion());
+
+	/** See {@link thaumcraft.common.blocks.basic.BlockPillar}'s own doc comment - real tier-bonus behavior,
+	 * no real recipe yet ({@code stoneAncient} was never ported). */
+	public static final DeferredBlock<thaumcraft.common.blocks.basic.BlockPillar> pillarAncient = BLOCKS.registerBlock("pillar_ancient",
+			thaumcraft.common.blocks.basic.BlockPillar::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.5f).sound(SoundType.STONE).noOcclusion());
+
+	/** See {@link thaumcraft.common.blocks.basic.BlockPillar}'s own doc comment - real tier-bonus behavior,
+	 * no real recipe yet ({@code stoneEldritchTile} was never ported). */
+	public static final DeferredBlock<thaumcraft.common.blocks.basic.BlockPillar> pillarEldritch = BLOCKS.registerBlock("pillar_eldritch",
+			thaumcraft.common.blocks.basic.BlockPillar::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.5f).sound(SoundType.STONE).noOcclusion());
+
+	/** A real Infusion Matrix cycle-time/cost accelerator, placed at one of the altar's 4 outer corners (see
+	 * {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix#getSurroundings}). Confirmed via the true
+	 * pre-port original source that this one never had a real crafting recipe anywhere, even in 1.12.2 itself
+	 * - a genuine upstream gap, not a porting gap, same honest "ships real but unreachable" pattern as
+	 * {@code nuggetRareearth} from this same review pass. */
+	public static final DeferredBlock<Block> matrixSpeed = BLOCKS.registerBlock("matrix_speed",
+			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE));
+
+	/** The other real Infusion Matrix corner accelerator - unlike {@link #matrixSpeed}, this one DOES have a
+	 * real original recipe ({@code stoneArcane} + {@code alumentum} + a diamond block, all real materials
+	 * already in this port) - see {@code data/thaumcraft/recipe/matrix_cost.json}. */
+	public static final DeferredBlock<Block> matrixCost = BLOCKS.registerBlock("matrix_cost",
+			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE));
+
 	/** See {@link thaumcraft.common.blocks.devices.BlockStabilizer}'s own doc comment - no block entity,
 	 * the Flux Rift-pacifying "energy" mechanic is cut alongside the still-unported {@code EntityFluxRift}. */
 	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockStabilizer> stabilizer = BLOCKS.registerBlock("stabilizer",

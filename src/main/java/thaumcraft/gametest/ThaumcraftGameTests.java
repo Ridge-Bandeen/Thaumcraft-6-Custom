@@ -562,6 +562,20 @@ public class ThaumcraftGameTests {
 	// the mock player toward the target, same as a real player would turn to face something before casting.
 	// --------------------------------------------------------------------------------------------------
 
+	/**
+	 * Places 4 real {@code pillarArcane} blocks at {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix}'s
+	 * own real corner positions (2 below, diagonal) - since {@code validLocation} now really requires them
+	 * (see that class's own doc comment), every existing infusion-matrix test needs this alongside its central
+	 * pedestal, not just the tests specifically about the pillar system itself.
+	 */
+	private static void placeInfusionMatrixPillars(GameTestHelper helper, BlockPos matrixPos) {
+		int[] xs = { -1, 1, 1, -1 };
+		int[] zs = { -1, -1, 1, 1 };
+		for (int i = 0; i < 4; i++) {
+			helper.setBlock(matrixPos.offset(xs[i], -2, zs[i]), BlocksTC.pillarArcane.get());
+		}
+	}
+
 	@SuppressWarnings("removal")
 	private static ServerPlayer spawnCasterAt(GameTestHelper helper, BlockPos origin) {
 		ServerPlayer caster = helper.makeMockServerPlayerInLevel();
@@ -3326,6 +3340,7 @@ public class ThaumcraftGameTests {
 	public static void infusionMatrixWontActivateWithoutACentralPedestal(GameTestHelper helper) {
 		BlockPos matrixPos = new BlockPos(4, 4, 4);
 		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, matrixPos);
 		BlockPos matrixAbs = helper.absolutePos(matrixPos);
 		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
 
@@ -3349,6 +3364,7 @@ public class ThaumcraftGameTests {
 		BlockPos matrixPos = new BlockPos(4, 4, 4);
 		BlockPos centralPos = matrixPos.below(2);
 		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, matrixPos);
 		helper.setBlock(centralPos, BlocksTC.pedestal.get());
 		BlockPos matrixAbs = helper.absolutePos(matrixPos);
 		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
@@ -3372,6 +3388,7 @@ public class ThaumcraftGameTests {
 		// above, this test only cares about the derived counter itself.
 		BlockPos matrix2Pos = new BlockPos(4, 4, 8);
 		helper.setBlock(matrix2Pos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, matrix2Pos);
 		BlockPos matrix2Abs = helper.absolutePos(matrix2Pos);
 		net.minecraft.world.level.block.state.BlockState matrix2State = helper.getBlockState(matrix2Pos);
 		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix2 = helper.getBlockEntity(matrix2Pos);
@@ -3398,6 +3415,7 @@ public class ThaumcraftGameTests {
 		BlockPos jarIgnisPos = matrixPos.south(2);
 
 		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, matrixPos);
 		helper.setBlock(centralPos, BlocksTC.pedestal.get());
 		helper.setBlock(componentPos, BlocksTC.pedestal.get());
 		helper.setBlock(jarOrdoPos, BlocksTC.jarNormal.get());
@@ -3447,6 +3465,7 @@ public class ThaumcraftGameTests {
 		BlockPos matrixPos = new BlockPos(4, 4, 4);
 		BlockPos centralPos = matrixPos.below(2);
 		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, matrixPos);
 		helper.setBlock(centralPos, BlocksTC.pedestal.get());
 		thaumcraft.common.tiles.crafting.TilePedestal central = helper.getBlockEntity(centralPos);
 		central.setItem(new ItemStack(BlocksTC.lampArcane.get()));
@@ -3522,6 +3541,7 @@ public class ThaumcraftGameTests {
 		BlockPos matrixPos = new BlockPos(4, 4, 4);
 		BlockPos centralPos = matrixPos.below(2);
 		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, matrixPos);
 		helper.setBlock(centralPos, BlocksTC.pedestal.get());
 		thaumcraft.common.tiles.crafting.TilePedestal central = helper.getBlockEntity(centralPos);
 		central.setItem(new ItemStack(BlocksTC.lampArcane.get()));
@@ -3598,6 +3618,7 @@ public class ThaumcraftGameTests {
 		BlockPos seedsPos = matrixPos.east(2);
 		BlockPos salisPos = matrixPos.west(2);
 		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, matrixPos);
 		helper.setBlock(centralPos, BlocksTC.pedestal.get());
 		helper.setBlock(seedsPos, BlocksTC.pedestal.get());
 		helper.setBlock(salisPos, BlocksTC.pedestal.get());
@@ -3665,6 +3686,7 @@ public class ThaumcraftGameTests {
 	public static void infusionMatrixPicksUpASymmetricalPairOfStabilizersAsARealBonus(GameTestHelper helper) {
 		BlockPos matrixPos = new BlockPos(4, 4, 4);
 		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, matrixPos);
 		helper.setBlock(matrixPos.offset(3, -2, 0), BlocksTC.stabilizer.get());
 		helper.setBlock(matrixPos.offset(-3, -2, 0), BlocksTC.stabilizer.get());
 
@@ -3683,6 +3705,7 @@ public class ThaumcraftGameTests {
 	public static void infusionMatrixPenalizesALoneUnmatchedStabilizer(GameTestHelper helper) {
 		BlockPos matrixPos = new BlockPos(4, 4, 4);
 		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, matrixPos);
 		helper.setBlock(matrixPos.offset(3, -2, 0), BlocksTC.stabilizer.get());
 		// Deliberately no mirrored partner at offset(-3, -2, 0) - the scan should see the mismatch (air on
 		// the other side) and penalize instead of reward, same as an unbalanced pedestal pairing.
@@ -3701,6 +3724,7 @@ public class ThaumcraftGameTests {
 	public static void casterBasicActivatesAnInfusionMatrixThroughOnItemUseFirst(GameTestHelper helper) {
 		BlockPos matrixPos = new BlockPos(4, 4, 4);
 		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, matrixPos);
 		helper.setBlock(matrixPos.below(2), BlocksTC.pedestal.get());
 		BlockPos matrixAbs = helper.absolutePos(matrixPos);
 		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
@@ -3724,6 +3748,7 @@ public class ThaumcraftGameTests {
 	public static void infusionMatrixPicksUpASymmetricalPairOfInlaysAsARealBonus(GameTestHelper helper) {
 		BlockPos matrixPos = new BlockPos(4, 4, 4);
 		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, matrixPos);
 		// BlockInlay needs a sturdy block below it to survive (canSurvive), unlike the Stabilizer.
 		helper.setBlock(matrixPos.offset(3, -3, 0), Blocks.STONE);
 		helper.setBlock(matrixPos.offset(-3, -3, 0), Blocks.STONE);
@@ -3737,6 +3762,145 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(matrix.stabilityReplenish > 0,
 				"a matched symmetrical pair of inlays should be a net positive to stabilityReplenish, got " + matrix.stabilityReplenish);
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Infusion Matrix pillar/accelerator tier system - restored while reviewing this port's own "dead/blocked"
+	// candidates (see TileInfusionMatrix's own doc comment and the port-tracking memory for the fuller
+	// review). validLocation now really requires 4 real BlockPillar corners (any tier); a uniform set of
+	// Ancient/Eldritch pillars, and independent matrixSpeed/matrixCost corner accelerators, real-tune the
+	// altar's cycle time and cost.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionMatrixWontActivateWithoutRealPillarsAtAllFourCorners(GameTestHelper helper) {
+		BlockPos matrixPos = new BlockPos(4, 4, 4);
+		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		helper.setBlock(matrixPos.below(2), BlocksTC.pedestal.get());
+		// Deliberately only 3 of the 4 real corners - the true original's own real structural requirement.
+		helper.setBlock(matrixPos.offset(-1, -2, -1), BlocksTC.pillarArcane.get());
+		helper.setBlock(matrixPos.offset(1, -2, -1), BlocksTC.pillarArcane.get());
+		helper.setBlock(matrixPos.offset(1, -2, 1), BlocksTC.pillarArcane.get());
+
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+		ServerPlayer player = spawnCasterAt(helper, matrixAbs);
+
+		helper.assertFalse(matrix.activate(helper.getLevel(), player),
+				"a real infusion matrix with only 3 of its 4 real corner pillars should refuse to activate");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionMatrixActivatesWithARealFourPillarArcaneCorner(GameTestHelper helper) {
+		BlockPos matrixPos = new BlockPos(4, 4, 4);
+		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, matrixPos);
+		helper.setBlock(matrixPos.below(2), BlocksTC.pedestal.get());
+
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+		ServerPlayer player = spawnCasterAt(helper, matrixAbs);
+
+		helper.assertTrue(matrix.activate(helper.getLevel(), player), "a real infusion matrix with all 4 real corner pillars and a pedestal should activate");
+		helper.succeed();
+	}
+
+	/**
+	 * A uniform set of all 4 corners being real {@code pillarEldritch} should really speed up the altar's
+	 * cycle - measured the same indirect way {@link #bellowsOnASmelterRealSpeedUpTheSmelt} measures the
+	 * Smelter's own real speed boost, since {@code cycleTime}/{@code countDelay} are private: run two otherwise
+	 * identical crafts (real demo recipe, glowstone dust -> glowstone) and compare real elapsed ticks.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void uniformEldritchPillarsRealSpeedUpTheInfusionCycle(GameTestHelper helper) {
+		BlockPos plainPos = new BlockPos(4, 4, 4);
+		BlockPos boostedPos = new BlockPos(4, 4, 20);
+
+		for (BlockPos matrixPos : new BlockPos[] { plainPos, boostedPos }) {
+			helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+			helper.setBlock(matrixPos.below(2), BlocksTC.pedestal.get());
+			helper.setBlock(matrixPos.offset(2, -2, 0), BlocksTC.pedestal.get());
+		}
+		placeInfusionMatrixPillars(helper, plainPos);
+		int[] xs = { -1, 1, 1, -1 };
+		int[] zs = { -1, -1, 1, 1 };
+		for (int i = 0; i < 4; i++) {
+			helper.setBlock(boostedPos.offset(xs[i], -2, zs[i]), BlocksTC.pillarEldritch.get());
+		}
+
+		int plainTicks = runDemoInfusionAndCountTicks(helper, plainPos);
+		int boostedTicks = runDemoInfusionAndCountTicks(helper, boostedPos);
+
+		helper.assertTrue(plainTicks > 0 && boostedTicks > 0, "both crafts should have completed within the test window (plain=" + plainTicks + ", eldritch=" + boostedTicks + ")");
+		helper.assertTrue(boostedTicks < plainTicks,
+				"4 real uniform pillarEldritch corners should really speed up the infusion cycle (eldritch=" + boostedTicks + " ticks, plain=" + plainTicks + " ticks)");
+		helper.succeed();
+	}
+
+	/** Shared demo-recipe craft (glowstone dust + redstone -> glowstone, same real recipe as
+	 * {@code infusionMatrixCraftsADemoInfusionRecipeEndToEnd}, including its own real ordo/ignis essentia jars
+	 * - the demo recipe has a real essentia cost, not just ingredients) for the pillar/accelerator
+	 * speed-comparison tests - returns real elapsed ticks to completion, or -1 if it didn't finish within the
+	 * test window. */
+	private static int runDemoInfusionAndCountTicks(GameTestHelper helper, BlockPos matrixPos) {
+		BlockPos centralPos = matrixPos.below(2);
+		BlockPos componentPos = centralPos.east(2);
+		thaumcraft.common.tiles.crafting.TilePedestal central = helper.getBlockEntity(centralPos);
+		central.setItem(new ItemStack(Items.GLOWSTONE_DUST));
+		thaumcraft.common.tiles.crafting.TilePedestal component = helper.getBlockEntity(componentPos);
+		component.setItem(new ItemStack(Items.REDSTONE));
+
+		BlockPos jarOrdoPos = matrixPos.north(2);
+		BlockPos jarIgnisPos = matrixPos.south(2);
+		helper.setBlock(jarOrdoPos, BlocksTC.jarNormal.get());
+		helper.setBlock(jarIgnisPos, BlocksTC.jarNormal.get());
+		thaumcraft.common.tiles.essentia.TileJarFillable jarOrdo = helper.getBlockEntity(jarOrdoPos);
+		jarOrdo.addToContainer(Aspect.ORDER, 10);
+		thaumcraft.common.tiles.essentia.TileJarFillable jarIgnis = helper.getBlockEntity(jarIgnisPos);
+		jarIgnis.addToContainer(Aspect.FIRE, 10);
+
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
+		ServerPlayer player = spawnCasterAt(helper, matrixAbs);
+
+		matrix.activate(helper.getLevel(), player);
+		matrix.activate(helper.getLevel(), player);
+
+		for (int i = 0; i < 2000; i++) {
+			thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(helper.getLevel(), matrixAbs, matrixState, matrix);
+			if (!matrix.crafting) return i;
+		}
+		return -1;
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void matrixSpeedCornersRealSpeedUpTheInfusionCycle(GameTestHelper helper) {
+		BlockPos plainPos = new BlockPos(4, 4, 4);
+		BlockPos boostedPos = new BlockPos(4, 4, 20);
+
+		for (BlockPos matrixPos : new BlockPos[] { plainPos, boostedPos }) {
+			helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+			placeInfusionMatrixPillars(helper, matrixPos);
+			helper.setBlock(matrixPos.below(2), BlocksTC.pedestal.get());
+			helper.setBlock(matrixPos.offset(2, -2, 0), BlocksTC.pedestal.get());
+		}
+		// 4 real matrixSpeed corners on the boosted matrix (one tier further out/down than the pillars) - the
+		// true original's own real per-corner check, independent of the pillars' own uniform-tier requirement.
+		int[] xs = { -1, 1, 1, -1 };
+		int[] zs = { -1, -1, 1, 1 };
+		for (int i = 0; i < 4; i++) {
+			helper.setBlock(boostedPos.offset(xs[i], -3, zs[i]), BlocksTC.matrixSpeed.get());
+		}
+
+		int plainTicks = runDemoInfusionAndCountTicks(helper, plainPos);
+		int boostedTicks = runDemoInfusionAndCountTicks(helper, boostedPos);
+
+		helper.assertTrue(plainTicks > 0 && boostedTicks > 0, "both crafts should have completed within the test window (plain=" + plainTicks + ", matrixSpeed=" + boostedTicks + ")");
+		helper.assertTrue(boostedTicks < plainTicks,
+				"4 real matrixSpeed corners should really speed up the infusion cycle (matrixSpeed=" + boostedTicks + " ticks, plain=" + plainTicks + " ticks)");
 		helper.succeed();
 	}
 
@@ -4764,6 +4928,7 @@ public class ThaumcraftGameTests {
 	public static void scanningTheRunicMatrixGrantsBootsTravellerResearch(GameTestHelper helper) {
 		BlockPos pos = new BlockPos(2, 2, 2);
 		helper.setBlock(pos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, pos);
 		BlockPos absolute = helper.absolutePos(pos);
 
 		ServerPlayer player = spawnCasterAt(helper, absolute.above());
@@ -9133,6 +9298,7 @@ public class ThaumcraftGameTests {
 		BlockPos matrixPos = new BlockPos(4, 4, 4);
 		BlockPos centralPos = matrixPos.below(2);
 		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, matrixPos);
 		helper.setBlock(centralPos, BlocksTC.pedestal.get());
 		thaumcraft.common.tiles.crafting.TilePedestal central = helper.getBlockEntity(centralPos);
 		central.setItem(new ItemStack(Items.TOTEM_OF_UNDYING));

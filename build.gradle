@@ -82,6 +82,7 @@ sourceSets {
             include 'thaumcraft/common/blocks/devices/BlockPedestal.java'
             include 'thaumcraft/common/tiles/crafting/TileInfusionMatrix.java'
             include 'thaumcraft/common/blocks/crafting/BlockInfusionMatrix.java'
+            include 'thaumcraft/common/blocks/basic/BlockPillar.java'
             include 'thaumcraft/common/blocks/devices/BlockStabilizer.java'
             include 'thaumcraft/common/blocks/devices/BlockInlay.java'
             include 'thaumcraft/common/items/tools/ItemResonator.java'

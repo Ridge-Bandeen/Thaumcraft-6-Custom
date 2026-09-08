@@ -62,11 +62,16 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * {@link thaumcraft.common.blocks.crafting.BlockInfusionMatrix} calls {@link #activate} directly from a
  * plain empty-hand right-click for now. Once a caster/wand item is ported, wiring it to check for
  * {@code IInteractWithCaster} and call {@code onCasterRightClick} needs no changes here.</li>
- * <li><b>No pillar/accelerator-block tier system.</b> The original required four matching {@code BlockPillar}
- * blocks at the structure's corners for {@code validLocation()} to pass, and Ancient/Eldritch pillar tiers
- * plus {@code matrixSpeed}/{@code matrixCost} blocks modified cycle time and cost. None of those blocks are
- * ported; {@code validLocation()} only requires the central pedestal, and cycle time/cost are fixed
- * baselines ({@link #BASE_CYCLE_TIME}, no cost multiplier).</li>
+ * <li><b>Real pillar/accelerator-block tier system (restored - see the port-tracking memory's parity-review
+ * notes).</b> {@link #validLocation} requires four real {@link thaumcraft.common.blocks.basic.BlockPillar}
+ * blocks at the structure's corners, same real position/check as the true original. A uniform set of all
+ * {@code pillarAncient} (or all {@code pillarEldritch}) gives a real cycle-time/cost/stability bonus; a real
+ * {@code matrixSpeed}/{@code matrixCost} block at each of the 4 outer corners (one tier down again) further
+ * modifies cycle time and cost independently per corner - see {@link #getSurroundings} for the exact real
+ * formula/positions, confirmed via the true pre-port original source. {@code pillarAncient}/
+ * {@code pillarEldritch}/{@code matrixSpeed} are real, functional blocks but currently uncraftable (their own
+ * true source materials/recipe were never real, even in the original - see each block's own doc comment);
+ * {@code pillarArcane}/{@code matrixCost} are both real and craftable.</li>
  * <li><b>No {@code TileStabilizer}/{@code BlockInlay} charge-network "instability mitigator".</b> The
  * original could redirect an instability-event item ejection into a nearby stabilizer block instead of
  * dropping it, if a charge-network path existed. That whole subsystem (candle/skull-adjacent charge
@@ -110,6 +115,11 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 	public float stabilityReplenish;
 	private int countDelay = BASE_CYCLE_TIME / 2;
 	private int count;
+	/** Real cycle-time/cost accumulators, reset to their real base values ({@link #BASE_CYCLE_TIME}/1.0) at
+	 * the start of every {@link #getSurroundings} scan and then modified by real pillar/matrixSpeed/matrixCost/
+	 * pedestal-tier bonuses - see that method for the exact real formula. */
+	private int cycleTime = BASE_CYCLE_TIME;
+	private float costMult = 1.0f;
 	/** Real, purely-derived animation state for {@link thaumcraft.client.render.TileInfusionMatrixRenderer} -
 	 * the original's own real {@code startUp}/{@code craftcount} fields. Deliberately NOT synced or persisted:
 	 * {@link #tick} runs identically on both logical sides (like {@link #count} above), so each side recomputes
@@ -157,8 +167,20 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		}
 	}
 
+	/** The 4 real corner offsets (2 blocks below, diagonal) a real {@code BlockPillar} must occupy - same real
+	 * position the true original's own {@code validLocation}/{@code getSurroundings} both use. */
+	private static final int[] PILLAR_X = { -1, 1, 1, -1 };
+	private static final int[] PILLAR_Z = { -1, -1, 1, 1 };
+
 	public boolean validLocation(Level level) {
-		return level.getBlockEntity(worldPosition.below(2)) instanceof TilePedestal;
+		if (!(level.getBlockEntity(worldPosition.below(2)) instanceof TilePedestal)) return false;
+		for (int i = 0; i < 4; i++) {
+			if (!(level.getBlockState(worldPosition.offset(PILLAR_X[i], -2, PILLAR_Z[i])).getBlock()
+					instanceof thaumcraft.common.blocks.basic.BlockPillar)) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	@Override
@@ -216,7 +238,16 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		recipeIngredients = components;
 		recipeOutput = recipe.getRecipeOutput(player, central, components).copy();
 		recipeInstability = recipe.getInstability(player, central, components);
-		recipeEssentia = recipe.getAspects(player, central, components).copy();
+		// Real costMult scaling (see getSurroundings for how it's built up) - clamped to a real minimum of
+		// 0.5 (can't go below half real cost), same real formula as the true original's own craftingStart.
+		if (costMult < 0.5f) costMult = 0.5f;
+		AspectList baseEssentia = recipe.getAspects(player, central, components);
+		AspectList scaledEssentia = new AspectList();
+		for (Aspect aspect : baseEssentia.getAspects()) {
+			int scaled = (int) (baseEssentia.getAmount(aspect) * costMult);
+			if (scaled > 0) scaledEssentia.add(aspect, scaled);
+		}
+		recipeEssentia = scaledEssentia;
 		recipeInputSnapshot = central.copy();
 		recipePlayer = player.getUUID();
 		crafting = true;
@@ -393,6 +424,8 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		problemBlocks.clear();
 		stabilizerCounts.clear();
 		stabilityReplenish = 0.0f;
+		cycleTime = BASE_CYCLE_TIME;
+		costMult = 1.0f;
 
 		Set<Long> stuff = new HashSet<>();
 		for (int xx = -8; xx <= 8; xx++) {
@@ -440,7 +473,50 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 				problemBlocks.add(c1);
 			}
 		}
-		countDelay = Math.max(1, BASE_CYCLE_TIME / 2);
+
+		// Real pillar-tier bonus: a UNIFORM set of all 4 corners being pillarAncient (or all 4 pillarEldritch)
+		// gives a real cycle-time/cost/stability bonus, on top of validLocation's own real "any BlockPillar"
+		// structural requirement - same real positions/formula as the true original.
+		boolean allAncient = true, allEldritch = true;
+		for (int i = 0; i < 4; i++) {
+			Block corner = level.getBlockState(worldPosition.offset(PILLAR_X[i], -2, PILLAR_Z[i])).getBlock();
+			if (corner != thaumcraft.api.blocks.BlocksTC.pillarAncient.get()) allAncient = false;
+			if (corner != thaumcraft.api.blocks.BlocksTC.pillarEldritch.get()) allEldritch = false;
+		}
+		if (allAncient) {
+			cycleTime -= 1;
+			costMult -= 0.1f;
+			stabilityReplenish -= 0.1f;
+		}
+		if (allEldritch) {
+			cycleTime -= 3;
+			costMult += 0.05f;
+			stabilityReplenish += 0.2f;
+		}
+
+		// Real matrixSpeed/matrixCost corner accelerators - one tier further down/out than the pillars,
+		// checked independently per corner (unlike the pillar bonus above, these don't need a matching set).
+		for (int i = 0; i < 4; i++) {
+			Block corner = level.getBlockState(worldPosition.offset(PILLAR_X[i], -3, PILLAR_Z[i])).getBlock();
+			if (corner == thaumcraft.api.blocks.BlocksTC.matrixSpeed.get()) {
+				cycleTime -= 1;
+				costMult += 0.01f;
+			}
+			if (corner == thaumcraft.api.blocks.BlocksTC.matrixCost.get()) {
+				cycleTime += 1;
+				costMult -= 0.02f;
+			}
+		}
+
+		// Real pedestalEldritch cost bonus (pedestalAncient doesn't exist in this port - a genuine forced
+		// block, not a deviation; see BlocksTC.pedestal's own doc comment).
+		for (BlockPos pp : pedestals) {
+			if (level.getBlockState(pp).getBlock() == thaumcraft.api.blocks.BlocksTC.pedestalEldritch.get()) {
+				costMult += 0.0025f;
+			}
+		}
+
+		countDelay = Math.max(1, cycleTime / 2);
 	}
 
 	private float diminishingReturns(Block b, float base) {
