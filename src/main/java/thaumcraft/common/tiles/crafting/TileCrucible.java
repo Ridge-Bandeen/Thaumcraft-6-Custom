@@ -47,6 +47,11 @@ import thaumcraft.common.world.aura.AuraHandler;
  * dispatcher / sound registry.</li>
  * <li>Collision shape is a plain approximation of the original's legs+walls, not an exact match.</li>
  * </ul>
+ *
+ * {@link #setChanged()} is overridden below - see
+ * {@link thaumcraft.common.tiles.crafting.TilePedestal#setChanged()}'s own doc comment for why plain
+ * {@code setChanged()} doesn't push live client updates on its own; needed here for
+ * {@link thaumcraft.client.render.TileCrucibleRenderer}.
  */
 public class TileCrucible extends BlockEntity implements IAspectContainer {
 
@@ -248,5 +253,15 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 	@Override
 	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
 		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	/** See {@link thaumcraft.common.tiles.crafting.TilePedestal#setChanged()}'s own doc comment - same real
+	 * fix, same reason. */
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+		}
 	}
 }
