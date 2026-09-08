@@ -14,8 +14,8 @@
   "key": {
     "T": { "item": "thaumcraft:tube" },
     "P": { "item": "thaumcraft:mechanism_simple" },
-    "R": { "item": "thaumcraft:vis_resonator" },
-    "C": { "item": "thaumcraft:metal_block_thaumium" }
+    "R": { "item": "thaumcraft:morphic_resonator" },
+    "C": { "item": "thaumcraft:metal_alchemical" }
   },
   "result": { "id": "thaumcraft:centrifuge" }
 }

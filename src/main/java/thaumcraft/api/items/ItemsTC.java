@@ -446,10 +446,12 @@ public final class ItemsTC {
 
 	/** A crafting component for the Centrifuge, Condenser, Arcane Bore and Causality Collapser (see
 	 * {@code data/thaumcraft/recipe/morphic_resonator.json} for its own real recipe - a glass pane, a brass
-	 * plate and a {@link #nuggetRareearth}). Only the Causality Collapser's own Infusion recipe has been
-	 * ported so far (see {@code data/thaumcraft/recipe/infusion_causality_collapser.json}); the Centrifuge,
-	 * Condenser and Arcane Bore still need their own recipes ported separately (the latter is additionally
-	 * blocked on {@code mechanismComplex}, a real item never ported this session). */
+	 * plate and a {@link #nuggetRareearth}). The Causality Collapser's Infusion recipe (see
+	 * {@code data/thaumcraft/recipe/infusion_causality_collapser.json}) and, since {@code metalAlchemical}
+	 * became real too, the Centrifuge's own recipe ({@code data/thaumcraft/recipe/centrifuge.json}) both use
+	 * the real ingredient now. Condenser and Arcane Bore's own real recipes both still need
+	 * {@code mechanismComplex} as well - a real item never ported this session - so neither can be fully
+	 * restored yet even though this ingredient alone is no longer the blocker for either. */
 	public static final DeferredItem<Item> morphicResonator =
 			ITEMS.registerSimpleItem("morphic_resonator");
 
