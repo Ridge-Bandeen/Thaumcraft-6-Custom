@@ -30,6 +30,13 @@ import thaumcraft.common.world.aura.AuraHandler;
  * session's consistent boundary so far (no custom tile/entity renderer has been ported yet at all - every
  * device so far has stayed within static blockstate models). The scan data, comparator output, and vis/flux
  * toggle are all fully functional and tested; only the in-world radar visualization is missing.
+ *
+ * <b>Update, now real:</b> {@code thaumcraft.client.render.TileDioptraRenderer} ports the real undulating-grid
+ * technique on {@code BlockEntityRenderer}/{@code PoseStack}/{@code VertexConsumer} - see that class's own doc
+ * comment for what's real and what's a deliberate scope cut. {@link #getUpdateTag}/{@link #getUpdatePacket}/
+ * {@link #setChanged()} are added below for it: this tile never synced {@link #gridAmount}/{@link #counter}
+ * to any client before (same real gap found and fixed across this whole arc - see
+ * {@code thaumcraft.common.tiles.crafting.TilePedestal#setChanged()}'s own doc comment).
  */
 public class TileDioptra extends BlockEntity {
 
@@ -70,5 +77,25 @@ public class TileDioptra extends BlockEntity {
 	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
 		super.saveAdditional(tag, registries);
 		tag.putByteArray("grid_a", gridAmount);
+	}
+
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	/** See {@code thaumcraft.common.tiles.crafting.TilePedestal#setChanged()}'s own doc comment - same real
+	 * fix, same reason. */
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+		}
 	}
 }

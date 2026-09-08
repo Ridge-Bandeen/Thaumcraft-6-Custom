@@ -1898,9 +1898,9 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
-	// Dioptra - an aura radar with no visual rendering ported (see TileDioptra's own doc comment). Calls
-	// TileDioptra.tick(...) directly 20 times to cross its "every 20 ticks" scan gate rather than waiting
-	// out real tick timing, same precedent as the Vis Battery/Vis Generator tests above.
+	// Dioptra - an aura radar (real undulating-grid renderer now ported too, see TileDioptra's own doc
+	// comment). Calls TileDioptra.tick(...) directly 20 times to cross its "every 20 ticks" scan gate rather
+	// than waiting out real tick timing, same precedent as the Vis Battery/Vis Generator tests above.
 	// --------------------------------------------------------------------------------------------------
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
@@ -1924,6 +1924,43 @@ public class ThaumcraftGameTests {
 		int signal = helper.getBlockState(pos).getAnalogOutputSignal(helper.getLevel(), absolute);
 		helper.assertTrue(signal > 0, "a dioptra sitting on a real vis reading should produce a nonzero comparator signal, found: " + signal);
 		helper.succeed();
+	}
+
+	/**
+	 * Real regression guard for the sync fix found while scoping the Infusion Matrix renderer (see this
+	 * tile's own doc comment): before that fix, this tile never overrode {@code getUpdateTag}/
+	 * {@code getUpdatePacket} at all, so a real client never saw the scan grid - not even on initial chunk
+	 * load - which meant {@code TileDioptraRenderer}'s undulating mesh could never actually render. GameTest
+	 * can't observe a real network sync, but it can assert the real payload {@code getUpdateTag} would send
+	 * is now correct.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void dioptraUpdateTagCarriesTheRealScanGrid(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.dioptra.get());
+		AuraHandler.addVis(helper.getLevel(), absolute, 500.0f);
+
+		thaumcraft.common.tiles.devices.TileDioptra tile = helper.getBlockEntity(pos);
+		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(pos);
+
+		net.minecraft.nbt.CompoundTag emptyTag = tile.getUpdateTag(helper.getLevel().registryAccess());
+		helper.assertTrue(emptyTag != null && isAllZero(emptyTag.getByteArray("grid_a")),
+				"before any real scan, the real update tag's grid should carry no nonzero readings, got " + emptyTag);
+
+		for (int i = 0; i < 20; i++) {
+			thaumcraft.common.tiles.devices.TileDioptra.tick(helper.getLevel(), absolute, state, tile);
+		}
+		net.minecraft.nbt.CompoundTag filledTag = tile.getUpdateTag(helper.getLevel().registryAccess());
+		helper.assertTrue(!isAllZero(filledTag.getByteArray("grid_a")), "the real update tag should carry the real nonzero scan grid once one exists, got " + filledTag);
+		helper.succeed();
+	}
+
+	private static boolean isAllZero(byte[] bytes) {
+		for (byte b : bytes) {
+			if (b != 0) return false;
+		}
+		return true;
 	}
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
