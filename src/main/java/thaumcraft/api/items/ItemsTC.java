@@ -393,6 +393,28 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.items.consumables.ItemBottleTaint> bottleTaint =
 			ITEMS.registerItem("bottle_taint", thaumcraft.common.items.consumables.ItemBottleTaint::new);
 
+	/** See {@link thaumcraft.common.items.consumables.ItemCausalityCollapser}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.consumables.ItemCausalityCollapser> causalityCollapser =
+			ITEMS.registerItem("causality_collapser", thaumcraft.common.items.consumables.ItemCausalityCollapser::new);
+
+	/** The 11th and last {@code ItemNuggets} metadata variant from the original ("rareearth", index 10) -
+	 * needed for {@link #morphicResonator}'s own real crafting recipe. Confirmed via the true original source
+	 * (all lang files, blockstate variants) that this nugget has NO real smelting/crafting/drop source
+	 * anywhere, even in 1.12.2 itself - diamond/redstone ore (its only ever-stated sources) have no vanilla
+	 * smelting recipe. A genuine, confirmed upstream Thaumcraft 6 dead end, not a porting gap: ships as real
+	 * but currently unreachable through normal progression, exactly matching the original's own real state. */
+	public static final DeferredItem<Item> nuggetRareearth =
+			ITEMS.registerSimpleItem("nugget_rareearth");
+
+	/** A crafting component for the Centrifuge, Condenser, Arcane Bore and Causality Collapser (see
+	 * {@code data/thaumcraft/recipe/morphic_resonator.json} for its own real recipe - a glass pane, a brass
+	 * plate and a {@link #nuggetRareearth}). Only the Causality Collapser's own Infusion recipe has been
+	 * ported so far (see {@code data/thaumcraft/recipe/infusion_causality_collapser.json}); the Centrifuge,
+	 * Condenser and Arcane Bore still need their own recipes ported separately (the latter is additionally
+	 * blocked on {@code mechanismComplex}, a real item never ported this session). */
+	public static final DeferredItem<Item> morphicResonator =
+			ITEMS.registerSimpleItem("morphic_resonator");
+
 	public static final DeferredItem<BlockItem> rechargePedestal =
 			ITEMS.registerSimpleBlockItem("recharge_pedestal", BlocksTC.rechargePedestal);
 

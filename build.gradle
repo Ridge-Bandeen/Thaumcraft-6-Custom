@@ -521,6 +521,8 @@ sourceSets {
             include 'thaumcraft/common/items/consumables/ItemAlumentum.java'
             include 'thaumcraft/common/entities/projectile/EntityBottleTaint.java'
             include 'thaumcraft/common/items/consumables/ItemBottleTaint.java'
+            include 'thaumcraft/common/entities/projectile/EntityCausalityCollapser.java'
+            include 'thaumcraft/common/items/consumables/ItemCausalityCollapser.java'
             include 'thaumcraft/common/registry/ThaumcraftMobEffects.java'
 
             include 'thaumcraft/common/blocks/devices/BlockRechargePedestal.java'

@@ -60,6 +60,13 @@ public final class ThaumcraftEntities {
 					.updateInterval(10)
 					.build("bottle_taint"));
 
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.projectile.EntityCausalityCollapser>> CAUSALITY_COLLAPSER = ENTITY_TYPES.register("causality_collapser",
+			() -> EntityType.Builder.<thaumcraft.common.entities.projectile.EntityCausalityCollapser>of(thaumcraft.common.entities.projectile.EntityCausalityCollapser::new, MobCategory.MISC)
+					.sized(0.25f, 0.25f)
+					.clientTrackingRange(64)
+					.updateInterval(10)
+					.build("causality_collapser"));
+
 	/** See {@link EntityFollowingItem}'s own doc comment - homes a dropped item toward whoever/wherever
 	 * earned it (COLLECTOR) instead of leaving it to fall normally. Persists across reloads like a real
 	 * dropped item (unlike the invisible focus-carrier entities above), same reasoning as Alumentum/BottleTaint. */

@@ -108,6 +108,7 @@ public class ThaumcraftClient {
         // Real vanilla-item spinning-icon renderer too, matching Alumentum above - the original's own
         // EntityBottleTaint really is an EntityThrowable, no bespoke model.
         event.registerEntityRenderer(ThaumcraftEntities.BOTTLE_TAINT.get(), ThrownItemRenderer::new);
+        event.registerEntityRenderer(ThaumcraftEntities.CAUSALITY_COLLAPSER.get(), ThrownItemRenderer::new);
         // Real vanilla ItemEntityRenderer, unmodified - EntityFollowingItem really is a plain ItemEntity
         // subtype in this port (see its own doc comment), so it just gets the exact same real rendering any
         // dropped item does, for free.

@@ -4556,6 +4556,48 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
+	// Causality Collapser - a thrown grenade that explodes and collapses nearby real flux rifts, same real
+	// ThrowableItemProjectile shape as Alumentum/Bottle of Taint. Found and closed while reviewing this
+	// port's own "dead/blocked" candidates - previously skipped as blocked on EntityFluxRift, real now.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void throwingCausalityCollapserCollapsesANearbyRealFluxRift(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerLevel level = helper.getLevel();
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+
+		// A real EntityFluxRift isn't itself a projectile-collidable entity (the original's own onImpact
+		// only ever fires on a block hit, per its `result.entityHit == null` guard - matched by this port
+		// using a BlockHitResult-only onHit), so unlike the pig-based Alumentum/BottleTaint tests (which get
+		// a continuous per-tick entity-collision check along the whole flight path), this one only gets a
+		// single real chance: wherever the throw happens to land - always very close to the caster's own feet
+		// at this short range, since the -5 degree pitch offset barely dents the steep look-down angle needed
+		// to hit a floor-level target only 2 blocks away. A LARGE riftSize (see EntityFluxRift's own doc
+		// comment on `points`/`calcSteps`) grows a real random-walk tendril bounding box that - confirmed by
+		// direct diagnostic logging during this test's own debugging - can end up lopsided several blocks off
+		// to one side of the entity's own position depending on its seed, occasionally missing a throw that
+		// landed well within the real 3-block collapse-search radius of the rift's actual position. A small
+		// riftSize keeps the tendrils (and so the bounding box) tight around the entity's real position
+		// instead, which the search radius comfortably covers regardless of shape - this is a test-geometry
+		// fix only, `setRiftSize` doesn't affect the collapse mechanic under test.
+		thaumcraft.common.entities.EntityFluxRift rift =
+				new thaumcraft.common.entities.EntityFluxRift(thaumcraft.common.registry.ThaumcraftEntities.FLUX_RIFT.get(), level);
+		rift.setRiftSeed(7);
+		rift.setPos(origin.getX() + 2.5, origin.getY() + 1, origin.getZ() + 0.5);
+		rift.setRiftSize(6);
+		level.addFreshEntity(rift);
+		caster.lookAt(EntityAnchorArgument.Anchor.EYES, rift.getBoundingBox().getCenter());
+		helper.assertFalse(rift.getCollapse(), "a freshly spawned real flux rift should not start out collapsing");
+
+		caster.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ItemsTC.causalityCollapser.get()));
+		ItemsTC.causalityCollapser.get().use(level, caster, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+		helper.succeedWhen(() -> helper.assertTrue(rift.getCollapse(),
+				"a real causality collapser thrown near a real flux rift should really have set it collapsing by now"));
+	}
+
+	// --------------------------------------------------------------------------------------------------
 	// MobEffectInfectiousVisExhaust - another Flux Rift prerequisite (see EntityWisp's own doc comment for
 	// the running prerequisite list). Registered together with its already-ported-but-previously-unused
 	// sibling MobEffectVisExhaust, its real amplifier-0 hand-off target.
