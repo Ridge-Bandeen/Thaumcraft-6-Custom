@@ -1607,6 +1607,29 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real regression guard for the sync fix found while scoping the Infusion Matrix renderer (see
+	 * {@link thaumcraft.common.tiles.devices.TileRechargePedestal}'s own doc comment): before that fix, this
+	 * tile never overrode {@code getUpdateTag}/{@code getUpdatePacket} at all, so a real client never saw its
+	 * held item - not even on initial chunk load - which meant {@code TileRechargePedestalRenderer}'s
+	 * floating item could never actually render. GameTest can't observe a real network sync, but it can
+	 * assert the real payload {@code getUpdateTag} would send is now correct.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void rechargePedestalUpdateTagCarriesTheRealHeldItem(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(2, 1, 2);
+		helper.setBlock(relPos, BlocksTC.rechargePedestal.get());
+		thaumcraft.common.tiles.devices.TileRechargePedestal tile = helper.getBlockEntity(relPos);
+
+		net.minecraft.nbt.CompoundTag emptyTag = tile.getUpdateTag(helper.getLevel().registryAccess());
+		helper.assertTrue(emptyTag != null, "the real update tag should never be null now that this tile overrides getUpdateTag");
+
+		tile.setItem(new ItemStack(TEST_RECHARGABLE_ITEM.get()));
+		net.minecraft.nbt.CompoundTag filledTag = tile.getUpdateTag(helper.getLevel().registryAccess());
+		helper.assertTrue(filledTag.contains("Items"), "the real update tag should carry the held item once one is placed, got " + filledTag);
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Hungry Chest - a real vanilla ChestBlock subclass (see BlockHungryChest's own doc comment). No new
 	// tile class was needed at all, so these tests focus on the two things this port actually adds:
@@ -4957,6 +4980,33 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(theoryKnowledge >= 1, "a full 100% BASICS theory should grant at least 1 real THEORY knowledge point, found " + theoryKnowledge);
 
 		helper.assertTrue(tile.checkSurroundingAids().isEmpty(), "with real aids now registered but none of their trigger blocks/items/entities actually placed near this table, the real scan should still come back empty");
+		helper.succeed();
+	}
+
+	/**
+	 * Real regression guard for the sync fix found while scoping the Infusion Matrix renderer (see this
+	 * tile's own doc comment): before that fix, this tile never overrode {@code getUpdateTag}/
+	 * {@code getUpdatePacket} at all, so a real client never saw the ink slot or the in-progress theory - not
+	 * even on initial chunk load - which meant {@code TileResearchTableRenderer}'s inkwell/scroll could never
+	 * actually render. GameTest can't observe a real network sync, but it can assert the real payload
+	 * {@code getUpdateTag} would send is now correct.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void researchTableUpdateTagCarriesTheRealInkAndActiveTheory(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(3, 2, 3);
+		BlockPos absPos = helper.absolutePos(pos);
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.researchTable.get());
+		thaumcraft.common.tiles.crafting.TileResearchTable tile = helper.getBlockEntity(pos);
+		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+
+		net.minecraft.nbt.CompoundTag emptyTag = tile.getUpdateTag(helper.getLevel().registryAccess());
+		helper.assertTrue(emptyTag != null && !emptyTag.contains("note"), "with no real theory started, the real update tag should carry no 'note' data, found " + emptyTag);
+
+		tile.getItemHandler().setStackInSlot(0, new ItemStack(ItemsTC.scribingTools.get()));
+		tile.startNewTheory(player, java.util.Set.of());
+		net.minecraft.nbt.CompoundTag filledTag = tile.getUpdateTag(helper.getLevel().registryAccess());
+		helper.assertTrue(filledTag.contains("Items"), "the real update tag should carry the real ink item once one is placed, got " + filledTag);
+		helper.assertTrue(filledTag.contains("note"), "the real update tag should carry the real in-progress theory once one is started, got " + filledTag);
 		helper.succeed();
 	}
 

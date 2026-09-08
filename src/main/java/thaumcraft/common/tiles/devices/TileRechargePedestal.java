@@ -38,6 +38,15 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * from {@link BlockEntity}) - the original's whole-tile sync-splitting existed to reduce 1.12.2 network
  * traffic and has no real modern equivalent (nor is one needed for a single-slot device).</li>
  * </ul>
+ *
+ * <b>Real bug fix (found while scoping the Infusion Matrix renderer):</b> {@link BlockEntity}'s own default
+ * {@code getUpdateTag}/{@code getUpdatePacket} return an empty tag / {@code null} - a plain {@code BlockEntity}
+ * subclass that never overrides them (as this one didn't, until now) never syncs <i>any</i> of its data to
+ * clients, not even on initial chunk load. That meant {@code TileRechargePedestalRenderer}'s floating item
+ * could never actually render - it was always reading an empty client-side copy. Fixed below the same way
+ * {@link thaumcraft.common.tiles.crafting.TilePedestal} and {@link thaumcraft.common.tiles.crafting.TileThaumatorium}
+ * already do it, plus a {@link #setChanged()} override so later item changes push live instead of only
+ * showing up after the chunk is reloaded (see that override's own doc comment).
  */
 public class TileRechargePedestal extends BlockEntity {
 
@@ -94,5 +103,25 @@ public class TileRechargePedestal extends BlockEntity {
 	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
 		super.loadAdditional(tag, registries);
 		items.deserializeNBT(registries, tag.getCompound("Items"));
+	}
+
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	/** See {@link thaumcraft.common.tiles.crafting.TilePedestal#setChanged()}'s own doc comment - same real
+	 * fix, same reason. */
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+		}
 	}
 }

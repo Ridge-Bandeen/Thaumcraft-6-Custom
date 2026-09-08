@@ -53,6 +53,11 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * exactly that recipe's requirement - same suction-and-fill shape as
  * {@link thaumcraft.common.tiles.devices.TilePotionSprayer#fill} - until it's met, then crafts and ejects
  * the result, consuming one catalyst.
+ *
+ * {@link #setChanged()} is overridden below for the same real reason
+ * {@link thaumcraft.common.tiles.crafting.TilePedestal#setChanged()} is - {@code TileThaumatoriumRenderer}'s
+ * floating preview item needs the catalyst swap to actually push to nearby clients, not just show up after a
+ * chunk reload.
  */
 public class TileThaumatorium extends BlockEntity implements IAspectContainer, IEssentiaTransport {
 
@@ -311,5 +316,15 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 	@Override
 	public Packet<ClientGamePacketListener> getUpdatePacket() {
 		return ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	/** See {@link thaumcraft.common.tiles.crafting.TilePedestal#setChanged()}'s own doc comment - same real
+	 * fix, same reason. */
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+		}
 	}
 }

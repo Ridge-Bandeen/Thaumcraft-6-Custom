@@ -43,13 +43,16 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * Purpose-built {@link BlockEntity}+{@link ItemStackHandler}, same "no shared inventory-tile base" pattern
  * every other device this session has used - slot 0 = scribing tools (ink), slot 1 = paper.
  *
- * {@link #data} (the live in-progress theory) deliberately has no {@code BlockEntity}-level sync override
- * (no {@code getUpdateTag} of its own) - unlike a device's inventory slots, this is fundamentally
- * "keep an open GUI in sync with every card draw/pick", which belongs at the menu level (explicit
- * per-action sync to the viewing player, the same shape {@code ArcaneWorkbenchMenu}'s own
- * {@code broadcastChanges} already uses) rather than infrequent generic chunk-level sync - real sync is a
- * job for the menu commit still to come, not this one. World-save persistence ({@link #saveAdditional}/
- * {@link #loadAdditional}) is real here regardless.
+ * Fine-grained "keep an open GUI in sync with every card draw/pick" sync is still a job for the menu level
+ * (explicit per-action sync to the viewing player, the same shape {@code ArcaneWorkbenchMenu}'s own
+ * {@code broadcastChanges} already uses), not this class - that's still a real follow-up, not built here.
+ * But {@link #getUpdateTag}/{@link #getUpdatePacket} below <b>are</b> real now: {@code TileResearchTableRenderer}
+ * needs a coarse, world-visible ("is there ink in the slot", "is a theory in progress") view of this tile for
+ * every nearby player, not just whoever has the menu open, and a plain {@code BlockEntity} that never
+ * overrides those two methods never syncs anything at all (its defaults are an empty tag / {@code null}) -
+ * not even on initial chunk load. Found and fixed while scoping the Infusion Matrix renderer; see
+ * {@link thaumcraft.common.tiles.crafting.TilePedestal#setChanged()}'s own doc comment for the matching
+ * live-update half of this fix.
  */
 public class TileResearchTable extends BlockEntity implements MenuProvider {
 
@@ -200,6 +203,26 @@ public class TileResearchTable extends BlockEntity implements MenuProvider {
 			data.deserialize(tag.getCompound("note"));
 		} else {
 			data = null;
+		}
+	}
+
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	/** See {@link thaumcraft.common.tiles.crafting.TilePedestal#setChanged()}'s own doc comment - same real
+	 * fix, same reason. */
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
 		}
 	}
 }

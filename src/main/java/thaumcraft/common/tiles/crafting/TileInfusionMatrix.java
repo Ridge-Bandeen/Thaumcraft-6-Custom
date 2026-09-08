@@ -88,6 +88,10 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * The symmetry-based stability scan itself ({@link #getSurroundings}) IS kept close to the original: pedestals
  * were always part of that scan (every {@link BlockPedestal} implements {@link IInfusionStabiliserExt}), and
  * vanilla skull blocks are kept as the original's other zero-dependency stabilizer case.
+ *
+ * {@link #setChanged()} is overridden below - see {@link thaumcraft.common.tiles.crafting.TilePedestal#setChanged()}'s
+ * own doc comment for why plain {@code setChanged()} doesn't push live client updates on its own; needed here
+ * for {@link thaumcraft.client.render.TileInfusionMatrixRenderer}.
  */
 public class TileInfusionMatrix extends BlockEntity implements IInteractWithCaster, IAspectContainer {
 
@@ -532,5 +536,16 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 	@Override
 	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
 		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	/** See {@link thaumcraft.common.tiles.crafting.TilePedestal#setChanged()}'s own doc comment - same real
+	 * fix, same reason. Needed here for {@link thaumcraft.client.render.TileInfusionMatrixRenderer} to see
+	 * {@link #active}/{@link #crafting}/{@link #stability} change live instead of only after a chunk reload. */
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+		}
 	}
 }

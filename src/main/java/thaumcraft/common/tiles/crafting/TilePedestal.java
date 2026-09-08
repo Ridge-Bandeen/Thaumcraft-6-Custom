@@ -6,6 +6,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import thaumcraft.common.registry.ThaumcraftBlockEntities;
@@ -28,6 +29,10 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * whole subsystem isn't ported; see {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix}'s doc
  * comment for what else got cut alongside it.</li>
  * </ul>
+ *
+ * Now has a real floating-item renderer ({@code thaumcraft.client.render.TilePedestalRenderer}), so
+ * {@link #setChanged()} is overridden to actually push the update to nearby clients - see that override's
+ * own doc comment for why plain {@code setChanged()} alone isn't enough.
  */
 public class TilePedestal extends BlockEntity {
 
@@ -76,5 +81,23 @@ public class TilePedestal extends BlockEntity {
 	@Override
 	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
 		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	/**
+	 * Real, confirmed-necessary fix (found while scoping the Infusion Matrix renderer): plain
+	 * {@link BlockEntity#setChanged()} only marks the containing chunk unsaved - it does <b>not</b> push a
+	 * {@code ClientboundBlockEntityDataPacket} to nearby clients (confirmed by reading vanilla's own
+	 * {@code BlockEntity#setChanged}/{@code Level#blockEntityChanged}). Without this override, a real,
+	 * already-loaded client only ever sees this tile's item at the moment its chunk was first sent - not on
+	 * any later {@link #setItem}. Matches vanilla's own real fix for the same problem (see
+	 * {@code SignBlockEntity}, which pairs every {@code setChanged()} call with an explicit
+	 * {@code level.sendBlockUpdated(...)}) - centralized here instead of at each call site.
+	 */
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+		}
 	}
 }
