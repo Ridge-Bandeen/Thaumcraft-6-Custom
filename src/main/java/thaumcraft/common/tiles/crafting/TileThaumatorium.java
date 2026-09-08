@@ -36,11 +36,14 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * upgradeable) recipes through a dedicated GUI, then sucking essentia from connected jars/tubes toward
  * whichever selected recipe's aspect requirement matched the currently inserted catalyst.
  *
- * Real simplification, following {@code BlockInfernalFurnace}'s own "drop the multi-block illusion, pick the
- * right vanilla-shaped block directly" precedent (see its doc comment): a single standalone block, no GUI
- * (matching {@link thaumcraft.common.tiles.devices.TilePotionSprayer}/{@link TileVoidSiphon}'s no-menu
- * convention - right-click inserts/removes the catalyst item directly), no Brain-in-a-Jar upgrade (nothing
- * left to upgrade - see below), no required-crucible-below structure, no separate "top" block.
+ * <b>The real structure is restored</b> (see {@code BlockThaumatorium}'s own doc comment) - a real crucible
+ * below and a real cosmetic top block are both back, via the real multiblock ritual. What's still simplified,
+ * following {@code BlockInfernalFurnace}'s own "drop the GUI, keep the function" precedent (see its doc
+ * comment): no GUI (matching {@link thaumcraft.common.tiles.devices.TilePotionSprayer}/{@link TileVoidSiphon}'s
+ * no-menu convention - right-click inserts/removes the catalyst item directly), no Brain-in-a-Jar upgrade
+ * (nothing left to upgrade - see below), and this tile's own runtime operation still doesn't actually read
+ * essentia from the real crucible below it (self-contained sourcing instead, same as before) - the crucible
+ * is a real structural placement requirement again, just not a real ongoing essentia-supply dependency yet.
  *
  * The automation this device actually adds over the plain {@link TileCrucible} - the entire point of it - is
  * preserved: instead of a player manually feeding essentia crystals in one at a time until a recipe's aspect

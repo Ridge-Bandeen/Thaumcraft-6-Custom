@@ -1932,6 +1932,31 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for {@link thaumcraft.common.lib.crafting.DustTriggerMultiblock}'s third real registered
+	 * blueprint - the Thaumatorium. A real, previously fully-unreachable device (no recipe of any kind, not
+	 * even an invented substitute - a genuine confirmed gap, found and closed while restoring this) now has a
+	 * real acquisition path: a real crucible, a real metalAlchemical block on top of it, right-click.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void salisMundusConvertsARealThaumatoriumStructure(GameTestHelper helper) {
+		BlockPos base = new BlockPos(2, 1, 2);
+		helper.setBlock(base, BlocksTC.crucible.get());
+		helper.setBlock(base.above(), BlocksTC.metalAlchemical.get());
+		helper.setBlock(base.above(2), BlocksTC.metalAlchemical.get());
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		useSalisMundusOn(helper, player, base.above());
+		helper.assertTrue(helper.getBlockState(base.above()).is(BlocksTC.metalAlchemical.get()), "the middle block should still be real metalAlchemical the same tick - the real conversion is delayed, not instant");
+
+		tickSchedulerPastDustTriggerDelay(helper);
+
+		helper.assertTrue(helper.getBlockState(base).is(BlocksTC.crucible.get()), "the pre-placed real crucible should be untouched");
+		helper.assertTrue(helper.getBlockState(base.above()).is(BlocksTC.thaumatorium.get()), "the real metalAlchemical body should really have become a real thaumatorium, found " + helper.getBlockState(base.above()));
+		helper.assertTrue(helper.getBlockState(base.above(2)).is(BlocksTC.thaumatoriumTop.get()), "the real metalAlchemical cap should really have become a real thaumatoriumTop, found " + helper.getBlockState(base.above(2)));
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// BlockScheduler - the real, direct port of the old (1.12.2) ServerEvents' own gradual block-break/swap
 	// scheduler (see that class's own doc comment for the fuller story). FocusEffectBreak/FocusEffectEarth/

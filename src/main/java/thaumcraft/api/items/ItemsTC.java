@@ -640,6 +640,12 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> thaumatorium =
 			ITEMS.registerSimpleBlockItem("thaumatorium", BlocksTC.thaumatorium);
 
+	public static final DeferredItem<BlockItem> thaumatoriumTop =
+			ITEMS.registerSimpleBlockItem("thaumatorium_top", BlocksTC.thaumatoriumTop);
+
+	public static final DeferredItem<BlockItem> metalAlchemical =
+			ITEMS.registerSimpleBlockItem("metal_alchemical", BlocksTC.metalAlchemical);
+
 	public static final DeferredItem<BlockItem> pavingStoneTravel =
 			ITEMS.registerSimpleBlockItem("paving_stone_travel", BlocksTC.pavingStoneTravel);
 

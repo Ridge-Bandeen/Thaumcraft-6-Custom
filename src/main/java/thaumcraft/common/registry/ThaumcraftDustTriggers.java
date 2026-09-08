@@ -18,10 +18,10 @@ import thaumcraft.common.lib.crafting.DustTriggerSimple;
  *
  * Research gates: the original's Arcane Workbench trigger used {@code FIRSTSTEPS@1}, already in every
  * player's default knowledge (see {@code PlayerKnowledge}), so it's reachable as-is. The Crucible
- * ({@code UNLOCKALCHEMY@1}), Infernal Furnace ({@code INFERNALFURNACE}), and Infusion Altar ({@code INFUSION})
- * triggers all used research keys that aren't reachable with no Thaumonomicon to grant them, so all three
- * substitute {@code FIRSTSTEPS} instead, the same "stay reachable given no research-granting path yet"
- * deviation used everywhere else this session.
+ * ({@code UNLOCKALCHEMY@1}), Infernal Furnace ({@code INFERNALFURNACE}), Infusion Altar ({@code INFUSION}),
+ * and Thaumatorium ({@code THAUMATORIUM}) triggers all used research keys that aren't reachable with no
+ * Thaumonomicon to grant them, so all four substitute {@code FIRSTSTEPS} instead, the same "stay reachable
+ * given no research-granting path yet" deviation used everywhere else this session.
  */
 public final class ThaumcraftDustTriggers {
 
@@ -30,6 +30,7 @@ public final class ThaumcraftDustTriggers {
 		IDustTrigger.registerDustTrigger(new DustTriggerSimple("FIRSTSTEPS", Blocks.CAULDRON, new ItemStack(BlocksTC.crucible.get())));
 		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", infernalFurnaceBlueprint()));
 		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", infusionAltarBlueprint()));
+		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", thaumatoriumBlueprint()));
 	}
 
 	/**
@@ -85,6 +86,30 @@ public final class ThaumcraftDustTriggers {
 	private static net.minecraft.world.level.block.state.BlockState pillarFacing(net.minecraft.core.Direction facing) {
 		return BlocksTC.pillarArcane.get().defaultBlockState()
 				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, facing);
+	}
+
+	/**
+	 * Real port of the true original's own {@code thaumotoriumBlueprint} - a simple 1x1x3 vertical stack: a
+	 * real, pre-placed {@code crucible} at the bottom (real {@code null}-target validity cell, untouched -
+	 * this port's own {@link thaumcraft.common.tiles.crafting.TileThaumatorium} doesn't actually read from it
+	 * at runtime, same already-documented simplification as before this restores just the real structural
+	 * placement requirement, not the original's own crucible-sourced essentia mechanic), a real
+	 * {@code metalAlchemical} block above it becomes the real {@code thaumatorium}, and another real
+	 * {@code metalAlchemical} above that becomes the real cosmetic {@code thaumatoriumTop}. The original's own
+	 * {@code applyPlayerFacing} flag on both targets is a real no-op here - neither block has a real
+	 * {@code HORIZONTAL_FACING} property to begin with (both full, faceless cubes - see
+	 * {@code BlockThaumatorium}'s own doc comment), so {@link DustTriggerMultiblock}'s facing computation
+	 * never triggers for either.
+	 */
+	private static Part[][][] thaumatoriumBlueprint() {
+		Part top = new Part(BlocksTC.metalAlchemical.get(), BlocksTC.thaumatoriumTop.get()).setApplyPlayerFacing(true);
+		Part body = new Part(BlocksTC.metalAlchemical.get(), BlocksTC.thaumatorium.get()).setApplyPlayerFacing(true);
+		Part base = new Part(BlocksTC.crucible.get(), null);
+		return new Part[][][] {
+				{ { top } },
+				{ { body } },
+				{ { base } },
+		};
 	}
 
 	private ThaumcraftDustTriggers() {

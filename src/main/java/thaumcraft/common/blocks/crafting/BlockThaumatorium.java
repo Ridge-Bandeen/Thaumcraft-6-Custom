@@ -26,10 +26,16 @@ import thaumcraft.common.tiles.crafting.TileThaumatorium;
 
 /**
  * Replaces the old (1.12.2) {@code BlockThaumatorium} - see {@link TileThaumatorium}'s own doc comment for
- * the auto-crafting mechanic and what's simplified (single standalone block, no GUI, no Brain-in-a-Jar, no
- * required-crucible-below structure or cosmetic "top" block). Full cube, no facing needed. Right-click
- * inserts/removes the catalyst item directly, same no-menu convention as
+ * the auto-crafting mechanic and what's simplified (no GUI, no Brain-in-a-Jar). Full cube, no facing needed.
+ * Right-click inserts/removes the catalyst item directly, same no-menu convention as
  * {@link thaumcraft.common.blocks.devices.BlockPotionSprayer}/{@link BlockVoidSiphon}.
+ *
+ * <b>Real acquisition path restored</b> (see {@code ThaumcraftDustTriggers#thaumatoriumBlueprint}): this had
+ * no real recipe of any kind for most of this session (not even an invented substitute - a genuine, confirmed
+ * gap, not a deliberate cut). The real path is the original's own real ritual: a real {@code crucible} placed
+ * below, a real {@code metalAlchemical} block placed on top of that, right-click with Salis Mundus - the
+ * {@code metalAlchemical} becomes this block. {@code metalAlchemical} itself is real but currently
+ * uncraftable (see its own doc comment).
  *
  * Texture note: the original's real look came from a hand-modeled {@code .obj} mesh with its own UV atlas
  * (see {@code thaumatorium.png}/{@code .mtl}/{@code .obj} still sitting in assets, unused). Reconstructing

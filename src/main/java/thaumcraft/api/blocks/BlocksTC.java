@@ -425,6 +425,25 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.crafting.BlockThaumatorium::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).explosionResistance(5.0f).sound(SoundType.STONE).noOcclusion());
 
+	/** A purely cosmetic cap block, placed directly above a real {@link #thaumatorium} by the real Infusion
+	 * ritual (see {@code ThaumcraftDustTriggers}) - no tile entity, matching the true original (the real mesh
+	 * combined body+top into one visual, this port's own already-established "reuse Crucible's plain-cube
+	 * textures instead of reconstructing the original's real {@code .obj} mesh" simplification for
+	 * {@link #thaumatorium} applies here too, for the same reason). */
+	public static final DeferredBlock<Block> thaumatoriumTop = BLOCKS.registerBlock("thaumatorium_top",
+			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).explosionResistance(5.0f).sound(SoundType.STONE));
+
+	/** A real crafting component for several devices this port hasn't built yet (Centrifuge, the Thaumium/Void
+	 * Essentia Smelter tiers, the Potion Sprayer, Smelter Aux/Vent, essentia-transport tube I/O, and - the one
+	 * this restores it for - the real {@link #thaumatorium}/{@link #thaumatoriumTop} multiblock ritual). Real,
+	 * currently uncraftable: the true original's own real recipe ({@code "AlchemicalConstruct"}) needs
+	 * {@code tubeValve} - a real, distinct essentia-tube device (its own tile entity, not a plain decorative
+	 * block) never ported this session - a genuine forced block, not chased down here. Ships real but
+	 * unreachable through normal progression, same honest pattern as {@code nuggetRareearth} earlier this
+	 * session. */
+	public static final DeferredBlock<Block> metalAlchemical = BLOCKS.registerBlock("metal_alchemical",
+			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(4.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
+
 	/** Only the "travel" variant of the original's shared {@code BlockPavingStone} - see
 	 * {@link thaumcraft.common.blocks.basic.BlockPavingStoneTravel}'s own doc comment for why the
 	 * "barrier" variant (the warding-network floor tile) is deferred separately. */
