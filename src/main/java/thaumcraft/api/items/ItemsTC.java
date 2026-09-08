@@ -499,6 +499,25 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemGrappleGun> grappleGun =
 			ITEMS.registerItem("grapple_gun", thaumcraft.common.items.tools.ItemGrappleGun::new);
 
+	/** {@code ItemPrimalCrusher.material} ("PRIMALVOID") from the original: 500 uses, 8.0 speed, +4.0 attack
+	 * damage, 20 enchantability - same real Thaumium-ingot repair substitution as {@link #TIER_VOID}/{@link
+	 * #TIER_CRIMSON_BLADE} above (the original repaired with a void ingot; that ore chain isn't ported). */
+	private static final Tier TIER_PRIMAL = new SimpleTier(BlockTags.INCORRECT_FOR_DIAMOND_TOOL, 500, 8.0F, 4.0F, 20,
+			() -> Ingredient.of(ItemsTC.ingotThaumium));
+
+	/** See {@link thaumcraft.common.items.tools.ItemPrimalCrusher}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemPrimalCrusher> primalCrusher = ITEMS.registerItem("primal_crusher",
+			props -> new thaumcraft.common.items.tools.ItemPrimalCrusher(TIER_PRIMAL,
+					props.attributes(net.minecraft.world.item.DiggerItem.createAttributes(TIER_PRIMAL, 3.5F, -2.8F)).rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+
+	/** See {@link thaumcraft.common.items.tools.ItemSanityChecker}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemSanityChecker> sanityChecker =
+			ITEMS.registerItem("sanity_checker", thaumcraft.common.items.tools.ItemSanityChecker::new);
+
+	/** See {@link thaumcraft.common.items.tools.ItemHandMirror}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemHandMirror> handMirror =
+			ITEMS.registerItem("hand_mirror", thaumcraft.common.items.tools.ItemHandMirror::new);
+
 	/** {@code ThaumcraftMaterials.ARMORMAT_THAUMIUM}, via {@link ThaumcraftArmorMaterials#THAUMIUM} - see that
 	 * class for why armor needs a real registry entry instead of a plain {@code Tier}-style object. Durability
 	 * is {@code Type.getDurability(25)} (the original's durability multiplier), same convention vanilla's own

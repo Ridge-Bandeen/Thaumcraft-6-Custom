@@ -1,112 +1,69 @@
 package thaumcraft.common.items.tools;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
-import java.util.Iterator;
-import java.util.Set;
-import net.minecraft.block.Block;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.client.renderer.ItemMeshDefinition;
-import net.minecraft.client.renderer.block.model.ModelResourceLocation;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ItemTool;
-import net.minecraft.util.NonNullList;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.EnumHelper;
-import thaumcraft.api.blocks.BlocksTC;
+
+import java.util.List;
+
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Tier;
+import net.minecraft.world.item.TieredItem;
+import net.minecraft.world.item.component.Tool;
+import net.minecraft.world.level.Level;
 import thaumcraft.api.items.IWarpingGear;
-import thaumcraft.api.items.ItemsTC;
-import thaumcraft.common.config.ConfigItems;
-import thaumcraft.common.items.IThaumcraftItems;
-import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
 
+/**
+ * Replaces the old (1.12.2) {@code ItemPrimalCrusher} - a real dual pickaxe+shovel tool, extending
+ * {@link TieredItem} directly rather than {@link net.minecraft.world.item.PickaxeItem}/{@link
+ * net.minecraft.world.item.ShovelItem}: neither single-tag constructor can express "mines both real tag sets
+ * at the same real flat speed", so the real {@link Tool} component is built by hand instead (two real {@link
+ * Tool.Rule#minesAndDrops} entries, one per real vanilla tag, both at the original's own real flat 8.0 speed).
+ *
+ * Real, documented simplification: the original's own {@code getDestroySpeed} gave iron/anvil/rock-material
+ * blocks that same flat 8.0 speed while everything else in its own hardcoded ~38-block list (dirt, sand,
+ * rails, taint blocks, etc.) fell back to a slower, plain {@code ItemTool}-default speed - this real modern
+ * {@link Tool} just gives the whole real {@link BlockTags#MINEABLE_WITH_PICKAXE}/{@link
+ * BlockTags#MINEABLE_WITH_SHOVEL} tag set the same flat speed, a real, minor fidelity loss (soft materials
+ * dig a bit faster here than the original), in exchange for a real modern tag-driven rule instead of a
+ * ~38-block hardcoded list that would need re-deriving by hand anyway (several of the original's own named
+ * blocks, e.g. {@code LIT_REDSTONE_ORE}, don't exist as separate blocks any more). Wood/leaves/plants are
+ * naturally excluded (neither tag covers them), matching the original's own real {@code canHarvestBlock}
+ * exclusion without needing to repeat it.
+ *
+ * Real mechanics kept: self-repair (1 durability every 20 ticks while damaged, matching {@link
+ * ItemVoidPickaxe}'s own real precedent exactly) and a real {@link IWarpingGear} +2 warp while held/worn.
+ * Real, documented cut: the original's own {@code getSubItems} pre-infused a creative-tab copy with real
+ * Destructive+Refining infusion enchantments - a minor creative-tab convenience, not a real mechanic (a
+ * player can still infuse a plain copy at the Infusion Altar); dropped rather than chasing a
+ * {@code FillCreativeModeTabEvent} hook for one decorative default.
+ */
+public class ItemPrimalCrusher extends TieredItem implements IWarpingGear {
 
-public class ItemPrimalCrusher extends ItemTool implements IWarpingGear, IThaumcraftItems
-{
-    public static Item.ToolMaterial material;
-    private static Set isEffective;
-    
-    public ItemPrimalCrusher() {
-        super(3.5f, -2.8f, ItemPrimalCrusher.material, ItemPrimalCrusher.isEffective);
-        setCreativeTab(ConfigItems.TABTC);
-        setRegistryName("primal_crusher");
-        setUnlocalizedName("primal_crusher");
-        ConfigItems.ITEM_VARIANT_HOLDERS.add(this);
-    }
-    
-    public Item getItem() {
-        return this;
-    }
-    
-    public String[] getVariantNames() {
-        return new String[] { "normal" };
-    }
-    
-    public int[] getVariantMeta() {
-        return new int[] { 0 };
-    }
-    
-    public ItemMeshDefinition getCustomMesh() {
-        return null;
-    }
-    
-    public ModelResourceLocation getCustomModelResourceLocation(String variant) {
-        return new ModelResourceLocation("thaumcraft:" + variant);
-    }
-    
-    public boolean canHarvestBlock(IBlockState p_150897_1_) {
-        return p_150897_1_.getMaterial() != Material.WOOD && p_150897_1_.getMaterial() != Material.LEAVES && p_150897_1_.getMaterial() != Material.PLANTS;
-    }
-    
-    public float getDestroySpeed(ItemStack stack, IBlockState state) {
-        return (state.getMaterial() != Material.IRON && state.getMaterial() != Material.ANVIL && state.getMaterial() != Material.ROCK) ? super.getDestroySpeed(stack, state) : efficiency;
-    }
-    
-    public Set<String> getToolClasses(ItemStack stack) {
-        return ImmutableSet.of("shovel", "pickaxe");
-    }
-    
-    private boolean isEffectiveAgainst(Block block) {
-        for (Object b : ItemPrimalCrusher.isEffective) {
-            if (b == block) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    public int getItemEnchantability() {
-        return 20;
-    }
-    
-    public int getWarp(ItemStack itemstack, EntityPlayer player) {
-        return 2;
-    }
-    
-    public void onUpdate(ItemStack stack, World world, Entity entity, int p_77663_4_, boolean p_77663_5_) {
-        super.onUpdate(stack, world, entity, p_77663_4_, p_77663_5_);
-        if (stack.isItemDamaged() && entity != null && entity.ticksExisted % 20 == 0 && entity instanceof EntityLivingBase) {
-            stack.damageItem(-1, (EntityLivingBase)entity);
-        }
-    }
-    
-    public void getSubItems(CreativeTabs tab, NonNullList<ItemStack> items) {
-        if (tab == ConfigItems.TABTC || tab == CreativeTabs.SEARCH) {
-            ItemStack w1 = new ItemStack(this);
-            EnumInfusionEnchantment.addInfusionEnchantment(w1, EnumInfusionEnchantment.DESTRUCTIVE, 1);
-            EnumInfusionEnchantment.addInfusionEnchantment(w1, EnumInfusionEnchantment.REFINING, 1);
-            items.add(w1);
-        }
-    }
-    
-    static {
-        ItemPrimalCrusher.material = EnumHelper.addToolMaterial("PRIMALVOID", 5, 500, 8.0f, 4.0f, 20).setRepairItem(new ItemStack(ItemsTC.ingots, 1, 1));
-        isEffective = Sets.newHashSet((Object[])new Block[] { Blocks.COBBLESTONE, Blocks.DOUBLE_STONE_SLAB, Blocks.STONE_SLAB, Blocks.STONE, Blocks.SANDSTONE, Blocks.MOSSY_COBBLESTONE, Blocks.IRON_ORE, Blocks.IRON_BLOCK, Blocks.COAL_ORE, Blocks.GOLD_BLOCK, Blocks.GOLD_ORE, Blocks.DIAMOND_ORE, Blocks.DIAMOND_BLOCK, Blocks.ICE, Blocks.NETHERRACK, Blocks.LAPIS_ORE, Blocks.LAPIS_BLOCK, Blocks.REDSTONE_ORE, Blocks.LIT_REDSTONE_ORE, Blocks.RAIL, Blocks.DETECTOR_RAIL, Blocks.GOLDEN_RAIL, Blocks.ACTIVATOR_RAIL, Blocks.GRASS, Blocks.DIRT, Blocks.SAND, Blocks.GRAVEL, Blocks.SNOW_LAYER, Blocks.SNOW, Blocks.CLAY, Blocks.FARMLAND, Blocks.SOUL_SAND, Blocks.MYCELIUM, BlocksTC.taintCrust, BlocksTC.taintRock, BlocksTC.taintSoil, BlocksTC.taintFeature, BlocksTC.taintLog, BlocksTC.taintFibre, Blocks.OBSIDIAN });
-    }
+	private static final float MINING_SPEED = 8.0F;
+
+	public ItemPrimalCrusher(Tier tier, Properties properties) {
+		super(tier, properties.component(DataComponents.TOOL, buildTool(tier)));
+	}
+
+	private static Tool buildTool(Tier tier) {
+		return new Tool(List.of(
+				Tool.Rule.minesAndDrops(BlockTags.MINEABLE_WITH_PICKAXE, MINING_SPEED),
+				Tool.Rule.minesAndDrops(BlockTags.MINEABLE_WITH_SHOVEL, MINING_SPEED),
+				Tool.Rule.deniesDrops(tier.getIncorrectBlocksForDrops())),
+				1.0F, 1);
+	}
+
+	@Override
+	public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
+		super.inventoryTick(stack, level, entity, slotId, isSelected);
+		if (!level.isClientSide && stack.isDamaged() && entity.tickCount % 20 == 0) {
+			stack.setDamageValue(stack.getDamageValue() - 1);
+		}
+	}
+
+	@Override
+	public int getWarp(ItemStack itemstack, Player player) {
+		return 2;
+	}
 }

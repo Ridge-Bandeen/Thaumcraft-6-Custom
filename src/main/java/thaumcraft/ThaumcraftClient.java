@@ -94,6 +94,7 @@ public class ThaumcraftClient {
         event.register(ThaumcraftMenus.PECH_TRADE.get(), thaumcraft.client.gui.GuiPechTrade::new);
         event.register(ThaumcraftMenus.SPA.get(), thaumcraft.client.gui.GuiSpa::new);
         event.register(ThaumcraftMenus.FOCUS_POUCH.get(), thaumcraft.client.gui.GuiFocusPouch::new);
+        event.register(ThaumcraftMenus.HAND_MIRROR.get(), thaumcraft.client.gui.GuiHandMirror::new);
     }
 
     @SubscribeEvent

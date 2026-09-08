@@ -4398,7 +4398,8 @@ public class ThaumcraftGameTests {
 
 	// --------------------------------------------------------------------------------------------------
 	// Node Transducer (Mirror) - see BlockMirror/BlockMirrorItem/TileMirror's own doc comments for what's
-	// deferred (TileMirrorEssentia, ItemHandMirror) and the link-preservation-on-break cut.
+	// deferred (TileMirrorEssentia) and the link-preservation-on-break cut. ItemHandMirror/HandMirrorMenu are
+	// real and covered further below (Basic Gear section).
 	// --------------------------------------------------------------------------------------------------
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
@@ -10606,6 +10607,124 @@ public class ThaumcraftGameTests {
 		player.setItemInHand(hand, pouch);
 
 		pouch.getItem().use(helper.getLevel(), player, hand);
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Basic Gear - the real remaining "basic gear" items (Thaumium/Void tools+armor were already real and
+	// shipped before this chunk - see the port-tracking memory's own audit note). ItemPrimalCrusher,
+	// ItemSanityChecker (+ its real SanityCheckerOverlay HUD), and ItemHandMirror (+ its real HandMirrorMenu,
+	// reusing TileMirror's real Node Transducer network) are the genuine remaining gaps.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void primalCrusherHasRealWarpAndSelfRepairs(GameTestHelper helper) {
+		ItemStack crusher = new ItemStack(thaumcraft.api.items.ItemsTC.primalCrusher.get());
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+
+		int warp = ((thaumcraft.api.items.IWarpingGear) crusher.getItem()).getWarp(crusher, player);
+		helper.assertTrue(warp == 2, "a real Primal Crusher should carry +2 real warp while held, found " + warp);
+
+		crusher.setDamageValue(10);
+		player.tickCount = 20;
+		crusher.getItem().inventoryTick(crusher, helper.getLevel(), player, 0, true);
+		helper.assertTrue(crusher.getDamageValue() == 9, "a real damaged Primal Crusher should really repair 1 durability every 20 ticks, found damage " + crusher.getDamageValue());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void primalCrusherMinesPickaxeAndShovelTaggedBlocksAtARealFlatSpeed(GameTestHelper helper) {
+		ItemStack crusher = new ItemStack(thaumcraft.api.items.ItemsTC.primalCrusher.get());
+		net.minecraft.world.item.component.Tool tool = crusher.get(net.minecraft.core.component.DataComponents.TOOL);
+		helper.assertTrue(tool != null, "a real Primal Crusher should carry a real Tool component");
+
+		float stoneSpeed = tool.getMiningSpeed(Blocks.STONE.defaultBlockState());
+		float dirtSpeed = tool.getMiningSpeed(Blocks.DIRT.defaultBlockState());
+		float logSpeed = tool.getMiningSpeed(Blocks.OAK_LOG.defaultBlockState());
+		helper.assertTrue(stoneSpeed == 8.0f, "a real pickaxe-tagged block should really mine at the real flat 8.0 speed, found " + stoneSpeed);
+		helper.assertTrue(dirtSpeed == 8.0f, "a real shovel-tagged block should really mine at the real flat 8.0 speed, found " + dirtSpeed);
+		helper.assertTrue(logSpeed == 1.0f, "a real axe-only block (not pickaxe or shovel tagged) should really fall back to the real default speed, found " + logSpeed);
+		helper.assertTrue(tool.isCorrectForDrops(Blocks.STONE.defaultBlockState()), "a real pickaxe-tagged block should really be a correct tool for drops");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void handMirrorLinksToARealPlacedMirrorRegardlessOfItsOwnLinkState(GameTestHelper helper) {
+		BlockPos mirrorPos = new BlockPos(3, 2, 3);
+		helper.setBlock(mirrorPos, thaumcraft.api.blocks.BlocksTC.mirror.get());
+		BlockPos absMirror = helper.absolutePos(mirrorPos);
+
+		ServerPlayer player = spawnCasterAt(helper, absMirror.above());
+		ItemStack handMirror = new ItemStack(thaumcraft.api.items.ItemsTC.handMirror.get());
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, handMirror);
+
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absMirror), net.minecraft.core.Direction.UP, absMirror, false);
+		net.minecraft.world.item.context.UseOnContext context =
+				new net.minecraft.world.item.context.UseOnContext(helper.getLevel(), player, hand, handMirror, hit);
+		handMirror.getItem().useOn(context);
+
+		thaumcraft.api.items.ThaumcraftDataComponents.MirrorLink link = handMirror.get(thaumcraft.api.items.ThaumcraftDataComponents.MIRROR_LINK.get());
+		helper.assertTrue(link != null && link.pos().equals(absMirror), "right-clicking a real mirror with a real Hand Mirror should really link to it, found " + link);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void handMirrorOpeningWithAStaleLinkClearsItAndFails(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		ItemStack handMirror = new ItemStack(thaumcraft.api.items.ItemsTC.handMirror.get());
+		// A real link pointing at a position with no real mirror block/tile at all - the linked target is
+		// really gone (or never existed), matching the original's own "destination missing" real error path.
+		handMirror.set(thaumcraft.api.items.ThaumcraftDataComponents.MIRROR_LINK.get(),
+				new thaumcraft.api.items.ThaumcraftDataComponents.MirrorLink(helper.getLevel().dimension(), helper.absolutePos(new BlockPos(50, 50, 50))));
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, handMirror);
+
+		handMirror.getItem().use(helper.getLevel(), player, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+		helper.assertTrue(!handMirror.has(thaumcraft.api.items.ThaumcraftDataComponents.MIRROR_LINK.get()),
+				"opening a real Hand Mirror whose linked mirror no longer really exists should clear the real link");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void handMirrorMenuDeliversAnItemThroughTheRealLinkedNetwork(GameTestHelper helper) {
+		BlockPos posA = new BlockPos(3, 2, 3);
+		BlockPos posB = new BlockPos(3, 2, 10);
+		helper.setBlock(posA, thaumcraft.api.blocks.BlocksTC.mirror.get());
+		helper.setBlock(posB, thaumcraft.api.blocks.BlocksTC.mirror.get());
+		BlockPos absA = helper.absolutePos(posA);
+		BlockPos absB = helper.absolutePos(posB);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.tiles.devices.TileMirror tileA = helper.getBlockEntity(posA);
+		tileA.applyLink(new thaumcraft.api.items.ThaumcraftDataComponents.MirrorLink(level.dimension(), absB));
+		helper.assertTrue(tileA.isLinkValid(), "applying a link should establish a real mutual pairing");
+
+		ItemStack handMirror = new ItemStack(thaumcraft.api.items.ItemsTC.handMirror.get());
+		handMirror.set(thaumcraft.api.items.ThaumcraftDataComponents.MIRROR_LINK.get(),
+				new thaumcraft.api.items.ThaumcraftDataComponents.MirrorLink(level.dimension(), absA));
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.common.container.HandMirrorMenu menu = new thaumcraft.common.container.HandMirrorMenu(1, player.getInventory(), handMirror);
+		menu.getSlot(0).set(new ItemStack(Items.STICK, 2));
+
+		net.minecraft.world.level.block.state.BlockState stateB = helper.getBlockState(posB);
+		thaumcraft.common.tiles.devices.TileMirror tileB = helper.getBlockEntity(posB);
+		for (int i = 0; i < 5; i++) {
+			thaumcraft.common.tiles.devices.TileMirror.tick(level, absB, stateB, tileB);
+		}
+
+		helper.assertTrue(menu.getSlot(0).getItem().isEmpty(), "dropping an item into a real linked Hand Mirror's send slot should really deliver it, clearing the slot");
+		List<ItemEntity> nearB = level.getEntitiesOfClass(ItemEntity.class, new AABB(absB).inflate(2));
+		helper.assertTrue(!nearB.isEmpty(), "the delivered item should really eject out of mirror A's own real linked partner (mirror B)");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sanityCheckerIsARealUncommonItem(GameTestHelper helper) {
+		ItemStack checker = new ItemStack(thaumcraft.api.items.ItemsTC.sanityChecker.get());
+		helper.assertTrue(checker.getRarity() == net.minecraft.world.item.Rarity.UNCOMMON, "a real Sanity Checker should really be Uncommon rarity, found " + checker.getRarity());
 		helper.succeed();
 	}
 }

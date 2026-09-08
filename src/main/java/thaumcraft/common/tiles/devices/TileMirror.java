@@ -121,6 +121,26 @@ public class TileMirror extends BlockEntity {
 		return true;
 	}
 
+	/** Real port of the original's own {@code TileMirror.transportDirect} - the real {@link
+	 * thaumcraft.common.items.tools.ItemHandMirror}'s own delivery path, pushing a real {@link ItemStack}
+	 * straight into {@link #outputStacks} without needing a real {@link ItemEntity} to exist first (unlike
+	 * {@link #transport}, called when something physically touches the block). Same real "must have a real
+	 * valid link" gate. @return whether the stack was accepted. */
+	public boolean transportDirect(ItemStack stack) {
+		if (!isLinkValid()) {
+			return false;
+		}
+		TileMirror target = targetTile();
+		if (target == null) {
+			return false;
+		}
+		target.outputStacks.add(stack.copy());
+		target.setChanged();
+		instability += stack.getCount();
+		setChanged();
+		return true;
+	}
+
 	public static void tick(Level level, BlockPos pos, BlockState state, TileMirror tile) {
 		if (level.isClientSide) {
 			return;

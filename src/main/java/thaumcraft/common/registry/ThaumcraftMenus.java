@@ -55,6 +55,10 @@ public final class ThaumcraftMenus {
 	public static final Supplier<MenuType<thaumcraft.common.container.FocusPouchMenu>> FOCUS_POUCH = MENUS.register("focus_pouch",
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.FocusPouchMenu(windowId, inv)));
 
+	/** Like {@link #FOCUS_POUCH} above, item-carried rather than block-position-based. */
+	public static final Supplier<MenuType<thaumcraft.common.container.HandMirrorMenu>> HAND_MIRROR = MENUS.register("hand_mirror",
+			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.HandMirrorMenu(windowId, inv)));
+
 	private ThaumcraftMenus() {
 	}
 }

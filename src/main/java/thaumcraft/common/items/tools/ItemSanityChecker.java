@@ -1,17 +1,19 @@
 package thaumcraft.common.items.tools;
-import net.minecraft.item.EnumRarity;
-import net.minecraft.item.ItemStack;
-import thaumcraft.common.items.ItemTCBase;
 
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Rarity;
 
-public class ItemSanityChecker extends ItemTCBase
-{
-    public ItemSanityChecker() {
-        super("sanity_checker");
-        setMaxStackSize(1);
-    }
-    
-    public EnumRarity getRarity(ItemStack itemstack) {
-        return EnumRarity.UNCOMMON;
-    }
+/**
+ * Replaces the old (1.12.2) {@code ItemSanityChecker} - a plain held item now (matching the original exactly,
+ * which had no real behavior of its own beyond its rarity). The real mechanic - a live readout of the
+ * holder's real Warp breakdown - lives in {@link thaumcraft.client.gui.SanityCheckerOverlay}, the same
+ * "the item is just a marker, the client overlay does the real work" split
+ * {@link thaumcraft.common.items.casters.ItemFocusPouch}/{@link thaumcraft.api.casters.ICaster}'s own real
+ * focus-radial HUD already established.
+ */
+public class ItemSanityChecker extends Item {
+
+	public ItemSanityChecker(Properties properties) {
+		super(properties.rarity(Rarity.UNCOMMON));
+	}
 }

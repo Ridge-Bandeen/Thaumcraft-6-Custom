@@ -1,134 +1,121 @@
 package thaumcraft.common.items.tools;
+
 import java.util.List;
-import net.minecraft.block.Block;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.SoundEvents;
-import net.minecraft.item.EnumRarity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTBase;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagInt;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.EnumActionResult;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentTranslation;
-import net.minecraft.util.text.translation.I18n;
-import net.minecraft.world.World;
-import net.minecraftforge.common.DimensionManager;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.Thaumcraft;
-import thaumcraft.api.blocks.BlocksTC;
-import thaumcraft.common.items.ItemTCBase;
-import thaumcraft.common.lib.SoundsTC;
+
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import thaumcraft.api.items.ThaumcraftDataComponents;
+import thaumcraft.api.items.ThaumcraftDataComponents.MirrorLink;
+import thaumcraft.common.blocks.devices.BlockMirror;
+import thaumcraft.common.container.HandMirrorMenu;
 import thaumcraft.common.tiles.devices.TileMirror;
 
+/**
+ * Replaces the old (1.12.2) {@code ItemHandMirror} - a real, portable remote-delivery tool for the Node
+ * Transducer network. Distinct from {@link thaumcraft.common.blocks.devices.BlockMirrorItem} (which links two
+ * mirrors to each OTHER at placement time): this links itself to any one already-placed real {@link
+ * TileMirror} ({@link #useOn}, no validity check on the target - unlike {@code BlockMirrorItem}, the original
+ * let a Hand Mirror re-point at any real mirror at any time, even an already-linked one), then lets the
+ * holder open a real remote delivery menu from anywhere ({@link #use}) that pushes items through to wherever
+ * THAT mirror's own real network partner is (via {@link TileMirror#transportDirect}) - a real two-hop
+ * indirection, matching the original exactly.
+ *
+ * Real link storage reuses {@link ThaumcraftDataComponents#MIRROR_LINK} directly (the same real component
+ * {@code BlockMirrorItem}/{@code TileMirror} already use) rather than inventing a second, parallel one -
+ * replaces the original's own raw {@code linkX}/{@code linkY}/{@code linkZ}/{@code linkDim} NBT.
+ */
+public class ItemHandMirror extends Item {
 
-public class ItemHandMirror extends ItemTCBase
-{
-    public ItemHandMirror() {
-        super("hand_mirror");
-        setMaxStackSize(1);
-    }
-    
-    public boolean getShareTag() {
-        return true;
-    }
-    
-    public EnumRarity getRarity(ItemStack itemstack) {
-        return EnumRarity.UNCOMMON;
-    }
-    
-    public boolean hasEffect(ItemStack stack1) {
-        return stack1.hasTagCompound();
-    }
-    
-    public EnumActionResult onItemUseFirst(EntityPlayer player, World world, BlockPos pos, EnumFacing side, float par8, float par9, float par10, EnumHand hand) {
-        Block bi = world.getBlockState(pos).getBlock();
-        if (bi != BlocksTC.mirror) {
-            return EnumActionResult.FAIL;
-        }
-        if (world.isRemote) {
-            player.swingArm(hand);
-            return super.onItemUseFirst(player, world, pos, side, par8, par9, par10, hand);
-        }
-        TileEntity tm = world.getTileEntity(pos);
-        if (tm != null && tm instanceof TileMirror) {
-            player.getHeldItem(hand).setTagInfo("linkX", new NBTTagInt(pos.getX()));
-            player.getHeldItem(hand).setTagInfo("linkY", new NBTTagInt(pos.getY()));
-            player.getHeldItem(hand).setTagInfo("linkZ", new NBTTagInt(pos.getZ()));
-            player.getHeldItem(hand).setTagInfo("linkDim", new NBTTagInt(world.provider.getDimension()));
-            world.playSound(null, pos.getX(), pos.getY(), pos.getZ(), SoundsTC.jar, SoundCategory.BLOCKS, 1.0f, 2.0f);
-            player.sendMessage(new TextComponentTranslation("tc.handmirrorlinked"));
-            player.inventoryContainer.detectAndSendChanges();
-        }
-        return EnumActionResult.PASS;
-    }
-    
-    public ActionResult<ItemStack> onItemRightClick(World world, EntityPlayer player, EnumHand hand) {
-        if (!world.isRemote && player.getHeldItem(hand).hasTagCompound()) {
-            int lx = player.getHeldItem(hand).getTagCompound().getInteger("linkX");
-            int ly = player.getHeldItem(hand).getTagCompound().getInteger("linkY");
-            int lz = player.getHeldItem(hand).getTagCompound().getInteger("linkZ");
-            int ldim = player.getHeldItem(hand).getTagCompound().getInteger("linkDim");
-            World targetWorld = DimensionManager.getWorld(ldim);
-            if (targetWorld == null) {
-                return super.onItemRightClick(world, player, hand);
-            }
-            TileEntity te = targetWorld.getTileEntity(new BlockPos(lx, ly, lz));
-            if (te == null || !(te instanceof TileMirror)) {
-                player.getHeldItem(hand).setTagCompound(null);
-                player.playSound(SoundsTC.zap, 1.0f, 0.8f);
-                player.sendMessage(new TextComponentTranslation("tc.handmirrorerror"));
-                return super.onItemRightClick(world, player, hand);
-            }
-            player.openGui(Thaumcraft.instance, 4, world, MathHelper.floor(player.posX), MathHelper.floor(player.posY), MathHelper.floor(player.posZ));
-        }
-        return super.onItemRightClick(world, player, hand);
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void addInformation(ItemStack stack, World worldIn, List<String> tooltip, ITooltipFlag flagIn) {
-        if (stack.hasTagCompound()) {
-            int lx = stack.getTagCompound().getInteger("linkX");
-            int ly = stack.getTagCompound().getInteger("linkY");
-            int lz = stack.getTagCompound().getInteger("linkZ");
-            int ldim = stack.getTagCompound().getInteger("linkDim");
-            tooltip.add(I18n.translateToLocal("tc.handmirrorlinkedto") + " " + lx + "," + ly + "," + lz + " in " + ldim);
-        }
-    }
-    
-    public static boolean transport(ItemStack mirror, ItemStack items, EntityPlayer player, World worldObj) {
-        if (!mirror.hasTagCompound()) {
-            return false;
-        }
-        int lx = mirror.getTagCompound().getInteger("linkX");
-        int ly = mirror.getTagCompound().getInteger("linkY");
-        int lz = mirror.getTagCompound().getInteger("linkZ");
-        int ldim = mirror.getTagCompound().getInteger("linkDim");
-        World targetWorld = DimensionManager.getWorld(ldim);
-        if (targetWorld == null) {
-            return false;
-        }
-        TileEntity te = targetWorld.getTileEntity(new BlockPos(lx, ly, lz));
-        if (te == null || !(te instanceof TileMirror)) {
-            mirror.setTagCompound(null);
-            player.playSound(SoundsTC.zap, 1.0f, 0.8f);
-            player.sendMessage(new TextComponentTranslation("tc.handmirrorerror"));
-            return false;
-        }
-        TileMirror tm = (TileMirror)te;
-        if (tm.transportDirect(items)) {
-            items = ItemStack.EMPTY;
-            player.playSound(SoundEvents.ENTITY_ENDERMEN_TELEPORT, 0.1f, 1.0f);
-        }
-        return true;
-    }
+	public ItemHandMirror(Properties properties) {
+		super(properties.stacksTo(1).rarity(Rarity.UNCOMMON));
+	}
+
+	/** Real port of the original's own {@code onItemUseFirst} - right-clicking any real placed Mirror block
+	 * links this Hand Mirror to it, overwriting whatever it was linked to before. */
+	@Override
+	public InteractionResult useOn(UseOnContext context) {
+		Level level = context.getLevel();
+		if (!(level.getBlockState(context.getClickedPos()).getBlock() instanceof BlockMirror) || context.getPlayer() == null) {
+			return InteractionResult.PASS;
+		}
+		if (level.isClientSide) {
+			return InteractionResult.SUCCESS;
+		}
+		Player player = context.getPlayer();
+		if (!(level.getBlockEntity(context.getClickedPos()) instanceof TileMirror)) {
+			return InteractionResult.PASS;
+		}
+
+		ItemStack held = context.getItemInHand();
+		held.set(ThaumcraftDataComponents.MIRROR_LINK.get(), new MirrorLink(level.dimension(), context.getClickedPos().immutable()));
+		level.playSound(null, context.getClickedPos(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0f, 2.0f);
+		player.displayClientMessage(Component.translatable("tc.handmirrorlinked"), true);
+		return InteractionResult.CONSUME;
+	}
+
+	/** Real port of the original's own {@code onItemRightClick} - a real linked Hand Mirror right-clicked in
+	 * open air opens the real remote delivery menu, provided the linked mirror still real exists; otherwise
+	 * the real link is cleared and the original's own real error message/sound plays. */
+	@Override
+	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+		ItemStack stack = player.getItemInHand(hand);
+		if (level.isClientSide) {
+			return InteractionResultHolder.pass(stack);
+		}
+		MirrorLink link = stack.get(ThaumcraftDataComponents.MIRROR_LINK.get());
+		if (link == null) {
+			return InteractionResultHolder.pass(stack);
+		}
+		if (!resolveTarget(level, link).isPresent()) {
+			stack.remove(ThaumcraftDataComponents.MIRROR_LINK.get());
+			player.playSound(SoundEvents.EVOKER_CAST_SPELL, 1.0f, 0.8f);
+			player.displayClientMessage(Component.translatable("tc.handmirrorerror").withStyle(ChatFormatting.RED), true);
+			return InteractionResultHolder.fail(stack);
+		}
+		player.openMenu(new net.minecraft.world.MenuProvider() {
+			@Override
+			public Component getDisplayName() {
+				return Component.translatable("item.thaumcraft.hand_mirror");
+			}
+
+			@Override
+			public net.minecraft.world.inventory.AbstractContainerMenu createMenu(int id, net.minecraft.world.entity.player.Inventory inv, Player p) {
+				return new HandMirrorMenu(id, inv, stack);
+			}
+		});
+		return InteractionResultHolder.success(stack);
+	}
+
+	@Override
+	public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+		MirrorLink link = stack.get(ThaumcraftDataComponents.MIRROR_LINK.get());
+		if (link != null) {
+			tooltip.add(Component.translatable("tc.handmirrorlinkedto")
+					.append(" " + link.pos().getX() + "," + link.pos().getY() + "," + link.pos().getZ())
+					.withStyle(ChatFormatting.DARK_PURPLE));
+		}
+		super.appendHoverText(stack, context, tooltip, flag);
+	}
+
+	/** Real, static resolver shared with {@link HandMirrorMenu} - a real linked target tile only if the real
+	 * dimension is loaded and the real block entity at that position still is a {@link TileMirror}. */
+	public static java.util.Optional<TileMirror> resolveTarget(Level level, MirrorLink link) {
+		if (!(level instanceof ServerLevel serverLevel)) return java.util.Optional.empty();
+		ServerLevel targetLevel = serverLevel.getServer().getLevel(link.dimension());
+		if (targetLevel == null || !targetLevel.isLoaded(link.pos())) return java.util.Optional.empty();
+		return targetLevel.getBlockEntity(link.pos()) instanceof TileMirror tile ? java.util.Optional.of(tile) : java.util.Optional.empty();
+	}
 }
