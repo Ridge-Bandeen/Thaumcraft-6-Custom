@@ -2499,9 +2499,10 @@ public class ThaumcraftGameTests {
 
 	// --------------------------------------------------------------------------------------------------
 	// Real, small pieces salvaged from the still-stale CraftingEvents (Thaumcraft.onAnvilUpdate/
-	// blocksAnvilOperation) and a real data-driven furnace_fuels contribution (Alumentum/Greatwood/
-	// Silverwood logs) - see the port-tracking memory for why the rest of that file (and most of
-	// common/lib/events generally) turned out to already be superseded elsewhere.
+	// blocksAnvilOperation) and EntityEvents (Thaumcraft.onItemPickup/isFakeThaumcraftPlayer), plus a real
+	// data-driven furnace_fuels contribution (Alumentum/Greatwood/Silverwood logs) - see the port-tracking
+	// memory for why the rest of both files (and most of common/lib/events generally) turned out to already
+	// be superseded elsewhere.
 	// --------------------------------------------------------------------------------------------------
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
@@ -2527,6 +2528,25 @@ public class ThaumcraftGameTests {
 
 		helper.succeedWhen(() -> helper.assertTrue(furnace.cookingProgress > 0,
 				"a real furnace fed alumentum (via the real data/thaumcraft/data_maps/item/furnace_fuels.json contribution) should light and actually cook - progress=" + furnace.cookingProgress));
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.Thaumcraft#isFakeThaumcraftPlayer} - the modern replacement for the
+	 * original's own {@code EntityEvents#itemPickup}, the last real piece salvaged out of that file (see the
+	 * port-tracking memory for the full triage). Confirms the real name-prefix guard itself rather than
+	 * trying to fire a real {@code ItemEntityPickupEvent.Pre} - same "extract and test the static helper"
+	 * shape {@link thaumcraft.Thaumcraft#blocksAnvilOperation}'s own test above already uses.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void fakeThaumcraftPlayersAreIdentifiedByTheirRealNamePrefix(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		net.neoforged.neoforge.common.util.FakePlayer golemPuppet = net.neoforged.neoforge.common.util.FakePlayerFactory.get(level,
+				new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes("OfflinePlayer:FakeThaumcraftGolem".getBytes(java.nio.charset.StandardCharsets.UTF_8)), "FakeThaumcraftGolem"));
+		helper.assertTrue(thaumcraft.Thaumcraft.isFakeThaumcraftPlayer(golemPuppet), "the real golem-puppet fake player should be identified by its real name prefix");
+
+		ServerPlayer realPlayer = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		helper.assertFalse(thaumcraft.Thaumcraft.isFakeThaumcraftPlayer(realPlayer), "a real player should never be misidentified as a fake Thaumcraft player");
+		helper.succeed();
 	}
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
@@ -10339,15 +10359,19 @@ public class ThaumcraftGameTests {
 	 * Real coverage for the third fragment extracted from the old {@code EntityEvents#livingDrops} - a
 	 * {@code ThaumcraftDamageTypes#DISSOLVE} kill dropping the victim's real registered essentia (see
 	 * {@code ThaumcraftEntityTags}) as real {@link thaumcraft.common.items.resources.ItemCrystalEssence}
-	 * stacks instead of its normal loot. Real zombie aspects are UNDEAD 20/MAN 10/EARTH 5 - any dropped
-	 * crystal should carry exactly one of those three.
+	 * stacks instead of its normal loot. Uses a real {@code EntityBrainyZombie}, not a plain zombie -
+	 * {@link thaumcraft.common.lib.events.MobDeathDropEvents#onLivingDrops}'s own independent 10% Brain-drop
+	 * roll (a real, different mechanic, unconditional on damage source) would otherwise occasionally
+	 * contaminate this same event's real drops with an unrelated Brain, since a Brainy Zombie is the one real
+	 * entity this method's own Brain-drop branch explicitly excludes. Real Brainy Zombie aspects are
+	 * UNDEAD 20/MAN 10/MIND 5/AVERSION 5 - any dropped crystal should carry exactly one of those four.
 	 */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void mobDeathDropEventsDropsRealEssentiaFromADissolveKill(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 		BlockPos abs = helper.absolutePos(BlockPos.ZERO);
-		net.minecraft.world.entity.monster.Zombie zombie = net.minecraft.world.entity.EntityType.ZOMBIE.create(level);
-		helper.assertTrue(zombie != null, "the zombie entity type should really create an instance");
+		thaumcraft.common.entities.monster.EntityBrainyZombie zombie = thaumcraft.common.registry.ThaumcraftEntities.BRAINY_ZOMBIE.get().create(level);
+		helper.assertTrue(zombie != null, "the brainy zombie entity type should really create an instance");
 		zombie.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
 		level.addFreshEntity(zombie);
 
@@ -10359,7 +10383,8 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(!drops.isEmpty(), "a real dissolve kill should really drop at least one real essentia crystal, found none");
 		java.util.Set<String> allowedAspects = java.util.Set.of(
-				thaumcraft.api.aspects.Aspect.UNDEAD.getTag(), thaumcraft.api.aspects.Aspect.MAN.getTag(), thaumcraft.api.aspects.Aspect.EARTH.getTag());
+				thaumcraft.api.aspects.Aspect.UNDEAD.getTag(), thaumcraft.api.aspects.Aspect.MAN.getTag(),
+				thaumcraft.api.aspects.Aspect.MIND.getTag(), thaumcraft.api.aspects.Aspect.AVERSION.getTag());
 		for (net.minecraft.world.entity.item.ItemEntity drop : drops) {
 			helper.assertTrue(drop.getItem().is(thaumcraft.api.items.ItemsTC.crystalEssence.get()), "every real drop from a dissolve kill should really be a crystal essence, found " + drop.getItem());
 			thaumcraft.api.aspects.AspectList held = ((thaumcraft.api.items.ItemGenericEssentiaContainer) drop.getItem().getItem()).getAspects(drop.getItem());

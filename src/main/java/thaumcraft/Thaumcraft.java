@@ -461,6 +461,26 @@ public class Thaumcraft {
         }
     }
 
+    /** Modern replacement for the original's own {@code EntityEvents#itemPickup} - stops the real
+     * {@code FakePlayer} {@link thaumcraft.common.golems.GolemInteractionHelper} puppets through a golem's
+     * block-break/use action (a real, named "FakeThaumcraftGolem" instance) from also vacuuming up a nearby
+     * item drop mid-action. Real logic lives in the static {@link #isFakeThaumcraftPlayer}, the same
+     * "extract a static, directly testable helper out of the instance event method" shape
+     * {@link #blocksAnvilOperation}/{@link #rollLootBagDrop} already established.
+     */
+    @SubscribeEvent
+    public void onItemPickup(net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent.Pre event) {
+        if (isFakeThaumcraftPlayer(event.getPlayer())) {
+            event.setCanPickup(net.neoforged.neoforge.common.util.TriState.FALSE);
+        }
+    }
+
+    /** Same real name-prefix guard the original used (not a hardcoded exact match, so any future
+     * "FakeThaumcraft"-prefixed fake player is covered too, matching the original's own intent). */
+    public static boolean isFakeThaumcraftPlayer(net.minecraft.world.entity.player.Player player) {
+        return player.getGameProfile().getName().startsWith("FakeThaumcraft");
+    }
+
     // Arcane Ear's cross-dimension note-listening mechanic - see TileArcaneEar's own doc comment. Play
     // records every real note block's trigger; Post clears each dimension's list once every Arcane Ear in
     // it has had a chance to check that tick's events.
