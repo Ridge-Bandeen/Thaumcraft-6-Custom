@@ -213,6 +213,35 @@ public class Thaumcraft {
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidEnchantmentTable());
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidPortal.AidPortalEnd());
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidPortal.AidPortalNether());
+
+        // Second batch of the "extra content" tier - see this method's own doc comment above. 18 of the
+        // original's remaining 19 cards (all but CardCelestial, which needs the still-unported
+        // ItemCelestialNotes) plus 4 of its remaining 8 aids (the other 4 - AidBasicAuromancy/AidBasicEldritch/
+        // AidBrainInAJar/AidGlyphedStone - each need a still-unported block: wandWorkbench/eldritch/jarBrain/
+        // stoneAncientGlyphed respectively; their own cards are still registered below where they're not
+        // aid-only, since the normal draw rotation can reach them regardless of whether their aid exists).
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardAwareness.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardFocus.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardGlyphs.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardRealization.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardRevelation.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardSculpting.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardSpellbinding.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardTruth.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardDarkWhispers.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardChannel.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardConcentrate.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardReactions.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardSynthesis.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardInfuse.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardTinker.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardMindOverMatter.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardCurio.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardScripting.class);
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidBasicAlchemy());
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidBasicArtifice());
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidBasicGolemancy());
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidBasicInfusion());
     }
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {

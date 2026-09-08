@@ -1,73 +1,76 @@
 package thaumcraft.common.lib.research.theorycraft;
+
 import java.util.Random;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.text.TextComponentTranslation;
-import net.minecraft.util.text.TextFormatting;
-import thaumcraft.api.ThaumcraftApiHelper;
+
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.research.theorycraft.ResearchTableData;
 import thaumcraft.api.research.theorycraft.TheorycraftCard;
+import thaumcraft.common.items.resources.ItemCrystalEssence;
 
+/** Replaces the old (1.12.2) {@code CardConcentrate} - direct translation. A real Crystal Essence of a
+ * random compound {@link Aspect}, shown but not consumed; flat 15 ALCHEMY progress plus a bonus draw, and a
+ * real 33% chance of 1 refunded inspiration. */
+public class CardConcentrate extends TheorycraftCard {
 
-public class CardConcentrate extends TheorycraftCard
-{
-    Aspect aspect;
-    
-    @Override
-    public NBTTagCompound serialize() {
-        NBTTagCompound nbt = super.serialize();
-        nbt.setString("aspect", aspect.getTag());
-        return nbt;
-    }
-    
-    @Override
-    public void deserialize(NBTTagCompound nbt) {
-        super.deserialize(nbt);
-        aspect = Aspect.getAspect(nbt.getString("aspect"));
-    }
-    
-    @Override
-    public boolean initialize(EntityPlayer player, ResearchTableData data) {
-        Random r = new Random(getSeed());
-        int num = r.nextInt(Aspect.getCompoundAspects().size());
-        aspect = Aspect.getCompoundAspects().get(num);
-        return true;
-    }
-    
-    @Override
-    public int getInspirationCost() {
-        return 1;
-    }
-    
-    @Override
-    public String getResearchCategory() {
-        return "ALCHEMY";
-    }
-    
-    @Override
-    public String getLocalizedName() {
-        return new TextComponentTranslation("card.concentrate.name").getFormattedText();
-    }
-    
-    @Override
-    public String getLocalizedText() {
-        return new TextComponentTranslation("card.concentrate.text", TextFormatting.BOLD + aspect.getName() + TextFormatting.RESET).getFormattedText();
-    }
-    
-    @Override
-    public ItemStack[] getRequiredItems() {
-        return new ItemStack[] { ThaumcraftApiHelper.makeCrystal(aspect) };
-    }
-    
-    @Override
-    public boolean activate(EntityPlayer player, ResearchTableData data) {
-        data.addTotal(getResearchCategory(), 15);
-        ++data.bonusDraws;
-        if (player.getRNG().nextFloat() < 0.33) {
-            data.addInspiration(1);
-        }
-        return true;
-    }
+	private Aspect aspect;
+
+	@Override
+	public CompoundTag serialize() {
+		CompoundTag nbt = super.serialize();
+		nbt.putString("aspect", aspect.getTag());
+		return nbt;
+	}
+
+	@Override
+	public void deserialize(CompoundTag nbt) {
+		super.deserialize(nbt);
+		aspect = Aspect.getAspect(nbt.getString("aspect"));
+	}
+
+	@Override
+	public boolean initialize(Player player, ResearchTableData data) {
+		Random r = new Random(getSeed());
+		aspect = Aspect.getCompoundAspects().get(r.nextInt(Aspect.getCompoundAspects().size()));
+		return true;
+	}
+
+	@Override
+	public int getInspirationCost() {
+		return 1;
+	}
+
+	@Override
+	public String getResearchCategory() {
+		return "ALCHEMY";
+	}
+
+	@Override
+	public String getLocalizedName() {
+		return Component.translatable("card.concentrate.name").getString();
+	}
+
+	@Override
+	public String getLocalizedText() {
+		return Component.translatable("card.concentrate.text", ChatFormatting.BOLD + aspect.getName() + ChatFormatting.RESET).getString();
+	}
+
+	@Override
+	public ItemStack[] getRequiredItems() {
+		return new ItemStack[] { ItemCrystalEssence.of(aspect) };
+	}
+
+	@Override
+	public boolean activate(Player player, ResearchTableData data) {
+		data.addTotal(getResearchCategory(), 15);
+		data.bonusDraws++;
+		if (player.getRandom().nextFloat() < 0.33f) {
+			data.addInspiration(1);
+		}
+		return true;
+	}
 }

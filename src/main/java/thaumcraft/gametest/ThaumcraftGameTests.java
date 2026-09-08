@@ -10919,4 +10919,163 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(!after.equals(before), "a real airborne non-player creature above an unpowered real Barrier Stone should really get pushed, found velocity unchanged at " + after);
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Theorycrafting content expansion - the real Theorycrafting engine/menu/screen were already fully
+	// shipped before this chunk (an earlier session's own work); this closes out 18 of the original's 19
+	// remaining flavor cards (all but CardCelestial - needs the still-unported ItemCelestialNotes) plus 4 of
+	// its remaining 8 aids (the other 4 each need a still-unported block - see Thaumcraft.java's own
+	// registration comment for exactly which).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void newTheorycraftContentIsRegistered(GameTestHelper helper) {
+		String[] cardKeys = {
+				"CardAwareness", "CardFocus", "CardGlyphs", "CardRealization", "CardRevelation", "CardSculpting",
+				"CardSpellbinding", "CardTruth", "CardDarkWhispers", "CardChannel", "CardConcentrate", "CardReactions",
+				"CardSynthesis", "CardInfuse", "CardTinker", "CardMindOverMatter", "CardCurio", "CardScripting",
+		};
+		for (String simpleName : cardKeys) {
+			String fqcn = "thaumcraft.common.lib.research.theorycraft." + simpleName;
+			helper.assertTrue(thaumcraft.api.research.theorycraft.TheorycraftManager.cards.containsKey(fqcn),
+					"the real registered deck should really contain " + simpleName + ", found keys: " + thaumcraft.api.research.theorycraft.TheorycraftManager.cards.keySet());
+		}
+		helper.assertTrue(thaumcraft.api.research.theorycraft.TheorycraftManager.aids.values().stream()
+						.anyMatch(a -> a instanceof thaumcraft.common.lib.research.theorycraft.AidBasicAlchemy),
+				"AidBasicAlchemy should really be registered");
+		helper.assertTrue(thaumcraft.api.research.theorycraft.TheorycraftManager.aids.values().stream()
+						.anyMatch(a -> a instanceof thaumcraft.common.lib.research.theorycraft.AidBasicArtifice),
+				"AidBasicArtifice should really be registered");
+		helper.assertTrue(thaumcraft.api.research.theorycraft.TheorycraftManager.aids.values().stream()
+						.anyMatch(a -> a instanceof thaumcraft.common.lib.research.theorycraft.AidBasicGolemancy),
+				"AidBasicGolemancy should really be registered");
+		helper.assertTrue(thaumcraft.api.research.theorycraft.TheorycraftManager.aids.values().stream()
+						.anyMatch(a -> a instanceof thaumcraft.common.lib.research.theorycraft.AidBasicInfusion),
+				"AidBasicInfusion should really be registered");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void aidBasicAlchemyOffersItsRealThreeCards(GameTestHelper helper) {
+		thaumcraft.common.lib.research.theorycraft.AidBasicAlchemy aid = new thaumcraft.common.lib.research.theorycraft.AidBasicAlchemy();
+		helper.assertTrue(aid.getAidObject() == thaumcraft.api.blocks.BlocksTC.crucible.get(), "AidBasicAlchemy should really trigger off the real Crucible block");
+		java.util.List<Class<thaumcraft.api.research.theorycraft.TheorycraftCard>> cards = java.util.Arrays.asList(aid.getCards());
+		helper.assertTrue(cards.contains(thaumcraft.common.lib.research.theorycraft.CardConcentrate.class)
+						&& cards.contains(thaumcraft.common.lib.research.theorycraft.CardReactions.class)
+						&& cards.contains(thaumcraft.common.lib.research.theorycraft.CardSynthesis.class),
+				"AidBasicAlchemy should really offer Concentrate/Reactions/Synthesis, found " + cards);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cardSculptingRequiresAndConsumesARealClayBall(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
+
+		thaumcraft.common.lib.research.theorycraft.CardSculpting card = new thaumcraft.common.lib.research.theorycraft.CardSculpting();
+		card.setSeed(1L);
+		helper.assertTrue(card.getRequiredItems().length == 1 && card.getRequiredItems()[0].is(Items.CLAY_BALL), "CardSculpting should really require a real clay ball");
+		helper.assertTrue(card.activate(player, data), "CardSculpting#activate should succeed");
+		helper.assertTrue(data.getTotal("GOLEMANCY") == 20 && data.bonusDraws == 1,
+				"CardSculpting should add flat 20 GOLEMANCY and 1 bonus draw, found total=" + data.getTotal("GOLEMANCY") + " bonusDraws=" + data.bonusDraws);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cardSpellbindingRequiresAndConsumesRealXpLevels(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
+		thaumcraft.common.lib.research.theorycraft.CardSpellbinding card = new thaumcraft.common.lib.research.theorycraft.CardSpellbinding();
+
+		player.experienceLevel = 0;
+		helper.assertTrue(!card.initialize(player, data), "with zero real XP levels, CardSpellbinding should really fail to initialize");
+		helper.assertTrue(!card.activate(player, data), "with zero real XP levels, CardSpellbinding#activate should really fail too");
+
+		player.experienceLevel = 3;
+		helper.assertTrue(card.initialize(player, data), "with real XP levels available, CardSpellbinding should really initialize");
+		helper.assertTrue(card.activate(player, data), "CardSpellbinding#activate should really succeed with real XP levels available");
+		helper.assertTrue(player.experienceLevel == 0, "CardSpellbinding should really spend all 3 real XP levels (capped at min(5, level)), found " + player.experienceLevel);
+		helper.assertTrue(data.getTotal("AUROMANCY") == 15, "CardSpellbinding should really add 5 AUROMANCY per real level spent, found " + data.getTotal("AUROMANCY"));
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cardScriptingConsumesRealInkAndPaperFromTheRealTable(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.researchTable.get());
+		thaumcraft.common.tiles.crafting.TileResearchTable tile = helper.getBlockEntity(pos);
+		tile.getItemHandler().setStackInSlot(0, new ItemStack(thaumcraft.api.items.ItemsTC.scribingTools.get()));
+		tile.getItemHandler().setStackInSlot(1, new ItemStack(Items.PAPER, 5));
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, tile);
+		thaumcraft.common.lib.research.theorycraft.CardScripting card = new thaumcraft.common.lib.research.theorycraft.CardScripting();
+
+		int inkDamageBefore = tile.getInk().getDamageValue();
+		int paperCountBefore = tile.getPaper().getCount();
+		helper.assertTrue(card.activate(player, data), "CardScripting#activate should succeed with real ink and paper available");
+		helper.assertTrue(tile.getInk().getDamageValue() == inkDamageBefore + 1, "CardScripting should really damage the real ink by 1");
+		helper.assertTrue(tile.getPaper().getCount() == paperCountBefore - 1, "CardScripting should really consume 1 real paper");
+		helper.assertTrue(data.getTotal("GOLEMANCY") == 25, "CardScripting should really add flat 25 GOLEMANCY, found " + data.getTotal("GOLEMANCY"));
+
+		tile.getItemHandler().setStackInSlot(1, ItemStack.EMPTY);
+		helper.assertTrue(!card.activate(player, data), "CardScripting#activate should really fail once the real table has no paper left");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cardCurioFindsAndConsumesARealCarriedCurio(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		ItemStack curio = new ItemStack(thaumcraft.api.items.ItemsTC.curio.get());
+		player.getInventory().add(curio);
+		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
+
+		thaumcraft.common.lib.research.theorycraft.CardCurio card = new thaumcraft.common.lib.research.theorycraft.CardCurio();
+		card.setSeed(1L);
+		helper.assertTrue(card.initialize(player, data), "CardCurio should really find the real carried Curio");
+		helper.assertTrue(card.getRequiredItems()[0].is(thaumcraft.api.items.ItemsTC.curio.get()), "CardCurio's own real required item should really be the real found Curio");
+		helper.assertTrue(card.activate(player, data), "CardCurio#activate should succeed");
+		helper.assertTrue(data.getTotal("BASICS") > 0, "CardCurio should really add real BASICS progress, found " + data.getTotal("BASICS"));
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cardChannelAndConcentrateRequireRealAspectItems(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
+
+		thaumcraft.common.lib.research.theorycraft.CardChannel channel = new thaumcraft.common.lib.research.theorycraft.CardChannel();
+		channel.setSeed(1L);
+		helper.assertTrue(channel.initialize(player, data), "CardChannel should really initialize with a real random compound aspect");
+		ItemStack phial = channel.getRequiredItems()[0];
+		helper.assertTrue(phial.getItem() instanceof thaumcraft.common.items.consumables.ItemPhial, "CardChannel should really require a real filled Phial, found " + phial);
+		helper.assertTrue(channel.activate(player, data), "CardChannel#activate should succeed");
+		helper.assertTrue(data.getTotal("INFUSION") == 25, "CardChannel should really add flat 25 INFUSION, found " + data.getTotal("INFUSION"));
+
+		thaumcraft.common.lib.research.theorycraft.CardConcentrate concentrate = new thaumcraft.common.lib.research.theorycraft.CardConcentrate();
+		concentrate.setSeed(2L);
+		helper.assertTrue(concentrate.initialize(player, data), "CardConcentrate should really initialize with a real random compound aspect");
+		ItemStack crystal = concentrate.getRequiredItems()[0];
+		helper.assertTrue(crystal.is(thaumcraft.api.items.ItemsTC.crystalEssence.get()), "CardConcentrate should really require a real Crystal Essence, found " + crystal);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cardSynthesisConsumesComponentsAndReturnsTheRealCompoundCrystal(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
+
+		thaumcraft.common.lib.research.theorycraft.CardSynthesis card = new thaumcraft.common.lib.research.theorycraft.CardSynthesis();
+		card.setSeed(1L);
+		helper.assertTrue(card.initialize(player, data), "CardSynthesis should really initialize with a real random compound aspect and its own 2 real components");
+		helper.assertTrue(card.getRequiredItems().length == 2 && card.getRequiredItemsConsumed()[0] && card.getRequiredItemsConsumed()[1],
+				"CardSynthesis should really require and consume its real 2 real component crystals");
+
+		int before = player.getInventory().items.stream().mapToInt(ItemStack::getCount).sum();
+		helper.assertTrue(card.activate(player, data), "CardSynthesis#activate should succeed");
+		helper.assertTrue(data.getTotal("ALCHEMY") == 40, "CardSynthesis should really add flat 40 ALCHEMY, found " + data.getTotal("ALCHEMY"));
+		int after = player.getInventory().items.stream().mapToInt(ItemStack::getCount).sum();
+		helper.assertTrue(after > before, "CardSynthesis should really hand back a real compound crystal to the player's real inventory, found before=" + before + " after=" + after);
+		helper.succeed();
+	}
 }

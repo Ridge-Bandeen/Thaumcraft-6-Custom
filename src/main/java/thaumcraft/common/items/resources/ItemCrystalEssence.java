@@ -5,6 +5,7 @@ import net.minecraft.world.item.ItemStack;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.items.ItemGenericEssentiaContainer;
+import thaumcraft.api.items.ItemsTC;
 
 /**
  * Replaces the old (1.12.2) {@code ItemCrystalEssence} - a thin subclass of the already-shipped
@@ -23,6 +24,16 @@ public class ItemCrystalEssence extends ItemGenericEssentiaContainer {
 
 	public ItemCrystalEssence(Properties properties) {
 		super(properties, 1);
+	}
+
+	/** Real modern equivalent of the original's own {@code ThaumcraftApiHelper#makeCrystal} - that whole
+	 * class is still stale/unported, so this is a small, real, purpose-built replacement rather than porting
+	 * it wholesale for one method. A real Crystal Essence stack pre-set to the given aspect, matching
+	 * {@link ItemGenericEssentiaContainer#setAspects}'s own real base-amount-1 convention. */
+	public static ItemStack of(Aspect aspect) {
+		ItemStack stack = new ItemStack(ItemsTC.crystalEssence.get());
+		((ItemGenericEssentiaContainer) stack.getItem()).setAspects(stack, new AspectList().add(aspect, 1));
+		return stack;
 	}
 
 	@Override
