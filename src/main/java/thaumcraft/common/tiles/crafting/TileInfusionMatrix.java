@@ -110,6 +110,17 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 	public float stabilityReplenish;
 	private int countDelay = BASE_CYCLE_TIME / 2;
 	private int count;
+	/** Real, purely-derived animation state for {@link thaumcraft.client.render.TileInfusionMatrixRenderer} -
+	 * the original's own real {@code startUp}/{@code craftcount} fields. Deliberately NOT synced or persisted:
+	 * {@link #tick} runs identically on both logical sides (like {@link #count} above), so each side recomputes
+	 * its own value from the already-real-synced {@link #active}/{@link #crafting} booleans rather than the
+	 * server pushing a third pair of fields across the network - same "derive it locally" shape
+	 * {@code FocusRadialOverlay}'s own client-side animation state already uses, just living on the tile so
+	 * both the renderer and any future consumer share one real definition. {@link #activatedTick} counts up
+	 * while {@link #active} (a real 0-1 startup ease-in ramp), resetting the instant it isn't; {@link #craftTick}
+	 * does the same for {@link #crafting} (a real ramping halo-intensity signal). */
+	private int activatedTick;
+	private int craftTick;
 
 	private AspectList recipeEssentia = new AspectList();
 	private List<ItemStack> recipeIngredients = new ArrayList<>();
@@ -124,6 +135,8 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TileInfusionMatrix tile) {
 		tile.count++;
+		tile.activatedTick = tile.active ? tile.activatedTick + 1 : 0;
+		tile.craftTick = tile.crafting ? tile.craftTick + 1 : 0;
 		if (tile.checkSurroundings) {
 			tile.checkSurroundings = false;
 			tile.getSurroundings(level);
@@ -446,6 +459,18 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 	 * a future progress readout, not just debugging. */
 	public int getRemainingIngredientCount() {
 		return recipeIngredients.size();
+	}
+
+	/** Real ticks since {@link #active} last became true (0 while inactive) - see this field's own doc
+	 * comment on why it's derived locally instead of synced. */
+	public int getActivatedTick() {
+		return activatedTick;
+	}
+
+	/** Real ticks since {@link #crafting} last became true (0 while idle) - see this field's own doc comment
+	 * on why it's derived locally instead of synced. */
+	public int getCraftTick() {
+		return craftTick;
 	}
 
 	@Override

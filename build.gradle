@@ -317,6 +317,7 @@ sourceSets {
             include 'thaumcraft/client/render/TileRechargePedestalRenderer.java'
             include 'thaumcraft/client/render/TileResearchTableRenderer.java'
             include 'thaumcraft/client/render/TileThaumatoriumRenderer.java'
+            include 'thaumcraft/client/render/TileInfusionMatrixRenderer.java'
             include 'thaumcraft/common/entities/monster/tainted/EntityTaintCrawler.java'
             include 'thaumcraft/client/render/RenderTaintCrawler.java'
             include 'thaumcraft/common/entities/monster/tainted/EntityTaintSwarm.java'

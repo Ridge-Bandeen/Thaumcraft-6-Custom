@@ -3107,6 +3107,59 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix#getActivatedTick()}/
+	 * {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix#getCraftTick()} - the two purely-derived
+	 * fields {@link thaumcraft.client.render.TileInfusionMatrixRenderer} uses for its startup ease-in/halo
+	 * ramps. Both should count up by exactly 1 per real tick while their real driving boolean is true, and
+	 * snap back to 0 the very next real tick after it goes false - real, deterministic, no randomness
+	 * involved, so exact counts are asserted directly rather than just "> 0".
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionMatrixActivatedAndCraftTickRampAndResetWithRealState(GameTestHelper helper) {
+		BlockPos matrixPos = new BlockPos(4, 4, 4);
+		BlockPos centralPos = matrixPos.below(2);
+		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		helper.setBlock(centralPos, BlocksTC.pedestal.get());
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+		ServerPlayer player = spawnCasterAt(helper, matrixAbs);
+
+		helper.assertTrue(matrix.getActivatedTick() == 0, "activatedTick should start at 0 before activation");
+		helper.assertTrue(matrix.activate(helper.getLevel(), player), "activation should succeed with a central pedestal in place");
+		for (int i = 0; i < 10; i++) {
+			thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(helper.getLevel(), matrixAbs, matrixState, matrix);
+		}
+		helper.assertTrue(matrix.getActivatedTick() == 10, "activatedTick should count up by exactly 1 real tick per real tick while active, found " + matrix.getActivatedTick());
+
+		matrix.active = false;
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(helper.getLevel(), matrixAbs, matrixState, matrix);
+		helper.assertTrue(matrix.getActivatedTick() == 0, "activatedTick should reset to 0 the instant active goes false, found " + matrix.getActivatedTick());
+
+		// A second, freshly-placed matrix for the craftTick half - set crafting=true directly (no real
+		// recipe state needed) and keep the tick count under BASE_CYCLE_TIME/2 (5) so the real
+		// craftCycle-triggering countDelay branch never fires; that machinery has its own dedicated coverage
+		// above, this test only cares about the derived counter itself.
+		BlockPos matrix2Pos = new BlockPos(4, 4, 8);
+		helper.setBlock(matrix2Pos, BlocksTC.infusionMatrix.get());
+		BlockPos matrix2Abs = helper.absolutePos(matrix2Pos);
+		net.minecraft.world.level.block.state.BlockState matrix2State = helper.getBlockState(matrix2Pos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix2 = helper.getBlockEntity(matrix2Pos);
+
+		helper.assertTrue(matrix2.getCraftTick() == 0, "craftTick should start at 0 while not crafting");
+		matrix2.crafting = true;
+		for (int i = 0; i < 4; i++) {
+			thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(helper.getLevel(), matrix2Abs, matrix2State, matrix2);
+		}
+		helper.assertTrue(matrix2.getCraftTick() == 4, "craftTick should count up by exactly 1 real tick per real tick while crafting, found " + matrix2.getCraftTick());
+
+		matrix2.crafting = false;
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(helper.getLevel(), matrix2Abs, matrix2State, matrix2);
+		helper.assertTrue(matrix2.getCraftTick() == 0, "craftTick should reset to 0 the instant crafting goes false, found " + matrix2.getCraftTick());
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void infusionMatrixCraftsADemoInfusionRecipeEndToEnd(GameTestHelper helper) {
 		BlockPos matrixPos = new BlockPos(4, 4, 4);
