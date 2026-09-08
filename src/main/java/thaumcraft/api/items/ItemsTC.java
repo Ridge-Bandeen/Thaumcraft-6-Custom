@@ -175,12 +175,12 @@ public final class ItemsTC {
 	 * {@link #plateBrass} closed its own real raw-material chain (ingot/nugget/block/plate) earlier this
 	 * session, see {@link #ingotBrass}'s own doc comment; {@code mechanismSimple} (this item) and
 	 * {@link #mechanismComplex} both got their own real recipes this pass too (see
-	 * {@code data/thaumcraft/recipe/mechanism_simple.json}/{@code mechanism_complex.json} - a glass-and-stick
-	 * assembly bottoming out on {@code plateIron}, and mechanismSimple wrapped around a vanilla piston,
-	 * respectively) - both still ultimately bottom out on {@code plateIron}, which has no real recipe of its
-	 * own yet. {@code plateVoid}/{@code mindClockwork}/{@code mindBiothaumic}/{@code moduleVision} still have
-	 * no real recipe - each needs its own real multi-ingredient device-assembly recipe, a different, larger
-	 * task. */
+	 * {@code data/thaumcraft/recipe/mechanism_simple.json} - plate_brass+plate_iron+a stick - and
+	 * {@code mechanism_complex.json} - mechanism_simple wrapped in plate_thaumium around a vanilla piston).
+	 * {@link #plateIron}'s own real recipe closed right after, so the whole chain is genuinely reachable end
+	 * to end now. {@code plateVoid}/{@code mindClockwork}/{@code mindBiothaumic}/{@code moduleVision} still
+	 * have no real recipe - each needs its own real multi-ingredient device-assembly recipe, a different,
+	 * larger task. */
 	public static final DeferredItem<Item> mechanismSimple =
 			ITEMS.registerSimpleItem("mechanism_simple");
 
@@ -212,6 +212,13 @@ public final class ItemsTC {
 
 	public static final DeferredItem<Item> plateBrass =
 			ITEMS.registerSimpleItem("plate_brass");
+
+	/** Real recipe now (see {@code data/thaumcraft/recipe/plate_iron.json}) - a plain vanilla 3-ingot row
+	 * batching into 3 plates, the exact same shape {@link #plateBrass}/{@code plateThaumium} already use,
+	 * matching the true original's own real convention for every plate tier. This was the single most-cited
+	 * remaining gap in {@link #mechanismSimple}'s own doc comment - a dozen-plus already-shipped recipes
+	 * across this whole session (mechanismSimple/Complex, Levitator, Dioptra, tube_valve/metal_alchemical,
+	 * Potion Sprayer, Smelter Aux/Vent, and more) bottom out on it, all now genuinely reachable end to end. */
 	public static final DeferredItem<Item> plateIron =
 			ITEMS.registerSimpleItem("plate_iron");
 	// plateThaumium already registered above (see ingotThaumium's own section) - reused here as-is.

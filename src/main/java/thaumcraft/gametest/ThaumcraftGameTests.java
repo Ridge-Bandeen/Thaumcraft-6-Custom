@@ -410,6 +410,7 @@ public class ThaumcraftGameTests {
 				"thaumium_helm", "thaumium_chest", "thaumium_legs", "thaumium_boots",
 				"vis_battery", "dioptra",
 				"filter", "condenser", "condenser_lattice", "stabilizer", "mechanism_simple", "mechanism_complex",
+				"plate_iron",
 				"paving_stone_travel",
 				"tallow", "candle_white", "candle_black", "candle_blue", "candle_brown", "candle_cyan",
 				"candle_gray", "candle_green", "candle_lightblue", "candle_lime", "candle_magenta",

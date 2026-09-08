@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "###"
+  ],
+  "key": {
+    "#": { "item": "minecraft:iron_ingot" }
+  },
+  "result": { "id": "thaumcraft:plate_iron", "count": 3 }
+}
