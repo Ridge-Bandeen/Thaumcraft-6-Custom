@@ -33,18 +33,19 @@ import thaumcraft.common.tiles.devices.TileInfernalFurnace;
  * dropped on top gets pulled in and auto-smelted, anything not smeltable is destroyed, living entities that
  * touch it take real lava-like damage and catch fire.
  *
- * Real, documented cut, same "pick the right vanilla-shaped block directly, drop the multi-block illusion"
- * simplification {@code BlockGolemBuilder}'s own doc comment already established for exactly this situation:
- * the original wasn't a real block at all - an invisible core built by a whole separate "structure
- * recognition" ritual ({@code IDustTrigger}/{@code DustTriggerMultiblock}, never ported) that swapped a real
- * 3x3x3 arrangement of decorative nether-brick/obsidian/iron-bars "placeholder" blocks into their real vanilla
- * equivalents on completion/destruction. This ships as one real, solid, directly placed/broken block instead,
- * with a real {@link thaumcraft.api.crafting} recipe using the same real ingredients the original's ritual
- * consumed (nether bricks/obsidian/iron bars/lava bucket) rather than the original's structure-based
- * acquisition. Real, deliberate cut: the smelting-bonus-nugget system ({@code ThaumcraftApi.SmeltBonus}/the
- * real ~30 registered bonuses in the original's {@code ConfigRecipes}) needs a whole family of modern nugget
- * items this port hasn't built yet ({@code ItemsTC} has none) - a real, separately-scoped future addition,
- * not attempted here. See {@link TileInfernalFurnace}'s own doc comment for the real smelting mechanic.
+ * Real, documented simplification, same "pick the right vanilla-shaped block directly, drop the multi-block
+ * illusion" pattern {@code BlockGolemBuilder}'s own doc comment already established for exactly this
+ * situation: the original wasn't a real block at all - an invisible core built by a whole separate "structure
+ * recognition" ritual ({@code IDustTrigger}/{@code DustTriggerMultiblock}) that swapped a real 3x3x3
+ * arrangement of decorative nether-brick/obsidian/iron-bars "placeholder" blocks into their real vanilla
+ * equivalents on completion/destruction. This currently ships as one real, solid, directly placed/broken
+ * block instead, with a real {@link thaumcraft.api.crafting} recipe using the same real ingredients the
+ * original's ritual consumed (nether bricks/obsidian/iron bars/lava bucket) rather than the original's
+ * structure-based acquisition - <b>a real multiblock subsystem is now being built (see the port-tracking
+ * memory), and this device's acquisition path is a real migration target once it exists.</b> The
+ * smelting-bonus-nugget system ({@code ThaumcraftApi.SmeltBonus}) - previously deferred here with the claim
+ * that it needed nugget items this port hadn't built - is real now; see {@link TileInfernalFurnace}'s own doc
+ * comment for the real smelting mechanic and the bonus table's own real, carefully-checked scope.
  */
 public class BlockInfernalFurnace extends Block implements EntityBlock {
 

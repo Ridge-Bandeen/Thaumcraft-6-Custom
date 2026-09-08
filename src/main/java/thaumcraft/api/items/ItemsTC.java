@@ -398,13 +398,34 @@ public final class ItemsTC {
 			ITEMS.registerItem("causality_collapser", thaumcraft.common.items.consumables.ItemCausalityCollapser::new);
 
 	/** The 11th and last {@code ItemNuggets} metadata variant from the original ("rareearth", index 10) -
-	 * needed for {@link #morphicResonator}'s own real crafting recipe. Confirmed via the true original source
-	 * (all lang files, blockstate variants) that this nugget has NO real smelting/crafting/drop source
-	 * anywhere, even in 1.12.2 itself - diamond/redstone ore (its only ever-stated sources) have no vanilla
-	 * smelting recipe. A genuine, confirmed upstream Thaumcraft 6 dead end, not a porting gap: ships as real
-	 * but currently unreachable through normal progression, exactly matching the original's own real state. */
+	 * needed for {@link #morphicResonator}'s own real crafting recipe. <b>Correction:</b> previously (wrongly)
+	 * called a genuine upstream dead end - the user recalled real survival access and asked for a wiki check,
+	 * which surfaced two real original sources this port's first, too-narrow search had both missed (it only
+	 * grepped for the literal string {@code "rareearth"}, missing every reference that used the nugget's
+	 * metadata index instead): a real ore-break bonus
+	 * ({@link thaumcraft.common.lib.events.ToolEvents#RAREEARTH_ORE_CHANCE}, unconditional, no multiblock
+	 * needed) and a real Infernal Furnace smelting bonus (see
+	 * {@link thaumcraft.common.tiles.devices.TileInfernalFurnace}). Both restored - see the port-tracking
+	 * memory for the fuller correction. */
 	public static final DeferredItem<Item> nuggetRareearth =
 			ITEMS.registerSimpleItem("nugget_rareearth");
+
+	/** Real Infernal Furnace smelting-bonus outputs (see {@code TileInfernalFurnace}'s own doc comment) - the
+	 * rest of the original's 11-variant nugget family, beyond {@code nuggetThaumium}/{@code nuggetBrass}/
+	 * {@code nuggetRareearth} (real content already) and {@code nuggetVoid} (not needed by anything real yet,
+	 * left unported). Vanilla already has real iron/gold nuggets, covering 2 of the remaining 8. */
+	public static final DeferredItem<Item> nuggetCopper =
+			ITEMS.registerSimpleItem("nugget_copper");
+	public static final DeferredItem<Item> nuggetTin =
+			ITEMS.registerSimpleItem("nugget_tin");
+	public static final DeferredItem<Item> nuggetSilver =
+			ITEMS.registerSimpleItem("nugget_silver");
+	public static final DeferredItem<Item> nuggetLead =
+			ITEMS.registerSimpleItem("nugget_lead");
+	public static final DeferredItem<Item> nuggetQuicksilver =
+			ITEMS.registerSimpleItem("nugget_quicksilver");
+	public static final DeferredItem<Item> nuggetQuartz =
+			ITEMS.registerSimpleItem("nugget_quartz");
 
 	/** A crafting component for the Centrifuge, Condenser, Arcane Bore and Causality Collapser (see
 	 * {@code data/thaumcraft/recipe/morphic_resonator.json} for its own real recipe - a glass pane, a brass

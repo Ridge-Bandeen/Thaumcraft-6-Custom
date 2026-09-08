@@ -4532,6 +4532,72 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	// --------------------------------------------------------------------------------------------------
+	// Rareearth ore-break bonus - a real, previously-missed nuggetRareearth source (see ToolEvents' own doc
+	// comment). Found after the user recalled real survival access to rareearth-dependent items and asked for
+	// a wiki check rather than trusting an earlier too-narrow source search.
+	// --------------------------------------------------------------------------------------------------
+
+	/**
+	 * Breaks the real block at {@code pos} via {@link Block#dropResources(BlockState, Level, BlockPos, BlockEntity, Entity, ItemStack)}
+	 * with {@code tool} as the real acting tool - same real "tool is really forwarded to BlockDropsEvent"
+	 * technique {@code BlockScheduler#harvest} already established. NOT {@code Level#destroyBlock}, which
+	 * hardcodes an empty tool for its drops calculation regardless of what the given entity actually holds -
+	 * a real trap this test tripped over once already (see this test class's own git history).
+	 */
+	private static void harvestWithTool(ServerLevel level, BlockPos pos, net.minecraft.world.entity.player.Player harvester, ItemStack tool) {
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
+		net.minecraft.world.level.block.Block.dropResources(state, level, pos, level.getBlockEntity(pos), harvester, tool);
+		level.removeBlock(pos, false);
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void breakingDiamondOreHasARealChanceToDropARareearthNugget(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		ServerLevel level = helper.getLevel();
+		BlockPos abs = helper.absolutePos(pos);
+		ServerPlayer harvester = spawnCasterAt(helper, abs);
+		ItemStack pick = new ItemStack(Items.DIAMOND_PICKAXE);
+
+		// 5% real chance per break (see RAREEARTH_ORE_CHANCE) - 300 tries is effectively certain
+		// (1-0.95^300 is far beyond any flake tolerance) without needing to control real RNG directly.
+		boolean found = false;
+		for (int i = 0; i < 300 && !found; i++) {
+			helper.setBlock(pos, Blocks.DIAMOND_ORE);
+			harvestWithTool(level, abs, harvester, pick);
+			for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, new AABB(abs).inflate(0.75))) {
+				if (item.getItem().is(ItemsTC.nuggetRareearth.get())) {
+					found = true;
+				}
+				item.discard();
+			}
+		}
+
+		helper.assertTrue(found, "breaking real diamond ore (no silk touch) enough times should really have dropped a rareearth nugget by now");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void silkTouchNeverDropsARareearthNuggetFromOreBreaking(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		ServerLevel level = helper.getLevel();
+		BlockPos abs = helper.absolutePos(pos);
+		ServerPlayer harvester = spawnCasterAt(helper, abs);
+		ItemStack silkPick = new ItemStack(Items.DIAMOND_PICKAXE);
+		silkPick.enchant(level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+				.getOrThrow(net.minecraft.world.item.enchantment.Enchantments.SILK_TOUCH), 1);
+
+		for (int i = 0; i < 300; i++) {
+			helper.setBlock(pos, Blocks.DIAMOND_ORE);
+			harvestWithTool(level, abs, harvester, silkPick);
+			for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, new AABB(abs).inflate(0.75))) {
+				helper.assertFalse(item.getItem().is(ItemsTC.nuggetRareearth.get()), "a real silk-touch break should never roll the rareearth bonus");
+				item.discard();
+			}
+		}
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void alembicCanBeLabelledToOneAspectAndCleared(GameTestHelper helper) {
 		BlockPos pos = new BlockPos(2, 2, 2);
@@ -10374,6 +10440,44 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(ticksA > 0 && ticksB > 0, "both furnaces should have finished smelting within the tick budget, found A=" + ticksA + " B=" + ticksB);
 		helper.assertTrue(ticksB < ticksA, "the bellows-boosted furnace should finish real strictly faster, found A=" + ticksA + " (no bellows) vs B=" + ticksB + " (bellows)");
+		helper.succeed();
+	}
+
+	/**
+	 * Real smelting-bonus coverage (see {@code TileInfernalFurnace#SMELTING_BONUSES}'s own doc comment) -
+	 * repeatedly smelts real iron ore (33% real bonus-nugget chance per cycle with no bellows) until a bonus
+	 * item shows up alongside the real iron ingot, same real per-cycle-refill technique as
+	 * {@code smelterWithNoVentStillCompletesRepeatedSmeltsWithoutHanging}.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infernalFurnaceRealSmeltingBonusEventuallyYieldsABonusNugget(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.infernalFurnace.get());
+		thaumcraft.common.tiles.devices.TileInfernalFurnace tile = helper.getBlockEntity(pos);
+		BlockPos abs = helper.absolutePos(pos);
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(abs);
+
+		boolean foundBonus = false;
+		int cycles = 0;
+		tile.addItemsToInventory(new ItemStack(Items.IRON_ORE));
+		// 33% real chance per cycle - 40 cycles is effectively certain (1-0.67^40 is far past any flake
+		// tolerance) without needing to control real RNG directly.
+		for (int i = 0; i < 8000 && !foundBonus && cycles < 40; i++) {
+			thaumcraft.common.tiles.devices.TileInfernalFurnace.tick(level, abs, state, tile);
+			for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, new AABB(abs).inflate(2))) {
+				if (item.getItem().is(Items.IRON_NUGGET) || item.getItem().is(ItemsTC.nuggetRareearth.get())) {
+					foundBonus = true;
+				}
+				if (item.getItem().is(Items.IRON_INGOT)) {
+					cycles++;
+					tile.addItemsToInventory(new ItemStack(Items.IRON_ORE));
+				}
+				item.discard();
+			}
+		}
+
+		helper.assertTrue(foundBonus, "smelting real iron ore in the Infernal Furnace enough times should really have yielded a real bonus nugget by now");
 		helper.succeed();
 	}
 

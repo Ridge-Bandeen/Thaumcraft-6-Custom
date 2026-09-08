@@ -126,6 +126,10 @@ public class Thaumcraft {
         // REFINING's cluster-substitution table - see ToolEvents' own doc comment. Same registry-timing
         // reason as the two calls just above.
         thaumcraft.common.lib.events.ToolEvents.initSpecialMining();
+        // The real rareearth-nugget ore-break bonus table - same registry-timing reason.
+        thaumcraft.common.lib.events.ToolEvents.initRareearthOreChances();
+        // The real Infernal Furnace smelting-bonus table - same registry-timing reason.
+        thaumcraft.common.tiles.devices.TileInfernalFurnace.initSmeltingBonuses();
 
         // The real golem part registry (material/head/arm/leg/addon) - see GolemProperties' own doc
         // comment. Same registry-timing reason as the calls above.

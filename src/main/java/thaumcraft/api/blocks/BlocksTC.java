@@ -549,16 +549,18 @@ public final class BlocksTC {
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.5f).sound(SoundType.STONE).noOcclusion());
 
 	/** A real Infusion Matrix cycle-time/cost accelerator, placed at one of the altar's 4 outer corners (see
-	 * {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix#getSurroundings}). Confirmed via the true
-	 * pre-port original source that this one never had a real crafting recipe anywhere, even in 1.12.2 itself
-	 * - a genuine upstream gap, not a porting gap, same honest "ships real but unreachable" pattern as
-	 * {@code nuggetRareearth} from this same review pass. */
+	 * {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix#getSurroundings}). <b>Correction:</b>
+	 * previously (wrongly) called a genuine upstream dead end - the true original's own recipe for this
+	 * exists, just under a different catalog key ({@code "MatrixMotion"}, not {@code "MatrixSpeed"}), which a
+	 * too-narrow initial search missed. Real, craftable - see {@code data/thaumcraft/recipe/matrix_speed.json}
+	 * ({@code stoneArcane} + any-color {@code nitor} + a diamond block, all real materials already in this
+	 * port). See the port-tracking memory for the fuller correction. */
 	public static final DeferredBlock<Block> matrixSpeed = BLOCKS.registerBlock("matrix_speed",
 			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE));
 
-	/** The other real Infusion Matrix corner accelerator - unlike {@link #matrixSpeed}, this one DOES have a
-	 * real original recipe ({@code stoneArcane} + {@code alumentum} + a diamond block, all real materials
-	 * already in this port) - see {@code data/thaumcraft/recipe/matrix_cost.json}. */
+	/** The other real Infusion Matrix corner accelerator - real original recipe ({@code stoneArcane} +
+	 * {@code alumentum} + a diamond block, all real materials already in this port) - see
+	 * {@code data/thaumcraft/recipe/matrix_cost.json}. */
 	public static final DeferredBlock<Block> matrixCost = BLOCKS.registerBlock("matrix_cost",
 			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE));
 

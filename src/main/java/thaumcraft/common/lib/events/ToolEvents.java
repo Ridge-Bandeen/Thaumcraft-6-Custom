@@ -52,8 +52,13 @@ import thaumcraft.common.lib.network.fx.PacketFXScanSource;
 import thaumcraft.common.lib.network.fx.PacketFXSlash;
 
 /**
- * Replaces the old (1.12.2) {@code ToolEvents}. Only the two infusion-enchantment gameplay hooks reachable
- * without any not-yet-ported infrastructure are ported this pass:
+ * Replaces the old (1.12.2) {@code ToolEvents}. Also carries a real, independent tool/enchantment-agnostic
+ * hook - see {@link #RAREEARTH_ORE_CHANCE}'s own doc comment - restored after the user pointed out real
+ * survival-reachable rareearth acquisition they remembered, which a too-narrow initial source search had
+ * missed entirely (see the port-tracking memory).
+ *
+ * The infusion-enchantment gameplay hooks reachable without any not-yet-ported infrastructure are ported
+ * this pass:
  * <ul>
  * <li>{@link EnumInfusionEnchantment#LAMPLIGHT} - places a real light source in a mined-out dark spot. The
  * original placed a custom invisible {@code BlockEffect} variant ({@code effectGlimmer}); vanilla's own
@@ -221,8 +226,47 @@ public class ToolEvents {
 		}
 	}
 
+	/**
+	 * The real, previously-missed source of {@code nuggetRareearth} - see this port's own memory notes on why
+	 * it was first (wrongly) called a genuine upstream dead end. The true original's own {@code ToolEvents}
+	 * had a second, completely independent {@code HarvestDropsEvent} handler with no tool/enchantment gate at
+	 * all: breaking one of these ore blocks without silk touch has a real, small chance to also drop a real
+	 * rare-earth nugget. Confirmed against both the true pre-port original source and the community wiki
+	 * (Feed The Beast Wiki's "Rare Earths" page) before restoring - the wiki also names an Infernal Furnace
+	 * smelting-bonus source, restored separately in {@link thaumcraft.common.tiles.devices.TileInfernalFurnace}
+	 * once that device's own real multiblock acquisition path existed.
+	 */
+	private static final Map<Block, Float> RAREEARTH_ORE_CHANCE = new HashMap<>();
+
+	public static void initRareearthOreChances() {
+		RAREEARTH_ORE_CHANCE.put(Blocks.DIAMOND_ORE, 0.05f);
+		RAREEARTH_ORE_CHANCE.put(Blocks.DEEPSLATE_DIAMOND_ORE, 0.05f);
+		RAREEARTH_ORE_CHANCE.put(Blocks.EMERALD_ORE, 0.075f);
+		RAREEARTH_ORE_CHANCE.put(Blocks.DEEPSLATE_EMERALD_ORE, 0.075f);
+		RAREEARTH_ORE_CHANCE.put(Blocks.LAPIS_ORE, 0.01f);
+		RAREEARTH_ORE_CHANCE.put(Blocks.DEEPSLATE_LAPIS_ORE, 0.01f);
+		RAREEARTH_ORE_CHANCE.put(Blocks.COAL_ORE, 0.001f);
+		RAREEARTH_ORE_CHANCE.put(Blocks.DEEPSLATE_COAL_ORE, 0.001f);
+		RAREEARTH_ORE_CHANCE.put(Blocks.REDSTONE_ORE, 0.01f);
+		RAREEARTH_ORE_CHANCE.put(Blocks.DEEPSLATE_REDSTONE_ORE, 0.01f);
+		RAREEARTH_ORE_CHANCE.put(Blocks.NETHER_QUARTZ_ORE, 0.01f);
+		RAREEARTH_ORE_CHANCE.put(BlocksTC.oreAmber.get(), 0.05f);
+		RAREEARTH_ORE_CHANCE.put(BlocksTC.oreQuartz.get(), 0.05f);
+	}
+
 	@SubscribeEvent
 	public static void onBlockDrops(BlockDropsEvent event) {
+		ServerLevel level = event.getLevel();
+		BlockPos pos = event.getPos();
+
+		Float rareearthChance = RAREEARTH_ORE_CHANCE.get(event.getState().getBlock());
+		if (rareearthChance != null && !isSilkTouching(level, event.getTool())) {
+			if (level.getRandom().nextFloat() < rareearthChance) {
+				event.getDrops().add(new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+						new ItemStack(ItemsTC.nuggetRareearth.get())));
+			}
+		}
+
 		if (!(event.getBreaker() instanceof Player harvester) || harvester.isCrouching()) {
 			return;
 		}
@@ -234,8 +278,6 @@ public class ToolEvents {
 		if (enchantments.isEmpty()) {
 			return;
 		}
-		ServerLevel level = event.getLevel();
-		BlockPos pos = event.getPos();
 
 		if (enchantments.contains(EnumInfusionEnchantment.LAMPLIGHT)) {
 			tryPlaceLamplight(level, pos);
@@ -404,6 +446,13 @@ public class ToolEvents {
 
 	private static boolean isValidBurrowBlock(BlockState state) {
 		return state.is(BlockTags.LOGS) || state.is(Tags.Blocks.ORES);
+	}
+
+	private static boolean isSilkTouching(ServerLevel level, ItemStack tool) {
+		if (tool.isEmpty()) return false;
+		net.minecraft.core.Holder<net.minecraft.world.item.enchantment.Enchantment> silkTouch =
+				level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(net.minecraft.world.item.enchantment.Enchantments.SILK_TOUCH);
+		return net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(silkTouch, tool) > 0;
 	}
 
 	private static BlockPos findFurthestMatchingBlock(ServerLevel level, BlockPos origin, Block match, int reach) {
