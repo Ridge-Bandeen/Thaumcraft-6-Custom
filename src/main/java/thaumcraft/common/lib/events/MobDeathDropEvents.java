@@ -1,5 +1,7 @@
 package thaumcraft.common.lib.events;
 
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Zombie;
@@ -9,10 +11,15 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import thaumcraft.Thaumcraft;
+import thaumcraft.api.aspects.Aspect;
+import thaumcraft.api.aspects.AspectHelper;
+import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
+import thaumcraft.api.damagesource.ThaumcraftDamageTypes;
 import thaumcraft.api.items.ItemsTC;
 import thaumcraft.common.entities.monster.EntityBrainyZombie;
 import thaumcraft.common.entities.monster.cult.EntityCultist;
+import thaumcraft.common.items.resources.ItemCrystalEssence;
 
 /**
  * Replaces 2 of the small, real, independent death-drop fragments buried inside the old (1.12.2)
@@ -39,6 +46,12 @@ import thaumcraft.common.entities.monster.cult.EntityCultist;
  * isn't ported. The original's extra "already carrying one, make it rarer still" dampener
  * ({@code InventoryUtils.getPlayerSlotFor}) is dropped - that whole utility class isn't ported, and without
  * the metadata-6 variant to specifically check for, there's nothing left to key the dampener off.
+ *
+ * A third real fragment from the same original handler: a kill by {@link ThaumcraftDamageTypes#DISSOLVE}
+ * (the Primal Crusher's own real disintegration effect) drops the victim's real {@link AspectHelper}-derived
+ * essentia as {@link ItemCrystalEssence} stacks instead of its normal loot, same real
+ * {@code getInt(1, 1+visSize/10)} roll-count formula the original used, ported onto {@link Mth#nextInt}
+ * (the modern {@link RandomSource}-based equivalent of the original's own {@code MathHelper.getInt}).
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID)
 public class MobDeathDropEvents {
@@ -56,6 +69,19 @@ public class MobDeathDropEvents {
 			int chance = ThaumcraftCapabilities.knowsResearch(player, "!CrimsonCultist") ? 20 : 4;
 			if (player.getRandom().nextInt(chance) == 0) {
 				drop(event, new ItemStack(ItemsTC.curio.get()));
+			}
+		}
+
+		if (event.getSource().is(ThaumcraftDamageTypes.DISSOLVE)) {
+			AspectList aspects = AspectHelper.getEntityAspects(entity);
+			if (aspects != null && aspects.size() > 0) {
+				Aspect[] all = aspects.getAspects();
+				RandomSource random = entity.getRandom();
+				int rolls = Mth.nextInt(random, 1, 1 + aspects.visSize() / 10);
+				for (int i = 0; i < rolls; i++) {
+					Aspect aspect = all[random.nextInt(all.length)];
+					drop(event, ItemCrystalEssence.of(aspect));
+				}
 			}
 		}
 	}

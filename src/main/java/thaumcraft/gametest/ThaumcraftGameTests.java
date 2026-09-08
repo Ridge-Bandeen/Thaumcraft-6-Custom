@@ -10335,6 +10335,40 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for the third fragment extracted from the old {@code EntityEvents#livingDrops} - a
+	 * {@code ThaumcraftDamageTypes#DISSOLVE} kill dropping the victim's real registered essentia (see
+	 * {@code ThaumcraftEntityTags}) as real {@link thaumcraft.common.items.resources.ItemCrystalEssence}
+	 * stacks instead of its normal loot. Real zombie aspects are UNDEAD 20/MAN 10/EARTH 5 - any dropped
+	 * crystal should carry exactly one of those three.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void mobDeathDropEventsDropsRealEssentiaFromADissolveKill(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos abs = helper.absolutePos(BlockPos.ZERO);
+		net.minecraft.world.entity.monster.Zombie zombie = net.minecraft.world.entity.EntityType.ZOMBIE.create(level);
+		helper.assertTrue(zombie != null, "the zombie entity type should really create an instance");
+		zombie.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(zombie);
+
+		net.minecraft.world.damagesource.DamageSource dissolve = thaumcraft.api.damagesource.ThaumcraftDamageTypes.dissolve(level);
+		java.util.List<net.minecraft.world.entity.item.ItemEntity> drops = new java.util.ArrayList<>();
+		net.neoforged.neoforge.event.entity.living.LivingDropsEvent event =
+				new net.neoforged.neoforge.event.entity.living.LivingDropsEvent(zombie, dissolve, drops, true);
+		thaumcraft.common.lib.events.MobDeathDropEvents.onLivingDrops(event);
+
+		helper.assertTrue(!drops.isEmpty(), "a real dissolve kill should really drop at least one real essentia crystal, found none");
+		java.util.Set<String> allowedAspects = java.util.Set.of(
+				thaumcraft.api.aspects.Aspect.UNDEAD.getTag(), thaumcraft.api.aspects.Aspect.MAN.getTag(), thaumcraft.api.aspects.Aspect.EARTH.getTag());
+		for (net.minecraft.world.entity.item.ItemEntity drop : drops) {
+			helper.assertTrue(drop.getItem().is(thaumcraft.api.items.ItemsTC.crystalEssence.get()), "every real drop from a dissolve kill should really be a crystal essence, found " + drop.getItem());
+			thaumcraft.api.aspects.AspectList held = ((thaumcraft.api.items.ItemGenericEssentiaContainer) drop.getItem().getItem()).getAspects(drop.getItem());
+			helper.assertTrue(held != null && held.size() == 1 && allowedAspects.contains(held.getAspects()[0].getTag()),
+					"the dropped crystal's real aspect should really be one of the zombie's own registered aspects, found " + (held == null ? "null" : held));
+		}
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// WornGearEvents' newly-closed Traveller's Boots fall-damage half, and PassiveResearchEvents' 2
 	// pickup-triggered research flags - continuing the events-audit chunk begun with
