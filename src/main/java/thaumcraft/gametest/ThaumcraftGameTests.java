@@ -2549,6 +2549,53 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for the login-sync half of {@link thaumcraft.Thaumcraft#onPlayerLogin} - the modern
+	 * replacement for the original's own stale {@code EventHandlerNetwork#playerLoggedInEvent}, found while
+	 * triaging {@code PlayerEvents}. The handler itself is a thin 2-line delegation to real, already-tested
+	 * {@code sync(player)} calls (see {@code PassiveResearchEvents}'s own tests for that half); this confirms
+	 * the exact same real call succeeds against a player carrying real, non-default knowledge/warp state -
+	 * the actual case this fix exists for (a returning player's data not looking stale on login).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void playerLoginSyncsRealExistingKnowledgeAndWarp(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		thaumcraft.api.ThaumcraftApi.internalMethods.addWarpToPlayer(player, 3, IPlayerWarp.EnumWarpType.NORMAL);
+		ThaumcraftCapabilities.getKnowledge(player).addResearch("BASICS");
+
+		ThaumcraftCapabilities.getKnowledge(player).sync(player);
+		ThaumcraftCapabilities.getWarp(player).sync(player);
+		helper.assertTrue(ThaumcraftCapabilities.getWarp(player).get(IPlayerWarp.EnumWarpType.NORMAL) == 3, "syncing shouldn't itself change the real warp value");
+		helper.assertTrue(ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("BASICS"), "syncing shouldn't itself change the real known research");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.Thaumcraft#handleFinishEatingUnderUnnaturalHunger} - the modern
+	 * replacement for the original's own {@code PlayerEvents#finishedUsingItem}, found while triaging the
+	 * same file.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void eatingFleshOrBrainStepsDownRealUnnaturalHungerButOtherFoodJustWarns(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.addEffect(new net.minecraft.world.effect.MobEffectInstance(thaumcraft.common.registry.ThaumcraftMobEffects.UNNATURAL_HUNGER, 1200, 2, true, false));
+
+		thaumcraft.Thaumcraft.handleFinishEatingUnderUnnaturalHunger(player, new ItemStack(Items.ROTTEN_FLESH));
+		net.minecraft.world.effect.MobEffectInstance stepped = player.getEffect(thaumcraft.common.registry.ThaumcraftMobEffects.UNNATURAL_HUNGER);
+		helper.assertTrue(stepped != null && stepped.getAmplifier() == 1 && stepped.getDuration() == 600,
+				"eating real rotten flesh should really step the amplifier down by 1 and the duration down by 600, found " + stepped);
+
+		thaumcraft.Thaumcraft.handleFinishEatingUnderUnnaturalHunger(player, new ItemStack(thaumcraft.api.items.ItemsTC.brain.get()));
+		helper.assertTrue(player.getEffect(thaumcraft.common.registry.ThaumcraftMobEffects.UNNATURAL_HUNGER) == null,
+				"a second real curative bite should really end the curse outright once the amplifier/duration would go negative");
+
+		player.addEffect(new net.minecraft.world.effect.MobEffectInstance(thaumcraft.common.registry.ThaumcraftMobEffects.UNNATURAL_HUNGER, 1200, 0, true, false));
+		thaumcraft.Thaumcraft.handleFinishEatingUnderUnnaturalHunger(player, new ItemStack(Items.APPLE));
+		helper.assertTrue(player.getEffect(thaumcraft.common.registry.ThaumcraftMobEffects.UNNATURAL_HUNGER) != null,
+				"eating a real non-curative food should really leave the curse completely untouched, just warn");
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void sanitySoapClearsAllWarpWhenUsedUp(GameTestHelper helper) {
 		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
@@ -10438,6 +10485,36 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.lib.events.PassiveResearchEvents.onItemPickup(bookEvent);
 		helper.assertTrue(ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("!gotthaumonomicon"),
 				"picking up a real thaumonomicon should really grant the real !gotthaumonomicon flag");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.lib.events.PassiveResearchEvents#onTick} - the 8 periodic
+	 * flags salvaged from the stale {@code ConfigResearch#checkPeriodicStuff} while triaging
+	 * {@code PlayerEvents}. Covers the altitude-gated pair (deepdown/uphigh, both real-gated on knowing
+	 * {@code UNLOCKAUROMANCY} stage 1 but not stage 2) and 2 of the 4 silent vanilla-stat thresholds - the
+	 * Nether/End dimension checks aren't exercised here (GameTest structures run in the overworld test
+	 * dimension, not a real Nether/End level).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void passiveResearchGrantsPeriodicFlagsFromAltitudeAndVanillaStats(GameTestHelper helper) {
+		BlockPos abs = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, abs);
+		thaumcraft.api.capabilities.IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		knowledge.setResearchStage("UNLOCKAUROMANCY", 1);
+
+		player.setPos(player.getX(), 5.0, player.getZ());
+		net.neoforged.neoforge.event.tick.PlayerTickEvent.Post tickEvent = new net.neoforged.neoforge.event.tick.PlayerTickEvent.Post(player);
+		thaumcraft.common.lib.events.PassiveResearchEvents.onTick(tickEvent);
+		helper.assertTrue(knowledge.isResearchKnown("m_deepdown"), "standing below Y=10 with only UNLOCKAUROMANCY stage 1 should really grant m_deepdown");
+		helper.assertFalse(knowledge.isResearchKnown("m_uphigh"), "standing below Y=10 should not also grant m_uphigh");
+
+		player.getStats().setValue(player, net.minecraft.stats.Stats.CUSTOM.get(net.minecraft.stats.Stats.WALK_ONE_CM), 200000);
+		player.getStats().setValue(player, net.minecraft.stats.Stats.CUSTOM.get(net.minecraft.stats.Stats.JUMP), 600);
+		thaumcraft.common.lib.events.PassiveResearchEvents.onTick(tickEvent);
+		helper.assertTrue(knowledge.isResearchKnown("m_walker"), "a real walk-distance stat past the real threshold should really grant m_walker");
+		helper.assertTrue(knowledge.isResearchKnown("m_jumper"), "a real jump-count stat past the real threshold should really grant m_jumper");
+		helper.assertFalse(knowledge.isResearchKnown("m_runner"), "a real sprint stat still under the real threshold should not grant m_runner");
 		helper.succeed();
 	}
 

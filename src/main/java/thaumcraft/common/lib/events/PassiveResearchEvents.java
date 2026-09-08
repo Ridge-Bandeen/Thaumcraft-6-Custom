@@ -3,16 +3,20 @@ package thaumcraft.common.lib.events;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.stats.Stats;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Fireball;
 import net.minecraft.world.entity.projectile.LlamaSpit;
+import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import thaumcraft.Thaumcraft;
 import thaumcraft.api.capabilities.IPlayerKnowledge;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
@@ -44,6 +48,17 @@ import thaumcraft.common.items.resources.ItemCrystalEssence;
  * {@code ModConfig.CONFIG_MISC.noSleep}) - dropped here, {@code ConfigItems.startBook} isn't ported (part of
  * the still-open config-system gap tracked elsewhere in this session's memory), and the flag itself is the
  * part with real, independent value (nothing currently requires the Dream Journal item specifically).
+ *
+ * Also covers the stale {@code ConfigResearch#checkPeriodicStuff} - 8 more real "gameplay experience teaches
+ * you something" flags (checked every 200 real ticks, same real cadence the original used), same real
+ * pattern as everything else in this class: {@code data/thaumcraft/research/*.json} already gates real nodes
+ * behind all 8 of these exact keys. {@link #onTick} real-ifies "visited the Nether"/"visited the End"
+ * (checked directly against the real dimension key, the same simplification {@code ChampionModEvents} already
+ * made for the same original {@code BiomeDictionary.Type.NETHER}/{@code END} check - no modern biome-tag
+ * equivalent is any more precise for an entire-dimension condition like this), "gone below Y=10"/"climbed
+ * above 40% world height" (both real, gated the same real way the original did - only once
+ * {@code UNLOCKAUROMANCY} stage 1 is known but stage 2 isn't), and 4 silent (no message, same as the
+ * original) vanilla-stat thresholds (walked/sprinted/jumped/swum enough) via real {@link Stats}.
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID)
 public class PassiveResearchEvents {
@@ -79,6 +94,38 @@ public class PassiveResearchEvents {
 		if (event.getOriginalStack().getItem() instanceof ItemThaumonomicon) {
 			grant(player, "!gotthaumonomicon", null);
 		}
+	}
+
+	@SubscribeEvent
+	public static void onTick(PlayerTickEvent.Post event) {
+		Player playerEntity = event.getEntity();
+		if (playerEntity.level().isClientSide || playerEntity.tickCount % 200 != 0 || !(playerEntity instanceof ServerPlayer player)) return;
+
+		Level level = player.level();
+		if (level.dimension() == Level.NETHER) {
+			grant(player, "m_hellandback", "got.hellandback");
+		}
+		if (level.dimension() == Level.END) {
+			grant(player, "m_endoftheworld", "got.endoftheworld");
+		}
+
+		if (ThaumcraftCapabilities.knowsResearchStrict(player, "UNLOCKAUROMANCY@1") && !ThaumcraftCapabilities.knowsResearchStrict(player, "UNLOCKAUROMANCY@2")) {
+			if (player.getY() < 10.0 && !ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("m_deepdown")) {
+				grant(player, "m_deepdown", "got.deepdown");
+			}
+			if (player.getY() > level.getHeight() * 0.4 && !ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("m_uphigh")) {
+				grant(player, "m_uphigh", "got.uphigh");
+			}
+		}
+
+		if (statAtLeast(player, Stats.WALK_ONE_CM, 160000)) grant(player, "m_walker", null);
+		if (statAtLeast(player, Stats.SPRINT_ONE_CM, 80000)) grant(player, "m_runner", null);
+		if (statAtLeast(player, Stats.JUMP, 500)) grant(player, "m_jumper", null);
+		if (statAtLeast(player, Stats.SWIM_ONE_CM, 8000)) grant(player, "m_swimmer", null);
+	}
+
+	private static boolean statAtLeast(ServerPlayer player, net.minecraft.resources.ResourceLocation stat, int threshold) {
+		return player.getStats().getValue(Stats.CUSTOM.get(stat)) > threshold;
 	}
 
 	private static void grant(ServerPlayer player, String researchKey, String messageKey) {

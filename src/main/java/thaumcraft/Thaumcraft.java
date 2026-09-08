@@ -481,6 +481,67 @@ public class Thaumcraft {
         return player.getGameProfile().getName().startsWith("FakeThaumcraft");
     }
 
+    /** Modern replacement for the original's own {@code EventHandlerNetwork#playerLoggedInEvent} - found
+     * while triaging {@code PlayerEvents}. {@link thaumcraft.api.capabilities.ThaumcraftCapabilities#KNOWLEDGE}/
+     * {@code WARP} are real NeoForge Data Attachments (real, live {@code .copyOnDeath()} already carries them
+     * across respawn for free - the original's own separate {@code PlayerEvents#cloneCapabilitiesEvent} has no
+     * real modern equivalent to port, that whole problem is solved a level below this), but neither is
+     * registered with {@code .sync(...)}, so nothing pushes them to a client automatically - every other real
+     * consumer this session ({@code PassiveResearchEvents}/{@code WarpEvents}/etc.) only calls
+     * {@code knowledge.sync(player)}/{@code warp.sync(player)} reactively, on its own real change. Without
+     * this, a player with real existing progress would show stale (usually empty-looking) data client-side
+     * from login until the next unrelated change happened to trigger a sync. */
+    @SubscribeEvent
+    public void onPlayerLogin(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            ThaumcraftCapabilities.getKnowledge(player).sync(player);
+            ThaumcraftCapabilities.getWarp(player).sync(player);
+        }
+    }
+
+    /** Modern replacement for the original's own {@code PlayerEvents#finishedUsingItem} - found while
+     * triaging the same file. While a player suffers {@code Unnatural Hunger} ({@link
+     * thaumcraft.common.registry.ThaumcraftMobEffects#UNNATURAL_HUNGER}), finishing a real Rotten Flesh or
+     * {@link thaumcraft.api.items.ItemsTC#brain} steps the curse's own amplifier/duration down (matching the
+     * original's real {@code -1} amplifier / {@code -600} duration formula, ending the effect outright once
+     * either would go negative); eating anything else edible instead just sends the original's own warning
+     * message, doing nothing mechanical. Real, minor cut: the original also swapped the re-applied effect's
+     * "cured by" item list down to just Rotten Flesh - cosmetic only (which items a status-effect tooltip
+     * lists as curing it), not ported.
+     */
+    @SubscribeEvent
+    public void onFinishEating(net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish event) {
+        net.minecraft.world.entity.LivingEntity entity = event.getEntity();
+        if (!entity.level().isClientSide && entity instanceof net.minecraft.world.entity.player.Player player) {
+            handleFinishEatingUnderUnnaturalHunger(player, event.getItem());
+        }
+    }
+
+    /** Real logic extracted out of {@link #onFinishEating} for real testability, the same "extract a static,
+     * directly testable helper out of the instance event method" shape {@link #blocksAnvilOperation}/
+     * {@link #rollLootBagDrop} already established. See {@link #onFinishEating}'s own doc comment for what
+     * this real port does and cuts. */
+    public static void handleFinishEatingUnderUnnaturalHunger(net.minecraft.world.entity.player.Player player, net.minecraft.world.item.ItemStack item) {
+        if (!player.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.UNNATURAL_HUNGER)) return;
+
+        boolean isCurativeFood = item.is(net.minecraft.world.item.Items.ROTTEN_FLESH) || item.is(thaumcraft.api.items.ItemsTC.brain.get());
+        if (isCurativeFood) {
+            net.minecraft.world.effect.MobEffectInstance current = player.getEffect(thaumcraft.common.registry.ThaumcraftMobEffects.UNNATURAL_HUNGER);
+            int amplifier = current.getAmplifier() - 1;
+            int duration = current.getDuration() - 600;
+            player.removeEffect(thaumcraft.common.registry.ThaumcraftMobEffects.UNNATURAL_HUNGER);
+            if (duration > 0 && amplifier >= 0) {
+                player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                        thaumcraft.common.registry.ThaumcraftMobEffects.UNNATURAL_HUNGER, duration, amplifier, true, false));
+            }
+            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("warp.text.hunger.2")
+                    .withStyle(net.minecraft.ChatFormatting.DARK_GREEN, net.minecraft.ChatFormatting.ITALIC), false);
+        } else if (item.get(net.minecraft.core.component.DataComponents.FOOD) != null) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("warp.text.hunger.1")
+                    .withStyle(net.minecraft.ChatFormatting.DARK_RED, net.minecraft.ChatFormatting.ITALIC), false);
+        }
+    }
+
     // Arcane Ear's cross-dimension note-listening mechanic - see TileArcaneEar's own doc comment. Play
     // records every real note block's trigger; Post clears each dimension's list once every Arcane Ear in
     // it has had a chance to check that tick's events.
