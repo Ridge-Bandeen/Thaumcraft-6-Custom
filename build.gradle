@@ -313,6 +313,8 @@ sourceSets {
             include 'thaumcraft/client/render/RenderTaintSeed.java'
             include 'thaumcraft/common/tiles/misc/TileBanner.java'
             include 'thaumcraft/client/render/TileBannerRenderer.java'
+            include 'thaumcraft/client/render/TilePedestalRenderer.java'
+            include 'thaumcraft/client/render/TileRechargePedestalRenderer.java'
             include 'thaumcraft/common/entities/monster/tainted/EntityTaintCrawler.java'
             include 'thaumcraft/client/render/RenderTaintCrawler.java'
             include 'thaumcraft/common/entities/monster/tainted/EntityTaintSwarm.java'

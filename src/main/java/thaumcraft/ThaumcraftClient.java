@@ -172,6 +172,8 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_GOLEM.get(), thaumcraft.client.render.RenderEldritchGolem::new);
         // First real BlockEntityRenderer this whole port has needed - see its own doc comment.
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.BANNER.get(), thaumcraft.client.render.TileBannerRenderer::new);
+        event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.PEDESTAL.get(), thaumcraft.client.render.TilePedestalRenderer::new);
+        event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.RECHARGE_PEDESTAL.get(), thaumcraft.client.render.TileRechargePedestalRenderer::new);
     }
 
     /** One real "additional" model per {@link GolemMaterial} (the trunk/limbs silhouette every golem has),
