@@ -34,8 +34,8 @@ import thaumcraft.common.tiles.crafting.TileThaumatorium;
  * no real recipe of any kind for most of this session (not even an invented substitute - a genuine, confirmed
  * gap, not a deliberate cut). The real path is the original's own real ritual: a real {@code crucible} placed
  * below, a real {@code metalAlchemical} block placed on top of that, right-click with Salis Mundus - the
- * {@code metalAlchemical} becomes this block. {@code metalAlchemical} itself is real but currently
- * uncraftable (see its own doc comment).
+ * {@code metalAlchemical} becomes this block. {@code metalAlchemical} itself is really craftable now too
+ * (see its own doc comment) once {@code tubeValve} was ported to supply its one missing ingredient.
  *
  * Texture note: the original's real look came from a hand-modeled {@code .obj} mesh with its own UV atlas
  * (see {@code thaumatorium.png}/{@code .mtl}/{@code .obj} still sitting in assets, unused). Reconstructing

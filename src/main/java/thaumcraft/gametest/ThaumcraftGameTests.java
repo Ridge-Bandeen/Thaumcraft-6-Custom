@@ -416,7 +416,7 @@ public class ThaumcraftGameTests {
 				"candle_orange", "candle_pink", "candle_purple", "candle_red", "candle_silver", "candle_yellow",
 				"phial", "label",
 				"flesh_block", "rotten_flesh_from_block", "sanity_soap",
-				"arcane_workbench_charger", "tube_filter", "tube_restrict",
+				"arcane_workbench_charger", "tube_filter", "tube_restrict", "tube_valve", "metal_alchemical",
 				"brassingot", "nugget_brass", "ingot_brass_from_nuggets",
 				"metal_block_brass", "ingot_brass_from_block", "plate_brass",
 				"table_wood", "table_stone"

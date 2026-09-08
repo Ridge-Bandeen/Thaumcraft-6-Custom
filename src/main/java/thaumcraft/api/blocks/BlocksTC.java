@@ -441,12 +441,10 @@ public final class BlocksTC {
 
 	/** A real crafting component for several devices this port hasn't built yet (Centrifuge, the Thaumium/Void
 	 * Essentia Smelter tiers, the Potion Sprayer, Smelter Aux/Vent, essentia-transport tube I/O, and - the one
-	 * this restores it for - the real {@link #thaumatorium}/{@link #thaumatoriumTop} multiblock ritual). Real,
-	 * currently uncraftable: the true original's own real recipe ({@code "AlchemicalConstruct"}) needs
-	 * {@code tubeValve} - a real, distinct essentia-tube device (its own tile entity, not a plain decorative
-	 * block) never ported this session - a genuine forced block, not chased down here. Ships real but
-	 * unreachable through normal progression, same honest pattern as {@code nuggetRareearth} earlier this
-	 * session. */
+	 * this restores it for - the real {@link #thaumatorium}/{@link #thaumatoriumTop} multiblock ritual). Really
+	 * craftable now ({@code data/thaumcraft/recipe/metal_alchemical.json}, the true original's own real
+	 * {@code "AlchemicalConstruct"} recipe) once {@code tubeValve} was ported to supply its one previously
+	 * missing ingredient. */
 	public static final DeferredBlock<Block> metalAlchemical = BLOCKS.registerBlock("metal_alchemical",
 			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(4.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 

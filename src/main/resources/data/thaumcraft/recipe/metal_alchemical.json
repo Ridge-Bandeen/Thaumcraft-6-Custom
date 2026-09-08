@@ -1,0 +1,22 @@
+{
+  "type": "thaumcraft:arcane_shaped",
+  "research": "FIRSTSTEPS",
+  "vis": 75,
+  "crystals": {
+    "aqua": 1,
+    "ordo": 1,
+    "perditio": 1
+  },
+  "pattern": [
+    "IVI",
+    "TWT",
+    "IVI"
+  ],
+  "key": {
+    "I": { "item": "thaumcraft:plate_iron" },
+    "V": { "item": "thaumcraft:tube_valve" },
+    "T": { "item": "thaumcraft:tube" },
+    "W": { "item": "thaumcraft:plank_greatwood" }
+  },
+  "result": { "id": "thaumcraft:metal_alchemical", "count": 2 }
+}
