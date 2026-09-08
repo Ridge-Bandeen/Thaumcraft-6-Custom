@@ -445,6 +445,22 @@ public class Thaumcraft {
         }
     }
 
+    /** Modern replacement for the original's own {@code WorldEvents#worldUnload} - drops this one
+     * dimension's live in-memory aura/seal/task state (real saved data itself is untouched, each system's
+     * own {@code SavedData} reloads it fresh on the dimension's next real {@link #onLevelLoad}). Without
+     * this, a dimension unloaded and reloaded during a single server run (a dynamically-added datapack
+     * dimension, or {@code /forge unloadWorld} on unmodified vanilla multi-world setups) would leak its old
+     * aura background thread and stale seal/task maps forever, alongside a fresh set loaded back in. Found
+     * and ported while triaging the still-stale {@code common/lib/events} package's real remaining gaps.
+     */
+    @SubscribeEvent
+    public void onLevelUnload(LevelEvent.Unload event) {
+        if (event.getLevel() instanceof ServerLevel level) {
+            AuraHandler.unloadDimension(level.dimension());
+            thaumcraft.common.golems.seals.SealHandler.unloadDimension(level.dimension());
+        }
+    }
+
     // Arcane Ear's cross-dimension note-listening mechanic - see TileArcaneEar's own doc comment. Play
     // records every real note block's trigger; Post clears each dimension's list once every Arcane Ear in
     // it has had a chance to check that tick's events.

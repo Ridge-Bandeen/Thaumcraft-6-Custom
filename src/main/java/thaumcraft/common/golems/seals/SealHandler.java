@@ -44,6 +44,17 @@ public final class SealHandler {
 		}
 	}
 
+	/** Drops this dimension's real cached {@link SealSavedData} reference plus {@link GolemHelper}'s own
+	 * live seal/task state for it - called from {@code Thaumcraft}'s real {@code LevelEvent.Unload} handler,
+	 * the modern replacement for the original's own {@code WorldEvents#worldUnload} -&gt; direct
+	 * {@code SealHandler.sealEntities.remove(dim)}. Safe even if this dimension was never loaded; real saved
+	 * data itself is untouched (owned by the level's own {@code DataStorage}, reloaded fresh next
+	 * {@link #loadForLevel}). */
+	public static void unloadDimension(ResourceKey<Level> dim) {
+		SAVE_DATA.remove(dim);
+		GolemHelper.unloadDimension(dim);
+	}
+
 	private static void markDirty(ResourceKey<Level> dim) {
 		SealSavedData data = SAVE_DATA.get(dim);
 		if (data != null) data.setDirty();

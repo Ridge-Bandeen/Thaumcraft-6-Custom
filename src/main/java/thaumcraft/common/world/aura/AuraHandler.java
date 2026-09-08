@@ -92,6 +92,20 @@ public class AuraHandler
         });
     }
 
+    /** Stops this one dimension's aura thread and drops its cached {@link AuraWorld} - the modern per-dimension
+     * counterpart to {@link #stopAllThreads} (server shutdown), called from {@code Thaumcraft}'s real
+     * {@code LevelEvent.Unload} handler (the replacement for the original's own {@code WorldEvents#worldUnload}
+     * -&gt; {@code AuraHandler.removeAuraWorld}). Safe even if this dimension was never loaded; safe to call
+     * again later too - {@link #getAuraChunk} lazily recreates both the world and the thread on next real
+     * access, so this never loses saved data (real persistence lives in {@link AuraWorld}'s own
+     * {@code SavedData}, untouched here), it just stops holding a thread/cache entry for an unloaded
+     * dimension. */
+    public static void unloadDimension(ResourceKey<Level> dim) {
+        AuraThread thread = auraThreads.remove(dim);
+        if (thread != null) thread.stop();
+        auras.remove(dim);
+    }
+
     public static void stopAllThreads() {
         for (AuraThread thread : auraThreads.values()) {
             thread.stop();

@@ -101,6 +101,18 @@ public class GolemHelper {
 	public static HashMap<ResourceKey<Level>,ArrayList<ProvisionRequest>> provisionRequests = new HashMap<>();
 	static int LISTLIMIT = 1000;
 
+	/** Drops this dimension's live in-memory seal/task/provision-request state - called from
+	 * {@code Thaumcraft}'s real {@code LevelEvent.Unload} handler (the modern replacement for the original's
+	 * own {@code WorldEvents#worldUnload}), one dimension at a time. Safe to call even if nothing was ever
+	 * loaded for this dimension - every map here lazily recreates its entry on next real access
+	 * ({@link #getSealEntities}/{@link #getTasks} both {@code computeIfAbsent}), so this never permanently
+	 * loses state, it just stops holding memory for a dimension that's no longer loaded. */
+	public static void unloadDimension(ResourceKey<Level> dim) {
+		SEAL_ENTITIES.remove(dim);
+		GOLEM_TASKS.remove(dim);
+		provisionRequests.remove(dim);
+	}
+
 	/**
 	 *
 	 * @param world

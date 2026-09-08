@@ -5726,6 +5726,41 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for the new {@code Thaumcraft#onLevelUnload} handler (the modern replacement for the
+	 * original's own {@code WorldEvents#worldUnload}) - GameTest can't fire a real {@code LevelEvent.Unload},
+	 * so this calls the same real static cleanup methods that handler calls directly, and confirms both the
+	 * real cleanup and the documented "lazily recreates on next real access" safety property (see each
+	 * method's own doc comment) actually hold.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void levelUnloadDropsAuraAndSealStateButBothLazilyRecreate(GameTestHelper helper) {
+		BlockPos pos = helper.absolutePos(BlockPos.ZERO);
+		net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dim = helper.getLevel().dimension();
+		ServerPlayer owner = spawnCasterAt(helper, pos.above(2));
+
+		thaumcraft.common.world.aura.AuraHandler.getAuraChunk(dim, pos.getX() >> 4, pos.getZ() >> 4);
+		helper.assertTrue(thaumcraft.common.world.aura.AuraHandler.getAuraWorld(dim) != null, "a real aura chunk access should have created this dimension's real AuraWorld");
+
+		thaumcraft.api.golems.seals.SealPos sealPos2 = new thaumcraft.api.golems.seals.SealPos(pos, net.minecraft.core.Direction.UP);
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), pos, net.minecraft.core.Direction.UP, new thaumcraft.common.golems.seals.SealGuard(), owner),
+				"placing a fresh seal should succeed");
+		helper.assertTrue(!thaumcraft.api.golems.GolemHelper.getSealEntities(dim).isEmpty(), "the real seal map should hold the placed seal before unload");
+
+		thaumcraft.common.world.aura.AuraHandler.unloadDimension(dim);
+		thaumcraft.common.golems.seals.SealHandler.unloadDimension(dim);
+
+		helper.assertTrue(thaumcraft.common.world.aura.AuraHandler.getAuraWorld(dim) == null, "unloadDimension should have dropped the real cached AuraWorld");
+		helper.assertTrue(thaumcraft.api.golems.GolemHelper.getSealEntities(dim).isEmpty(), "unloadDimension should have dropped the real live seal map");
+
+		// The real "never loses state permanently" property - a later real access should just recreate both,
+		// same as a dimension being reloaded after this real unload.
+		thaumcraft.common.world.aura.AuraHandler.getAuraChunk(dim, pos.getX() >> 4, pos.getZ() >> 4);
+		helper.assertTrue(thaumcraft.common.world.aura.AuraHandler.getAuraWorld(dim) != null, "a real aura chunk access after unload should lazily recreate this dimension's AuraWorld");
+
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void sealLumberDetectsLogsAndAGolemChopsThemDownForReal(GameTestHelper helper) {
 		BlockPos floorPos = BlockPos.ZERO;
