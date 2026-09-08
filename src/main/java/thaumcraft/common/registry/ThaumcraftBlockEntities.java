@@ -95,6 +95,9 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.essentia.TileTubeRestrict>> TUBE_RESTRICT = BLOCK_ENTITIES.register("tube_restrict",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.essentia.TileTubeRestrict::new, BlocksTC.tubeRestrict.get()).build(null));
 
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.essentia.TileTubeValve>> TUBE_VALVE = BLOCK_ENTITIES.register("tube_valve",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.essentia.TileTubeValve::new, BlocksTC.tubeValve.get()).build(null));
+
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.devices.TileDioptra>> DIOPTRA = BLOCK_ENTITIES.register("dioptra",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.devices.TileDioptra::new, BlocksTC.dioptra.get()).build(null));
 

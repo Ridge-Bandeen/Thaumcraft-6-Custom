@@ -3433,6 +3433,63 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeValveBlocksFlowWhileRedstonePoweredAndResumesWhenUnpowered(GameTestHelper helper) {
+		BlockPos sourcePos = new BlockPos(4, 3, 4);
+		BlockPos valvePos = sourcePos.below();
+		BlockPos jarPos = valvePos.below();
+
+		helper.setBlock(sourcePos, TEST_ESSENTIA_SOURCE_BLOCK.get());
+		helper.setBlock(valvePos, BlocksTC.tubeValve.get());
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		BlockPos valveAbs = helper.absolutePos(valvePos);
+		BlockPos jarAbs = helper.absolutePos(jarPos);
+
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(sourcePos);
+		source.aspect = Aspect.EARTH;
+		source.amount = 999;
+
+		thaumcraft.common.tiles.essentia.TileTubeValve valve = helper.getBlockEntity(valvePos);
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(jarPos);
+
+		helper.assertTrue(valve.isAllowingFlow(), "a freshly-placed valve should start open, same as the original");
+
+		for (int i = 0; i < 200; i++) {
+			thaumcraft.common.tiles.essentia.TileTubeValve.tick(helper.getLevel(), valveAbs, helper.getBlockState(valvePos), valve);
+			thaumcraft.common.tiles.essentia.TileJarFillable.tick(helper.getLevel(), jarAbs, helper.getBlockState(jarPos), jar);
+		}
+		helper.assertTrue(jar.getAspects().getAmount(Aspect.EARTH) > 0, "an open valve should relay essentia normally, jar got " + jar.getAspects());
+
+		// Powering the valve should shut it - real redstone-gating, not a cosmetic flag - so no further
+		// essentia should ever reach the jar, no matter how many more ticks pass.
+		helper.setBlock(valvePos.north(), Blocks.REDSTONE_BLOCK);
+		for (int i = 0; i < 10; i++) {
+			thaumcraft.common.tiles.essentia.TileTubeValve.tick(helper.getLevel(), valveAbs, helper.getBlockState(valvePos), valve);
+		}
+		helper.assertTrue(!valve.isAllowingFlow(), "a redstone-powered valve should shut itself");
+
+		jar.emptyIntoAura(helper.getLevel(), jarAbs);
+		for (int i = 0; i < 200; i++) {
+			thaumcraft.common.tiles.essentia.TileTubeValve.tick(helper.getLevel(), valveAbs, helper.getBlockState(valvePos), valve);
+			thaumcraft.common.tiles.essentia.TileJarFillable.tick(helper.getLevel(), jarAbs, helper.getBlockState(jarPos), jar);
+		}
+		helper.assertTrue(jar.getAspects().getAmount(Aspect.EARTH) == 0, "a shut valve should relay no essentia at all, jar got " + jar.getAspects());
+
+		// Removing the signal should reopen it and let flow resume.
+		helper.setBlock(valvePos.north(), Blocks.AIR);
+		for (int i = 0; i < 10; i++) {
+			thaumcraft.common.tiles.essentia.TileTubeValve.tick(helper.getLevel(), valveAbs, helper.getBlockState(valvePos), valve);
+		}
+		helper.assertTrue(valve.isAllowingFlow(), "losing the redstone signal should reopen the valve");
+
+		for (int i = 0; i < 200; i++) {
+			thaumcraft.common.tiles.essentia.TileTubeValve.tick(helper.getLevel(), valveAbs, helper.getBlockState(valvePos), valve);
+			thaumcraft.common.tiles.essentia.TileJarFillable.tick(helper.getLevel(), jarAbs, helper.getBlockState(jarPos), jar);
+		}
+		helper.assertTrue(jar.getAspects().getAmount(Aspect.EARTH) > 0, "once reopened, the valve should relay essentia again, jar got " + jar.getAspects());
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Infusion Altar (Runic Matrix + Arcane Pedestal) - see TileInfusionMatrix's own doc comment for what's
 	// simplified this pass. No wand/caster item is ported yet, so activation goes through
