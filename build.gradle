@@ -228,6 +228,7 @@ sourceSets {
             include 'thaumcraft/api/golems/tasks/Task.java'
             include 'thaumcraft/common/golems/GolemProperties.java'
             include 'thaumcraft/common/golems/EntityThaumcraftGolem.java'
+            include 'thaumcraft/common/golems/parts/GolemArmDart.java'
             include 'thaumcraft/common/golems/ItemGolemPlacer.java'
             include 'thaumcraft/common/tiles/crafting/TileGolemBuilder.java'
             include 'thaumcraft/common/blocks/crafting/BlockGolemBuilder.java'

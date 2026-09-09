@@ -1,41 +1,67 @@
 package thaumcraft.common.golems.parts;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.IRangedAttackMob;
-import net.minecraft.entity.SharedMonsterAttributes;
-import net.minecraft.entity.ai.EntityAIAttackRanged;
-import net.minecraft.init.SoundEvents;
+
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.RangedAttackGoal;
+import net.minecraft.world.entity.monster.RangedAttackMob;
+import net.minecraft.world.entity.projectile.Arrow;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import thaumcraft.api.golems.IGolemAPI;
 import thaumcraft.api.golems.parts.GolemArm;
-import thaumcraft.common.entities.projectile.EntityGolemDart;
-import thaumcraft.common.golems.ai.AIArrowAttack;
 
+/**
+ * Replaces the old (1.12.2) {@code GolemArmDart} - the real {@link GolemArm.IArmFunction} the "DARTS" arm
+ * (see {@link thaumcraft.common.golems.GolemProperties#init}) was registered without until now, closing a
+ * real gap that class's own doc comment flagged ("no shipped {@code GolemArm} has a real
+ * {@code IArmFunction} yet"). Real ranged attack: a real vanilla {@link Arrow} (the true original's own
+ * {@code EntityGolemDart} was itself just a re-skinned, smaller-hitbox {@code EntityArrow} with no other
+ * real behavior - not worth a whole new {@code EntityType} for a purely cosmetic difference, same "drop the
+ * cosmetic-only divergence, keep the real mechanic" precedent this whole port has used throughout), damage
+ * scaled to a third of the golem's own real attack damage plus range plus a small real random spread, same
+ * real formula and 1.6/3.0 velocity/inaccuracy as the original's own {@code onRangedAttack}.
+ *
+ * {@link #getRangedAttackAI} returns vanilla's own {@link RangedAttackGoal} directly (same real interval/
+ * range parameters - 20-25 ticks, 16 blocks - as the original's own hand-rolled {@code AIArrowAttack}) - the
+ * {@link GolemArm.IArmFunction} interface itself already expects that return type, so no custom {@code Goal}
+ * subclass was ever needed here, matching the same real "reuse vanilla directly" precedent
+ * {@link thaumcraft.common.golems.EntityThaumcraftGolem}'s own doc comment already established for
+ * {@code FollowOwnerGoal}/{@code OwnerHurtByTargetGoal}/{@code OwnerHurtTargetGoal}.
+ */
+public class GolemArmDart implements GolemArm.IArmFunction {
 
-public class GolemArmDart implements GolemArm.IArmFunction
-{
-    @Override
-    public void onMeleeAttack(IGolemAPI golem, Entity target) {
-    }
-    
-    @Override
-    public void onRangedAttack(IGolemAPI golem, EntityLivingBase target, float range) {
-        EntityGolemDart entityarrow = new EntityGolemDart(golem.getGolemWorld(), golem.getGolemEntity());
-        float dmg = (float)golem.getGolemEntity().getEntityAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue() / 3.0f;
-        entityarrow.setDamage(dmg + range + golem.getGolemWorld().rand.nextGaussian() * 0.25);
-        double d0 = target.posX - golem.getGolemEntity().posX;
-        double d2 = target.getEntityBoundingBox().minY + target.getEyeHeight() + range * range - entityarrow.posY;
-        double d3 = target.posZ - golem.getGolemEntity().posZ;
-        entityarrow.shoot(d0, d2, d3, 1.6f, 3.0f);
-        golem.getGolemWorld().spawnEntity(entityarrow);
-        golem.getGolemEntity().playSound(SoundEvents.ENTITY_ARROW_SHOOT, 1.0f, 1.0f / (golem.getGolemWorld().rand.nextFloat() * 0.4f + 0.8f));
-    }
-    
-    @Override
-    public EntityAIAttackRanged getRangedAttackAI(IRangedAttackMob golem) {
-        return new AIArrowAttack(golem, 1.0, 20, 25, 16.0f);
-    }
-    
-    @Override
-    public void onUpdateTick(IGolemAPI golem) {
-    }
+	@Override
+	public void onMeleeAttack(IGolemAPI golem, Entity target) {
+	}
+
+	@Override
+	public void onRangedAttack(IGolemAPI golem, LivingEntity target, float range) {
+		LivingEntity shooter = golem.getGolemEntity();
+		if (!(shooter.level() instanceof ServerLevel level)) return;
+
+		Arrow dart = new Arrow(level, shooter, new ItemStack(Items.ARROW), null);
+		var atk = shooter.getAttribute(Attributes.ATTACK_DAMAGE);
+		double baseDamage = (atk != null ? atk.getValue() : 1.0) / 3.0;
+		dart.setBaseDamage(baseDamage + range + level.getRandom().nextGaussian() * 0.25);
+
+		double dx = target.getX() - shooter.getX();
+		double dy = target.getBoundingBox().minY + target.getEyeHeight() + (double) (range * range) - dart.getY();
+		double dz = target.getZ() - shooter.getZ();
+		dart.shoot(dx, dy, dz, 1.6f, 3.0f);
+
+		level.addFreshEntity(dart);
+		shooter.playSound(SoundEvents.ARROW_SHOOT, 1.0f, 1.0f / (level.getRandom().nextFloat() * 0.4f + 0.8f));
+	}
+
+	@Override
+	public RangedAttackGoal getRangedAttackAI(RangedAttackMob golem) {
+		return new RangedAttackGoal(golem, 1.0, 20, 25, 16.0f);
+	}
+
+	@Override
+	public void onUpdateTick(IGolemAPI golem) {
+	}
 }

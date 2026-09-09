@@ -6813,6 +6813,39 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void golemArmDartRealRangedGoalAndAttackSpawnARealArrow(GameTestHelper helper) {
+		thaumcraft.api.golems.parts.GolemMaterial iron = findPartByKey(thaumcraft.api.golems.parts.GolemMaterial.getMaterials(), m -> m.key, "IRON");
+		thaumcraft.api.golems.parts.GolemHead basic = findPartByKey(thaumcraft.api.golems.parts.GolemHead.getHeads(), h -> h.key, "BASIC");
+		thaumcraft.api.golems.parts.GolemArm darts = findPartByKey(thaumcraft.api.golems.parts.GolemArm.getArms(), a -> a.key, "DARTS");
+		thaumcraft.api.golems.parts.GolemLeg walker = findPartByKey(thaumcraft.api.golems.parts.GolemLeg.getLegs(), l -> l.key, "WALKER");
+		thaumcraft.api.golems.parts.GolemAddon none = findPartByKey(thaumcraft.api.golems.parts.GolemAddon.getAddons(), a -> a.key, "NONE");
+
+		helper.assertTrue(darts.function instanceof thaumcraft.common.golems.parts.GolemArmDart,
+				"the real DARTS arm should really have GolemArmDart wired in as its function");
+
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setMaterial(iron);
+		props.setHead(basic);
+		props.setArms(darts);
+		props.setLegs(walker);
+		props.setAddon(none);
+		props.setRank(1);
+
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, origin);
+		golem.initializeGolem(props, 0);
+
+		helper.assertTrue(golem.getProperties().hasTrait(thaumcraft.api.golems.EnumGolemTrait.RANGED), "the real DARTS arm should really grant the RANGED trait");
+		helper.assertTrue(darts.function.getRangedAttackAI(golem) != null, "the real DARTS arm function should really return a real ranged-attack goal");
+
+		ServerPlayer target = spawnCasterAt(helper, origin.offset(6, 0, 0));
+		golem.performRangedAttack(target, 6.0f);
+		boolean spawnedDart = !helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.projectile.Arrow.class, new AABB(origin).inflate(10)).isEmpty();
+		helper.assertTrue(spawnedDart, "a real ranged attack from a DARTS-armed golem should really spawn a real arrow-based dart");
+		helper.succeed();
+	}
+
 	/** {@link thaumcraft.api.golems.IGolemAPI#hasTrait} isn't part of the interface - convenience delegate
 	 * used only by this test file. */
 	private static boolean hasTrait(thaumcraft.common.golems.EntityThaumcraftGolem golem, thaumcraft.api.golems.EnumGolemTrait trait) {

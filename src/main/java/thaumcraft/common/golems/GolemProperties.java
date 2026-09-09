@@ -38,10 +38,15 @@ import thaumcraft.api.items.ItemsTC;
  * <li>Every part uses the base {@link PartModel} directly rather than the original's per-part
  * {@code PartModelClaws}/{@code PartModelBreakers}/{@code PartModelDarts}/{@code PartModelWheel}/
  * {@code PartModelHauler} subclasses (client-only rendering hooks with nothing to call them yet - no golem
- * renderer exists in this port), and none of the {@code IArmFunction}/{@code ILegFunction} special-behavior
- * classes ({@code GolemArmDart}'s dart-shooting, {@code GolemLegWheels}' speed bonus,
- * {@code GolemLegLevitator}'s flight) are wired in yet either - real, separately-scoped follow-up work once
- * the entity itself needs them. Every part is still real and selectable with its real traits/components.</li>
+ * renderer exists in this port). The "DARTS" arm's real {@code IArmFunction}
+ * ({@link thaumcraft.common.golems.parts.GolemArmDart}) is wired in - real ranged combat, not cosmetic. The
+ * WHEELED/FLYER legs' own real {@code ILegFunction} classes ({@code GolemLegWheels}/{@code GolemLegLevitator})
+ * are deliberately NOT ported, for a real reason confirmed by reading the true original's own source
+ * directly: both are 100% client-side particle FX (a `world.isRemote`-gated wheel-dust-kick / floating-motes
+ * effect) with no server-side behavior at all - the REAL gameplay payoff of those traits (extra speed,
+ * flight navigation) is already handled independently, by {@link thaumcraft.common.golems.EntityThaumcraftGolem}'s
+ * own {@code getGolemMoveSpeed}/{@code createGolemNavigation} trait checks. Every part is real and
+ * selectable with its real traits/components regardless.</li>
  * <li>{@code BlocksTC.levitator} (the FLYER leg's real cost item) isn't ported yet - substituted with
  * {@code Items.FEATHER} (same "substitute the unreachable ingredient, keep the rest real" precedent used
  * repeatedly this session), documented rather than silent.</li>
@@ -269,7 +274,9 @@ public class GolemProperties implements IGolemProperties {
 				new Object[] { new ItemStack(Items.DIAMOND, 2), "base", new ItemStack(Blocks.PISTON, 2) }, new EnumGolemTrait[] { EnumGolemTrait.BREAKER, EnumGolemTrait.CLUMSY, EnumGolemTrait.BRUTAL }));
 		GolemArm.register(new GolemArm("DARTS", new String[] { "GOLEMCOMBATADV" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/arms_darts"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_arms_darter.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_arms_darter"), PartModel.EnumAttachPoint.ARMS),
-				new Object[] { new ItemStack(ItemsTC.moduleAggression.get()), new ItemStack(Blocks.DISPENSER, 2), new ItemStack(Items.ARROW, 32), "mech" }, new EnumGolemTrait[] { EnumGolemTrait.FIGHTER, EnumGolemTrait.CLUMSY, EnumGolemTrait.RANGED, EnumGolemTrait.FRAGILE }));
+				new Object[] { new ItemStack(ItemsTC.moduleAggression.get()), new ItemStack(Blocks.DISPENSER, 2), new ItemStack(Items.ARROW, 32), "mech" },
+				new thaumcraft.common.golems.parts.GolemArmDart(),
+				new EnumGolemTrait[] { EnumGolemTrait.FIGHTER, EnumGolemTrait.CLUMSY, EnumGolemTrait.RANGED, EnumGolemTrait.FRAGILE }));
 
 		GolemLeg.register(new GolemLeg("WALKER", new String[] { "MINDCLOCKWORK" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/legs_walker"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_legs_walker.obj"), null, PartModel.EnumAttachPoint.LEGS), new Object[] { "base", "mech" }, new EnumGolemTrait[0]));

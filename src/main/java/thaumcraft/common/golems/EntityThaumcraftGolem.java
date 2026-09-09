@@ -61,20 +61,25 @@ import thaumcraft.api.golems.IGolemProperties;
  * own two-{@code int} packing hack); colour and the following-owner/in-combat flags are two separate
  * synced bytes rather than one packed int, purely a modern-code-clarity choice with the same real content.
  *
- * <b>Real, documented cuts from the original for this first pass</b> (this is "core golem" scope - the
- * task-assignment/seals subsystem is a separate, much larger arc of its own, not touched here):
+ * <b>Real, documented cuts from the original</b> (status current as of the real ranged-combat chunk that
+ * closed the 3rd bullet below - the task-assignment/seals system named in this comment's own earlier
+ * version as "a separate, much larger arc... not touched" was, in fact, touched in the meantime and is
+ * real now; see the 1st bullet):
  * <ul>
- *   <li>The {@code TaskHandler}/{@code Task} seal-assignment system (AIGotoEntity/AIGotoBlock/AIGotoHome)
- *       is not ported - a following golem uses {@link FollowOwnerGoal}, a stationary one just wanders
- *       within its restriction radius via {@link WaterAvoidingRandomStrollGoal} instead of actively
- *       walking to an assigned seal/block.</li>
+ *   <li>The {@code TaskHandler}/{@code Task} seal-assignment system IS real now
+ *       ({@link thaumcraft.common.golems.ai.AIGoto}/{@code AIGotoBlock}/{@code AIGotoEntity}, wired into
+ *       {@link #createAI} below) - a golem with a real assigned task actively walks to it, taking priority
+ *       over the plain-wander fallback. {@code AIGotoHome} specifically is still real, just via vanilla
+ *       {@link Mob#restrictTo} instead (see this class's own earlier note on that).</li>
  *   <li>No {@code PathNavigateGolemGround}/{@code PathNavigateGolemAir}/{@code PathNavigateClimber} -
  *       {@link #createGolemNavigation} swaps between plain vanilla {@link GroundPathNavigation} and
  *       {@link FlyingPathNavigation} on the {@code FLYER} trait only; {@code CLIMBER} golems still use
  *       ground pathing for now.</li>
- *   <li>No ranged-attack {@code Goal} is ever added (no shipped {@code GolemArm} has a real
- *       {@code IArmFunction} yet, see {@code GolemProperties}' own doc comment) - {@link #performRangedAttack}
- *       is still a real, working passthrough to {@code arms.function} for whenever one does exist.</li>
+ *   <li>A real ranged-attack {@link net.minecraft.world.entity.ai.goal.RangedAttackGoal} IS added now for
+ *       {@code RANGED}-trait golems with a real {@code arms.function} (the "DARTS" arm's
+ *       {@link thaumcraft.common.golems.parts.GolemArmDart}, the first real {@code IArmFunction} this port
+ *       has shipped) - see {@link #createAI}. {@link #performRangedAttack} was already a real, working
+ *       passthrough to {@code arms.function} before this; it just had nothing to call yet.</li>
  *   <li>Melee damage no longer hand-rolls enchantment/knockback math (fire aspect, sharpness, knockback
  *       enchants) - modern enchantments are data-driven and apply automatically through
  *       {@code super.doHurtTarget}; only the on-kill rank-XP hook is added on top.</li>
@@ -298,6 +303,14 @@ public class EntityThaumcraftGolem extends TamableAnimal implements IGolemAPI, R
 		goalSelector.addGoal(9, new RandomLookAroundGoal(this));
 
 		if (props.hasTrait(EnumGolemTrait.FIGHTER)) {
+			// Real, matches the original's own AIArrowAttack=1/EntityAIAttackMelee=2 priority exactly - a
+			// ranged-capable golem prefers to keep its distance, only falling back to melee once vanilla's
+			// own RangedAttackGoal#canUse finds it can't. Only added if a real arm function actually exists
+			// to drive it (see GolemArmDart, the first real IArmFunction this port has shipped) - a RANGED
+			// golem with no wired-in function just falls through to melee, same real original behavior.
+			if (props.hasTrait(EnumGolemTrait.RANGED) && props.getArms().function != null) {
+				goalSelector.addGoal(1, props.getArms().function.getRangedAttackAI(this));
+			}
 			goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.15, false));
 			if (isFollowingOwner()) {
 				targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
