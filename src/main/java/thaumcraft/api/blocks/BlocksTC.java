@@ -748,9 +748,15 @@ public final class BlocksTC {
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f, 10.0f).sound(SoundType.METAL).noOcclusion());
 
 	/** See {@link thaumcraft.common.blocks.devices.BlockMirror}'s own doc comment - the item-transport Node
-	 * Transducer (the essentia-transport variant isn't ported this pass). */
+	 * Transducer. */
 	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockMirror> mirror = BLOCKS.registerBlock("mirror",
 			thaumcraft.common.blocks.devices.BlockMirror::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(0.1f).sound(SoundType.GLASS).noOcclusion());
+
+	/** See {@link thaumcraft.common.blocks.devices.BlockMirrorEssentia}'s own doc comment - the
+	 * essentia-transport Node Transducer, {@link #mirror}'s sibling. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockMirrorEssentia> mirrorEssentia = BLOCKS.registerBlock("mirror_essentia",
+			thaumcraft.common.blocks.devices.BlockMirrorEssentia::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(0.1f).sound(SoundType.GLASS).noOcclusion());
 
 	/** See {@link thaumcraft.common.blocks.world.taint.BlockTaintFibre}'s own doc comment - the first piece

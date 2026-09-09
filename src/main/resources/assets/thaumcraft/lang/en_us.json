@@ -212,6 +212,7 @@
   "block.thaumcraft.placeholder_netherbrick": "Nether Brick",
   "block.thaumcraft.placeholder_obsidian": "Obsidian",
   "block.thaumcraft.mirror": "Node Transducer",
+  "block.thaumcraft.mirror_essentia": "Essentia Mirror",
   "item.thaumcraft.mirror.already_linked": "That mirror is already linked to a valid destination.",
   "item.thaumcraft.resonator": "Essentia Resonator",
   "item.thaumcraft.filter": "Filter",

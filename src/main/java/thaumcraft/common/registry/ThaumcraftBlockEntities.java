@@ -142,6 +142,9 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.devices.TileMirror>> MIRROR = BLOCK_ENTITIES.register("mirror",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.devices.TileMirror::new, BlocksTC.mirror.get()).build(null));
 
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.devices.TileMirrorEssentia>> MIRROR_ESSENTIA = BLOCK_ENTITIES.register("mirror_essentia",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.devices.TileMirrorEssentia::new, BlocksTC.mirrorEssentia.get()).build(null));
+
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.misc.TileBarrierStone>> BARRIER_STONE = BLOCK_ENTITIES.register("barrier_stone",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.misc.TileBarrierStone::new, BlocksTC.pavingStoneBarrier.get()).build(null));
 

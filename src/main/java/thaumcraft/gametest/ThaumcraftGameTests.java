@@ -379,7 +379,7 @@ public class ThaumcraftGameTests {
 				"focus_air", "focus_air_crucible",
 				"focus_trap", "focus_trap_crucible",
 				"focus_sanctuary", "focus_sanctuary_crucible",
-				"caster_basic", "thaumometer", "quicksilver_smelting", "mirrored_glass", "vis_resonator", "alumentum",
+				"caster_basic", "thaumometer", "quicksilver_smelting", "mirrored_glass", "mirror_essentia", "vis_resonator", "alumentum",
 				"recharge_pedestal", "hungry_chest", "salis_mundus", "lamp_arcane",
 				"amber_block", "amber_block_to_amber", "amber_brick", "amber_brick_to_block",
 				"crystal_essence_aer", "crystal_essence_aqua", "crystal_essence_ignis",
@@ -5659,6 +5659,99 @@ public class ThaumcraftGameTests {
 
 		List<ItemEntity> nearB = level.getEntitiesOfClass(ItemEntity.class, new AABB(absB).inflate(2));
 		helper.assertTrue(!nearB.isEmpty(), "the transported item should eventually eject out of the linked mirror on the other side");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Essentia Mirror (TileMirrorEssentia) - the item-transport Node Transducer's essentia-transport
+	// sibling. See TileMirrorEssentia's own doc comment for the real "pure IAspectSource pass-through,
+	// scans near the linked partner" mechanic.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void mirrorEssentiaItemChargesALinkFromAnUnlinkedMirror(GameTestHelper helper) {
+		BlockPos mirrorPos = new BlockPos(3, 2, 3);
+		helper.setBlock(mirrorPos, thaumcraft.api.blocks.BlocksTC.mirrorEssentia.get());
+		BlockPos absMirror = helper.absolutePos(mirrorPos);
+
+		ServerPlayer player = spawnCasterAt(helper, absMirror.above());
+		ItemStack mirrorItem = new ItemStack(ItemsTC.mirrorEssentia.get());
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, mirrorItem);
+
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absMirror), net.minecraft.core.Direction.UP, absMirror, false);
+		net.minecraft.world.item.context.UseOnContext context =
+				new net.minecraft.world.item.context.UseOnContext(helper.getLevel(), player, hand, mirrorItem, hit);
+		mirrorItem.getItem().useOn(context);
+
+		boolean found = false;
+		for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+			if (player.getInventory().getItem(i).has(thaumcraft.api.items.ThaumcraftDataComponents.MIRROR_LINK.get())) {
+				found = true;
+			}
+		}
+		helper.assertTrue(found, "right-clicking an unlinked essentia mirror with an essentia mirror item should charge a copy with a real MIRROR_LINK component");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void linkedMirrorEssentiaTakesFromARealSourceNearTheOtherSide(GameTestHelper helper) {
+		BlockPos posA = new BlockPos(3, 2, 3);
+		BlockPos posB = new BlockPos(3, 2, 10);
+		// Deliberately not adjacent to posB: a direct neighbor placement fires neighborChanged on posB,
+		// which re-validates its own support block - real, correct BlockMirrorEssentia behavior, but the
+		// "empty" template's floor isn't guaranteed solid at every relative Y, so a same-row offset avoids
+		// relying on that incidentally rather than papering over it with an extra floor placement.
+		BlockPos jarPos = posB.offset(2, 0, 0);
+		helper.setBlock(posA, thaumcraft.api.blocks.BlocksTC.mirrorEssentia.get());
+		helper.setBlock(posB, thaumcraft.api.blocks.BlocksTC.mirrorEssentia.get());
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		BlockPos absA = helper.absolutePos(posA);
+		BlockPos absB = helper.absolutePos(posB);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(jarPos);
+		jar.setAspects(new AspectList().add(Aspect.FIRE, 5));
+
+		thaumcraft.common.tiles.devices.TileMirrorEssentia tileA = helper.getBlockEntity(posA);
+		thaumcraft.common.tiles.devices.TileMirrorEssentia tileB = helper.getBlockEntity(posB);
+		tileA.applyLink(new thaumcraft.api.items.ThaumcraftDataComponents.MirrorLink(level.dimension(), absB));
+		helper.assertTrue(tileA.isLinkValid() && tileB.isLinkValid(), "applying a link should establish a real mutual pairing on both tiles");
+
+		boolean taken = tileA.takeFromContainer(Aspect.FIRE, 1);
+		helper.assertTrue(taken, "pulling from mirror A should reach the real jar sitting near linked mirror B and take 1 fire");
+		helper.assertTrue(jar.getAspects().getAmount(Aspect.FIRE) == 4,
+				"the jar near mirror B should have lost exactly 1 fire, got " + jar.getAspects().getAmount(Aspect.FIRE));
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void linkedMirrorEssentiaAddsToARealSinkNearTheOtherSide(GameTestHelper helper) {
+		BlockPos posA = new BlockPos(3, 2, 3);
+		BlockPos posB = new BlockPos(3, 2, 10);
+		// Deliberately not adjacent to posB: a direct neighbor placement fires neighborChanged on posB,
+		// which re-validates its own support block - real, correct BlockMirrorEssentia behavior, but the
+		// "empty" template's floor isn't guaranteed solid at every relative Y, so a same-row offset avoids
+		// relying on that incidentally rather than papering over it with an extra floor placement.
+		BlockPos jarPos = posB.offset(2, 0, 0);
+		helper.setBlock(posA, thaumcraft.api.blocks.BlocksTC.mirrorEssentia.get());
+		helper.setBlock(posB, thaumcraft.api.blocks.BlocksTC.mirrorEssentia.get());
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		BlockPos absB = helper.absolutePos(posB);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(jarPos);
+
+		thaumcraft.common.tiles.devices.TileMirrorEssentia tileA = helper.getBlockEntity(posA);
+		thaumcraft.common.tiles.devices.TileMirrorEssentia tileB = helper.getBlockEntity(posB);
+		tileA.applyLink(new thaumcraft.api.items.ThaumcraftDataComponents.MirrorLink(level.dimension(), absB));
+		helper.assertTrue(tileA.isLinkValid() && tileB.isLinkValid(), "applying a link should establish a real mutual pairing on both tiles");
+
+		int leftover = tileA.addToContainer(Aspect.WATER, 1);
+		helper.assertTrue(leftover == 0, "pushing into mirror A should reach the real empty jar sitting near linked mirror B and accept 1 water, leftover " + leftover);
+		helper.assertTrue(jar.getAspects().getAmount(Aspect.WATER) == 1,
+				"the jar near mirror B should now hold exactly 1 water, got " + jar.getAspects().getAmount(Aspect.WATER));
 		helper.succeed();
 	}
 

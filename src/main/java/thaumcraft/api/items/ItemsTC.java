@@ -891,6 +891,11 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.blocks.devices.BlockMirrorItem> mirror =
 			ITEMS.registerItem("mirror", props -> new thaumcraft.common.blocks.devices.BlockMirrorItem(BlocksTC.mirror.get(), props));
 
+	/** See {@link thaumcraft.common.blocks.devices.BlockMirrorEssentiaItem}'s own doc comment - {@link #mirror}'s
+	 * essentia-transport sibling, same self-linking pattern. */
+	public static final DeferredItem<thaumcraft.common.blocks.devices.BlockMirrorEssentiaItem> mirrorEssentia =
+			ITEMS.registerItem("mirror_essentia", props -> new thaumcraft.common.blocks.devices.BlockMirrorEssentiaItem(BlocksTC.mirrorEssentia.get(), props));
+
 	public static final DeferredItem<Item> fabric =
 			ITEMS.registerSimpleItem("fabric");
 

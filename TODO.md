@@ -74,13 +74,37 @@ not just a name diff).
   `onBlockActivated` around line 180 to confirm the exact behavior before
   building it). Crafted `"NSN"/"S S"/"NSN"`, N=nuggetBrass, S=stickWood.
 
-- **Triple Meat Treat** (`tripleMeatTreat`). Simple, self-contained,
-  low-effort real gap: a custom `ItemFood` (`ItemTripleMeatTreat` in the true
-  original) — 6 hunger / 0.8 saturation, always edible, applies
-  `Regeneration` (100 ticks, amplifier 0) at 66% chance on eat. No custom
-  behavior beyond that (`getItem`/variant-mesh boilerplate is 1.12.2-only
-  rendering plumbing, not needed in this port's item-model system). Good
-  quick win whenever picking up small items.
+- **Triple Meat Treat** (`tripleMeatTreat`) — **re-scoped, bigger than it
+  looks; not actually a quick win.** The item itself is trivial (a custom
+  `ItemFood`/`FoodProperties` — 6 hunger / 0.8 saturation, always edible,
+  applies `Regeneration` 100 ticks amplifier 0 at 66% chance on eat), but its
+  real crafting recipe (`RecipeTripleMeatTreat` — 3 *distinct* meat-chunk
+  variants, no duplicates, + 1 sugar, shapeless-with-a-distinctness-
+  constraint so needs a real custom `Recipe` class, not a JSON shapeless
+  recipe) depends on a whole prerequisite item family that also doesn't
+  exist yet: **`chunks`/`ItemChunksEdible`** — 6 real, distinct raw-meat-chunk
+  items (beef/chicken/porkchop/fish/rabbit/mutton; 1 hunger/0.3 saturation,
+  not always edible, real `nuggetMeat`-tag members), obtained via true
+  original's **generic vanilla-furnace smelting-bonus mechanic**
+  (`ThaumcraftApi.addSmeltingBonus(new ItemStack(Items.BEEF), ...)` etc. -
+  smelting raw beef/chicken/porkchop/rawfish/rabbit/mutton in **any** vanilla
+  furnace has a chance to also yield the matching chunk). **This is a
+  materially different mechanism from the smelting-bonus system this port
+  already has** (`TileInfernalFurnace`'s own private `SMELTING_BONUSES` -
+  deliberately scoped to ore→nugget bonuses inside the Infernal Furnace
+  only, per that class's own doc comment). The true original's meat-chunk
+  bonus hooked vanilla furnace smelting generically, which this port has no
+  equivalent for at all yet (no `FurnaceSmeltEvent`-equivalent hook exists).
+  Real scope: (1) a new, first-of-its-kind generic "any vanilla furnace,
+  chance of bonus drop" hook (NeoForge's actual smelt-event API needs
+  confirming for 1.21.1 - check whether it's still `FurnaceSmeltEvent` or
+  moved), (2) the 6 chunk items, (3) the 6 smelting-bonus registrations, (4)
+  the custom distinct-3-chunks-plus-sugar recipe, (5) the treat item itself.
+  Both stale reference files (`ItemTripleMeatTreat.java`,
+  `RecipeTripleMeatTreat.java`, `ItemChunksEdible.java`, all still
+  1.12.2-era unconverted source sitting inert in the tree, not in
+  `build.gradle`'s compile-include list) are good line-for-line references
+  for steps 2-5 once the new furnace hook exists.
 
 - **Loot Urns** (`lootUrnCommon`/`lootUrnUncommon`/`lootUrnRare`). A real,
   distinct dungeon-decoration BLOCK type (`BlockLoot` with a `LootType`
