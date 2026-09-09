@@ -583,6 +583,9 @@ sourceSets {
             include 'thaumcraft/common/tiles/essentia/TileJarFillable.java'
             include 'thaumcraft/common/blocks/essentia/BlockJarVoid.java'
             include 'thaumcraft/common/tiles/essentia/TileJarFillableVoid.java'
+            include 'thaumcraft/common/blocks/essentia/BlockJarBrain.java'
+            include 'thaumcraft/common/tiles/devices/TileJarBrain.java'
+            include 'thaumcraft/common/lib/research/theorycraft/AidBrainInAJar.java'
 
             include 'thaumcraft/common/blocks/devices/BlockLampGrowth.java'
             include 'thaumcraft/common/tiles/devices/TileLampGrowth.java'

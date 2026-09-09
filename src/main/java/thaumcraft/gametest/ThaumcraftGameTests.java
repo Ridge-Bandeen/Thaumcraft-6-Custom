@@ -5345,6 +5345,144 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
+	// Brain in a Jar - a portable XP battery. See TileJarBrain/BlockJarBrain's own doc comments for the
+	// real mechanic and what's simplified.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void jarBrainConsumesARealTouchingXpOrb(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = new BlockPos(2, 2, 2);
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.jarBrain.get());
+		thaumcraft.common.tiles.devices.TileJarBrain jar = helper.getBlockEntity(pos);
+		helper.assertTrue(jar.getXp() == 0, "a fresh brain jar should really start with 0 real stored XP");
+
+		net.minecraft.world.entity.ExperienceOrb orb = new net.minecraft.world.entity.ExperienceOrb(level,
+				abs.getX() + 0.5, abs.getY() + 0.5, abs.getZ() + 0.5, 10);
+		level.addFreshEntity(orb);
+
+		for (int i = 0; i < 5 && jar.getXp() == 0; i++) {
+			thaumcraft.common.tiles.devices.TileJarBrain.tick(level, abs, level.getBlockState(abs), jar);
+		}
+		helper.assertTrue(jar.getXp() == 10, "a real brain jar should really consume a real touching XP orb's full value, found " + jar.getXp());
+		helper.assertTrue(!orb.isAlive(), "the real consumed XP orb should really be discarded");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void jarBrainMagneticallyPullsARealNearbyXpOrb(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = new BlockPos(2, 2, 2);
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.jarBrain.get());
+		thaumcraft.common.tiles.devices.TileJarBrain jar = helper.getBlockEntity(pos);
+
+		net.minecraft.world.entity.ExperienceOrb orb = new net.minecraft.world.entity.ExperienceOrb(level,
+				abs.getX() + 3.5, abs.getY() + 0.5, abs.getZ() + 0.5, 5);
+		level.addFreshEntity(orb);
+		double startX = orb.getX();
+
+		thaumcraft.common.tiles.devices.TileJarBrain.tick(level, abs, level.getBlockState(abs), jar);
+		helper.assertTrue(orb.getDeltaMovement().x < 0.0, "a real nearby XP orb should really be pulled toward the brain jar (negative X motion), found " + orb.getDeltaMovement());
+		helper.assertTrue(orb.getX() == startX, "a real orb outside the tight touch box should NOT be instantly consumed by the pull alone");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void jarBrainRightClickDrainsRealStoredXpAsRealOrbsWithARealCooldown(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+
+		// Separate jar/position for this real, isolated check - drainRandom unconditionally arms the real
+		// 40-tick eatDelay cooldown even on a no-op call (matching the original's own real behavior, see
+		// TileJarBrain#drainRandom's own doc comment), which would otherwise stall the seeded jar below.
+		BlockPos emptyPos = new BlockPos(2, 2, 5);
+		BlockPos emptyAbs = helper.absolutePos(emptyPos);
+		helper.setBlock(emptyPos, BlocksTC.jarBrain.get());
+		thaumcraft.common.tiles.devices.TileJarBrain emptyJar = helper.getBlockEntity(emptyPos);
+		emptyJar.drainRandom(level, emptyAbs, level.getRandom());
+		helper.assertTrue(emptyJar.getXp() == 0, "draining an empty real brain jar should really do nothing");
+
+		BlockPos pos = new BlockPos(2, 2, 2);
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.jarBrain.get());
+		thaumcraft.common.tiles.devices.TileJarBrain jar = helper.getBlockEntity(pos);
+
+		// Force a real, deterministic stock of XP directly (avoids depending on the magnet/consume test above).
+		net.minecraft.world.entity.ExperienceOrb seed = new net.minecraft.world.entity.ExperienceOrb(level,
+				abs.getX() + 0.5, abs.getY() + 0.5, abs.getZ() + 0.5, 100);
+		level.addFreshEntity(seed);
+		for (int i = 0; i < 10 && jar.getXp() == 0; i++) {
+			thaumcraft.common.tiles.devices.TileJarBrain.tick(level, abs, level.getBlockState(abs), jar);
+		}
+		int stocked = jar.getXp();
+		helper.assertTrue(stocked > 0, "the jar should really have real stocked XP before testing drain");
+
+		ServerPlayer player = spawnCasterAt(helper, abs.above(2));
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				net.minecraft.world.phys.Vec3.atCenterOf(abs), net.minecraft.core.Direction.UP, abs, false);
+		// drainRandom rolls a fresh random 0..63 amount every real call (no repeat-click gate of its own -
+		// only the passive orb-eating tick() respects eatDelay) - retry a few times so a real, low-odds
+		// "rolled exactly 0" outcome doesn't make this test flaky.
+		for (int i = 0; i < 10 && jar.getXp() == stocked; i++) {
+			level.getBlockState(abs).useWithoutItem(level, player, hit);
+		}
+		helper.assertTrue(jar.getXp() < stocked, "right-clicking a real brain jar should really drain some of its real stored XP, was " + stocked + " now " + jar.getXp());
+		boolean sawOrb = !level.getEntitiesOfClass(net.minecraft.world.entity.ExperienceOrb.class, new AABB(abs).inflate(2)).isEmpty();
+		helper.assertTrue(sawOrb, "draining a real brain jar should really spawn real XP orbs back into the world");
+
+		// Real cooldown: immediately ticking again should NOT re-swallow the orbs it just spawned.
+		int afterDrain = jar.getXp();
+		thaumcraft.common.tiles.devices.TileJarBrain.tick(level, abs, level.getBlockState(abs), jar);
+		helper.assertTrue(jar.getXp() == afterDrain, "a real brain jar should really not immediately re-consume the orbs it just spawned (eatDelay cooldown)");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void jarBrainComparatorOutputScalesWithRealStoredXp(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = new BlockPos(2, 2, 2);
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.jarBrain.get());
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(abs);
+		helper.assertTrue(state.hasAnalogOutputSignal(), "a real brain jar should really have an analog (comparator) output signal");
+		helper.assertTrue(state.getAnalogOutputSignal(level, abs) == 0, "a fresh, empty real brain jar should really read 0 on a comparator");
+
+		thaumcraft.common.tiles.devices.TileJarBrain jar = helper.getBlockEntity(pos);
+		net.minecraft.world.entity.ExperienceOrb full = new net.minecraft.world.entity.ExperienceOrb(level,
+				abs.getX() + 0.5, abs.getY() + 0.5, abs.getZ() + 0.5, thaumcraft.common.tiles.devices.TileJarBrain.XP_MAX);
+		level.addFreshEntity(full);
+		for (int i = 0; i < 10 && jar.getXp() < thaumcraft.common.tiles.devices.TileJarBrain.XP_MAX; i++) {
+			thaumcraft.common.tiles.devices.TileJarBrain.tick(level, abs, level.getBlockState(abs), jar);
+		}
+		helper.assertTrue(jar.getXp() == thaumcraft.common.tiles.devices.TileJarBrain.XP_MAX, "the jar should really be full for this test, found " + jar.getXp());
+		helper.assertTrue(state.getAnalogOutputSignal(level, abs) == 15, "a real full brain jar should really read the max comparator signal (15), found " + state.getAnalogOutputSignal(level, abs));
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void jarBrainIsARealEnchantmentPowerProvider(GameTestHelper helper) {
+		helper.assertTrue(BlocksTC.jarBrain.get().defaultBlockState().is(net.minecraft.tags.BlockTags.ENCHANTMENT_POWER_PROVIDER),
+				"a real brain jar should really be tagged as a real modern enchantment_power_provider (the closest real equivalent to the original's own bonus enchant power)");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void aidBrainInAJarOffersItsRealCard(GameTestHelper helper) {
+		helper.assertTrue(thaumcraft.api.research.theorycraft.TheorycraftManager.aids.values().stream()
+						.anyMatch(a -> a instanceof thaumcraft.common.lib.research.theorycraft.AidBrainInAJar),
+				"AidBrainInAJar should really be registered");
+		thaumcraft.common.lib.research.theorycraft.AidBrainInAJar aid = new thaumcraft.common.lib.research.theorycraft.AidBrainInAJar();
+		helper.assertTrue(aid.getAidObject() instanceof ItemStack stack && stack.is(BlocksTC.jarBrain.get().asItem()),
+				"AidBrainInAJar should really trigger off a real brain jar item, found " + aid.getAidObject());
+		java.util.List<Class<thaumcraft.api.research.theorycraft.TheorycraftCard>> cards = java.util.Arrays.asList(aid.getCards());
+		helper.assertTrue(cards.contains(thaumcraft.common.lib.research.theorycraft.CardDarkWhispers.class),
+				"AidBrainInAJar should really offer CardDarkWhispers, found " + cards);
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
 	// Boots of the Traveller - the first real IRechargable item (previously only exercised via a synthetic
 	// test stand-in against TileRechargePedestal). Tests call the real Item#inventoryTick entry point
 	// directly, same "test the real entry point directly" shape used throughout this session.

@@ -80,6 +80,9 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.essentia.TileJarFillableVoid>> JAR_VOID = BLOCK_ENTITIES.register("jar_void",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.essentia.TileJarFillableVoid::new, BlocksTC.jarVoid.get()).build(null));
 
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.devices.TileJarBrain>> JAR_BRAIN = BLOCK_ENTITIES.register("jar_brain",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.devices.TileJarBrain::new, BlocksTC.jarBrain.get()).build(null));
+
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileLampGrowth>> LAMP_GROWTH = BLOCK_ENTITIES.register("lamp_growth",
 			() -> BlockEntityType.Builder.of(TileLampGrowth::new, BlocksTC.lampGrowth.get()).build(null));
 

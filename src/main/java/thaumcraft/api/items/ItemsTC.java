@@ -557,6 +557,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> jarVoid =
 			ITEMS.registerSimpleBlockItem("jar_void", BlocksTC.jarVoid);
 
+	public static final DeferredItem<BlockItem> jarBrain =
+			ITEMS.registerSimpleBlockItem("jar_brain", BlocksTC.jarBrain);
+
 	/** See {@link thaumcraft.common.blocks.essentia.BlockJar}'s own doc comment - locks a jar out of
 	 * pull-based {@code IAspectSource} scans via {@link thaumcraft.common.tiles.essentia.TileJarFillable#applyBrace}.
 	 * A plain item - all the real behavior lives in {@code BlockJar#useItemOn} reacting to the held stack,

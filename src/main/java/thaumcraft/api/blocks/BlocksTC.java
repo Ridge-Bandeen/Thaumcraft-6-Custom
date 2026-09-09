@@ -414,6 +414,12 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.essentia.BlockJarVoid::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY).strength(0.3f).sound(SoundType.GLASS).noOcclusion());
 
+	/** See {@link thaumcraft.common.blocks.essentia.BlockJarBrain}'s own doc comment - the "Brain in a Jar",
+	 * a portable XP battery. */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockJarBrain> jarBrain = BLOCKS.registerBlock("jar_brain",
+			thaumcraft.common.blocks.essentia.BlockJarBrain::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY).strength(0.3f).sound(SoundType.GLASS).noOcclusion());
+
 	/** First real consumer of the {@code IEssentiaTransport} draw mechanic {@link #jarNormal} proved out -
 	 * see {@link thaumcraft.common.tiles.devices.TileLampGrowth}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockLampGrowth> lampGrowth = BLOCKS.registerBlock("lamp_growth",
