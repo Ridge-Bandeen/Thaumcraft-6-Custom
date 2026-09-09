@@ -57,13 +57,6 @@ not just a name diff).
   (and Uncommon/Rare siblings). Likely low priority — dungeon/structure
   worldgen dressing, not a progression gate — but a real, unbuilt block.
 
-- **Tube Buffer** (`tubeBuffer`). A `TileTube` family variant with no
-  modern-port equivalent (confirmed by direct field-name grep against
-  `BlocksTC.java` — zero hits). Status/complexity not yet investigated this
-  sweep; check `TileTube`'s true-original buffer-mode handling before
-  scoping. (Its sibling `tubeOneway` is a **known, already-diagnosed
-  blocker** — needs unported per-face wand raytracing — not a fresh gap.)
-
 - **Essentia Transport Input/Output** (`essentiaTransportInput`/
   `essentiaTransportOutput`). Already flagged as a known real gap in earlier
   session notes (not re-investigated this sweep beyond confirming the name
@@ -90,6 +83,14 @@ not just a name diff).
   this sweep (didn't surface in the targeted `ConfigBlocks.java` greps used);
   need a follow-up direct read of the true original's block registration to
   confirm real vs. naming-mismatch false-positive before acting.
+- **`tubeOneway`** — a **known, already-diagnosed blocker**, not a fresh
+  gap: needs the same unported per-face wand raytracing that already
+  blocked the Levitator/Redstone Relay (and shaped `TileTube`'s own
+  "all 6 sides always open" simplification). Its sibling `tubeBuffer` is
+  closed (see "Recently closed" below) - it didn't need per-face toggling
+  for its own real distinguishing feature (multi-aspect storage), but
+  one-way tubes are *defined* by a single configurable facing, so this one
+  stays blocked until that raytracing gap is addressed some other way.
 
 ## Confirmed dead-in-the-true-original (do not port — matches nothing real)
 
@@ -225,6 +226,16 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   redstone toggle replaces the original's bespoke wand-toggle. See commit
   "Give the Arcane Pattern Crafter a real vis-powered auto-crafting
   mechanic".
+
+- **Tube Buffer** (`tubeBuffer`) — closed 2026-09-09. Real
+  `TileTubeBuffer`/`BlockTubeBuffer` shipped: a real multi-aspect essentia
+  store (up to 10 total units, any mix), not a `TileTube` subclass (a
+  buffer's real suction is a small fixed value, not `TileTube`'s own
+  dynamic neighbor-derived one). Deliberately weak base suction (1,
+  matching the true original's own real formula and confirmed by the
+  research text) means it only pulls from a neighbor with
+  `getMinimumSuction() == 0` (a plain tube, not a jar) - by design. See
+  commit "Give the Tube Buffer a real multi-aspect essentia store".
 
 ---
 *Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
