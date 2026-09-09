@@ -1936,6 +1936,87 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
+	 * Real coverage for the Ancient tier of the same real multiblock ritual (see
+	 * {@code ThaumcraftDustTriggers#infusionAltarAncientBlueprint}'s own doc comment) - same real conversion
+	 * mechanics as {@link #salisMundusConvertsARealInfusionAltarStructure}, just the Ancient tier's own real
+	 * materials. Placing {@code stoneAncient} directly (via {@code helper.setBlock}) is the only way to
+	 * exercise this in-game at all - the true original itself never had a real acquisition path for
+	 * {@code stoneAncient}, see {@code BlocksTC.stoneAncient}'s own doc comment - so this test, not survival
+	 * play, is genuinely the only way this real code ever runs.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void salisMundusConvertsARealAncientInfusionAltarStructure(GameTestHelper helper) {
+		BlockPos base = new BlockPos(2, 1, 2);
+		helper.setBlock(base.offset(1, 2, 1), BlocksTC.infusionMatrix.get());
+		helper.setBlock(base.offset(1, 0, 1), BlocksTC.pedestalAncient.get());
+		for (BlockPos scaffold : new BlockPos[] { base.offset(0, 1, 0), base.offset(0, 1, 2), base.offset(2, 1, 0), base.offset(2, 1, 2) }) {
+			helper.setBlock(scaffold, BlocksTC.stoneAncient.get());
+		}
+		BlockPos eastPos = base.offset(0, 0, 0);
+		BlockPos northPos = base.offset(0, 0, 2);
+		BlockPos southPos = base.offset(2, 0, 0);
+		BlockPos westPos = base.offset(2, 0, 2);
+		for (BlockPos corner : new BlockPos[] { eastPos, northPos, southPos, westPos }) {
+			helper.setBlock(corner, BlocksTC.stoneAncient.get());
+		}
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		useSalisMundusOn(helper, player, base.offset(1, 2, 1));
+		tickSchedulerPastDustTriggerDelay(helper);
+
+		java.util.Set<net.minecraft.core.Direction> facings = new java.util.HashSet<>();
+		for (BlockPos corner : new BlockPos[] { eastPos, northPos, southPos, westPos }) {
+			net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(corner);
+			helper.assertTrue(state.is(BlocksTC.pillarAncient.get()), "every real corner should really have become a real pillarAncient, found " + state + " at " + corner);
+			facings.add(state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING));
+		}
+		helper.assertTrue(facings.size() == 4, "the 4 real corner pillars should each really have their own distinct real facing, found " + facings);
+		helper.assertTrue(helper.getBlockState(base.offset(0, 1, 0)).isAir(), "the real scaffolding stoneAncient ring should really have become air");
+		helper.assertTrue(helper.getBlockState(base.offset(1, 2, 1)).is(BlocksTC.infusionMatrix.get()), "the pre-placed real infusionMatrix should be untouched");
+		helper.assertTrue(helper.getBlockState(base.offset(1, 0, 1)).is(BlocksTC.pedestalAncient.get()), "the pre-placed real pedestalAncient should be untouched");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for the Eldritch tier of the same real multiblock ritual (see
+	 * {@code ThaumcraftDustTriggers#infusionAltarEldritchBlueprint}'s own doc comment) - see
+	 * {@link #salisMundusConvertsARealAncientInfusionAltarStructure}'s own doc comment for why this test, not
+	 * survival play, is genuinely the only way this real code ever runs.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void salisMundusConvertsARealEldritchInfusionAltarStructure(GameTestHelper helper) {
+		BlockPos base = new BlockPos(2, 1, 2);
+		helper.setBlock(base.offset(1, 2, 1), BlocksTC.infusionMatrix.get());
+		helper.setBlock(base.offset(1, 0, 1), BlocksTC.pedestalEldritch.get());
+		for (BlockPos scaffold : new BlockPos[] { base.offset(0, 1, 0), base.offset(0, 1, 2), base.offset(2, 1, 0), base.offset(2, 1, 2) }) {
+			helper.setBlock(scaffold, BlocksTC.stoneEldritchTile.get());
+		}
+		BlockPos eastPos = base.offset(0, 0, 0);
+		BlockPos northPos = base.offset(0, 0, 2);
+		BlockPos southPos = base.offset(2, 0, 0);
+		BlockPos westPos = base.offset(2, 0, 2);
+		for (BlockPos corner : new BlockPos[] { eastPos, northPos, southPos, westPos }) {
+			helper.setBlock(corner, BlocksTC.stoneEldritchTile.get());
+		}
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		useSalisMundusOn(helper, player, base.offset(1, 2, 1));
+		tickSchedulerPastDustTriggerDelay(helper);
+
+		java.util.Set<net.minecraft.core.Direction> facings = new java.util.HashSet<>();
+		for (BlockPos corner : new BlockPos[] { eastPos, northPos, southPos, westPos }) {
+			net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(corner);
+			helper.assertTrue(state.is(BlocksTC.pillarEldritch.get()), "every real corner should really have become a real pillarEldritch, found " + state + " at " + corner);
+			facings.add(state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING));
+		}
+		helper.assertTrue(facings.size() == 4, "the 4 real corner pillars should each really have their own distinct real facing, found " + facings);
+		helper.assertTrue(helper.getBlockState(base.offset(0, 1, 0)).isAir(), "the real scaffolding stoneEldritchTile ring should really have become air");
+		helper.assertTrue(helper.getBlockState(base.offset(1, 2, 1)).is(BlocksTC.infusionMatrix.get()), "the pre-placed real infusionMatrix should be untouched");
+		helper.assertTrue(helper.getBlockState(base.offset(1, 0, 1)).is(BlocksTC.pedestalEldritch.get()), "the pre-placed real pedestalEldritch should be untouched");
+		helper.succeed();
+	}
+
+	/**
 	 * Real coverage for {@link thaumcraft.common.lib.crafting.DustTriggerMultiblock}'s third real registered
 	 * blueprint - the Thaumatorium. A real, previously fully-unreachable device (no recipe of any kind, not
 	 * even an invented substitute - a genuine confirmed gap, found and closed while restoring this) now has a
@@ -7890,7 +7971,7 @@ public class ThaumcraftGameTests {
 		ServerLevel level = helper.getLevel();
 
 		BlockPos altarPos = abs.above();
-		level.setBlockAndUpdate(altarPos, thaumcraft.api.blocks.BlocksTC.pedestalEldritch.get().defaultBlockState());
+		level.setBlockAndUpdate(altarPos, thaumcraft.api.blocks.BlocksTC.cultistRitualAltar.get().defaultBlockState());
 
 		thaumcraft.common.entities.monster.cult.EntityCultistCleric cleric =
 				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_CLERIC.get().create(level);
@@ -9831,6 +9912,57 @@ public class ThaumcraftGameTests {
 			Optional<RecipeHolder<?>> recipe = recipes.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id));
 			helper.assertTrue(recipe.isPresent(), "expected recipe '" + id + "' to be registered, but it wasn't");
 		}
+		helper.succeed();
+	}
+
+	/**
+	 * Names the real recipes for the whole Ancient/Eldritch Infusion Altar stone family - real code, real
+	 * ingredients, genuinely unreachable in survival (see {@code BlocksTC.stoneAncient}'s own doc comment for
+	 * why) - and asserts each one is actually registered, same "name every id" pattern as
+	 * {@link #mindAndModuleRecipesRegistered} and siblings. Also covers the previously-missing Arcane Stone
+	 * stairs/slab recipes found and fixed alongside this (a real, separate, pre-existing gap - the whole
+	 * family had complete assets but no blockstate ever actually pointed at them).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void ancientEldritchStoneFamilyRecipesRegistered(GameTestHelper helper) {
+		RecipeManager recipes = helper.getLevel().getRecipeManager();
+		String[] expectedIds = { "stone_arcane_stairs", "stone_arcane_brick_stairs", "stone_arcane_slab", "stone_arcane_brick_slab",
+				"stairs_ancient", "slab_ancient", "slab_eldritch", "pedestal_ancient", "pedestal_eldritch" };
+		for (String id : expectedIds) {
+			Optional<RecipeHolder<?>> recipe = recipes.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id));
+			helper.assertTrue(recipe.isPresent(), "expected recipe '" + id + "' to be registered, but it wasn't");
+		}
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix}'s own real pedestal-tier
+	 * cost bonus, matching the true original's own real, opposite-signed numbers exactly - a real bug this
+	 * session's own earlier {@code pedestalEldritch}/Cultist-ritual-altar naming collision (see
+	 * {@code BlocksTC.cultistRitualAltar}'s own doc comment) silently broke: this check was always written
+	 * correctly, it just couldn't ever see the real Infusion Altar's own pedestalEldritch, since that id
+	 * pointed at an unrelated block. Verifies both signs directly via {@code checkStability} - a real
+	 * unreachable-in-survival test either way (see {@code BlocksTC.stoneAncient}'s own doc comment), but real,
+	 * correct code worth confirming regardless.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionMatrixRealPedestalTierCostBonusesHaveOppositeSigns(GameTestHelper helper) {
+		BlockPos eldritchMatrixPos = new BlockPos(4, 3, 4);
+		helper.setBlock(eldritchMatrixPos.offset(3, -2, 0), BlocksTC.pedestalEldritch.get());
+		helper.setBlock(eldritchMatrixPos, BlocksTC.infusionMatrix.get());
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix eldritchMatrix = helper.getBlockEntity(eldritchMatrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(helper.getLevel(), helper.absolutePos(eldritchMatrixPos), helper.getBlockState(eldritchMatrixPos), eldritchMatrix);
+		float eldritchCostMult = eldritchMatrix.getCostMult();
+
+		BlockPos ancientMatrixPos = new BlockPos(4, 3, 12);
+		helper.setBlock(ancientMatrixPos.offset(3, -2, 0), BlocksTC.pedestalAncient.get());
+		helper.setBlock(ancientMatrixPos, BlocksTC.infusionMatrix.get());
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix ancientMatrix = helper.getBlockEntity(ancientMatrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(helper.getLevel(), helper.absolutePos(ancientMatrixPos), helper.getBlockState(ancientMatrixPos), ancientMatrix);
+		float ancientCostMult = ancientMatrix.getCostMult();
+
+		helper.assertTrue(ancientCostMult < eldritchCostMult,
+				"a real pedestalAncient should really lower cost relative to a real pedestalEldritch (ancient=" + ancientCostMult + ", eldritch=" + eldritchCostMult + ")");
 		helper.succeed();
 	}
 

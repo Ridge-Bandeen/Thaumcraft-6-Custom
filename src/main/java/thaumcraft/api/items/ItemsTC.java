@@ -377,6 +377,31 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> stoneArcaneBrickSlab =
 			ITEMS.registerSimpleBlockItem("stone_arcane_brick_slab", BlocksTC.stoneArcaneBrickSlab);
 
+	/** See {@link BlocksTC#stoneAncient}'s own doc comment for why this whole family is real but genuinely
+	 * unreachable, matching the true original exactly. */
+	public static final DeferredItem<BlockItem> stoneAncient =
+			ITEMS.registerSimpleBlockItem("stone_ancient", BlocksTC.stoneAncient);
+	public static final DeferredItem<BlockItem> stoneAncientTile =
+			ITEMS.registerSimpleBlockItem("stone_ancient_tile", BlocksTC.stoneAncientTile);
+	public static final DeferredItem<BlockItem> stoneAncientRock =
+			ITEMS.registerSimpleBlockItem("stone_ancient_rock", BlocksTC.stoneAncientRock);
+	public static final DeferredItem<BlockItem> stoneAncientGlyphed =
+			ITEMS.registerSimpleBlockItem("stone_ancient_glyphed", BlocksTC.stoneAncientGlyphed);
+	public static final DeferredItem<BlockItem> stoneAncientDoorway =
+			ITEMS.registerSimpleBlockItem("stone_ancient_doorway", BlocksTC.stoneAncientDoorway);
+	public static final DeferredItem<BlockItem> stoneEldritchTile =
+			ITEMS.registerSimpleBlockItem("stone_eldritch_tile", BlocksTC.stoneEldritchTile);
+	public static final DeferredItem<BlockItem> stairsAncient =
+			ITEMS.registerSimpleBlockItem("stairs_ancient", BlocksTC.stairsAncient);
+	public static final DeferredItem<BlockItem> slabAncient =
+			ITEMS.registerSimpleBlockItem("slab_ancient", BlocksTC.slabAncient);
+	public static final DeferredItem<BlockItem> slabEldritch =
+			ITEMS.registerSimpleBlockItem("slab_eldritch", BlocksTC.slabEldritch);
+	public static final DeferredItem<BlockItem> pedestalAncient =
+			ITEMS.registerSimpleBlockItem("pedestal_ancient", BlocksTC.pedestalAncient);
+	public static final DeferredItem<BlockItem> pedestalEldritch =
+			ITEMS.registerSimpleBlockItem("pedestal_eldritch", BlocksTC.pedestalEldritch);
+
 	public static final DeferredItem<BlockItem> logSilverwood =
 			ITEMS.registerSimpleBlockItem("log_silverwood", BlocksTC.logSilverwood);
 
@@ -794,9 +819,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> pedestal =
 			ITEMS.registerSimpleBlockItem("pedestal", BlocksTC.pedestal);
 
-	/** See {@link BlocksTC#pedestalEldritch}'s own doc comment. */
-	public static final DeferredItem<BlockItem> pedestalEldritch =
-			ITEMS.registerSimpleBlockItem("pedestal_eldritch", BlocksTC.pedestalEldritch);
+	/** See {@link BlocksTC#cultistRitualAltar}'s own doc comment. */
+	public static final DeferredItem<BlockItem> cultistRitualAltar =
+			ITEMS.registerSimpleBlockItem("cultist_ritual_altar", BlocksTC.cultistRitualAltar);
 
 	/** See {@link BlocksTC#bannerCrimsonCult}'s own doc comment. */
 	public static final DeferredItem<BlockItem> bannerCrimsonCult =

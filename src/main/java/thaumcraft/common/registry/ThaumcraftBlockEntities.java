@@ -113,10 +113,14 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.crafting.TileThaumatorium>> THAUMATORIUM = BLOCK_ENTITIES.register("thaumatorium",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TileThaumatorium::new, BlocksTC.thaumatorium.get()).build(null));
 
-	/** Also backs {@link BlocksTC#pedestalEldritch} - see that field's own doc comment. Same tile, same
-	 * behavior, purely a themed reskin (matches the original's own "Eldritch" pedestal tier). */
+	/** Also backs {@link BlocksTC#pedestalEldritch} (the real Infusion Altar Eldritch-tier corner pedestal)
+	 * and {@link BlocksTC#pedestalAncient} (its Ancient-tier sibling) - same {@code BlockPedestal} class as
+	 * the true original itself, just parameterized by name. Also backs {@link BlocksTC#cultistRitualAltar} -
+	 * a themed reskin for the unrelated Cultist Cleric ritual-altar fix, see that field's own doc comment for
+	 * why it shares this same tile/behavior rather than needing its own. */
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.crafting.TilePedestal>> PEDESTAL = BLOCK_ENTITIES.register("pedestal",
-			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TilePedestal::new, BlocksTC.pedestal.get(), BlocksTC.pedestalEldritch.get()).build(null));
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TilePedestal::new,
+					BlocksTC.pedestal.get(), BlocksTC.pedestalEldritch.get(), BlocksTC.pedestalAncient.get(), BlocksTC.cultistRitualAltar.get()).build(null));
 
 	/** See {@link thaumcraft.common.tiles.misc.TileBanner}'s own doc comment. */
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.misc.TileBanner>> BANNER = BLOCK_ENTITIES.register("banner",

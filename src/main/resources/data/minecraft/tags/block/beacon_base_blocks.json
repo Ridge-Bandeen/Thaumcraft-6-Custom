@@ -2,6 +2,12 @@
   "replace": false,
   "values": [
     "thaumcraft:stone_arcane",
+    "thaumcraft:stone_ancient",
+    "thaumcraft:stone_ancient_tile",
+    "thaumcraft:stone_ancient_rock",
+    "thaumcraft:stone_ancient_glyphed",
+    "thaumcraft:stone_ancient_doorway",
+    "thaumcraft:stone_eldritch_tile",
     "thaumcraft:metal_block_thaumium",
     "thaumcraft:metal_block_brass",
     "thaumcraft:metal_alchemical"

@@ -1,19 +1,7 @@
 {
-    "forge_marker": 1,
-    "variants": {
-        "half": { 
-            "bottom": { "model": "minecraft:half_slab" }, 
-            "top": { "model": "minecraft:upper_slab" } 
-        },
-        "variant": {
-            "default": {
-                "textures": {
-                    "particle": "thaumcraft:blocks/eldritch_stone_1",
-                    "bottom": "thaumcraft:blocks/eldritch_stone_1",
-                    "top": "thaumcraft:blocks/eldritch_stone_2",
-                    "side": "thaumcraft:blocks/eldritch_stone_3"
-                }
-            }
-        }        
-    }
+  "variants": {
+    "type=bottom": { "model": "thaumcraft:block/slab_eldritch" },
+    "type=top": { "model": "thaumcraft:block/slab_eldritch_top" },
+    "type=double": { "model": "thaumcraft:block/eldritch_stone" }
+  }
 }

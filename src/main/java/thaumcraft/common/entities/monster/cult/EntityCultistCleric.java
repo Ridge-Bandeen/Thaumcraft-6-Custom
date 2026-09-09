@@ -51,12 +51,12 @@ import thaumcraft.common.entities.projectile.EntityGolemOrb;
  * matching the original's own {@code setLoot} odds.
  *
  * **Real, working ritualist/altar-focus mechanic** - the original's own version of this was a genuine bug
- * in the shipped 1.12.2 mod (see {@link BlocksTC#pedestalEldritch}'s own doc comment: the block field it
+ * in the shipped 1.12.2 mod (see {@link BlocksTC#cultistRitualAltar}'s own doc comment: the block field it
  * checked was never assigned, so the state always canceled itself within ~2 seconds regardless of any real
  * altar). This port fixes that for real: a synced {@code ritualist} flag that, while true, prevents this
  * cleric from naturally despawning ({@link #removeWhenFarAway}) and gets cancelled for real once every 40
  * ticks if it's more than 4 blocks from its own home position or that position no longer holds a real
- * {@link BlocksTC#pedestalEldritch} block - a faithful, now-functional port of {@code AIAltarFocus}'s own
+ * {@link BlocksTC#cultistRitualAltar} block - a faithful, now-functional port of {@code AIAltarFocus}'s own
  * distance/block check. The original's own {@code rage} counter (a second, alternate cancel condition -
  * {@code rage >= 5}) is ported too, but nothing in the original's own {@code EntityCultistCleric.java}
  * itself ever increments it, and no other original source file this port has read so far sets {@code
@@ -218,7 +218,7 @@ public class EntityCultistCleric extends EntityCultist implements RangedAttackMo
 		}
 		BlockPos home = getRestrictCenter();
 		boolean tooFar = home.distSqr(blockPosition()) > 16.0;
-		boolean altarGone = !level().getBlockState(home).is(BlocksTC.pedestalEldritch.get());
+		boolean altarGone = !level().getBlockState(home).is(BlocksTC.cultistRitualAltar.get());
 		if (tooFar || altarGone) {
 			setRitualist(false);
 		}

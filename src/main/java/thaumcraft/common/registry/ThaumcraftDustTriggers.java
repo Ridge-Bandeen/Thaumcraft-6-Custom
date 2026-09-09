@@ -30,6 +30,8 @@ public final class ThaumcraftDustTriggers {
 		IDustTrigger.registerDustTrigger(new DustTriggerSimple("FIRSTSTEPS", Blocks.CAULDRON, new ItemStack(BlocksTC.crucible.get())));
 		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", infernalFurnaceBlueprint()));
 		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", infusionAltarBlueprint()));
+		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", infusionAltarAncientBlueprint()));
+		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", infusionAltarEldritchBlueprint()));
 		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", thaumatoriumBlueprint()));
 	}
 
@@ -63,18 +65,15 @@ public final class ThaumcraftDustTriggers {
 	 * {@code stoneArcane} scaffolding at the 4 corners one layer up vanishes, and the 4 corner
 	 * {@code stoneArcane} blocks 2 below the matrix become real {@code pillarArcane} - each with its own real,
 	 * fixed absolute facing (a {@link BlockState}-typed target, not a relative one - see that same doc comment)
-	 * exactly matching the original's own per-corner facing assignment. The Ancient/Eldritch tiers aren't
-	 * ported here - {@code stoneAncient}/{@code stoneEldritchTile} were never ported either (a genuine forced
-	 * block, see {@code BlockPillar}'s own doc comment), so there's no real source material to build them from
-	 * yet.
+	 * exactly matching the original's own per-corner facing assignment.
 	 */
 	private static Part[][][] infusionAltarBlueprint() {
 		Part im = new Part(BlocksTC.infusionMatrix.get(), null);
 		Part snt = new Part(BlocksTC.stoneArcane.get(), "AIR");
-		Part snb1 = new Part(BlocksTC.stoneArcane.get(), pillarFacing(net.minecraft.core.Direction.EAST));
-		Part snb2 = new Part(BlocksTC.stoneArcane.get(), pillarFacing(net.minecraft.core.Direction.NORTH));
-		Part snb3 = new Part(BlocksTC.stoneArcane.get(), pillarFacing(net.minecraft.core.Direction.SOUTH));
-		Part snb4 = new Part(BlocksTC.stoneArcane.get(), pillarFacing(net.minecraft.core.Direction.WEST));
+		Part snb1 = new Part(BlocksTC.stoneArcane.get(), pillarFacing(BlocksTC.pillarArcane.get(), net.minecraft.core.Direction.EAST));
+		Part snb2 = new Part(BlocksTC.stoneArcane.get(), pillarFacing(BlocksTC.pillarArcane.get(), net.minecraft.core.Direction.NORTH));
+		Part snb3 = new Part(BlocksTC.stoneArcane.get(), pillarFacing(BlocksTC.pillarArcane.get(), net.minecraft.core.Direction.SOUTH));
+		Part snb4 = new Part(BlocksTC.stoneArcane.get(), pillarFacing(BlocksTC.pillarArcane.get(), net.minecraft.core.Direction.WEST));
 		Part pn = new Part(BlocksTC.pedestal.get().defaultBlockState(), null);
 		return new Part[][][] {
 				{ { null, null, null }, { null, im, null }, { null, null, null } },
@@ -83,8 +82,54 @@ public final class ThaumcraftDustTriggers {
 		};
 	}
 
-	private static net.minecraft.world.level.block.state.BlockState pillarFacing(net.minecraft.core.Direction facing) {
-		return BlocksTC.pillarArcane.get().defaultBlockState()
+	/**
+	 * Real port of the true original's own {@code infusionAltarAncientBlueprint} - same real shape as
+	 * {@link #infusionAltarBlueprint} above, just the Ancient tier's own real materials
+	 * ({@code stoneAncient}/{@code pillarAncient}/{@code pedestalAncient}). <b>Genuinely unreachable through
+	 * normal survival progression, matching the true original exactly</b> - see {@code BlocksTC.stoneAncient}'s
+	 * own doc comment for why this is real, correct, functioning code rather than a porting gap: the true
+	 * original itself never had a real acquisition path for {@code stoneAncient} either. Ported anyway for
+	 * real fidelity, same as {@code matrixSpeed}/the Causality Collapser earlier this session shipped real
+	 * code before their own blockers were found and fixed - this one's blocker (a whole abandoned/incomplete
+	 * upstream content gap, not a portable subsystem) has no real fix to chase.
+	 */
+	private static Part[][][] infusionAltarAncientBlueprint() {
+		Part sat = new Part(BlocksTC.stoneAncient.get(), "AIR");
+		Part sab1 = new Part(BlocksTC.stoneAncient.get(), pillarFacing(BlocksTC.pillarAncient.get(), net.minecraft.core.Direction.EAST));
+		Part sab2 = new Part(BlocksTC.stoneAncient.get(), pillarFacing(BlocksTC.pillarAncient.get(), net.minecraft.core.Direction.NORTH));
+		Part sab3 = new Part(BlocksTC.stoneAncient.get(), pillarFacing(BlocksTC.pillarAncient.get(), net.minecraft.core.Direction.SOUTH));
+		Part sab4 = new Part(BlocksTC.stoneAncient.get(), pillarFacing(BlocksTC.pillarAncient.get(), net.minecraft.core.Direction.WEST));
+		Part im = new Part(BlocksTC.infusionMatrix.get(), null);
+		Part pa = new Part(BlocksTC.pedestalAncient.get().defaultBlockState(), null);
+		return new Part[][][] {
+				{ { null, null, null }, { null, im, null }, { null, null, null } },
+				{ { sat, null, sat }, { null, null, null }, { sat, null, sat } },
+				{ { sab1, null, sab2 }, { null, pa, null }, { sab3, null, sab4 } },
+		};
+	}
+
+	/**
+	 * Real port of the true original's own {@code infusionAltarEldritchBlueprint} - see
+	 * {@link #infusionAltarAncientBlueprint}'s own doc comment for why this tier is real but genuinely
+	 * unreachable too, matching the true original exactly.
+	 */
+	private static Part[][][] infusionAltarEldritchBlueprint() {
+		Part set = new Part(BlocksTC.stoneEldritchTile.get(), "AIR");
+		Part seb1 = new Part(BlocksTC.stoneEldritchTile.get(), pillarFacing(BlocksTC.pillarEldritch.get(), net.minecraft.core.Direction.EAST));
+		Part seb2 = new Part(BlocksTC.stoneEldritchTile.get(), pillarFacing(BlocksTC.pillarEldritch.get(), net.minecraft.core.Direction.NORTH));
+		Part seb3 = new Part(BlocksTC.stoneEldritchTile.get(), pillarFacing(BlocksTC.pillarEldritch.get(), net.minecraft.core.Direction.SOUTH));
+		Part seb4 = new Part(BlocksTC.stoneEldritchTile.get(), pillarFacing(BlocksTC.pillarEldritch.get(), net.minecraft.core.Direction.WEST));
+		Part im = new Part(BlocksTC.infusionMatrix.get(), null);
+		Part pe = new Part(BlocksTC.pedestalEldritch.get().defaultBlockState(), null);
+		return new Part[][][] {
+				{ { null, null, null }, { null, im, null }, { null, null, null } },
+				{ { set, null, set }, { null, null, null }, { set, null, set } },
+				{ { seb1, null, seb2 }, { null, pe, null }, { seb3, null, seb4 } },
+		};
+	}
+
+	private static net.minecraft.world.level.block.state.BlockState pillarFacing(Block pillarBlock, net.minecraft.core.Direction facing) {
+		return pillarBlock.defaultBlockState()
 				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, facing);
 	}
 

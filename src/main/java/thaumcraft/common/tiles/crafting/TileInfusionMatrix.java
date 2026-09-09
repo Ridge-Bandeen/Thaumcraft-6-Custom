@@ -174,6 +174,14 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 	private static final int[] PILLAR_X = { -1, 1, 1, -1 };
 	private static final int[] PILLAR_Z = { -1, -1, 1, 1 };
 
+	/** Real accessor for {@link #costMult} - the real per-corner pillar/matrixSpeed/matrixCost/pedestal-tier
+	 * cost multiplier {@link #getSurroundings} builds up each scan (see that method's own doc comment for the
+	 * exact real formula). Exists purely for real test observability, matching this project's own established
+	 * "add a minimal public getter rather than reach into a private field" precedent elsewhere. */
+	public float getCostMult() {
+		return costMult;
+	}
+
 	public boolean validLocation(Level level) {
 		if (!(level.getBlockEntity(worldPosition.below(2)) instanceof TilePedestal)) return false;
 		for (int i = 0; i < 4; i++) {
@@ -510,11 +518,19 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 			}
 		}
 
-		// Real pedestalEldritch cost bonus (pedestalAncient doesn't exist in this port - a genuine forced
-		// block, not a deviation; see BlocksTC.pedestal's own doc comment).
+		// Real pedestalEldritch/pedestalAncient cost bonuses, matching the true original's own real, opposite
+		// signs exactly - Eldritch raises cost slightly, Ancient lowers it. Both tiers' own stone/pedestal
+		// chain is real but genuinely unreachable in survival (stoneAncient/stoneEldritchTile have zero
+		// acquisition path anywhere in the true original itself, not a porting gap - see BlocksTC.stoneAncient's
+		// own doc comment), so neither check can actually fire outside a creative-mode/GameTest setup, same as
+		// the true original's own code.
 		for (BlockPos pp : pedestals) {
-			if (level.getBlockState(pp).getBlock() == thaumcraft.api.blocks.BlocksTC.pedestalEldritch.get()) {
+			Block pedestalBlock = level.getBlockState(pp).getBlock();
+			if (pedestalBlock == thaumcraft.api.blocks.BlocksTC.pedestalEldritch.get()) {
 				costMult += 0.0025f;
+			}
+			if (pedestalBlock == thaumcraft.api.blocks.BlocksTC.pedestalAncient.get()) {
+				costMult -= 0.01f;
 			}
 		}
 

@@ -145,6 +145,78 @@ public final class BlocksTC {
 			SlabBlock::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
 
+	/** The Ancient/Eldritch tiers of the Infusion Altar's own real stone family - same shape as
+	 * {@link #stoneArcane} above (plain {@code Block}, {@code BlockStoneTC}'s own real hardness/resistance
+	 * per block - 2.0/10.0 for every variant except {@link #stoneEldritchTile}'s own explicit 15.0/1000.0
+	 * override, and instabreak/unbreakable for {@link #stoneAncientRock}/{@link #stoneAncientDoorway}, same
+	 * as the true original's own real {@code setHardness(-1.0f)}). <b>Genuinely unreachable through normal
+	 * survival progression, matching the true shipped 1.12.2 original exactly, not a porting gap</b>: none
+	 * of these ever had any recipe, loot-table drop, or world-gen placement anywhere in the true original's
+	 * own source at all (confirmed via exhaustive search - no {@code DimensionType}/{@code WorldProvider}/
+	 * structure-generation code exists anywhere in the whole original codebase either, so this isn't gated
+	 * behind some unported dimension or structure feature - it just never had a real acquisition path to
+	 * begin with, seemingly abandoned/incomplete content in the shipped mod itself). Ported anyway for real
+	 * fidelity - the Ancient/Eldritch Infusion Altar tiers, their own real pillars ({@link #pillarAncient}/
+	 * {@link #pillarEldritch}, already real) and pedestals ({@link #pedestalAncient}/{@link #pedestalEldritch}
+	 * below) all exist as real, correct, functioning code, exactly matching the true original - they just
+	 * can't be reached without creative mode, same as in real 1.12.2 Thaumcraft 6 itself. */
+	public static final DeferredBlock<Block> stoneAncient = BLOCKS.registerBlock("stone_ancient",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
+
+	public static final DeferredBlock<Block> stoneAncientTile = BLOCKS.registerBlock("stone_ancient_tile",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
+
+	/** Real {@code setHardness(-1.0f)} in the true original - unbreakable, same convention as vanilla's own
+	 * bedrock. */
+	public static final DeferredBlock<Block> stoneAncientRock = BLOCKS.registerBlock("stone_ancient_rock",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(-1.0f, 3600000.0f).sound(SoundType.STONE));
+
+	public static final DeferredBlock<Block> stoneAncientGlyphed = BLOCKS.registerBlock("stone_ancient_glyphed",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
+
+	/** Real {@code setHardness(-1.0f)} in the true original - unbreakable, same as {@link #stoneAncientRock}. */
+	public static final DeferredBlock<Block> stoneAncientDoorway = BLOCKS.registerBlock("stone_ancient_doorway",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(-1.0f, 3600000.0f).sound(SoundType.STONE));
+
+	/** Real {@code setHardness(15.0f).setResistance(1000.0f)} in the true original - a much tougher block
+	 * than every other tier. */
+	public static final DeferredBlock<Block> stoneEldritchTile = BLOCKS.registerBlock("stone_eldritch_tile",
+			Block::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(15.0f, 1000.0f).sound(SoundType.STONE));
+
+	public static final DeferredBlock<StairBlock> stairsAncient = BLOCKS.registerBlock("stairs_ancient",
+			props -> new StairBlock(stoneAncient.get().defaultBlockState(), props),
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
+
+	public static final DeferredBlock<SlabBlock> slabAncient = BLOCKS.registerBlock("slab_ancient",
+			SlabBlock::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 10.0f).sound(SoundType.STONE));
+
+	public static final DeferredBlock<SlabBlock> slabEldritch = BLOCKS.registerBlock("slab_eldritch",
+			SlabBlock::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(15.0f, 1000.0f).sound(SoundType.STONE));
+
+	/** The Infusion Altar's own real Ancient-tier corner pedestal - see {@link #stoneAncient}'s own doc
+	 * comment for why this whole tier is real but unreachable. Same {@code BlockPedestal} class as
+	 * {@link #pedestal}, just a themed variant, exactly like the true original's own
+	 * {@code new BlockPedestal("pedestal_ancient")}. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockPedestal> pedestalAncient = BLOCKS.registerBlock("pedestal_ancient",
+			thaumcraft.common.blocks.devices.BlockPedestal::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE).noOcclusion());
+
+	/** The Infusion Altar's own real Eldritch-tier corner pedestal - the true original's own real
+	 * {@code new BlockPedestal("pedestal_eldritch")}. This exact id was borrowed by an earlier chunk this
+	 * session for an unrelated Cultist Cleric ritual-altar bugfix (see {@link #cultistRitualAltar}'s own doc
+	 * comment for why) - freed back up for its real, true original meaning here. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockPedestal> pedestalEldritch = BLOCKS.registerBlock("pedestal_eldritch",
+			thaumcraft.common.blocks.devices.BlockPedestal::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE).noOcclusion());
+
 	/**
 	 * The Silverwood wood set - gives {@code Filter} (and everything else that needs {@code plankSilverwood})
 	 * a reachable ingredient. Log/planks/leaves use vanilla base classes directly ({@link RotatedPillarBlock}/
@@ -547,11 +619,15 @@ public final class BlocksTC {
 	 * assigned to an actual block anywhere in that codebase, making the ritualist check always fail within
 	 * seconds regardless of any altar. Confirmed by direct grep of the original source before writing this.
 	 * This registers what the original almost certainly meant: the same {@code BlockPedestal} class, an
-	 * "Eldritch" reskin, reusing the original's own separately-working {@code pedestalEldritch} naming and
-	 * bundled textures/model (which DO exist as real assets - only the code-side wiring was missing). See
-	 * {@link thaumcraft.common.entities.monster.cult.EntityCultistCleric}'s own doc comment for the AI side
-	 * of this fix. */
-	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockPedestal> pedestalEldritch = BLOCKS.registerBlock("pedestal_eldritch",
+	 * "Eldritch" reskin. <b>Renamed from this port's own earlier {@code pedestal_eldritch}/{@code pedestalEldritch}
+	 * to this id</b> once the true original's own real, separate, correctly-registered {@code pedestalEldritch}
+	 * (the Infusion Altar's own Eldritch-tier corner pedestal, see {@link #pedestalEldritch} below) needed
+	 * that real name back - a genuine naming collision this port's own earlier guess created, not something
+	 * the true original ever had. Still visually reuses {@code pedestal_eldritch}'s own real block model/
+	 * texture (thematically identical either way, no new art invented) via its own thin blockstate/item-model
+	 * wrapper. See {@link thaumcraft.common.entities.monster.cult.EntityCultistCleric}'s own doc comment for
+	 * the AI side of this fix. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockPedestal> cultistRitualAltar = BLOCKS.registerBlock("cultist_ritual_altar",
 			thaumcraft.common.blocks.devices.BlockPedestal::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).sound(SoundType.STONE).noOcclusion());
 
