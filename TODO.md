@@ -18,12 +18,9 @@ Each of these is genuinely real, registered content in the true original with
 no equivalent anywhere in the current port (verified by direct source read,
 not just a name diff).
 
-- **Loot Urns** (`lootUrnCommon`/`lootUrnUncommon`/`lootUrnRare`). A real,
-  distinct dungeon-decoration BLOCK type (`BlockLoot` with a `LootType`
-  enum), separate from the already-shipped Loot Bag/Loot Crate items. True
-  original: `new BlockLoot(Material.ROCK, "loot_urn_common", BlockLoot.LootType.COMMON)`
-  (and Uncommon/Rare siblings). Likely low priority — dungeon/structure
-  worldgen dressing, not a progression gate — but a real, unbuilt block.
+*(Empty as of 2026-09-09 — Loot Urns, the last item here, closed. See
+"Recently closed" below. Next work should come from "Deferred subsystems" or
+a fresh sweep.)*
 
 ## Needs further triage (real content exists in the original; scope/priority unconfirmed)
 
@@ -360,6 +357,24 @@ rather than trusting the prose - it was wrong about 2 of 4 entries here.
   custom `Goal` needed) added to `EntityThaumcraftGolem#createAI` for
   RANGED-trait golems with a wired function. See commit "Give the golem
   Dart arm its real ranged attack".
+
+- **Loot Urns** (`lootUrnCommon`/`lootUrnUncommon`/`lootUrnRare`) — closed
+  2026-09-09, the last item in "Confirmed real gaps". Real `Material.ROCK`
+  sibling of the already-shipped loot crates, sharing the same `BlockLoot`
+  class and vanilla-loot-table-based drop mechanic (each tier nests
+  `gameplay/loot_bag_<tier>`, same as the crates). Block models/textures for
+  all three tiers already existed from earlier scaffolding; what was missing
+  was the `BlocksTC`/`ItemsTC` registrations, 3 blockstates (still stale
+  `forge_marker` format), 3 item models, and 3 loot tables. Real, documented
+  simplification kept: one shared `VoxelShape` across crate and urn rather
+  than the true original's own genuinely smaller urn hitbox.
+  `SoundType.DECORATED_POT` used as a real vanilla substitute for the true
+  original's own custom "urnbreak" sound (no modern equivalent exists in
+  this port). Along the way, found and fixed a real pre-existing bug: loot
+  crates and the crimson cult banner had only stale, dead `tile.X.name` lang
+  keys and no real `block.thaumcraft.X` key, so all four rendered as raw
+  untranslated keys in-game - fixed for all four. See commit "Give dungeon
+  urns their real BlockLoot registration - loot_urn_common/uncommon/rare".
 
 ---
 *Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
