@@ -685,6 +685,23 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.misc.BlockLoot::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(0.15f, 0.0f).sound(SoundType.WOOD).noOcclusion());
 
+	/** Stone-material sibling of {@link #lootCrateCommon} - the true original's own dungeon urn decoration,
+	 * sharing the same {@link thaumcraft.common.blocks.misc.BlockLoot} class and loot-table-based drop
+	 * mechanic. The true original gave urns a genuinely smaller hitbox and a distinct "urnbreak" sound from
+	 * the wooden crates; this port keeps the one shared crate-shaped VoxelShape (a documented simplification -
+	 * see BlockLoot's own doc comment) but does use a real, thematically-matching vanilla break sound. */
+	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockLoot> lootUrnCommon = BLOCKS.registerBlock("loot_urn_common",
+			thaumcraft.common.blocks.misc.BlockLoot::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(0.15f, 0.0f).sound(SoundType.DECORATED_POT).noOcclusion());
+
+	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockLoot> lootUrnUncommon = BLOCKS.registerBlock("loot_urn_uncommon",
+			thaumcraft.common.blocks.misc.BlockLoot::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(0.15f, 0.0f).sound(SoundType.DECORATED_POT).noOcclusion());
+
+	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockLoot> lootUrnRare = BLOCKS.registerBlock("loot_urn_rare",
+			thaumcraft.common.blocks.misc.BlockLoot::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(0.15f, 0.0f).sound(SoundType.DECORATED_POT).noOcclusion());
+
 	/** See {@link thaumcraft.common.blocks.crafting.BlockInfusionMatrix}'s own doc comment for what's
 	 * simplified about this device this pass. */
 	public static final DeferredBlock<thaumcraft.common.blocks.crafting.BlockInfusionMatrix> infusionMatrix = BLOCKS.registerBlock("infusion_matrix",

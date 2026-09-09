@@ -8645,6 +8645,33 @@ public class ThaumcraftGameTests {
 	}
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void lootUrnBlocksAreRealAndFunctional(GameTestHelper helper) {
+		// The stone-material dungeon-decoration sibling of the loot crates - same BlockLoot class, same
+		// loot-table-based drop mechanic, real vanilla SoundType.DECORATED_POT instead of the crates' WOOD.
+		ServerLevel level = helper.getLevel();
+		BlockPos[] positions = { new BlockPos(1, 0, 1), new BlockPos(3, 0, 1), new BlockPos(5, 0, 1) };
+		var blocks = new net.minecraft.world.level.block.Block[] {
+				thaumcraft.api.blocks.BlocksTC.lootUrnCommon.get(),
+				thaumcraft.api.blocks.BlocksTC.lootUrnUncommon.get(),
+				thaumcraft.api.blocks.BlocksTC.lootUrnRare.get()
+		};
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(1, 1, 1)).above(3));
+		for (int i = 0; i < positions.length; i++) {
+			BlockPos pos = positions[i];
+			BlockPos abs = helper.absolutePos(pos);
+			helper.setBlock(pos.below(), net.minecraft.world.level.block.Blocks.STONE);
+			level.setBlockAndUpdate(abs, blocks[i].defaultBlockState());
+			helper.assertTrue(level.getBlockState(abs).is(blocks[i]), "a real urn should really place as its own real block");
+			level.destroyBlock(abs, true, player);
+			List<net.minecraft.world.entity.item.ItemEntity> drops =
+					level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new AABB(abs).inflate(2));
+			helper.assertTrue(!drops.isEmpty(), "breaking a real loot urn (tier " + i + ") should really drop real tiered loot");
+		}
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void cultistPortalGreaterEscalatesPlacesRealDressingAndConjuresRealMinions(GameTestHelper helper) {
 		BlockPos pos = BlockPos.ZERO;
 		BlockPos abs = helper.absolutePos(pos);

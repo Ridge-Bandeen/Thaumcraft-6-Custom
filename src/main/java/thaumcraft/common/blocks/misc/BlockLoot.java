@@ -13,8 +13,13 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
  * Replaces the old (1.12.2) {@code BlockLoot} - the three loot-crate tiers ({@code loot_crate_common/
- * uncommon/rare}) placed by {@code EntityCultistPortalGreater} during its staged encounter. Real, slightly
- * undersized box shape matching the original's own {@code getBoundingBox} exactly.
+ * uncommon/rare}) placed by {@code EntityCultistPortalGreater} during its staged encounter, plus the
+ * material-{@code ROCK} sibling {@code loot_urn_common/uncommon/rare} dungeon-decoration variant (plain
+ * placeable/breakable worldgen dressing, not tied to any encounter). The true original gave the urn variant
+ * its own smaller {@code getBoundingBox} and a distinct "urnbreak" {@code SoundType} from the wooden
+ * crates; this port shares one {@code VoxelShape} (matching the crate's own real box exactly) across both,
+ * a real, minor, documented simplification, while still giving urns a real, thematically-matching vanilla
+ * sound ({@code SoundType.DECORATED_POT}) via each urn block's own registration in {@code BlocksTC}.
  *
  * The original's own drops came from {@code Utils.generateLoot} - a hand-written weighted-tier gear
  * generator (leather-through-diamond armor progression, random enchantments, plus a fallback
@@ -25,10 +30,10 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * come from vanilla's own data-driven loot table system, nesting the SAME real {@code
  * gameplay/loot_bag_<tier>} table this port's loot bags already use (a real, working, curated vanilla-only
  * pool, "better tier, better stuff," rather than a generator mostly targeting items this port doesn't have).
- * One difference from the loot bags: no silk-touch-preserves-the-crate branch (the original's own {@code
+ * One difference from the loot bags: no silk-touch-preserves-the-block branch (the original's own {@code
  * canSilkHarvest() -> true}) - always drops its real tiered contents when broken, a real, minor,
- * documented simplification since preserving the crate itself as a decoration is tangential to what the
- * portal encounter actually needs from this block.
+ * documented simplification since preserving the crate/urn itself as a decoration is tangential to what
+ * actually matters here.
  */
 public class BlockLoot extends Block {
 

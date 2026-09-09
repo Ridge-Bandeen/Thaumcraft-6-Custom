@@ -899,6 +899,17 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> lootCrateRare =
 			ITEMS.registerSimpleBlockItem("loot_crate_rare", BlocksTC.lootCrateRare);
 
+	/** See {@link BlocksTC#lootUrnCommon}/{@link thaumcraft.common.blocks.misc.BlockLoot}'s own doc
+	 * comment. */
+	public static final DeferredItem<BlockItem> lootUrnCommon =
+			ITEMS.registerSimpleBlockItem("loot_urn_common", BlocksTC.lootUrnCommon);
+
+	public static final DeferredItem<BlockItem> lootUrnUncommon =
+			ITEMS.registerSimpleBlockItem("loot_urn_uncommon", BlocksTC.lootUrnUncommon);
+
+	public static final DeferredItem<BlockItem> lootUrnRare =
+			ITEMS.registerSimpleBlockItem("loot_urn_rare", BlocksTC.lootUrnRare);
+
 	public static final DeferredItem<BlockItem> infusionMatrix =
 			ITEMS.registerSimpleBlockItem("infusion_matrix", BlocksTC.infusionMatrix);
 
