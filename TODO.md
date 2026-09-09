@@ -58,31 +58,54 @@ not just a name diff).
   worldgen dressing, not a progression gate — but a real, unbuilt block.
 
 - **Essentia Transport Input/Output** (`essentiaTransportInput`/
-  `essentiaTransportOutput`). Already flagged as a known real gap in earlier
-  session notes (not re-investigated this sweep beyond confirming the name
-  diff still holds); carried forward here so it isn't lost.
+  `essentiaTransportOutput`) — scoped 2026-09-09, real content, meaningfully
+  bigger than it first looked. True original: `TileEssentiaInput`/
+  `TileEssentiaOutput`, each a real `IEssentiaTransport` node with a tube
+  connection on one face and, on the true original's own real recipe, built
+  around a `Blocks.DISPENSER` (input) or `Blocks.HOPPER` (output) component
+  - meaning the real intended usage is mounting one against a
+  dispenser/hopper full of essentia-container ITEMS (e.g. Crystal Essence),
+  converting between the tube network and physical container items sitting
+  in that adjacent inventory's slots. Real mechanic per-tick: `fillJar`
+  (input) pulls 1 unit from the tube-network neighbor then calls the true
+  original's own richer `EssentiaHandler.addEssentia(tile, aspect,
+  direction, range, simulate, ???)` overload to deposit it into a nearby
+  essentia-container item; `fillBuffer` (output) is the mirror, draining a
+  nearby container item back into the network via
+  `EssentiaHandler.drainEssentiaWithConfirmation`/`confirmDrain` (a 2-phase
+  simulate-then-commit pair). **Neither richer `EssentiaHandler` overload
+  exists in this port** - the current `EssentiaHandler.java` only has the
+  simple omnidirectional `drainEssentia(tile, aspect, range)` this session
+  already used for the Mirror/Infusion Altar, explicitly documented as a
+  narrower port. Real scope: (1) real adjacent-inventory item-slot scanning
+  (NeoForge's `Capabilities.ItemHandler.BLOCK`, same idiom
+  `EntityArcaneBore`/this session's own Pattern Crafter chunk already
+  established) to find a real `IEssentiaContainerItem`-implementing stack
+  nearby, (2) the actual fill/drain exchange with that item via its own
+  interface, (3) the tube-network side (a `Block`-typed target, standard
+  `IEssentiaTransport` node, well precedented by `TileEssentiaInput`/
+  `TileEssentiaOutput`'s own real isConnectable/canInputFrom/canOutputTo
+  shape, straightforward). A real, buildable chunk, not blocked on anything
+  - just meaningfully bigger than a first glance suggested, closer in size
+  to the Pattern Crafter chunk than to a quick win.
 
 ## Needs further triage (real content exists in the original; scope/priority unconfirmed)
 
-- **`effectShock`/`effectSap`/`effectGlimmer`** (`BlockEffect`) — likely
-  transient, purely-cosmetic VFX placeholder blocks (placed briefly, removed
-  automatically) rather than real player-facing content. Worth a quick read
-  of `BlockEffect.java` (true original) to confirm before deciding whether
-  to port or explicitly write off.
-- **`empty`** (`BlockTranslucent`) — likely an invisible structural/render
-  placeholder, not real content. Probably a write-off once confirmed.
-- **`liquidDeath`** (`BlockFluidDeath`) — a real fluid block, but likely
-  tangled with the already-known-blocked finite-fluid/Taint subsystem (per
-  earlier session notes: "Taint/world-corruption (tangled with the blocked
-  finite-fluid)"). Confirm it's the same blocker before treating as separate.
+- **`effectSap`** (`BlockEffect`, a sticky-web trap block) — confirmed real
+  but low priority. Its only two true-original placers are
+  `EntityEldritchWarden` (an unbuilt boss) and `FocusEffectCurse`'s own
+  block-hit branch - which this port's modern `FocusEffectCurse` already
+  documents dropping deliberately ("that block isn't ported, and there's
+  nothing sensible to fall back to"). Not worth building until either real
+  consumer exists.
+- **`liquidDeath`** (`BlockFluidDeath`) — confirmed real but has no
+  standalone placer outside client-rendering setup (`ProxyBlock.java`);
+  genuinely tangled with the already-known-blocked finite-fluid/Taint
+  world-spread subsystem, not a separate gap.
 - **`grassAmbient`, `shimmerleaf`, `vishroom`, `bloom`** — worldgen
   plant/ambient blocks. Earlier session notes already confirmed
   `world/plants/` as worldgen-only and out of near-term scope; these are
   likely the same bucket. Low priority.
-- **`fluxScrubber`, `taintDust`, `auraTotem`** — not pinned down precisely
-  this sweep (didn't surface in the targeted `ConfigBlocks.java` greps used);
-  need a follow-up direct read of the true original's block registration to
-  confirm real vs. naming-mismatch false-positive before acting.
 - **`tubeOneway`** — a **known, already-diagnosed blocker**, not a fresh
   gap: needs the same unported per-face wand raytracing that already
   blocked the Levitator/Redstone Relay (and shaped `TileTube`'s own
@@ -102,6 +125,30 @@ not just a name diff).
   `ItemsTC.eldritchEye =` / `ItemsTC.runedTablet =` across the whole
   pristine-original tree — zero hits). These are vestigial/dead fields in
   the shipped original itself, not a porting gap. No action needed.
+- **`fluxScrubber`, `auraTotem`, `taintDust`** (blocks) — confirmed
+  2026-09-09, same real pattern as `eldritchEye`/`runedTablet`: declared as
+  public fields in the true original's own `BlocksTC.java` but **never
+  actually assigned/registered anywhere** (confirmed via exhaustive
+  `git grep` for `fluxScrubber =`/`auraTotem =`/`taintDust =` across the
+  whole pristine-original tree — zero hits, and zero other real usages
+  anywhere either). Vestigial/dead fields in the shipped original itself.
+  No action needed.
+- **`effectShock`** (`BlockEffect`) — confirmed 2026-09-09 real but
+  genuinely unreachable in the true original itself: registered and has
+  real self-reactive behavior in `BlockEffect.java`, but has **zero real
+  placer anywhere** in the whole pristine-original tree (only its own
+  class ever references it). Never actually creatable in the true
+  original. No action needed.
+- **`effectGlimmer`** (`BlockEffect`) — confirmed 2026-09-09 already
+  superseded, not a gap: its only two true-original placers
+  (`TileLampArcane`, `ToolEvents`) are both already real and shipped in
+  this port using vanilla's own `LightBlock` (added 1.17) instead - a
+  real, documented, strictly-better modern replacement for the exact
+  "hand-rolled invisible light marker" trick `effectGlimmer` existed for
+  (see `TileLampArcane`'s own doc comment). No action needed.
+- **`empty`** (`BlockTranslucent`) — confirmed 2026-09-09 real (registered)
+  but has zero real usages anywhere in the true original outside its own
+  registration - a functionally inert novelty block, not worth porting.
 - **The "cultist dimension"** — confirmed in an earlier session chunk to
   never have existed in real shipped Thaumcraft 6 (TC5-only concept, or a
   still-open Azanor GitHub suggestion). See memory file for the full
