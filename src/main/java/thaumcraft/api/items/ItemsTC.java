@@ -179,9 +179,9 @@ public final class ItemsTC {
 	 * {@code mechanism_complex.json} - mechanism_simple wrapped in plate_thaumium around a vanilla piston).
 	 * {@link #plateIron}'s own real recipe closed right after, so the whole chain is genuinely reachable end
 	 * to end now. {@link #plateVoid} got its own real recipe too, once {@link #ingotVoid}'s chain existed to
-	 * feed it (see its own doc comment). {@code mindClockwork}/{@code mindBiothaumic}/{@code moduleVision}
-	 * still have no real recipe - each needs its own real multi-ingredient device-assembly recipe, a
-	 * different, larger task. */
+	 * feed it (see its own doc comment). {@link #mindClockwork}/{@link #mindBiothaumic}/{@link #moduleVision}/
+	 * {@link #moduleAggression} all got their own real recipes too, once {@code mechanismSimple}/
+	 * {@code mechanismComplex}/{@code plateBrass} existed to feed them (see each item's own doc comment). */
 	public static final DeferredItem<Item> mechanismSimple =
 			ITEMS.registerSimpleItem("mechanism_simple");
 
@@ -228,12 +228,24 @@ public final class ItemsTC {
 	 * every other plate tier, batching {@link #ingotVoid}. */
 	public static final DeferredItem<Item> plateVoid =
 			ITEMS.registerSimpleItem("plate_void");
+	/** Real recipe now (see {@code data/thaumcraft/recipe/mind_clockwork.json}) - glass panes, plate_brass,
+	 * mechanism_simple and a vanilla comparator, all real. The base golem "mind" - {@link #mindBiothaumic}
+	 * is its own real Infusion upgrade. */
 	public static final DeferredItem<Item> mindClockwork =
 			ITEMS.registerSimpleItem("mind_clockwork");
+
+	/** Real recipe now (see {@code data/thaumcraft/recipe/mind_biothaumic.json}) - a real Infusion Altar
+	 * upgrade over {@link #mindClockwork}, using a real {@link #brain} and {@link #mechanismComplex}. */
 	public static final DeferredItem<Item> mindBiothaumic =
 			ITEMS.registerSimpleItem("mind_biothaumic");
+
+	/** Real recipe now (see {@code data/thaumcraft/recipe/module_vision.json}) - a glass bottle, fermented
+	 * spider eyes, plate_brass and mechanism_simple, all real. */
 	public static final DeferredItem<Item> moduleVision =
 			ITEMS.registerSimpleItem("module_vision");
+
+	/** Real recipe now (see {@code data/thaumcraft/recipe/module_aggression.json}) - glass panes, blaze
+	 * powder, plate_brass and mechanism_simple, all real. */
 	public static final DeferredItem<Item> moduleAggression =
 			ITEMS.registerSimpleItem("module_aggression");
 

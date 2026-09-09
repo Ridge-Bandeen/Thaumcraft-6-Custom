@@ -9702,6 +9702,22 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
+	 * Names the real recipes for the golem "mind"/"module" component family (the base Clockwork mind, its
+	 * real Infusion Altar upgrade to Biothaumic, and the two golem modules) and asserts each one is actually
+	 * registered - same "name every id" pattern as {@link #focusRecipesRegistered} and siblings.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void mindAndModuleRecipesRegistered(GameTestHelper helper) {
+		RecipeManager recipes = helper.getLevel().getRecipeManager();
+		String[] expectedIds = { "mind_clockwork", "mind_biothaumic", "module_vision", "module_aggression" };
+		for (String id : expectedIds) {
+			Optional<RecipeHolder<?>> recipe = recipes.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id));
+			helper.assertTrue(recipe.isPresent(), "expected recipe '" + id + "' to be registered, but it wasn't");
+		}
+		helper.succeed();
+	}
+
+	/**
 	 * Real coverage for {@link thaumcraft.common.items.armor.ItemVoidArmor}'s real self-repair tick - a
 	 * damaged piece should really regain 1 durability every real second (20 ticks) while worn.
 	 */

@@ -1,0 +1,15 @@
+{
+  "type": "thaumcraft:infusion",
+  "research": "MINDBIOTHAUMIC",
+  "instability": 4,
+  "aspects": {
+    "cognitio": 50,
+    "machina": 25
+  },
+  "central": { "item": "thaumcraft:mind_clockwork" },
+  "components": [
+    { "item": "thaumcraft:brain" },
+    { "item": "thaumcraft:mechanism_complex" }
+  ],
+  "result": { "id": "thaumcraft:mind_biothaumic" }
+}
