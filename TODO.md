@@ -44,15 +44,6 @@ not just a name diff).
   (GP3 not shown in the grep excerpt — re-read `ConfigRecipes.java` around
   line 120-128 in the true original for the full blueprint before building.)
 
-- **Mirror of Essentia** (`mirrorEssentia`). `TileMirrorEssentia.java`
-  already exists in the modern tree
-  (`src/main/java/thaumcraft/common/tiles/devices/TileMirrorEssentia.java`)
-  but is a fully orphaned file — no `BlocksTC.mirrorEssentia` block, no
-  `BlockEntityType` registration, nothing consumes it. A real, distinct
-  device from the already-shipped plain item-transport `Mirror`. Scope: wire
-  up the block + BlockEntityType + blockstate/models/loot table/recipe, verify
-  the tile's own logic still matches the true original's `TileMirrorEssentia`.
-
 - **Grapple Gun components** (`jarBrace`, `grappleGunTip`, `grappleGunSpool`).
   The assembled `grappleGun` item exists in the modern port, but the true
   original crafts it from two intermediate arcane-crafted components that
@@ -237,6 +228,15 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   in project memory) — a running list of client-rendering simplifications
   made throughout the port that need an actual `runClient` playtest to
   confirm they look/feel right. Not re-derived here; keep using that file.
+
+## Recently closed (kept briefly for continuity, safe to delete once stale)
+
+- **Mirror of Essentia** (`mirrorEssentia`) — closed 2026-09-09. Real
+  `BlockMirrorEssentia`/`BlockMirrorEssentiaItem`/`TileMirrorEssentia`
+  shipped, following `TileMirror`'s own `MirrorLink` pairing pattern
+  exactly. See commit "Give the Essentia Mirror its real cross-dimensional
+  relay" for the real mechanic (a pure `IAspectSource` pass-through that
+  cube-scans near its linked partner, not an item-transport relay).
 
 ---
 *Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
