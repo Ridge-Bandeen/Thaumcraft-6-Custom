@@ -163,20 +163,22 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   before those were added later the same arc). The real "core" tier
   (`api.research.theorycraft`, all 9 cards + `AidBookshelf`) is fully
   ported. Of the true original's larger `common.lib.research.theorycraft`
-  "extra content" tier, **18 of 19 remaining cards and 6 of 8 remaining
+  "extra content" tier, **18 of 19 remaining cards and 7 of 8 remaining
   aids are already registered** (see `Thaumcraft.java`'s own `commonSetup`
   doc comment for the exact running list - it's the authoritative, current
-  source, more current than any individual class's own comment). Genuinely
-  still open: `CardCelestial` (needs `ItemCelestialNotes`, itself
-  confirmed flavor-only/Baubles-tied by an earlier sweep - out of scope by
-  the standing Baubles exclusion unless that changes) and 3 aids each
-  blocked on their own still-unported block - `AidBasicAuromancy`
-  (`wandWorkbench`), `AidBasicEldritch` (`eldritch`), `AidBrainInAJar`
-  (`jarBrain`). All three of those blocks were already independently
-  flagged as real gaps elsewhere in this file's own history - building any
-  of them for its own sake would also unblock its aid essentially for
-  free. `AidGlyphedStone` (a 4th aid in that same blocked group) is now
-  closed - see "Recently closed" below.
+  source, more current than any individual class's own comment). `AidGlyphedStone`/
+  `AidBasicAuromancy`/`AidBasicEldritch` all turned out to be the same real
+  story - each aid class already existed but was never registered, and each
+  one's supposedly-missing trigger block was already real and shipped under
+  this port's own modern name (`stoneAncientGlyphed` as-is, `wandWorkbench`
+  as `focalManipulator`, `eldritch` as `cultistRitualAltar`) - see
+  "Recently closed" below for both commits. Genuinely still open:
+  `CardCelestial` (needs `ItemCelestialNotes`, itself confirmed
+  flavor-only/Baubles-tied by an earlier sweep - out of scope by the
+  standing Baubles exclusion unless that changes) and `AidBrainInAJar`,
+  blocked on a real still-unported block (`jarBrain`, the "Brain in a Jar"
+  tile/jar variant) - building it would unblock this aid essentially for
+  free, same as the other 3 turned out not to even need.
 - **Golem construction pipeline** — **closed 2026-09-09.** Every genuinely
   real item this arc's own re-scope turned up has now shipped:
   `GolemHelper`/`IGolemAPI`/`IGolemProperties`/`EnumGolemTrait`,
@@ -208,10 +210,13 @@ were all far more complete than documented, and golem construction's own
 remaining CLIMBER-pathfinding residual turned out small too once actually
 investigated - vanilla's own `Spider`/`WallClimberNavigation` answered it
 directly; crystal-cluster rendering's own claimed blocker turned out to not
-really exist either, same `AmethystClusterBlock` story). This section now
-has only Research Table's few small residuals (`CardCelestial`, 3
-block-blocked aids) as genuinely open, non-blocking, low-priority items -
-everything else that was here is closed.
+really exist either, same `AmethystClusterBlock` story; 3 of Research
+Table's own 4 flagged "block-blocked" aids turned out to not be blocked at
+all - each trigger block was already real and shipped under a different
+modern name, just never connected). This section now has only two tiny,
+genuinely open, non-blocking, low-priority items left in Research Table
+(`CardCelestial`, `AidBrainInAJar`) - everything else that was here is
+closed.
 
 ## Standing manual-verification item (not a code gap)
 
@@ -387,6 +392,19 @@ everything else that was here is closed.
   CLIMBER-trait golems, and a new `onClimbable()` override closes the loop.
   See commit "Give CLIMBER-trait golems their real wall-climbing
   pathfinding".
+
+- **AidBasicAuromancy, AidBasicEldritch** — closed 2026-09-09. Both were
+  the same real story as `AidGlyphedStone`: already-written aid classes,
+  never registered or added to `build.gradle`, each pointing (in their
+  stale, unconverted content) at a true-original field name
+  (`wandWorkbench`/`eldritch`) that this port had already shipped under a
+  different modern name (`focalManipulator`/`cultistRitualAltar`
+  respectively) - nobody had connected the aid to its already-built block.
+  Fixed the references, added both to `build.gradle`, registered both in
+  `Thaumcraft.java`. Only `AidBrainInAJar` remains genuinely blocked now
+  (needs the still-unported `jarBrain` block). See commit "Register
+  AidBasicAuromancy and AidBasicEldritch - their blockers were already
+  resolved".
 
 ---
 *Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
