@@ -1,0 +1,21 @@
+{
+  "type": "thaumcraft:arcane_shaped",
+  "research": "ESSENTIATRANSPORT",
+  "vis": 100,
+  "crystals": {
+    "aer": 1,
+    "aqua": 1
+  },
+  "pattern": [
+    "   ",
+    "BQB",
+    "IGI"
+  ],
+  "key": {
+    "I": { "item": "thaumcraft:plate_iron" },
+    "B": { "item": "thaumcraft:plate_brass" },
+    "Q": { "item": "minecraft:hopper" },
+    "G": { "item": "thaumcraft:metal_alchemical" }
+  },
+  "result": { "id": "thaumcraft:essentia_output" }
+}

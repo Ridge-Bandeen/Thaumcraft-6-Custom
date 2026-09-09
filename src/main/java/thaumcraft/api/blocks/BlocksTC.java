@@ -457,6 +457,18 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.essentia.BlockTubeBuffer::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.5f).sound(SoundType.METAL).noOcclusion());
 
+	/** A real long-range bridge from a tube network to a distant IAspectSource - see
+	 * {@link thaumcraft.common.tiles.essentia.TileEssentiaInput}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockEssentiaInput> essentiaTransportInput = BLOCKS.registerBlock("essentia_input",
+			thaumcraft.common.blocks.essentia.BlockEssentiaInput::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f, 10.0f).sound(SoundType.METAL).noOcclusion());
+
+	/** {@link #essentiaTransportInput}'s own real sibling - see
+	 * {@link thaumcraft.common.tiles.essentia.TileEssentiaOutput}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockEssentiaOutput> essentiaTransportOutput = BLOCKS.registerBlock("essentia_output",
+			thaumcraft.common.blocks.essentia.BlockEssentiaOutput::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f, 10.0f).sound(SoundType.METAL).noOcclusion());
+
 	/** Storage block for Thaumium ingots - see {@link thaumcraft.api.items.ItemsTC#ingotThaumium}'s own doc
 	 * comment for the material's real, reachable crucible-based origin. Plain block, same shape as vanilla's
 	 * own metal blocks. */

@@ -3778,6 +3778,76 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	// --------------------------------------------------------------------------------------------------
+	// Essentia Input/Output - real long-range bridges between a tube network and a distant IAspectSource
+	// (a jar, altar, etc.), NOT a physical-inventory device despite the true original's own thematic
+	// dispenser/hopper-based crafting recipe - see TileEssentiaInput's own doc comment for how that was
+	// confirmed by reading the true original's real EssentiaHandler directly.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void essentiaInputMovesEssentiaFromTheNetworkToADistantSource(GameTestHelper helper) {
+		BlockPos inputPos = new BlockPos(4, 3, 4);
+		BlockPos sourcePos = inputPos.below(); // default facing UP -> network neighbor is below
+		BlockPos jarPos = inputPos.offset(3, 0, 0); // a distant real IAspectSource, well within range 16
+		helper.setBlock(inputPos, BlocksTC.essentiaTransportInput.get());
+		helper.setBlock(sourcePos, TEST_ESSENTIA_SOURCE_BLOCK.get());
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		BlockPos inputAbs = helper.absolutePos(inputPos);
+
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(sourcePos);
+		source.outputFace = net.minecraft.core.Direction.UP; // toward the input tile, sitting above it
+		source.aspect = Aspect.FIRE;
+		source.amount = 5;
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(jarPos);
+
+		thaumcraft.common.tiles.essentia.TileEssentiaInput inputTile = helper.getBlockEntity(inputPos);
+		thaumcraft.common.tiles.essentia.TileEssentiaInput.tick(helper.getLevel(), inputAbs, helper.getBlockState(inputPos), inputTile);
+
+		helper.assertTrue(jar.getAspects().getAmount(Aspect.FIRE) == 1,
+				"the distant jar should really have received exactly 1 fire, found " + jar.getAspects().getAmount(Aspect.FIRE));
+		helper.assertTrue(source.amount == 4, "the network-side source should really have lost exactly 1, found " + source.amount);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void essentiaOutputMovesEssentiaFromADistantSourceToTheNetwork(GameTestHelper helper) {
+		BlockPos outputPos = new BlockPos(4, 3, 4);
+		BlockPos sinkPos = outputPos.below(); // default facing UP -> network neighbor is below
+		BlockPos sourcePos = outputPos.offset(3, 0, 0); // a distant real IAspectSource, well within range 16
+		helper.setBlock(outputPos, BlocksTC.essentiaTransportOutput.get());
+		helper.setBlock(sinkPos, BlocksTC.jarNormal.get());
+		helper.setBlock(sourcePos, BlocksTC.jarNormal.get());
+		BlockPos outputAbs = helper.absolutePos(outputPos);
+
+		// The network-side neighbor is a plain jar - real jars only ever connect on their own UP face, which
+		// matches this exact arrangement (jar sits below, facing the output tile above it). Labelled so its
+		// own real getSuctionType reports a real demand (an unlabelled, still-empty jar reports null).
+		thaumcraft.common.tiles.essentia.TileJarFillable sink = helper.getBlockEntity(sinkPos);
+		sink.applyLabel(Aspect.FIRE);
+		thaumcraft.common.tiles.essentia.TileJarFillable distantSource = helper.getBlockEntity(sourcePos);
+		distantSource.setAspects(new AspectList().add(Aspect.FIRE, 5));
+
+		thaumcraft.common.tiles.essentia.TileEssentiaOutput outputTile = helper.getBlockEntity(outputPos);
+		thaumcraft.common.tiles.essentia.TileEssentiaOutput.tick(helper.getLevel(), outputAbs, helper.getBlockState(outputPos), outputTile);
+
+		helper.assertTrue(sink.getAspects().getAmount(Aspect.FIRE) == 1,
+				"the network-side jar should really have received exactly 1 fire, found " + sink.getAspects().getAmount(Aspect.FIRE));
+		helper.assertTrue(distantSource.getAspects().getAmount(Aspect.FIRE) == 4,
+				"the distant source jar should really have lost exactly 1, found " + distantSource.getAspects().getAmount(Aspect.FIRE));
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void essentiaInputOutputRecipesRegistered(GameTestHelper helper) {
+		RecipeManager recipes = helper.getLevel().getRecipeManager();
+		for (String id : new String[] { "essentia_input", "essentia_output" }) {
+			helper.assertTrue(recipes.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id)).isPresent(),
+					"the " + id + " recipe should really be registered");
+		}
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void tubeValveBlocksFlowWhileRedstonePoweredAndResumesWhenUnpowered(GameTestHelper helper) {
 		BlockPos sourcePos = new BlockPos(4, 3, 4);
