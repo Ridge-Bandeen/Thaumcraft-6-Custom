@@ -18,38 +18,6 @@ Each of these is genuinely real, registered content in the true original with
 no equivalent anywhere in the current port (verified by direct source read,
 not just a name diff).
 
-- **Triple Meat Treat** (`tripleMeatTreat`) — **re-scoped, bigger than it
-  looks; not actually a quick win.** The item itself is trivial (a custom
-  `ItemFood`/`FoodProperties` — 6 hunger / 0.8 saturation, always edible,
-  applies `Regeneration` 100 ticks amplifier 0 at 66% chance on eat), but its
-  real crafting recipe (`RecipeTripleMeatTreat` — 3 *distinct* meat-chunk
-  variants, no duplicates, + 1 sugar, shapeless-with-a-distinctness-
-  constraint so needs a real custom `Recipe` class, not a JSON shapeless
-  recipe) depends on a whole prerequisite item family that also doesn't
-  exist yet: **`chunks`/`ItemChunksEdible`** — 6 real, distinct raw-meat-chunk
-  items (beef/chicken/porkchop/fish/rabbit/mutton; 1 hunger/0.3 saturation,
-  not always edible, real `nuggetMeat`-tag members), obtained via true
-  original's **generic vanilla-furnace smelting-bonus mechanic**
-  (`ThaumcraftApi.addSmeltingBonus(new ItemStack(Items.BEEF), ...)` etc. -
-  smelting raw beef/chicken/porkchop/rawfish/rabbit/mutton in **any** vanilla
-  furnace has a chance to also yield the matching chunk). **This is a
-  materially different mechanism from the smelting-bonus system this port
-  already has** (`TileInfernalFurnace`'s own private `SMELTING_BONUSES` -
-  deliberately scoped to ore→nugget bonuses inside the Infernal Furnace
-  only, per that class's own doc comment). The true original's meat-chunk
-  bonus hooked vanilla furnace smelting generically, which this port has no
-  equivalent for at all yet (no `FurnaceSmeltEvent`-equivalent hook exists).
-  Real scope: (1) a new, first-of-its-kind generic "any vanilla furnace,
-  chance of bonus drop" hook (NeoForge's actual smelt-event API needs
-  confirming for 1.21.1 - check whether it's still `FurnaceSmeltEvent` or
-  moved), (2) the 6 chunk items, (3) the 6 smelting-bonus registrations, (4)
-  the custom distinct-3-chunks-plus-sugar recipe, (5) the treat item itself.
-  Both stale reference files (`ItemTripleMeatTreat.java`,
-  `RecipeTripleMeatTreat.java`, `ItemChunksEdible.java`, all still
-  1.12.2-era unconverted source sitting inert in the tree, not in
-  `build.gradle`'s compile-include list) are good line-for-line references
-  for steps 2-5 once the new furnace hook exists.
-
 - **Loot Urns** (`lootUrnCommon`/`lootUrnUncommon`/`lootUrnRare`). A real,
   distinct dungeon-decoration BLOCK type (`BlockLoot` with a `LootType`
   enum), separate from the already-shipped Loot Bag/Loot Crate items. True
@@ -267,6 +235,22 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   its existing `drainEssentia`, refactored to share one scan helper. See
   commit "Give the Essentia Input/Output devices their real long-range
   bridge mechanic".
+
+- **Triple Meat Treat** (`tripleMeatTreat`) — closed 2026-09-09. **Corrects
+  an earlier scoping note in this same file** that assumed a new generic
+  vanilla-furnace smelt-event hook was needed - reading the true original's
+  own `CommonInternals`/`ThaumcraftApi` directly showed the shared
+  `smeltingBonus` list has exactly ONE real consumer anywhere in the whole
+  original codebase: `TileInfernalFurnace`, the same device this port
+  already has its own real (ore-scoped) smelting-bonus system on. No
+  vanilla-furnace hook ever existed for this in the true original (and none
+  exists in NeoForge 1.21.1 either, confirmed directly against the jar).
+  6 new chunk items (`chunkBeef`/`Chicken`/`Pork`/`Fish`/`Rabbit`/`Mutton`)
+  registered as real Infernal Furnace smelting bonuses (33% each); Triple
+  Meat Treat's own recipe (3 distinct chunks, no duplicates, + sugar) is a
+  real custom `CraftingRecipe` (`CustomRecipe`, same vanilla mechanism
+  `RepairItemRecipe` uses), not a JSON shapeless recipe. See commit "Give
+  Triple Meat Treat its real chunk family and custom crafting recipe".
 
 ---
 *Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
