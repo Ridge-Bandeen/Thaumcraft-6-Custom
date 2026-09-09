@@ -455,6 +455,12 @@ public final class BlocksTC {
 	public static final DeferredBlock<Block> metalAlchemical = BLOCKS.registerBlock("metal_alchemical",
 			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(4.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
+	/** The advanced tier of {@link #metalAlchemical} - crafts into the Essentia Smelter's own Void tier (see
+	 * {@code data/thaumcraft/recipe/essentia_smelter_void.json}). Same plain block shape, true original's own
+	 * real {@code "AdvAlchemyConstruct"} recipe (see {@code data/thaumcraft/recipe/metal_alchemical_advanced.json}). */
+	public static final DeferredBlock<Block> metalAlchemicalAdvanced = BLOCKS.registerBlock("metal_alchemical_advanced",
+			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(4.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
+
 	/** See {@link thaumcraft.common.blocks.devices.BlockBrainBox}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockBrainBox> brainBox = BLOCKS.registerBlock("brain_box",
 			thaumcraft.common.blocks.devices.BlockBrainBox::new,
@@ -631,8 +637,21 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.essentia.BlockAlembic::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0f).sound(SoundType.WOOD).noOcclusion());
 
-	/** See {@link thaumcraft.common.tiles.essentia.TileSmelter}'s own doc comment - only the Basic tier. */
+	/** The Basic tier - see {@link thaumcraft.common.tiles.essentia.TileSmelter}'s own doc comment for the
+	 * real 3-tier progression shared across all three of these block registrations. */
 	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockSmelter> smelter = BLOCKS.registerBlock("smelter",
+			thaumcraft.common.blocks.essentia.BlockSmelter::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(3.5f).sound(SoundType.METAL));
+
+	/** The Thaumium tier - see {@link #smelter}'s own doc comment. Same block class, same shape as the true
+	 * original (a plain {@code new BlockSmelter("smelter_thaumium")}, no hardness override). */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockSmelter> smelterThaumium = BLOCKS.registerBlock("smelter_thaumium",
+			thaumcraft.common.blocks.essentia.BlockSmelter::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(3.5f).sound(SoundType.METAL));
+
+	/** The Void tier - see {@link #smelter}'s own doc comment. Same block class, same shape as the true
+	 * original (a plain {@code new BlockSmelter("smelter_void")}, no hardness override). */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockSmelter> smelterVoid = BLOCKS.registerBlock("smelter_void",
 			thaumcraft.common.blocks.essentia.BlockSmelter::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(3.5f).sound(SoundType.METAL));
 

@@ -698,6 +698,11 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> metalAlchemical =
 			ITEMS.registerSimpleBlockItem("metal_alchemical", BlocksTC.metalAlchemical);
 
+	/** Real recipe now (see {@code data/thaumcraft/recipe/metal_alchemical_advanced.json}) - the true
+	 * original's own real "AdvAlchemyConstruct" (metalAlchemical + plate_void + a real primordialPearl). */
+	public static final DeferredItem<BlockItem> metalAlchemicalAdvanced =
+			ITEMS.registerSimpleBlockItem("metal_alchemical_advanced", BlocksTC.metalAlchemicalAdvanced);
+
 	public static final DeferredItem<BlockItem> brainBox =
 			ITEMS.registerSimpleBlockItem("brain_box", BlocksTC.brainBox);
 
@@ -837,6 +842,14 @@ public final class ItemsTC {
 
 	public static final DeferredItem<BlockItem> smelter =
 			ITEMS.registerSimpleBlockItem("smelter", BlocksTC.smelter);
+
+	/** Real recipe now (see {@code data/thaumcraft/recipe/essentia_smelter_thaumium.json}). */
+	public static final DeferredItem<BlockItem> smelterThaumium =
+			ITEMS.registerSimpleBlockItem("smelter_thaumium", BlocksTC.smelterThaumium);
+
+	/** Real recipe now (see {@code data/thaumcraft/recipe/essentia_smelter_void.json}). */
+	public static final DeferredItem<BlockItem> smelterVoid =
+			ITEMS.registerSimpleBlockItem("smelter_void", BlocksTC.smelterVoid);
 
 	public static final DeferredItem<BlockItem> bellows =
 			ITEMS.registerSimpleBlockItem("bellows", BlocksTC.bellows);

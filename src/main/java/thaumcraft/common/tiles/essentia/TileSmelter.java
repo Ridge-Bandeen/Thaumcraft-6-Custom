@@ -44,10 +44,12 @@ import java.util.List;
  * {@link Container} implementation (not {@code WorldlyContainer}) still gives free hopper compatibility,
  * just without the original's side-specific slot routing (that nuance - fuel only from below, input only
  * from the sides, no extraction slot - is dropped along with it).</li>
- * <li><b>Single tier.</b> The original had Basic/Thaumium/Void tiers (progressively faster, more efficient).
- * Only the Basic tier's numbers are ported; the others would just be a different set of constants on the
- * same class, not new code - left for whenever a real acquisition path for Thaumium/Void-tier materials
- * exists.</li>
+ * <li><b>Real 3-tier progression (Basic/Thaumium/Void), same shared class</b> - {@link #getTier} reads which
+ * real registered {@code smelterThaumium}/{@code smelterVoid} block this tile's own state belongs to, no new
+ * class needed (same shape {@code BlockSmelter} already reused for all three). {@link #getEfficiency}
+ * matches the true original's own real per-tier numbers exactly (0.8/0.9/0.95); {@link #getSpeedFactor}
+ * preserves a real quirk in the true original's own {@code getSpeed} formula - only Thaumium actually
+ * smelts faster (~1.5x), Void's own real advantage is efficiency alone.</li>
  * <li><b>Real Bellows speed boost, real aux/vent auxiliary blocks (restored - see the port-tracking memory's
  * parity-review notes).</b> Up to 3 {@link TileBellows} on the smelter's non-facing sides each cut
  * {@link #smeltTime} by 12.5%, same real formula/counting (via {@link TileBellows#getBellows}) as the true
@@ -62,7 +64,6 @@ import java.util.List;
 public class TileSmelter extends BlockEntity implements Container {
 
 	private static final int MAX_VIS = 256;
-	private static final float EFFICIENCY = 0.8f;
 
 	private ItemStack inputItem = ItemStack.EMPTY;
 	private ItemStack fuelItem = ItemStack.EMPTY;
@@ -167,25 +168,56 @@ public class TileSmelter extends BlockEntity implements Container {
 		return TileBellows.getBellows(level, pos, sides);
 	}
 
+	/**
+	 * The true original's own {@code TileSmelter#getType} (0=Basic/1=Thaumium/2=Void) - which real
+	 * registered {@link net.minecraft.world.level.block.Block} this tile's own state belongs to, same
+	 * "shared tile, tier-by-block-identity" shape {@link #getEfficiency}/{@link #getSpeedFactor} both use.
+	 */
+	private static int getTier(BlockState state) {
+		if (state.is(BlocksTC.smelterThaumium.get())) return 1;
+		if (state.is(BlocksTC.smelterVoid.get())) return 2;
+		return 0;
+	}
+
+	/** The true original's own real per-tier {@code getEfficiency}: Basic 0.8, Thaumium 0.9, Void 0.95. */
+	private static float getEfficiency(BlockState state) {
+		return switch (getTier(state)) {
+			case 1 -> 0.9f;
+			case 2 -> 0.95f;
+			default -> 0.8f;
+		};
+	}
+
+	/**
+	 * The true original's own real {@code getSpeed} (20 - (type==1 ? 10 : 5)): only the Thaumium tier
+	 * actually smelts faster (a real ~1.5x, {@code 15/10}) - Void's own real advantage is
+	 * {@link #getEfficiency} alone, not speed. Preserved faithfully rather than "fixed" - a real quirk of
+	 * the true original, not a porting bug.
+	 */
+	private static float getSpeedFactor(BlockState state) {
+		return getTier(state) == 1 ? 2f / 3f : 1f;
+	}
+
 	private boolean canSmelt() {
 		if (inputItem.isEmpty()) return false;
 		AspectList tags = AspectHelper.getObjectAspects(inputItem);
 		if (tags == null || tags.size() == 0) return false;
 		int vs = tags.visSize();
 		if (vs > MAX_VIS - aspects.visSize()) return false;
-		smeltTime = Math.max(1, (int) (vs * 2 * (1.0f - 0.125f * bellows)));
+		smeltTime = Math.max(1, (int) (vs * 2 * (1.0f - 0.125f * bellows) * getSpeedFactor(getBlockState())));
 		return true;
 	}
 
 	private void smeltItem(Level level, BlockPos pos, BlockState state) {
 		if (!canSmelt()) return;
 		AspectList tags = AspectHelper.getObjectAspects(inputItem);
+		float efficiency = getEfficiency(state);
 		int flux = 0;
 		for (Aspect a : tags.getAspects()) {
 			int qq = tags.getAmount(a);
 			int kept = qq;
 			for (int q = 0; q < qq; q++) {
-				if (level.getRandom().nextFloat() > (a == Aspect.FLUX ? EFFICIENCY * 0.66f : EFFICIENCY)) {
+				if (level.getRandom().nextFloat() > (a == Aspect.FLUX ? efficiency * 0.66f : efficiency)) {
 					kept--;
 					flux++;
 				}

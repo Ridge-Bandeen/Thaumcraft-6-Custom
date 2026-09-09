@@ -411,6 +411,7 @@ public class ThaumcraftGameTests {
 				"vis_battery", "dioptra",
 				"filter", "condenser", "condenser_lattice", "stabilizer", "mechanism_simple", "mechanism_complex",
 				"plate_iron", "ingot_void", "ingot_void_from_block", "metal_block_void", "plate_void", "brain_box",
+				"metal_alchemical_advanced", "essentia_smelter_thaumium", "essentia_smelter_void",
 				"paving_stone_travel",
 				"tallow", "candle_white", "candle_black", "candle_blue", "candle_brown", "candle_cyan",
 				"candle_gray", "candle_green", "candle_lightblue", "candle_lime", "candle_magenta",
@@ -4716,6 +4717,94 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(boostedTicksToConsume > 0, "the bellows-boosted smelter should have finished smelting within the test window");
 		helper.assertTrue(boostedTicksToConsume < plainTicksToConsume,
 				"3 real bellows should really speed up the smelt (boosted=" + boostedTicksToConsume + " ticks, unboosted=" + plainTicksToConsume + " ticks)");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.tiles.essentia.TileSmelter}'s own real 3-tier progression -
+	 * a real, faithfully-preserved quirk in the true original's own formula: only the Thaumium tier actually
+	 * smelts faster than Basic (a real ~1.5x); the Void tier's own real advantage is efficiency, not speed
+	 * (covered separately - efficiency is a per-unit random roll, not deterministic enough for a tick-count
+	 * comparison like this one).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumiumSmelterTierRealSmeltsFasterThanBasic(GameTestHelper helper) {
+		BlockPos basicPos = new BlockPos(2, 2, 2);
+		BlockPos thaumiumPos = new BlockPos(2, 2, 8);
+		helper.setBlock(basicPos, BlocksTC.smelter.get());
+		helper.setBlock(thaumiumPos, BlocksTC.smelterThaumium.get());
+
+		thaumcraft.common.tiles.essentia.TileSmelter basic = helper.getBlockEntity(basicPos);
+		basic.setItem(0, new ItemStack(Items.IRON_INGOT));
+		basic.setItem(1, new ItemStack(Items.COAL));
+		thaumcraft.common.tiles.essentia.TileSmelter thaumium = helper.getBlockEntity(thaumiumPos);
+		thaumium.setItem(0, new ItemStack(Items.IRON_INGOT));
+		thaumium.setItem(1, new ItemStack(Items.COAL));
+
+		BlockPos basicAbs = helper.absolutePos(basicPos);
+		BlockPos thaumiumAbs = helper.absolutePos(thaumiumPos);
+		net.minecraft.world.level.block.state.BlockState basicState = helper.getBlockState(basicPos);
+		net.minecraft.world.level.block.state.BlockState thaumiumState = helper.getBlockState(thaumiumPos);
+
+		int basicTicksToConsume = -1;
+		int thaumiumTicksToConsume = -1;
+		for (int i = 0; i < 400; i++) {
+			thaumcraft.common.tiles.essentia.TileSmelter.tick(helper.getLevel(), basicAbs, basicState, basic);
+			thaumcraft.common.tiles.essentia.TileSmelter.tick(helper.getLevel(), thaumiumAbs, thaumiumState, thaumium);
+			if (basicTicksToConsume < 0 && basic.getItem(0).isEmpty()) basicTicksToConsume = i;
+			if (thaumiumTicksToConsume < 0 && thaumium.getItem(0).isEmpty()) thaumiumTicksToConsume = i;
+		}
+
+		helper.assertTrue(basicTicksToConsume > 0, "the Basic-tier smelter should have finished smelting within the test window");
+		helper.assertTrue(thaumiumTicksToConsume > 0, "the Thaumium-tier smelter should have finished smelting within the test window");
+		helper.assertTrue(thaumiumTicksToConsume < basicTicksToConsume,
+				"the Thaumium tier should really smelt faster than Basic (thaumium=" + thaumiumTicksToConsume + " ticks, basic=" + basicTicksToConsume + " ticks)");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for the Void tier's own real efficiency advantage (0.95 vs Basic's 0.8) - over enough
+	 * trials smelting a Flux-heavy item, the Void smelter should really retain more essentia (vent/pollute
+	 * less) than a Basic one, a real statistical difference from the true original's own per-unit random roll.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void voidSmelterTierRealHasHigherEfficiencyThanBasic(GameTestHelper helper) {
+		BlockPos basicPos = new BlockPos(2, 2, 2);
+		BlockPos voidPos = new BlockPos(2, 2, 8);
+		helper.setBlock(basicPos, BlocksTC.smelter.get());
+		helper.setBlock(voidPos, BlocksTC.smelterVoid.get());
+
+		thaumcraft.common.tiles.essentia.TileSmelter basic = helper.getBlockEntity(basicPos);
+		thaumcraft.common.tiles.essentia.TileSmelter voidTier = helper.getBlockEntity(voidPos);
+
+		BlockPos basicAbs = helper.absolutePos(basicPos);
+		BlockPos voidAbs = helper.absolutePos(voidPos);
+		net.minecraft.world.level.block.state.BlockState basicState = helper.getBlockState(basicPos);
+		net.minecraft.world.level.block.state.BlockState voidState = helper.getBlockState(voidPos);
+
+		// Reset each tile's real essentia store after every trial and track a running total locally -
+		// otherwise both tiles saturate MAX_VIS well before enough trials accumulate to tell the two
+		// tiers' real efficiency numbers (0.8 vs 0.95) apart from noise near that shared ceiling.
+		int trials = 120;
+		int basicTotalKept = 0;
+		int voidTotalKept = 0;
+		for (int i = 0; i < trials; i++) {
+			basic.setItem(0, new ItemStack(Items.IRON_INGOT));
+			basic.setItem(1, new ItemStack(Items.COAL));
+			voidTier.setItem(0, new ItemStack(Items.IRON_INGOT));
+			voidTier.setItem(1, new ItemStack(Items.COAL));
+			for (int t = 0; t < 30 && (!basic.getItem(0).isEmpty() || !voidTier.getItem(0).isEmpty()); t++) {
+				if (!basic.getItem(0).isEmpty()) thaumcraft.common.tiles.essentia.TileSmelter.tick(helper.getLevel(), basicAbs, basicState, basic);
+				if (!voidTier.getItem(0).isEmpty()) thaumcraft.common.tiles.essentia.TileSmelter.tick(helper.getLevel(), voidAbs, voidState, voidTier);
+			}
+			basicTotalKept += basic.aspects.visSize();
+			voidTotalKept += voidTier.aspects.visSize();
+			basic.aspects = new thaumcraft.api.aspects.AspectList();
+			voidTier.aspects = new thaumcraft.api.aspects.AspectList();
+		}
+
+		helper.assertTrue(voidTotalKept > basicTotalKept,
+				"across " + trials + " real smelts, the Void tier's higher efficiency should really have retained more essentia than Basic (void=" + voidTotalKept + ", basic=" + basicTotalKept + ")");
 		helper.succeed();
 	}
 
