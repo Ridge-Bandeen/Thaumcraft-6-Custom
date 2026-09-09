@@ -410,7 +410,7 @@ public class ThaumcraftGameTests {
 				"thaumium_helm", "thaumium_chest", "thaumium_legs", "thaumium_boots",
 				"vis_battery", "dioptra",
 				"filter", "condenser", "condenser_lattice", "stabilizer", "mechanism_simple", "mechanism_complex",
-				"plate_iron", "ingot_void", "ingot_void_from_block", "metal_block_void", "plate_void",
+				"plate_iron", "ingot_void", "ingot_void_from_block", "metal_block_void", "plate_void", "brain_box",
 				"paving_stone_travel",
 				"tallow", "candle_white", "candle_black", "candle_blue", "candle_brown", "candle_cyan",
 				"candle_gray", "candle_green", "candle_lightblue", "candle_lime", "candle_magenta",
@@ -1956,6 +1956,34 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(helper.getBlockState(base).is(BlocksTC.crucible.get()), "the pre-placed real crucible should be untouched");
 		helper.assertTrue(helper.getBlockState(base.above()).is(BlocksTC.thaumatorium.get()), "the real metalAlchemical body should really have become a real thaumatorium, found " + helper.getBlockState(base.above()));
 		helper.assertTrue(helper.getBlockState(base.above(2)).is(BlocksTC.thaumatoriumTop.get()), "the real metalAlchemical cap should really have become a real thaumatoriumTop, found " + helper.getBlockState(base.above(2)));
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.blocks.devices.BlockBrainBox}'s own real "must stay mounted"
+	 * mechanic: placeable against any of the 6 faces of a real thaumatorium/thaumatoriumTop, and pops itself
+	 * off (drops a real item, block reverts to air) the instant that support is removed.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void brainBoxMustStayMountedToARealThaumatoriumOrItPopsOff(GameTestHelper helper) {
+		BlockPos thaumPos = new BlockPos(2, 2, 2);
+		BlockPos brainPos = thaumPos.north();
+		helper.setBlock(thaumPos, BlocksTC.thaumatorium.get());
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(brainPos));
+
+		net.minecraft.world.item.context.BlockPlaceContext ctx = new net.minecraft.world.item.context.BlockPlaceContext(
+				helper.getLevel(), player, net.minecraft.world.InteractionHand.MAIN_HAND,
+				new ItemStack(ItemsTC.brainBox.get()),
+				new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(helper.absolutePos(thaumPos)),
+						net.minecraft.core.Direction.NORTH, helper.absolutePos(thaumPos), false));
+		net.minecraft.world.level.block.state.BlockState placed = BlocksTC.brainBox.get().getStateForPlacement(ctx);
+		helper.assertTrue(placed != null, "a brain_box should be placeable against a real thaumatorium's north face");
+		helper.setBlock(brainPos, placed);
+		helper.assertTrue(helper.getBlockState(brainPos).is(BlocksTC.brainBox.get()), "the real brain_box should have been placed");
+
+		helper.setBlock(thaumPos, net.minecraft.world.level.block.Blocks.AIR);
+		helper.getLevel().neighborChanged(helper.absolutePos(brainPos), net.minecraft.world.level.block.Blocks.AIR, helper.absolutePos(thaumPos));
+		helper.assertTrue(helper.getBlockState(brainPos).isAir(), "the real brain_box should have popped itself off once its real support was removed, found " + helper.getBlockState(brainPos));
 		helper.succeed();
 	}
 

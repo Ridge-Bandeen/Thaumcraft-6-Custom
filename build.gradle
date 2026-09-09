@@ -46,6 +46,7 @@ sourceSets {
             include 'thaumcraft/common/tiles/crafting/TileVoidSiphon.java'
             include 'thaumcraft/common/blocks/crafting/BlockThaumatorium.java'
             include 'thaumcraft/common/tiles/crafting/TileThaumatorium.java'
+            include 'thaumcraft/common/blocks/devices/BlockBrainBox.java'
             include 'thaumcraft/common/entities/monster/EntityPech.java'
             include 'thaumcraft/client/render/RenderPech.java'
             include 'thaumcraft/common/entities/projectile/EntityEldritchOrb.java'

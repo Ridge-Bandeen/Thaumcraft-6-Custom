@@ -445,14 +445,20 @@ public final class BlocksTC {
 	public static final DeferredBlock<Block> thaumatoriumTop = BLOCKS.registerBlock("thaumatorium_top",
 			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).explosionResistance(5.0f).sound(SoundType.STONE));
 
-	/** A real crafting component for several devices this port hasn't built yet (Centrifuge, the Thaumium/Void
-	 * Essentia Smelter tiers, the Potion Sprayer, Smelter Aux/Vent, essentia-transport tube I/O, and - the one
-	 * this restores it for - the real {@link #thaumatorium}/{@link #thaumatoriumTop} multiblock ritual). Really
-	 * craftable now ({@code data/thaumcraft/recipe/metal_alchemical.json}, the true original's own real
+	/** A real crafting component for the real {@link #thaumatorium}/{@link #thaumatoriumTop} multiblock
+	 * ritual, and for the Centrifuge/Thaumium+Void Essentia Smelter tiers/Potion Sprayer/Smelter Aux+Vent/
+	 * essentia-transport tube I/O (see {@link thaumcraft.api.items.ItemsTC#mechanismSimple}'s own doc comment
+	 * trail for which of those are real now vs. still open). Really craftable now (see
+	 * {@code data/thaumcraft/recipe/metal_alchemical.json}, the true original's own real
 	 * {@code "AlchemicalConstruct"} recipe) once {@code tubeValve} was ported to supply its one previously
 	 * missing ingredient. */
 	public static final DeferredBlock<Block> metalAlchemical = BLOCKS.registerBlock("metal_alchemical",
 			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(4.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
+
+	/** See {@link thaumcraft.common.blocks.devices.BlockBrainBox}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockBrainBox> brainBox = BLOCKS.registerBlock("brain_box",
+			thaumcraft.common.blocks.devices.BlockBrainBox::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f, 10.0f).sound(SoundType.METAL).noOcclusion());
 
 	/** Only the "travel" variant of the original's shared {@code BlockPavingStone} - see
 	 * {@link thaumcraft.common.blocks.basic.BlockPavingStoneTravel}'s own doc comment for why the

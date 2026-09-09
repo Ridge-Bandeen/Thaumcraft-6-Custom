@@ -698,6 +698,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> metalAlchemical =
 			ITEMS.registerSimpleBlockItem("metal_alchemical", BlocksTC.metalAlchemical);
 
+	public static final DeferredItem<BlockItem> brainBox =
+			ITEMS.registerSimpleBlockItem("brain_box", BlocksTC.brainBox);
+
 	public static final DeferredItem<BlockItem> pavingStoneTravel =
 			ITEMS.registerSimpleBlockItem("paving_stone_travel", BlocksTC.pavingStoneTravel);
 
