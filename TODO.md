@@ -57,13 +57,6 @@ not just a name diff).
   (and Uncommon/Rare siblings). Likely low priority — dungeon/structure
   worldgen dressing, not a progression gate — but a real, unbuilt block.
 
-- **Pattern Crafter** (`patternCrafter` / `BlockPatternCrafter` /
-  `TilePatternCrafter`). A real crafting BlockEntity device in the true
-  original with no equivalent anywhere in the modern port. Purpose not yet
-  investigated this sweep — read `TilePatternCrafter.java` (true original,
-  `git show 31baee9:src/main/java/thaumcraft/common/tiles/crafting/TilePatternCrafter.java`)
-  before scoping.
-
 - **Tube Buffer** (`tubeBuffer`). A `TileTube` family variant with no
   modern-port equivalent (confirmed by direct field-name grep against
   `BlocksTC.java` — zero hits). Status/complexity not yet investigated this
@@ -221,6 +214,17 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   `applyBrace()` + `ItemsTC.jarBrace` (plain item, asset scaffolding already
   in the tree) shipped, wired through `BlockJar#useItemOn`. See commit "Give
   the Warded Jar a real jar brace".
+
+- **Pattern Crafter** (`patternCrafter`) — closed 2026-09-09. Real
+  `TilePatternCrafter`/`BlockPatternCrafter` shipped: a vis-powered
+  auto-crafter using real adjacent-inventory lookups (NeoForge's
+  `Capabilities.ItemHandler.BLOCK`) and real vanilla `CraftingRecipe`
+  matching via `CraftingInput`. No CodeChicken sub-hit raytracing (a plain
+  right-click cycles the pattern instead - the same dependency wall that
+  already blocked the Levitator/Redstone Relay/Tube One-way); `ENABLED`
+  redstone toggle replaces the original's bespoke wand-toggle. See commit
+  "Give the Arcane Pattern Crafter a real vis-powered auto-crafting
+  mechanic".
 
 ---
 *Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
