@@ -291,6 +291,15 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("taintacle_small"));
 
+	/** The Taint faction's own boss - see {@code EntityTaintacleGiant}'s own doc comment. {@code sized(1.1f,
+	 * 6.0f)} matches the original's own constructor-time {@code setSize(1.1f, 6.0f)} exactly. Same real
+	 * no-renderer shape as {@link #TAINTACLE}. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.boss.EntityTaintacleGiant>> TAINTACLE_GIANT = ENTITY_TYPES.register("taintacle_giant",
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.boss.EntityTaintacleGiant>of(thaumcraft.common.entities.monster.boss.EntityTaintacleGiant::new, MobCategory.MONSTER)
+					.sized(1.1f, 6.0f)
+					.clientTrackingRange(64)
+					.build("taintacle_giant"));
+
 	/** See {@code EntityTaintSeed}'s own doc comment. Same real no-renderer shape as {@link #TAINTACLE} -
 	 * the original's own {@code ModelTaintSeed} is also a bespoke model this port hasn't built.
 	 * {@code sized(1.5f, 1.25f)} matches the original's own constructor-time {@code setSize(1.5f, 1.25f)}

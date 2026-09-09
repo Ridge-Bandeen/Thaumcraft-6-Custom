@@ -137,6 +137,7 @@ public final class ThaumcraftEntityTags {
 		register(thaumcraft.common.registry.ThaumcraftEntities.TAINT_SWARM.get(), new AspectList().add(Aspect.FLUX, 15).add(Aspect.AIR, 5));
 		register(thaumcraft.common.registry.ThaumcraftEntities.TAINTACLE.get(), new AspectList().add(Aspect.FLUX, 15).add(Aspect.BEAST, 10));
 		register(thaumcraft.common.registry.ThaumcraftEntities.TAINTACLE_SMALL.get(), new AspectList().add(Aspect.FLUX, 5).add(Aspect.BEAST, 5));
+		register(thaumcraft.common.registry.ThaumcraftEntities.TAINTACLE_GIANT.get(), new AspectList().add(Aspect.ELDRITCH, 40).add(Aspect.BEAST, 40).add(Aspect.FLUX, 40));
 		// The original registered "Thaumcraft.TaintSeed"/"TaintSeedPrime" twice with different values - the
 		// second registration silently overwrote the first in its own registry, so only the second (real,
 		// winning) value is carried forward here.

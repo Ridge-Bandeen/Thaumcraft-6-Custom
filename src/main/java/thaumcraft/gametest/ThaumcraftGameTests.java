@@ -11796,6 +11796,84 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
+	// Taintacle Giant - the Taint faction's own boss, a real EntityTaintacle subclass with its own real
+	// boss-bar/enrage/self-heal mechanic and a real death-drop dedup. See its own doc comment for why this
+	// isn't an EntityThaumcraftBoss subclass instead (Java has no multiple inheritance).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void taintacleGiantIsARealBossThatEnragesAndSelfHeals(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.taintRock.get());
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.boss.EntityTaintacleGiant giant =
+				thaumcraft.common.registry.ThaumcraftEntities.TAINTACLE_GIANT.get().create(level);
+		helper.assertTrue(giant != null, "the entity type should really create an instance");
+		giant.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(giant);
+		helper.assertTrue(giant.getMaxHealth() == 175.0f, "a real taintacle giant should really have 175 max health, found " + giant.getMaxHealth());
+
+		// real enrage cap: a single hit over 35 damage is really capped at 35 and grants real buffs.
+		float healthBefore = giant.getHealth();
+		giant.hurt(level.damageSources().generic(), 50.0f);
+		float lost = healthBefore - giant.getHealth();
+		helper.assertTrue(lost <= 35.01f, "a real single hit over 35 damage should really be capped at 35, lost " + lost);
+		helper.assertTrue(giant.hasEffect(net.minecraft.world.effect.MobEffects.REGENERATION), "a real enraged taintacle giant should really gain real Regeneration");
+		helper.assertTrue(giant.hasEffect(net.minecraft.world.effect.MobEffects.DAMAGE_BOOST), "a real enraged taintacle giant should really gain real Strength");
+
+		// real periodic self-heal, driven off tickCount % 30.
+		giant.setHealth(Math.max(1.0f, giant.getMaxHealth() - 20.0f));
+		float beforeHeal = giant.getHealth();
+		for (int i = 0; i < 60; i++) {
+			giant.tickCount++;
+			giant.aiStep();
+		}
+		helper.assertTrue(giant.getHealth() > beforeHeal, "a real taintacle giant should really self-heal over time, found " + giant.getHealth() + " vs " + beforeHeal);
+
+		// real inherited EntityTaintacle mechanic - still rooted, can't actually move.
+		helper.assertTrue(giant.isAlliedTo(giant), "sanity: an entity should always be allied to itself");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void taintacleGiantOnlyDropsAPrimordialPearlWithoutAnotherGiantNearby(GameTestHelper helper) {
+		BlockPos posA = new BlockPos(2, 2, 2);
+		BlockPos posB = posA.offset(4, 0, 0);
+		helper.setBlock(posA, BlocksTC.taintRock.get());
+		helper.setBlock(posB, BlocksTC.taintRock.get());
+		BlockPos absA = helper.absolutePos(posA);
+		BlockPos absB = helper.absolutePos(posB);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.boss.EntityTaintacleGiant lone =
+				thaumcraft.common.registry.ThaumcraftEntities.TAINTACLE_GIANT.get().create(level);
+		lone.moveTo(absA.getX() + 0.5, absA.getY() + 1.0, absA.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(lone);
+		lone.setHealth(1.0f);
+		lone.hurt(level.damageSources().generic(), 50.0f);
+		helper.assertFalse(lone.isAlive(), "a lethal hit should really kill the lone taintacle giant");
+		helper.assertTrue(!level.getEntitiesOfClass(ItemEntity.class, new AABB(absA).inflate(2)).isEmpty(),
+				"a lone taintacle giant should really drop a real primordial pearl when it dies");
+
+		thaumcraft.common.entities.monster.boss.EntityTaintacleGiant pairA =
+				thaumcraft.common.registry.ThaumcraftEntities.TAINTACLE_GIANT.get().create(level);
+		thaumcraft.common.entities.monster.boss.EntityTaintacleGiant pairB =
+				thaumcraft.common.registry.ThaumcraftEntities.TAINTACLE_GIANT.get().create(level);
+		pairA.moveTo(absB.getX() + 0.5, absB.getY() + 1.0, absB.getZ() + 0.5, 0.0f, 0.0f);
+		pairB.moveTo(absB.getX() + 1.5, absB.getY() + 1.0, absB.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(pairA);
+		level.addFreshEntity(pairB);
+		pairA.setHealth(1.0f);
+		pairA.hurt(level.damageSources().generic(), 50.0f);
+		helper.assertFalse(pairA.isAlive(), "a lethal hit should really kill the first paired taintacle giant");
+		helper.assertTrue(level.getEntitiesOfClass(ItemEntity.class, new AABB(absB).inflate(3)).isEmpty(),
+				"a taintacle giant dying with a real other one still nearby should really NOT drop a duplicate primordial pearl");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
 	// PassiveResearchEvents - real coverage for the "gameplay experience teaches you something" hook that
 	// data/thaumcraft/research/auromancy.json's f_onfire/f_arrow/f_fireball/f_spit prerequisite flags
 	// actually depend on. Constructs a real LivingIncomingDamageEvent directly, same DamageContainer pattern

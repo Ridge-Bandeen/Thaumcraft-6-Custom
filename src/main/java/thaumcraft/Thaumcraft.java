@@ -356,6 +356,7 @@ public class Thaumcraft {
         event.put(ThaumcraftEntities.TAINT_SWARM.get(), thaumcraft.common.entities.monster.tainted.EntityTaintSwarm.createAttributes().build());
         event.put(ThaumcraftEntities.TAINTACLE.get(), thaumcraft.common.entities.monster.tainted.EntityTaintacle.createAttributes().build());
         event.put(ThaumcraftEntities.TAINTACLE_SMALL.get(), thaumcraft.common.entities.monster.tainted.EntityTaintacleSmall.createAttributes().build());
+        event.put(ThaumcraftEntities.TAINTACLE_GIANT.get(), thaumcraft.common.entities.monster.boss.EntityTaintacleGiant.createAttributes().build());
         event.put(ThaumcraftEntities.TAINT_SEED.get(), thaumcraft.common.entities.monster.tainted.EntityTaintSeed.createAttributes().build());
         event.put(ThaumcraftEntities.TAINT_SEED_PRIME.get(), thaumcraft.common.entities.monster.tainted.EntityTaintSeedPrime.createAttributes().build());
         event.put(ThaumcraftEntities.TURRET_CROSSBOW.get(), thaumcraft.common.entities.construct.EntityTurretCrossbow.createAttributes().build());

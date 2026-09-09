@@ -342,6 +342,7 @@ sourceSets {
             include 'thaumcraft/common/entities/monster/tainted/EntityTaintSwarm.java'
             include 'thaumcraft/common/entities/monster/tainted/EntityTaintacle.java'
             include 'thaumcraft/common/entities/monster/tainted/EntityTaintacleSmall.java'
+            include 'thaumcraft/common/entities/monster/boss/EntityTaintacleGiant.java'
             include 'thaumcraft/common/entities/monster/tainted/EntityTaintSeed.java'
             include 'thaumcraft/common/entities/monster/tainted/EntityTaintSeedPrime.java'
 
