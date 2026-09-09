@@ -28,8 +28,17 @@ import thaumcraft.common.world.aura.AuraHandler;
  *
  * Simplified vs the original:
  * <ul>
- * <li>No jar brace ("blocked") mechanic - needs an item this port hasn't built ({@code ItemsTC.jarBrace}).
- * Aspect filter/label support <b>is</b> ported (see {@link #aspectFilter}/{@link #applyLabel} and
+ * <li>Jar brace ({@link #blocked}, applied via {@link #applyBrace}) <b>is</b> real now - see
+ * {@link thaumcraft.common.blocks.essentia.BlockJar#useItemOn}'s own {@code ItemsTC.jarBrace} branch. A
+ * braced jar's {@link #isBlocked} returns {@code true}, which every real {@code IAspectSource} scan already
+ * checks (the Infusion Altar's {@code EssentiaHandler.drainEssentia}, the Essentia Mirror's own
+ * {@code scanFor}) - real "lock this jar out of pull-based scans, keep the direct adjacent-tile
+ * {@code IEssentiaTransport} exchange working" scoping, matching the true original's own {@code blocked}
+ * field exactly (only ever read by {@code isBlocked()} there too). One real, documented simplification:
+ * breaking a braced jar doesn't drop the brace item back (the original stored that in the jar's own dropped
+ * NBT) - same already-accepted "plain empty jar on break" precedent this class's own next bullet already
+ * covers for aspect contents, not a new loss.</li>
+ * <li>Aspect filter/label support <b>is</b> ported (see {@link #aspectFilter}/{@link #applyLabel} and
  * {@link thaumcraft.common.blocks.essentia.BlockJar#applyLabel}) - a labelled jar's raised 64 suction can
  * out-pull a plain jar/tube's 32 outright. {@link #tick} still allows ties ({@code <=}, not the original's
  * strict {@code <}) though: a plain Tube's own suction matches whatever a plain jar below it demands, so
@@ -52,6 +61,7 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 	 * for that aspect specifically. {@code null} on a plain, unlabelled jar. */
 	private Aspect aspectFilter;
 	private int amount;
+	private boolean blocked;
 
 	public TileJarFillable(BlockPos pos, BlockState state) {
 		super(ThaumcraftBlockEntities.JAR.get(), pos, state);
@@ -183,7 +193,19 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 
 	@Override
 	public boolean isBlocked() {
-		return false;
+		return blocked;
+	}
+
+	/** Applies a jar brace - locks this jar out of pull-based {@code IAspectSource} scans (see this class's
+	 * own doc comment). Mirrors {@link #applyLabel}'s own "already applied, refuse" gate: a braced jar can't
+	 * be braced twice.
+	 *
+	 * @return true if the brace was consumed (the jar was actually blocked). */
+	public boolean applyBrace() {
+		if (blocked) return false;
+		blocked = true;
+		setChanged();
+		return true;
 	}
 
 	@Override
@@ -274,6 +296,7 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 			tag.putString("AspectFilter", aspectFilter.getTag());
 		}
 		tag.putInt("Amount", amount);
+		tag.putBoolean("Blocked", blocked);
 	}
 
 	@Override
@@ -282,5 +305,6 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 		aspect = tag.contains("Aspect") ? Aspect.getAspect(tag.getString("Aspect")) : null;
 		aspectFilter = tag.contains("AspectFilter") ? Aspect.getAspect(tag.getString("AspectFilter")) : null;
 		amount = tag.getInt("Amount");
+		blocked = tag.getBoolean("Blocked");
 	}
 }

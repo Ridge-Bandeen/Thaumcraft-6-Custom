@@ -46,6 +46,9 @@ import thaumcraft.common.tiles.essentia.TileJarFillable;
  *
  * Implements {@link ILabelable} (same as the original) so {@code ItemLabel} can lock this jar to one
  * aspect - see {@link #applyLabel} and {@link TileJarFillable}'s own doc comment.
+ *
+ * Right-clicking with a jar brace ({@code ItemsTC.jarBrace}) locks the jar out of pull-based scans via
+ * {@link TileJarFillable#applyBrace} - see that method's own doc comment for the real mechanic.
  */
 public class BlockJar extends Block implements EntityBlock, ILabelable {
 
@@ -75,6 +78,14 @@ public class BlockJar extends Block implements EntityBlock, ILabelable {
 		if (player.isShiftKeyDown() && stack.isEmpty()) {
 			tile.emptyIntoAura(level, pos);
 			level.playSound(null, pos, SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 0.4f, 1.0f);
+			return ItemInteractionResult.SUCCESS;
+		}
+
+		if (stack.is(thaumcraft.api.items.ItemsTC.jarBrace.get()) && tile.applyBrace()) {
+			if (!player.getAbilities().instabuild) {
+				stack.shrink(1);
+			}
+			level.playSound(null, pos, SoundEvents.TRIPWIRE_CLICK_ON, SoundSource.BLOCKS, 1.0f, 1.0f);
 			return ItemInteractionResult.SUCCESS;
 		}
 

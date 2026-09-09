@@ -557,6 +557,13 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> jarVoid =
 			ITEMS.registerSimpleBlockItem("jar_void", BlocksTC.jarVoid);
 
+	/** See {@link thaumcraft.common.blocks.essentia.BlockJar}'s own doc comment - locks a jar out of
+	 * pull-based {@code IAspectSource} scans via {@link thaumcraft.common.tiles.essentia.TileJarFillable#applyBrace}.
+	 * A plain item - all the real behavior lives in {@code BlockJar#useItemOn} reacting to the held stack,
+	 * same pattern the essentia-container-item branch right above it already uses. */
+	public static final DeferredItem<Item> jarBrace =
+			ITEMS.registerSimpleItem("jar_brace");
+
 	public static final DeferredItem<BlockItem> lampGrowth =
 			ITEMS.registerSimpleBlockItem("lamp_growth", BlocksTC.lampGrowth);
 

@@ -416,7 +416,7 @@ public class ThaumcraftGameTests {
 				"tallow", "candle_white", "candle_black", "candle_blue", "candle_brown", "candle_cyan",
 				"candle_gray", "candle_green", "candle_lightblue", "candle_lime", "candle_magenta",
 				"candle_orange", "candle_pink", "candle_purple", "candle_red", "candle_silver", "candle_yellow",
-				"phial", "label",
+				"phial", "label", "jar_brace",
 				"flesh_block", "rotten_flesh_from_block", "sanity_soap",
 				"arcane_workbench_charger", "tube_filter", "tube_restrict", "tube_valve", "metal_alchemical",
 				"smelter_aux", "smelter_vent",
@@ -2903,6 +2903,54 @@ public class ThaumcraftGameTests {
 		player.getItemInHand(hand).getItem().onItemUseFirst(player.getItemInHand(hand), context);
 
 		helper.assertTrue(jar.getAspectFilter() == null, "a blank label on an empty jar (nothing to lock onto) should not set a filter, found: " + jar.getAspectFilter());
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Jar Brace - locks a Warded Jar out of pull-based IAspectSource scans via TileJarFillable#applyBrace.
+	// See that method's own doc comment for the real mechanic.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void jarBraceLocksAJarOutOfPullBasedScans(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.jarNormal.get());
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(pos);
+		helper.assertTrue(!jar.isBlocked(), "a plain jar should start unblocked");
+
+		ServerPlayer player = spawnCasterAt(helper, absolute.above());
+		player.getAbilities().instabuild = false;
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, new ItemStack(ItemsTC.jarBrace.get()));
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(absolute), net.minecraft.core.Direction.UP, absolute, false);
+		helper.getBlockState(pos).useItemOn(player.getItemInHand(hand), helper.getLevel(), player, hand, hit);
+
+		helper.assertTrue(jar.isBlocked(), "right-clicking a jar with a jar brace should really block it");
+		helper.assertTrue(player.getItemInHand(hand).isEmpty(), "the jar brace should have been consumed");
+
+		// A second brace has nothing to do - the jar is already blocked.
+		player.setItemInHand(hand, new ItemStack(ItemsTC.jarBrace.get()));
+		helper.getBlockState(pos).useItemOn(player.getItemInHand(hand), helper.getLevel(), player, hand, hit);
+		helper.assertTrue(!player.getItemInHand(hand).isEmpty(), "a second brace on an already-blocked jar should not be consumed");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void aBlockedJarIsRealSkippedByPullBasedEssentiaScans(GameTestHelper helper) {
+		BlockPos originPos = new BlockPos(3, 2, 3);
+		BlockPos jarPos = originPos.offset(1, 0, 0);
+		helper.setBlock(originPos, BlocksTC.jarNormal.get());
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		thaumcraft.common.tiles.essentia.TileJarFillable origin = helper.getBlockEntity(originPos);
+		thaumcraft.common.tiles.essentia.TileJarFillable source = helper.getBlockEntity(jarPos);
+		source.setAspects(new AspectList().add(Aspect.FIRE, 5));
+		helper.assertTrue(source.applyBrace(), "applying a brace to a fresh jar should succeed");
+		helper.assertTrue(source.isBlocked(), "the source jar should really be blocked");
+
+		boolean drained = thaumcraft.common.lib.events.EssentiaHandler.drainEssentia(origin, Aspect.FIRE, 8);
+		helper.assertTrue(!drained, "a real pull-based scan should really skip a blocked jar entirely, even though it holds a matching aspect");
 		helper.succeed();
 	}
 
