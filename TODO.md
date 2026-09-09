@@ -57,38 +57,6 @@ not just a name diff).
   (and Uncommon/Rare siblings). Likely low priority — dungeon/structure
   worldgen dressing, not a progression gate — but a real, unbuilt block.
 
-- **Essentia Transport Input/Output** (`essentiaTransportInput`/
-  `essentiaTransportOutput`) — scoped 2026-09-09, real content, meaningfully
-  bigger than it first looked. True original: `TileEssentiaInput`/
-  `TileEssentiaOutput`, each a real `IEssentiaTransport` node with a tube
-  connection on one face and, on the true original's own real recipe, built
-  around a `Blocks.DISPENSER` (input) or `Blocks.HOPPER` (output) component
-  - meaning the real intended usage is mounting one against a
-  dispenser/hopper full of essentia-container ITEMS (e.g. Crystal Essence),
-  converting between the tube network and physical container items sitting
-  in that adjacent inventory's slots. Real mechanic per-tick: `fillJar`
-  (input) pulls 1 unit from the tube-network neighbor then calls the true
-  original's own richer `EssentiaHandler.addEssentia(tile, aspect,
-  direction, range, simulate, ???)` overload to deposit it into a nearby
-  essentia-container item; `fillBuffer` (output) is the mirror, draining a
-  nearby container item back into the network via
-  `EssentiaHandler.drainEssentiaWithConfirmation`/`confirmDrain` (a 2-phase
-  simulate-then-commit pair). **Neither richer `EssentiaHandler` overload
-  exists in this port** - the current `EssentiaHandler.java` only has the
-  simple omnidirectional `drainEssentia(tile, aspect, range)` this session
-  already used for the Mirror/Infusion Altar, explicitly documented as a
-  narrower port. Real scope: (1) real adjacent-inventory item-slot scanning
-  (NeoForge's `Capabilities.ItemHandler.BLOCK`, same idiom
-  `EntityArcaneBore`/this session's own Pattern Crafter chunk already
-  established) to find a real `IEssentiaContainerItem`-implementing stack
-  nearby, (2) the actual fill/drain exchange with that item via its own
-  interface, (3) the tube-network side (a `Block`-typed target, standard
-  `IEssentiaTransport` node, well precedented by `TileEssentiaInput`/
-  `TileEssentiaOutput`'s own real isConnectable/canInputFrom/canOutputTo
-  shape, straightforward). A real, buildable chunk, not blocked on anything
-  - just meaningfully bigger than a first glance suggested, closer in size
-  to the Pattern Crafter chunk than to a quick win.
-
 ## Needs further triage (real content exists in the original; scope/priority unconfirmed)
 
 - **`effectSap`** (`BlockEffect`, a sticky-web trap block) — confirmed real
@@ -283,6 +251,22 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   research text) means it only pulls from a neighbor with
   `getMinimumSuction() == 0` (a plain tube, not a jar) - by design. See
   commit "Give the Tube Buffer a real multi-aspect essentia store".
+
+- **Essentia Transport Input/Output** (`essentiaTransportInput`/
+  `essentiaTransportOutput`) — closed 2026-09-09. **Corrects an earlier
+  scoping note in this same file** that assumed (from the true original's
+  own dispenser/hopper-themed crafting recipe) that these devices interact
+  with physical essentia-container items in an adjacent inventory - reading
+  the true original's own real `EssentiaHandler` directly disproved that:
+  both devices only ever scan for real `IAspectSource` **block entities**
+  (jars, altars, etc.), the dispenser/hopper components are just thematic
+  crafting flavor. Real long-range bridge instead: Input pulls 1 unit from
+  a real tube-network neighbor and pushes it into the nearest real
+  `IAspectSource` within 16 blocks (any direction); Output is the exact
+  mirror. `EssentiaHandler.java` gained a real `addEssentia` counterpart to
+  its existing `drainEssentia`, refactored to share one scan helper. See
+  commit "Give the Essentia Input/Output devices their real long-range
+  bridge mechanic".
 
 ---
 *Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
