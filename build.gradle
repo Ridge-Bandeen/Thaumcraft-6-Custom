@@ -625,6 +625,7 @@ sourceSets {
             include 'thaumcraft/client/gui/KeyBindings.java'
             include 'thaumcraft/client/gui/FocusRadialOverlay.java'
             include 'thaumcraft/common/lib/crafting/RunicArmorRecipe.java'
+            include 'thaumcraft/common/lib/crafting/RecipeTripleMeatTreat.java'
             include 'thaumcraft/common/lib/events/RunicShieldEvents.java'
             include 'thaumcraft/common/config/ThaumcraftConfig.java'
             include 'thaumcraft/common/items/casters/ItemFocusPouch.java'

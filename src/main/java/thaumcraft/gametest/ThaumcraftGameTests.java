@@ -11345,6 +11345,92 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for the true original's own real meat-chunk smelting bonuses (see
+	 * {@code TileInfernalFurnace#SMELTING_BONUSES}'s own doc comment for why this device, specifically, is
+	 * their real and only real consumer) - same real per-cycle-refill technique as the ore bonus test above.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infernalFurnaceRealSmeltingBonusEventuallyYieldsABonusChunk(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.infernalFurnace.get());
+		thaumcraft.common.tiles.devices.TileInfernalFurnace tile = helper.getBlockEntity(pos);
+		BlockPos abs = helper.absolutePos(pos);
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(abs);
+
+		boolean foundBonus = false;
+		int cycles = 0;
+		tile.addItemsToInventory(new ItemStack(Items.BEEF));
+		for (int i = 0; i < 8000 && !foundBonus && cycles < 40; i++) {
+			thaumcraft.common.tiles.devices.TileInfernalFurnace.tick(level, abs, state, tile);
+			for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, new AABB(abs).inflate(2))) {
+				if (item.getItem().is(ItemsTC.chunkBeef.get())) {
+					foundBonus = true;
+				}
+				if (item.getItem().is(Items.COOKED_BEEF)) {
+					cycles++;
+					tile.addItemsToInventory(new ItemStack(Items.BEEF));
+				}
+				item.discard();
+			}
+		}
+
+		helper.assertTrue(foundBonus, "smelting real raw beef in the Infernal Furnace enough times should really have yielded a real bonus chunk by now");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Triple Meat Treat - a real custom CraftingRecipe (3 distinct real chunk types + 1 sugar, no
+	// duplicates), same real vanilla mechanism RepairItemRecipe/ShieldDecorationRecipe use.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tripleMeatTreatCraftsFromThreeDistinctChunksAndSugar(GameTestHelper helper) {
+		java.util.List<ItemStack> grid = new java.util.ArrayList<>(9);
+		grid.add(new ItemStack(ItemsTC.chunkBeef.get()));
+		grid.add(new ItemStack(ItemsTC.chunkChicken.get()));
+		grid.add(new ItemStack(ItemsTC.chunkPork.get()));
+		grid.add(new ItemStack(Items.SUGAR));
+		for (int i = 4; i < 9; i++) grid.add(ItemStack.EMPTY);
+		net.minecraft.world.item.crafting.CraftingInput input = net.minecraft.world.item.crafting.CraftingInput.of(3, 3, grid);
+
+		var match = helper.getLevel().getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, input, helper.getLevel());
+		helper.assertTrue(match.isPresent(), "3 real distinct chunks + sugar should really match the real triple meat treat recipe");
+		ItemStack result = match.get().value().assemble(input, helper.getLevel().registryAccess());
+		helper.assertTrue(result.is(ItemsTC.tripleMeatTreat.get()), "the real recipe should really assemble a real triple meat treat, found " + result);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tripleMeatTreatRejectsDuplicateChunkTypes(GameTestHelper helper) {
+		java.util.List<ItemStack> grid = new java.util.ArrayList<>(9);
+		grid.add(new ItemStack(ItemsTC.chunkBeef.get()));
+		grid.add(new ItemStack(ItemsTC.chunkBeef.get())); // duplicate, not a second distinct type
+		grid.add(new ItemStack(ItemsTC.chunkPork.get()));
+		grid.add(new ItemStack(Items.SUGAR));
+		for (int i = 4; i < 9; i++) grid.add(ItemStack.EMPTY);
+		net.minecraft.world.item.crafting.CraftingInput input = net.minecraft.world.item.crafting.CraftingInput.of(3, 3, grid);
+
+		var match = helper.getLevel().getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, input, helper.getLevel());
+		helper.assertTrue(match.isEmpty(), "a duplicate chunk type should really be rejected, not treated as a 3rd distinct meat");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tripleMeatTreatRejectsMissingSugar(GameTestHelper helper) {
+		java.util.List<ItemStack> grid = new java.util.ArrayList<>(9);
+		grid.add(new ItemStack(ItemsTC.chunkBeef.get()));
+		grid.add(new ItemStack(ItemsTC.chunkChicken.get()));
+		grid.add(new ItemStack(ItemsTC.chunkPork.get()));
+		for (int i = 3; i < 9; i++) grid.add(ItemStack.EMPTY);
+		net.minecraft.world.item.crafting.CraftingInput input = net.minecraft.world.item.crafting.CraftingInput.of(3, 3, grid);
+
+		var match = helper.getLevel().getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, input, helper.getLevel());
+		helper.assertTrue(match.isEmpty(), "3 real distinct chunks with no sugar at all should really not match");
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void infernalFurnaceDamagesAndIgnitesLivingEntities(GameTestHelper helper) {
 		BlockPos pos = new BlockPos(2, 2, 2);

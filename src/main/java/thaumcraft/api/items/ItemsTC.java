@@ -820,6 +820,36 @@ public final class ItemsTC {
 							.effect(() -> new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.HUNGER, 30, 0), 0.8f)
 							.build())));
 
+	/** Real Infernal Furnace smelting-bonus outputs (raw meat -> a chance of the matching chunk, 33% - see
+	 * {@code TileInfernalFurnace#SMELTING_BONUSES}'s own doc comment) - the true original's own single
+	 * metadata-variant {@code ItemsTC.chunks} field, split into this port's own established per-variant
+	 * fields, same convention {@code nuggetBrass}/etc. already set. 1 nutrition / 0.3 raw saturation
+	 * (modifier {@code 0.3/(1*2)}), not always edible, matching the true original's own real
+	 * {@code ItemChunksEdible} constructor exactly. Real ingredient for {@link #tripleMeatTreat}. */
+	public static final DeferredItem<Item> chunkBeef = ITEMS.registerItem("chunk_beef",
+			props -> new Item(props.food(new net.minecraft.world.food.FoodProperties.Builder().nutrition(1).saturationModifier(0.15f).build())));
+	public static final DeferredItem<Item> chunkChicken = ITEMS.registerItem("chunk_chicken",
+			props -> new Item(props.food(new net.minecraft.world.food.FoodProperties.Builder().nutrition(1).saturationModifier(0.15f).build())));
+	public static final DeferredItem<Item> chunkPork = ITEMS.registerItem("chunk_pork",
+			props -> new Item(props.food(new net.minecraft.world.food.FoodProperties.Builder().nutrition(1).saturationModifier(0.15f).build())));
+	public static final DeferredItem<Item> chunkFish = ITEMS.registerItem("chunk_fish",
+			props -> new Item(props.food(new net.minecraft.world.food.FoodProperties.Builder().nutrition(1).saturationModifier(0.15f).build())));
+	public static final DeferredItem<Item> chunkRabbit = ITEMS.registerItem("chunk_rabbit",
+			props -> new Item(props.food(new net.minecraft.world.food.FoodProperties.Builder().nutrition(1).saturationModifier(0.15f).build())));
+	public static final DeferredItem<Item> chunkMutton = ITEMS.registerItem("chunk_mutton",
+			props -> new Item(props.food(new net.minecraft.world.food.FoodProperties.Builder().nutrition(1).saturationModifier(0.15f).build())));
+
+	/** See {@link thaumcraft.common.lib.crafting.RecipeTripleMeatTreat}'s own doc comment - a real custom
+	 * {@code Recipe} (3 distinct chunk types, no duplicates, + sugar), not expressible as a plain vanilla
+	 * shapeless recipe. 6 nutrition / 0.8 raw saturation (modifier {@code 0.8/(6*2)}), always edible, 66%
+	 * chance of Regeneration (100 ticks, amplifier 0) on eat - matching the true original's own real
+	 * {@code ItemTripleMeatTreat} exactly. */
+	public static final DeferredItem<Item> tripleMeatTreat = ITEMS.registerItem("triple_meat_treat",
+			props -> new Item(props.food(new net.minecraft.world.food.FoodProperties.Builder()
+					.nutrition(6).saturationModifier(0.0667f).alwaysEdible()
+					.effect(() -> new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, 100, 0), 0.66f)
+					.build())));
+
 	public static final java.util.Map<net.minecraft.world.item.DyeColor, DeferredItem<BlockItem>> candles = new java.util.EnumMap<>(net.minecraft.world.item.DyeColor.class);
 	static {
 		BlocksTC.candles.forEach((dye, block) -> candles.put(dye, ITEMS.registerSimpleBlockItem("candle_" + BlocksTC.candleDyeName(dye), block)));

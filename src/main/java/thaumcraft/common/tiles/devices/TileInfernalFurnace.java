@@ -181,6 +181,17 @@ public class TileInfernalFurnace extends BlockEntity {
 	 * <p>Tin/silver/lead ore blocks were never ported (no real acquisition path exists for them at all yet -
 	 * a genuine forced block, not a deviation), so their own bonus entries are left out here rather than
 	 * registered against a nonexistent item.
+	 *
+	 * <p>Also includes the true original's own real raw-meat-to-chunk bonuses (7 entries -
+	 * {@code Items.COD}/{@code SALMON} both feed the same {@code chunkFish}, matching the true original's own
+	 * single wildcard-metadata "any raw fish" entry now that fish is split into two separate vanilla items).
+	 * Confirmed via exhaustive grep of the true original that {@code CommonInternals.smeltingBonus} - the
+	 * shared list these entries were registered into there - has exactly ONE real consumer anywhere in the
+	 * whole codebase: this exact device. There's no vanilla-furnace hook for this in the true original either
+	 * (an earlier scoping note in this port's own TODO.md assumed one existed from the recipe's own dispenser/
+	 * hopper-adjacent thematic framing before this was actually checked) - the true original's own real scope
+	 * for meat bonuses was always "smelt it in the Infernal Furnace specifically," so this closes the gap
+	 * completely, not partially.
 	 */
 	private record SmeltBonus(Item input, java.util.function.Supplier<ItemStack> output, float chance) {
 	}
@@ -204,6 +215,18 @@ public class TileInfernalFurnace extends BlockEntity {
 		SMELTING_BONUSES.add(new SmeltBonus(Items.COPPER_ORE, () -> new ItemStack(ItemsTC.nuggetCopper.get()), 0.33f));
 		SMELTING_BONUSES.add(new SmeltBonus(Blocks.DEEPSLATE_COPPER_ORE.asItem(), () -> new ItemStack(ItemsTC.nuggetCopper.get()), 0.33f));
 		SMELTING_BONUSES.add(new SmeltBonus(BlocksTC.oreCinnabar.get().asItem(), () -> new ItemStack(ItemsTC.nuggetQuicksilver.get()), 0.33f));
+
+		// Real chunk bonuses (raw meat -> a chance of the matching chunk) - the true original's own real
+		// smelting-bonus entries for ItemsTC.chunks, confirmed via exhaustive grep of the true original to be
+		// consumed ONLY by this exact device (TileInfernalFurnace) - there's no vanilla-furnace hook for this
+		// anywhere in the original either, so this closes the gap completely, not partially.
+		addBonus(Items.BEEF, ItemsTC.chunkBeef, 0.33f);
+		addBonus(Items.CHICKEN, ItemsTC.chunkChicken, 0.33f);
+		addBonus(Items.PORKCHOP, ItemsTC.chunkPork, 0.33f);
+		addBonus(Items.COD, ItemsTC.chunkFish, 0.33f);
+		addBonus(Items.SALMON, ItemsTC.chunkFish, 0.33f);
+		addBonus(Items.RABBIT, ItemsTC.chunkRabbit, 0.33f);
+		addBonus(Items.MUTTON, ItemsTC.chunkMutton, 0.33f);
 	}
 
 	private static void addBonus(Item input, DeferredItem<Item> output, float chance) {

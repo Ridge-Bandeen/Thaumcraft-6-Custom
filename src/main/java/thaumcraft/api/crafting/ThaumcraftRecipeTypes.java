@@ -68,6 +68,15 @@ public final class ThaumcraftRecipeTypes {
 	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.RunicArmorRecipe>> RUNIC_ARMOR_SERIALIZER =
 			RECIPE_SERIALIZERS.register("runic_armor", () -> new thaumcraft.common.lib.crafting.RunicArmorRecipe.Serializer());
 
+	/** A real vanilla {@code CustomRecipe} (see {@link thaumcraft.common.lib.crafting.RecipeTripleMeatTreat}'s
+	 * own doc comment) - shares vanilla's own {@link net.minecraft.world.item.crafting.RecipeType#CRAFTING},
+	 * not a Thaumcraft-specific type, since it's a plain crafting-table recipe. Same real
+	 * {@code SimpleCraftingRecipeSerializer} wrapper vanilla's own {@code RepairItemRecipe}/
+	 * {@code ShieldDecorationRecipe} use. */
+	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.RecipeTripleMeatTreat>> TRIPLE_MEAT_TREAT_SERIALIZER =
+			RECIPE_SERIALIZERS.register("triple_meat_treat",
+					() -> new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>(thaumcraft.common.lib.crafting.RecipeTripleMeatTreat::new));
+
 	private static <T extends net.minecraft.world.item.crafting.Recipe<?>> Supplier<RecipeType<T>> registerType(String name) {
 		return RECIPE_TYPES.register(name, () -> new RecipeType<T>() {
 			@Override
