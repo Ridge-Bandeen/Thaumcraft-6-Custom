@@ -220,13 +220,13 @@ public class Thaumcraft {
 
         // Second batch of the "extra content" tier - see this method's own doc comment above. 18 of the
         // original's remaining 19 cards (all but CardCelestial, which needs the still-unported
-        // ItemCelestialNotes) plus 5 of its remaining 8 aids (the other 3 - AidBasicAuromancy/AidBasicEldritch/
-        // AidBrainInAJar - each still need their own unported block: wandWorkbench/eldritch/jarBrain
-        // respectively; their own cards are still registered below where they're not aid-only, since the
-        // normal draw rotation can reach them regardless of whether their aid exists). AidGlyphedStone
-        // closed once stoneAncientGlyphed shipped later the same session as this comment's own original
-        // version - a real example of a doc comment going stale within the same session, not just across
-        // sessions.
+        // ItemCelestialNotes) plus 7 of its remaining 8 aids are now registered. AidGlyphedStone,
+        // AidBasicAuromancy and AidBasicEldritch all turned out to be the same real story - their own
+        // supposedly-missing blocks (stoneAncientGlyphed/wandWorkbench/eldritch) were each already real and
+        // shipped under this port's own modern names (stoneAncientGlyphed as-is, wandWorkbench as
+        // focalManipulator, eldritch as cultistRitualAltar - see each aid's own doc comment) - nobody had
+        // connected the aid class to its already-built block yet. Only AidBrainInAJar remains genuinely
+        // blocked, on a real still-unported block (jarBrain, the "Brain in a Jar" tile).
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardAwareness.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardFocus.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardGlyphs.class);
@@ -250,6 +250,8 @@ public class Thaumcraft {
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidBasicGolemancy());
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidBasicInfusion());
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidGlyphedStone());
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidBasicAuromancy());
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidBasicEldritch());
     }
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {

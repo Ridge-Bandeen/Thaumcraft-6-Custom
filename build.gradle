@@ -187,6 +187,8 @@ sourceSets {
             include 'thaumcraft/common/lib/research/theorycraft/AidBasicArtifice.java'
             include 'thaumcraft/common/lib/research/theorycraft/AidBasicGolemancy.java'
             include 'thaumcraft/common/lib/research/theorycraft/AidGlyphedStone.java'
+            include 'thaumcraft/common/lib/research/theorycraft/AidBasicAuromancy.java'
+            include 'thaumcraft/common/lib/research/theorycraft/AidBasicEldritch.java'
             include 'thaumcraft/common/lib/research/theorycraft/AidBasicInfusion.java'
             include 'thaumcraft/common/tiles/crafting/TileResearchTable.java'
             include 'thaumcraft/common/blocks/crafting/BlockResearchTable.java'

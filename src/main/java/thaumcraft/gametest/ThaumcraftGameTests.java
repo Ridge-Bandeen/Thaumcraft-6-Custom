@@ -13078,6 +13078,38 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(thaumcraft.api.research.theorycraft.TheorycraftManager.aids.values().stream()
 						.anyMatch(a -> a instanceof thaumcraft.common.lib.research.theorycraft.AidGlyphedStone),
 				"AidGlyphedStone should really be registered");
+		helper.assertTrue(thaumcraft.api.research.theorycraft.TheorycraftManager.aids.values().stream()
+						.anyMatch(a -> a instanceof thaumcraft.common.lib.research.theorycraft.AidBasicAuromancy),
+				"AidBasicAuromancy should really be registered");
+		helper.assertTrue(thaumcraft.api.research.theorycraft.TheorycraftManager.aids.values().stream()
+						.anyMatch(a -> a instanceof thaumcraft.common.lib.research.theorycraft.AidBasicEldritch),
+				"AidBasicEldritch should really be registered");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void aidBasicAuromancyOffersItsRealThreeCards(GameTestHelper helper) {
+		thaumcraft.common.lib.research.theorycraft.AidBasicAuromancy aid = new thaumcraft.common.lib.research.theorycraft.AidBasicAuromancy();
+		helper.assertTrue(aid.getAidObject() instanceof ItemStack stack && stack.is(thaumcraft.api.blocks.BlocksTC.focalManipulator.get().asItem()),
+				"AidBasicAuromancy should really trigger off the real Focal Manipulator (the true original's own wandWorkbench), found " + aid.getAidObject());
+		java.util.List<Class<thaumcraft.api.research.theorycraft.TheorycraftCard>> cards = java.util.Arrays.asList(aid.getCards());
+		helper.assertTrue(cards.contains(thaumcraft.common.lib.research.theorycraft.CardFocus.class)
+						&& cards.contains(thaumcraft.common.lib.research.theorycraft.CardAwareness.class)
+						&& cards.contains(thaumcraft.common.lib.research.theorycraft.CardSpellbinding.class),
+				"AidBasicAuromancy should really offer Focus/Awareness/Spellbinding, found " + cards);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void aidBasicEldritchOffersItsRealThreeCards(GameTestHelper helper) {
+		thaumcraft.common.lib.research.theorycraft.AidBasicEldritch aid = new thaumcraft.common.lib.research.theorycraft.AidBasicEldritch();
+		helper.assertTrue(aid.getAidObject() instanceof ItemStack stack && stack.is(thaumcraft.api.blocks.BlocksTC.cultistRitualAltar.get().asItem()),
+				"AidBasicEldritch should really trigger off the real Cultist Ritual Altar (the true original's own eldritch field), found " + aid.getAidObject());
+		java.util.List<Class<thaumcraft.api.research.theorycraft.TheorycraftCard>> cards = java.util.Arrays.asList(aid.getCards());
+		helper.assertTrue(cards.contains(thaumcraft.common.lib.research.theorycraft.CardRealization.class)
+						&& cards.contains(thaumcraft.common.lib.research.theorycraft.CardRevelation.class)
+						&& cards.contains(thaumcraft.common.lib.research.theorycraft.CardTruth.class),
+				"AidBasicEldritch should really offer Realization/Revelation/Truth, found " + cards);
 		helper.succeed();
 	}
 
