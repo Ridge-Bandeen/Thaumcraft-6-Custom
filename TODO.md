@@ -18,32 +18,6 @@ Each of these is genuinely real, registered content in the true original with
 no equivalent anywhere in the current port (verified by direct source read,
 not just a name diff).
 
-- **Golem Press ritual** (`GolemBuilder`'s real activation multiblock).
-  `BlocksTC.golemBuilder` and the `GOLEM_BUILDER` BlockEntityType already
-  exist and are wired up, but the true original's real acquisition path — a
-  `DustTriggerMultiblock` blueprint registered as
-  `IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("MINDCLOCKWORK", golempressBlueprint))`
-  plus a `ThaumcraftApi.addMultiblockRecipeToCatalog(new ResourceLocation("thaumcraft:GolemPress"), ...)`
-  catalog entry — was never ported. This is the same well-established pattern
-  already used for Salis Mundus / Infusion Altar conversion this session (see
-  `ThaumcraftDustTriggers.java`), so it's a clean, self-contained chunk.
-  Needs 4 new placeholder blocks first (`BlockPlaceholder`-style, matching the
-  existing `placeholderNetherbrick`/`placeholderObsidian` pattern):
-  `placeholderAnvil`, `placeholderBars`, `placeholderCauldron`,
-  `placeholderTable` — each is a display-only stand-in for a vanilla block
-  (`Blocks.ANVIL`/`Blocks.IRON_BARS`/`Blocks.CAULDRON`/`BlocksTC.tableStone`
-  respectively) inside the multiblock structure. True-original blueprint
-  shape (`ConfigRecipes.java:124-128`, true original):
-  ```java
-  final Part GP1 = new Part(Blocks.IRON_BARS, new ItemStack(BlocksTC.placeholderBars));
-  final Part GP2 = new Part(Blocks.CAULDRON, new ItemStack(BlocksTC.placeholderCauldron));
-  final Part GP4 = new Part(Blocks.ANVIL, new ItemStack(BlocksTC.placeholderAnvil));
-  final Part GP5 = new Part(BlocksTC.tableStone, new ItemStack(BlocksTC.placeholderTable));
-  final Part[][][] golempressBlueprint = { { { null, null }, { GP1, null } }, { { GP2, GP4 }, { GP3, GP5 } } };
-  ```
-  (GP3 not shown in the grep excerpt — re-read `ConfigRecipes.java` around
-  line 120-128 in the true original for the full blueprint before building.)
-
 - **Grapple Gun components** (`jarBrace`, `grappleGunTip`, `grappleGunSpool`).
   The assembled `grappleGun` item exists in the modern port, but the true
   original crafts it from two intermediate arcane-crafted components that
@@ -215,9 +189,9 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   pattern has no modern equivalent yet.
 - Golem construction pipeline — far bigger than it looks (~4000+ lines, 140
   files), own API layer (`GolemHelper`) is pure stub. Multi-session arc, not
-  a quick chunk. (Note: the Golem Press *ritual* above is a much smaller,
-  separable piece of this — the ritual itself doesn't require the full golem
-  AI/behavior pipeline to be useful as a standalone chunk.)
+  a quick chunk. (Note: the Golem Press *ritual* that used to unlock
+  `golemBuilder` itself is now closed — see "Recently closed" below — this
+  remaining item is the much bigger golem AI/behavior pipeline behind it.)
 - Focal Manipulator — **closed**, full arc shipped (tile, block, menu,
   screen, craft button, graph-save packet, node-graph canvas). Listed here
   only so it isn't mistakenly re-opened by a future sweep.
@@ -237,6 +211,17 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   exactly. See commit "Give the Essentia Mirror its real cross-dimensional
   relay" for the real mechanic (a pure `IAspectSource` pass-through that
   cube-scans near its linked partner, not an item-transport relay).
+
+- **Golem Press ritual** (`GolemBuilder`'s real activation multiblock) —
+  closed 2026-09-09. Real `golemPressBlueprint()` shipped in
+  `ThaumcraftDustTriggers.java`, migrating `golemBuilder` off its
+  now-stale-precedent "direct block, no ritual" doc comment onto the same
+  real `DustTriggerMultiblock` pattern the Infernal Furnace and Thaumatorium
+  were already migrated to. 4 new purely-decorative placeholder blocks
+  (`placeholderBars`/`Cauldron`/`Anvil`/`Table`, matching the
+  `placeholderNetherbrick`/`Obsidian` pattern, not the true original's own
+  heavier `BlockPlaceholder`). See commit "Give the Golem Builder its real
+  acquisition ritual".
 
 ---
 *Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
