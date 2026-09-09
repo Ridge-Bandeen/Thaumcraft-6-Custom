@@ -177,51 +177,18 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   of them for its own sake would also unblock its aid essentially for
   free. `AidGlyphedStone` (a 4th aid in that same blocked group) is now
   closed - see "Recently closed" below.
-- **Golem construction pipeline** — **re-scoped 2026-09-09, this note was
-  very stale too.** The old "`GolemHelper` is pure stub" claim no longer
-  holds - `GolemHelper`/`IGolemAPI`/`IGolemProperties`/`EnumGolemTrait`,
-  the real `EntityThaumcraftGolem` (827 lines in the true original) with
-  real taming/following/melee/basic-AI behavior, `GolemProperties`,
-  `ItemGolemBell`/`ItemGolemPlacer`, and a real task/seal-assignment system
-  (`golems/ai/AIGoto`/`AIGotoBlock`/`AIGotoEntity`, `golems/tasks/
-  TaskHandler`, all 15 `sealGuard`/etc. items from the original sweep) are
-  ALL already real and wired up - `EntityThaumcraftGolem`'s own top-level
-  doc comment is itself the stale one here, still describing the task
-  system as a "separate, much larger arc... not touched" when
-  `registerGoals` right below it already wires `AIGotoEntity`/`AIGotoBlock`
-  in for real. `GolemArmDart` (the "DARTS" arm's real ranged-attack
-  function - closed 2026-09-09, see "Recently closed" below) turned out to
-  be the only one of the 3 flagged part-function classes with any real
-  server-side behavior to port - `GolemLegLevitator`/`GolemLegWheels` are
-  confirmed 100% client-side particle FX in the true original (zero
-  server behavior), and their real trait payoffs (flight, WHEELED speed)
-  were already handled independently by `EntityThaumcraftGolem`'s own
-  trait checks, so there's nothing left to build for either.
-  `AINearestValidTarget` also turned out to need no work - confirmed
-  dead-in-the-true-original itself (zero real usages anywhere in the whole
-  original codebase; a same-named but unrelated inner class exists locally
-  in `EntityTurretCrossbow`/`EntityTurretCrossbowAdvanced`, not this one).
-  `AIArrowAttack` was already confirmed unnecessary too (vanilla's own
-  `RangedAttackGoal` covers it directly - see "Recently closed"). Only
-  genuinely real item left, from a precise diff against the true
-  original's whole `golems`/`research/theorycraft` trees: air/ground
-  pathfinding refinement for `CLIMBER`-trait golems
-  (`PathNavigateGolemGround`/`Air`, `GolemNodeProcessor` -
-  `createGolemNavigation` currently only special-cases `FLYER`, `CLIMBER`
-  still falls back to plain ground pathing). Checked the true original's
-  own `PathNavigateGolemGround` directly: its real content turned out to
-  be general golem-pathing quality-of-life (door-opening, smarter
-  target-Y resolution around solid/air blocks) more than climbing-specific
-  logic - needs the modern `NodeEvaluator` API (1.21's real replacement
-  for 1.12.2's `PathNodeProcessor`) investigated properly before building,
-  not attempted this pass. Client-only golem-builder-screen button widgets/part-model
-  renderers were NOT diffed carefully - likely mostly moot given
+- **Golem construction pipeline** — **closed 2026-09-09.** Every genuinely
+  real item this arc's own re-scope turned up has now shipped:
+  `GolemHelper`/`IGolemAPI`/`IGolemProperties`/`EnumGolemTrait`,
+  `EntityThaumcraftGolem`, `GolemProperties`, `ItemGolemBell`/
+  `ItemGolemPlacer`, the real task/seal-assignment system, `GolemArmDart`,
+  and (closing this arc) CLIMBER-trait pathfinding - see "Recently closed"
+  below for the last one. Client-only golem-builder-screen button widgets/
+  part-model renderers were NOT diffed carefully - likely mostly moot given
   `GuiGolemBuilder`'s own doc comment already describes a deliberate
-  "lighter, simplified screen, not a line-for-line port" treatment, same
-  as every other client screen this port has built. This is a real,
-  substantially smaller remaining scope than the old estimate - not a
-  from-scratch multi-session arc, more like 2-4 focused chunks (parts,
-  specific AI behaviors, pathfinding) on top of an already-solid base.
+  "lighter, simplified screen, not a line-for-line port" treatment, same as
+  every other client screen this port has built; flag if a future sweep
+  finds otherwise.
 - Focal Manipulator — **closed**, full arc shipped (tile, block, menu,
   screen, craft button, graph-save packet, node-graph canvas). Listed here
   only so it isn't mistakenly re-opened by a future sweep.
@@ -235,12 +202,16 @@ this session did (true original's file list for that area vs.
 `build.gradle`'s include list; for a claimed technical blocker, check whether
 a real modern vanilla precedent already solves it, the way `AmethystClusterBlock`
 turned out to directly answer the crystal-cluster rendering "blocker") rather
-than trusting the prose - it was wrong about 3 of the original 4 entries
-here (monster roster, Research Table, golem construction were all far more
-complete than documented; crystal-cluster rendering's own claimed blocker
-- see "Recently closed" below - turned out to not really exist either). Only
-the golem construction pipeline's own residual scope (CLIMBER pathfinding)
-remains genuinely open and unverified-further in this section.
+than trusting the prose - it was wrong about all 4 of the original entries
+here to some degree (monster roster, Research Table, and golem construction
+were all far more complete than documented, and golem construction's own
+remaining CLIMBER-pathfinding residual turned out small too once actually
+investigated - vanilla's own `Spider`/`WallClimberNavigation` answered it
+directly; crystal-cluster rendering's own claimed blocker turned out to not
+really exist either, same `AmethystClusterBlock` story). This section now
+has only Research Table's few small residuals (`CardCelestial`, 3
+block-blocked aids) as genuinely open, non-blocking, low-priority items -
+everything else that was here is closed.
 
 ## Standing manual-verification item (not a code gap)
 
@@ -398,6 +369,24 @@ remains genuinely open and unverified-further in this section.
   advanced turret's OBJ mesh carries - a separate, smaller, non-blocking
   follow-up). See commit "Give crystal clusters real per-face orientation -
   resolves the crystal-cluster rendering soft blocker".
+
+- **CLIMBER-trait golem pathfinding** — closed 2026-09-09, closing the
+  entire golem construction pipeline arc. The earlier note assumed this
+  needed the modern `NodeEvaluator` API investigated first - it didn't.
+  The true original's own real CLIMBER-specific class, `PathNavigateClimber`,
+  turned out to be genuinely absent from the whole pristine-original tree
+  this port was decompiled from (referenced by `EntityThaumcraftGolem.java`
+  but never actually present - confirmed via exhaustive search, not a
+  porting loss since it was never there). Checked whether modern vanilla
+  already solves the same "climb any wall you're pushed against" need
+  rather than guessing at the missing class: it does, via `Spider`'s own
+  real `WallClimberNavigation` + `onClimbable()` override pattern. This port
+  already had the synced `isBesideClimbableBlock` flag (from an earlier pass
+  this same session) but nothing ever read it back into real physics -
+  `createGolemNavigation` now returns `WallClimberNavigation` for
+  CLIMBER-trait golems, and a new `onClimbable()` override closes the loop.
+  See commit "Give CLIMBER-trait golems their real wall-climbing
+  pathfinding".
 
 ---
 *Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
