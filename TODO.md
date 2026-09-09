@@ -177,12 +177,6 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   of them for its own sake would also unblock its aid essentially for
   free. `AidGlyphedStone` (a 4th aid in that same blocked group) is now
   closed - see "Recently closed" below.
-- Crystal cluster connected-texture rendering (`BlockCrystal`) — real soft
-  blocker: Forge's `IExtendedBlockState`/unlisted-properties baked-model
-  pattern has no modern equivalent yet. Not re-verified this pass - given
-  how stale the other two estimates in this section turned out to be, this
-  one's real blocker (not just an old line-count guess) makes it more
-  likely to still be accurate, but worth a fresh look before assuming so.
 - **Golem construction pipeline** — **re-scoped 2026-09-09, this note was
   very stale too.** The old "`GolemHelper` is pure stub" claim no longer
   holds - `GolemHelper`/`IGolemAPI`/`IGolemProperties`/`EnumGolemTrait`,
@@ -236,9 +230,17 @@ sub-arcs — see the project memory file for full detail, not repeated here:
 whole "Deferred subsystems" section had gone stale in ways the rest of this
 file hadn't - each entry here is a coarse, old estimate nobody had reason to
 revisit until someone actually went looking. Before treating any remaining
-entry above as an accurate scope, do the same precise diff this session did
-(true original's file list for that area vs. `build.gradle`'s include list)
-rather than trusting the prose - it was wrong about 2 of 4 entries here.
+entry above as an accurate scope, do the same precise diff/direct-source-check
+this session did (true original's file list for that area vs.
+`build.gradle`'s include list; for a claimed technical blocker, check whether
+a real modern vanilla precedent already solves it, the way `AmethystClusterBlock`
+turned out to directly answer the crystal-cluster rendering "blocker") rather
+than trusting the prose - it was wrong about 3 of the original 4 entries
+here (monster roster, Research Table, golem construction were all far more
+complete than documented; crystal-cluster rendering's own claimed blocker
+- see "Recently closed" below - turned out to not really exist either). Only
+the golem construction pipeline's own residual scope (CLIMBER pathfinding)
+remains genuinely open and unverified-further in this section.
 
 ## Standing manual-verification item (not a code gap)
 
@@ -375,6 +377,27 @@ rather than trusting the prose - it was wrong about 2 of 4 entries here.
   keys and no real `block.thaumcraft.X` key, so all four rendered as raw
   untranslated keys in-game - fixed for all four. See commit "Give dungeon
   urns their real BlockLoot registration - loot_urn_common/uncommon/rare".
+
+- **Crystal cluster connected-texture rendering** — closed 2026-09-09,
+  removed from "Deferred subsystems". The old blocker note ("Forge's
+  `IExtendedBlockState`/unlisted-properties baked-model pattern has no
+  modern equivalent yet") was itself wrong - vanilla's own real
+  `AmethystClusterBlock` already solves the identical "attach to and render
+  from a single real face" need with nothing more exotic than a stored
+  `DirectionProperty` plus per-facing blockstate model rotation, no custom
+  baked model required. `BlockCrystal` now stores a real `FACING` property
+  (set from the clicked face on placement, computed fresh per spread target
+  during natural growth); `getShape`/`canSurvive` read it directly instead
+  of live-rescanning all 6 neighbors. All 7 aspect blockstates converted
+  from `multipart` to real `variants` keyed by `facing=<direction>`, using
+  the exact rotation matrix read off vanilla's own `amethyst_cluster.json`.
+  Real, still-open remaining cut: the true original's own bespoke OBJ
+  crystal-cluster mesh (a genuinely faceted shape) isn't ported - this
+  closed the real per-face ORIENTATION gap, not the mesh geometry itself
+  (stays a simple oriented box, same "no bespoke mesh renderer yet" gap the
+  advanced turret's OBJ mesh carries - a separate, smaller, non-blocking
+  follow-up). See commit "Give crystal clusters real per-face orientation -
+  resolves the crystal-cluster rendering soft blocker".
 
 ---
 *Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
