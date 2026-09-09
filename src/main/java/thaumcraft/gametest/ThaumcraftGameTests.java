@@ -9718,6 +9718,23 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
+	 * Names the real recipes for the whole turret-placer family (Automated Crossbow, Advanced Crossbow, and
+	 * the Arcane Bore's own real Infusion Altar recipe) and asserts each one is actually registered - a real,
+	 * confirmed gap all session (zero acquisition path of any kind) until the golem mind/module family closed
+	 * it out, same "name every id" pattern as {@link #mindAndModuleRecipesRegistered} and siblings.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void turretPlacerRecipesRegistered(GameTestHelper helper) {
+		RecipeManager recipes = helper.getLevel().getRecipeManager();
+		String[] expectedIds = { "turret_placer_basic", "turret_placer_advanced", "turret_placer_bore" };
+		for (String id : expectedIds) {
+			Optional<RecipeHolder<?>> recipe = recipes.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id));
+			helper.assertTrue(recipe.isPresent(), "expected recipe '" + id + "' to be registered, but it wasn't");
+		}
+		helper.succeed();
+	}
+
+	/**
 	 * Real coverage for {@link thaumcraft.common.items.armor.ItemVoidArmor}'s real self-repair tick - a
 	 * damaged piece should really regain 1 durability every real second (20 ticks) while worn.
 	 */

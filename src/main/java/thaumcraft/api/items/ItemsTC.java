@@ -187,12 +187,10 @@ public final class ItemsTC {
 
 	/** See {@link #mechanismSimple}'s own doc comment - both got real recipes this pass. Unblocks the
 	 * Condenser's own real recipe (see {@code data/thaumcraft/recipe/condenser.json}), the Stabilizer's
-	 * (see {@code data/thaumcraft/recipe/stabilizer.json}), and - once {@link #ingotVoid}'s own chain closed
-	 * {@code metalBlockVoid} right after - the Void Siphon's too (see
-	 * {@code data/thaumcraft/recipe/void_siphon.json}). Arcane Bore's own turret-placer recipe uses it too,
-	 * but that whole 3-item turret-placer family ({@link thaumcraft.common.entities.construct.ItemTurretPlacer})
-	 * has no recipe of any kind yet - its own real base recipe needs a golem {@code mind} item, never ported
-	 * this session, a genuine forced gap this ingredient alone doesn't clear. Not chased down this pass. */
+	 * (see {@code data/thaumcraft/recipe/stabilizer.json}), the Void Siphon's (see
+	 * {@code data/thaumcraft/recipe/void_siphon.json}), and - once the golem {@code mind} item family got its
+	 * own real recipes a couple chunks later - the whole turret-placer family too (see
+	 * {@code data/thaumcraft/recipe/turret_placer_bore.json}). */
 	public static final DeferredItem<Item> mechanismComplex =
 			ITEMS.registerSimpleItem("mechanism_complex");
 
@@ -973,7 +971,10 @@ public final class ItemsTC {
 			ITEMS.registerSimpleBlockItem("activator_rail", BlocksTC.activatorRail);
 
 	/** See {@link thaumcraft.common.entities.construct.ItemTurretPlacer}'s own doc comment for why these are
-	 * plain, separate items rather than the original's own 3-subtype {@code "turret"} item. */
+	 * plain, separate items rather than the original's own 3-subtype {@code "turret"} item. All 3 got their
+	 * true original real recipes once the golem {@code mind} item family did too (see
+	 * {@code data/thaumcraft/recipe/turret_placer_basic.json}/{@code _advanced.json}/{@code _bore.json}) - a
+	 * real, confirmed gap (zero acquisition path of any kind) for the whole session before that. */
 	public static final DeferredItem<thaumcraft.common.entities.construct.ItemTurretPlacer> turretPlacerBasic =
 			ITEMS.registerItem("turret_placer_basic",
 					props -> new thaumcraft.common.entities.construct.ItemTurretPlacer(props, () -> thaumcraft.common.registry.ThaumcraftEntities.TURRET_CROSSBOW.get()));
