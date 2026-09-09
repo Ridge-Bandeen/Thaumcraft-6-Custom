@@ -3713,6 +3713,71 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	// --------------------------------------------------------------------------------------------------
+	// Tube Buffer - holds a real multi-aspect essentia store (up to 10 total units, any mix), not a
+	// TileTube subclass (see TileTubeBuffer's own doc comment for why). Real, deliberately weak base
+	// suction (1) means it only pulls from a neighbor with getMinimumSuction() == 0 (a plain tube or
+	// direct-attach source, not a jar) - TEST_ESSENTIA_SOURCE_BLOCK's own real 0/0 suction/minimum makes it
+	// the clean fixture for that, same real device this file's other essentia tests already use.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeBufferFillsFromARealSourceItIsDirectlyAttachedTo(GameTestHelper helper) {
+		BlockPos bufferPos = new BlockPos(4, 3, 4);
+		BlockPos sourcePos = bufferPos.above();
+		helper.setBlock(sourcePos, TEST_ESSENTIA_SOURCE_BLOCK.get());
+		helper.setBlock(bufferPos, BlocksTC.tubeBuffer.get());
+		BlockPos bufferAbs = helper.absolutePos(bufferPos);
+
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(sourcePos);
+		source.aspect = Aspect.FIRE;
+		source.amount = 5;
+
+		thaumcraft.common.tiles.essentia.TileTubeBuffer buffer = helper.getBlockEntity(bufferPos);
+		thaumcraft.common.tiles.essentia.TileTubeBuffer.tick(helper.getLevel(), bufferAbs, helper.getBlockState(bufferPos), buffer);
+
+		helper.assertTrue(buffer.getAspects().getAmount(Aspect.FIRE) == 1,
+				"the buffer should really have pulled exactly 1 fire from the real source it's directly attached to, found " + buffer.getAspects().getAmount(Aspect.FIRE));
+		helper.assertTrue(source.amount == 4, "the source should really have lost exactly 1, found " + source.amount);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeBufferHoldsUpToTenRealTotalUnitsAcrossAnyMixOfAspects(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(4, 3, 4);
+		helper.setBlock(pos, BlocksTC.tubeBuffer.get());
+		thaumcraft.common.tiles.essentia.TileTubeBuffer buffer = helper.getBlockEntity(pos);
+
+		for (int i = 0; i < 6; i++) {
+			helper.assertTrue(buffer.addToContainer(Aspect.FIRE, 1) == 0, "adding fire under capacity should really succeed, unit " + i);
+		}
+		for (int i = 0; i < 4; i++) {
+			helper.assertTrue(buffer.addToContainer(Aspect.WATER, 1) == 0, "adding a real different aspect (water) should really still count toward the same shared cap, unit " + i);
+		}
+		helper.assertTrue(buffer.getAspects().visSize() == 10, "the buffer should really hold exactly 10 total units now, found " + buffer.getAspects().visSize());
+
+		int leftover = buffer.addToContainer(Aspect.EARTH, 1);
+		helper.assertTrue(leftover == 1, "adding an 11th unit past the real shared 10-unit cap should really be rejected, leftover " + leftover);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeBufferReportsZeroSuctionOnceRealFull(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(4, 3, 4);
+		helper.setBlock(pos, BlocksTC.tubeBuffer.get());
+		thaumcraft.common.tiles.essentia.TileTubeBuffer buffer = helper.getBlockEntity(pos);
+
+		helper.assertTrue(buffer.getSuctionAmount(net.minecraft.core.Direction.DOWN) == 1,
+				"an empty buffer should really report the real minimal suction of 1, found " + buffer.getSuctionAmount(net.minecraft.core.Direction.DOWN));
+
+		for (int i = 0; i < 10; i++) {
+			buffer.addToContainer(Aspect.FIRE, 1);
+		}
+		helper.assertTrue(buffer.getSuctionAmount(net.minecraft.core.Direction.DOWN) == 0,
+				"a real full buffer should really report 0 suction, found " + buffer.getSuctionAmount(net.minecraft.core.Direction.DOWN));
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void tubeValveBlocksFlowWhileRedstonePoweredAndResumesWhenUnpowered(GameTestHelper helper) {
 		BlockPos sourcePos = new BlockPos(4, 3, 4);

@@ -278,6 +278,7 @@
   "item.thaumcraft.loot_bag_rare": "Rare Treasure",
   "block.thaumcraft.arcane_workbench_charger": "Workbench Charger",
   "block.thaumcraft.tube_filter": "Filtered Essentia Tube",
+  "block.thaumcraft.tube_buffer": "Essentia Buffer",
   "block.thaumcraft.tube_restrict": "Restricted Essentia Tube",
   "block.thaumcraft.tube_valve": "Essentia Valve",
   "_comment_aspects": "The 37 real aspect names + 3 category headers, converted from the old en_us.lang (which 1.21.1 never actually loaded - only .json lang files load any more, so these were silently dead until now). Needed for ItemCrystalEssence's per-aspect display name (Aspect#getLocalizedDescription). The rest of en_us.lang still needs the same conversion - see thaumcraft-1211-port memory.",

@@ -451,6 +451,12 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.essentia.BlockTubeValve::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.5f).sound(SoundType.METAL).noOcclusion());
 
+	/** Holds a real multi-aspect essentia buffer inline in a tube run - see
+	 * {@link thaumcraft.common.blocks.essentia.BlockTubeBuffer}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockTubeBuffer> tubeBuffer = BLOCKS.registerBlock("tube_buffer",
+			thaumcraft.common.blocks.essentia.BlockTubeBuffer::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.5f).sound(SoundType.METAL).noOcclusion());
+
 	/** Storage block for Thaumium ingots - see {@link thaumcraft.api.items.ItemsTC#ingotThaumium}'s own doc
 	 * comment for the material's real, reachable crucible-based origin. Plain block, same shape as vanilla's
 	 * own metal blocks. */
