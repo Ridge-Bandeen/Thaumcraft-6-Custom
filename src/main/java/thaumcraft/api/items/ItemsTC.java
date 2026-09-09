@@ -504,6 +504,18 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> placeholderObsidian =
 			ITEMS.registerSimpleBlockItem("placeholder_obsidian", BlocksTC.placeholderObsidian);
 
+	public static final DeferredItem<BlockItem> placeholderBars =
+			ITEMS.registerSimpleBlockItem("placeholder_bars", BlocksTC.placeholderBars);
+
+	public static final DeferredItem<BlockItem> placeholderCauldron =
+			ITEMS.registerSimpleBlockItem("placeholder_cauldron", BlocksTC.placeholderCauldron);
+
+	public static final DeferredItem<BlockItem> placeholderAnvil =
+			ITEMS.registerSimpleBlockItem("placeholder_anvil", BlocksTC.placeholderAnvil);
+
+	public static final DeferredItem<BlockItem> placeholderTable =
+			ITEMS.registerSimpleBlockItem("placeholder_table", BlocksTC.placeholderTable);
+
 	/** A crafting component for the Centrifuge, Condenser, Arcane Bore and Causality Collapser (see
 	 * {@code data/thaumcraft/recipe/morphic_resonator.json} for its own real recipe - a glass pane, a brass
 	 * plate and a {@link #nuggetRareearth}). The Causality Collapser's Infusion recipe (see

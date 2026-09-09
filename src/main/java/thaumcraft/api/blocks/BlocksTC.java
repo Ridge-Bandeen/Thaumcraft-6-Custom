@@ -378,6 +378,18 @@ public final class BlocksTC {
 	public static final DeferredBlock<Block> placeholderObsidian = BLOCKS.registerBlock("placeholder_obsidian",
 			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(50.0f, 1200.0f).sound(SoundType.STONE));
 
+	/** The Golem Press's real multiblock-ritual shell blocks (see {@link thaumcraft.common.registry.ThaumcraftDustTriggers#golemPressBlueprint})
+	 * - same real "visually near-identical to their real vanilla source, different block id" pattern
+	 * {@link #placeholderNetherbrick}/{@link #placeholderObsidian} already established. */
+	public static final DeferredBlock<Block> placeholderBars = BLOCKS.registerBlock("placeholder_bars",
+			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0f, 6.0f).sound(SoundType.METAL).noOcclusion());
+	public static final DeferredBlock<Block> placeholderCauldron = BLOCKS.registerBlock("placeholder_cauldron",
+			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 6.0f).sound(SoundType.METAL));
+	public static final DeferredBlock<Block> placeholderAnvil = BLOCKS.registerBlock("placeholder_anvil",
+			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0f, 1200.0f).sound(SoundType.ANVIL));
+	public static final DeferredBlock<Block> placeholderTable = BLOCKS.registerBlock("placeholder_table",
+			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.5f).sound(SoundType.STONE));
+
 	/** See {@link thaumcraft.common.blocks.devices.BlockRedstoneRelay}'s own doc comment - a real
 	 * configurable-threshold/strength redstone repeater variant, no tile entity needed. */
 	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockRedstoneRelay> redstoneRelay = BLOCKS.registerBlock("redstone_relay",

@@ -33,6 +33,7 @@ public final class ThaumcraftDustTriggers {
 		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", infusionAltarAncientBlueprint()));
 		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", infusionAltarEldritchBlueprint()));
 		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", thaumatoriumBlueprint()));
+		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", golemPressBlueprint()));
 	}
 
 	/**
@@ -154,6 +155,43 @@ public final class ThaumcraftDustTriggers {
 				{ { top } },
 				{ { body } },
 				{ { base } },
+		};
+	}
+
+	/**
+	 * Real port of the true original's own {@code golempressBlueprint} - {@link thaumcraft.common.blocks.crafting.BlockGolemBuilder}'s
+	 * real acquisition ritual, missing entirely until now despite the block itself (and its menu/tile) being
+	 * real and working since an earlier chunk - that class's own doc comment describing a "ships as one real,
+	 * solid, directly-interactable block" simplification was written before this port's real
+	 * {@code DustTriggerMultiblock} subsystem existed, and (unlike {@link #infernalFurnaceBlueprint} and
+	 * {@link #thaumatoriumBlueprint}, both already migrated to their own real rituals) was never revisited -
+	 * this chunk is that migration, closing the block's total lack of any acquisition path at all.
+	 *
+	 * Same real compact 2x2x2 shape as the original: a bottom-layer iron-bars corner, and a top layer of
+	 * cauldron/anvil/stone-table corners around a piston (facing up) that becomes the real
+	 * {@code golemBuilder} block itself - a {@link Block}-typed target, same as {@link #infernalFurnaceBlueprint}'s
+	 * own lava→furnace conversion, not an {@link net.minecraft.world.level.block.state.BlockState}-typed one,
+	 * since (unlike the Infusion Altar's corner pillars) this device has no facing property to fix in place.
+	 * The other 4 corners convert to real, purely decorative {@link BlocksTC#placeholderBars}/
+	 * {@link BlocksTC#placeholderCauldron}/{@link BlocksTC#placeholderAnvil}/{@link BlocksTC#placeholderTable} -
+	 * same real "visually near-identical, different block id so a finished structure's own shell no longer
+	 * matches the blueprint and can't be accidentally re-converted" pattern {@link BlocksTC#placeholderNetherbrick}/
+	 * {@link BlocksTC#placeholderObsidian} already established, not the true original's own much heavier
+	 * {@code BlockPlaceholder} (GUI right-click forwarding + break-triggers-destroy) - this port's
+	 * {@code golemBuilder} is already a real, directly-interactable block in its own right, so none of that
+	 * forwarding machinery is needed.
+	 */
+	private static Part[][][] golemPressBlueprint() {
+		Part bars = new Part(Blocks.IRON_BARS, new ItemStack(BlocksTC.placeholderBars.get()));
+		Part cauldron = new Part(Blocks.CAULDRON, new ItemStack(BlocksTC.placeholderCauldron.get()));
+		Part piston = new Part(
+				Blocks.PISTON.defaultBlockState().setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.UP),
+				BlocksTC.golemBuilder.get());
+		Part anvil = new Part(Blocks.ANVIL, new ItemStack(BlocksTC.placeholderAnvil.get()));
+		Part table = new Part(BlocksTC.tableStone.get(), new ItemStack(BlocksTC.placeholderTable.get()));
+		return new Part[][][] {
+				{ { null, null }, { bars, null } },
+				{ { cauldron, anvil }, { piston, table } },
 		};
 	}
 

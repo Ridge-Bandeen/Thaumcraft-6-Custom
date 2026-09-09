@@ -1885,6 +1885,43 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
+	 * Real coverage for {@link thaumcraft.common.registry.ThaumcraftDustTriggers#golemPressBlueprint} - the
+	 * Golem Press ritual, {@link thaumcraft.common.blocks.crafting.BlockGolemBuilder}'s real (and, until this
+	 * chunk, entirely missing) acquisition path. Builds the real compact 2x2x2 shape (a lower-layer 2x2
+	 * cauldron/anvil/piston/table footprint, an iron-bars accent one block above the piston corner), converts
+	 * it, and confirms the piston core really becomes the real {@code golemBuilder} block while the other 4
+	 * corners become their own real placeholder blocks (not left as plain vanilla, which could be
+	 * re-converted).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void salisMundusConvertsARealGolemPressStructure(GameTestHelper helper) {
+		BlockPos base = new BlockPos(2, 1, 2);
+		BlockPos cauldronPos = base.offset(0, 0, 0);
+		BlockPos anvilPos = base.offset(0, 0, 1);
+		BlockPos pistonPos = base.offset(1, 0, 0);
+		BlockPos tablePos = base.offset(1, 0, 1);
+		BlockPos barsPos = base.offset(1, 1, 0);
+		helper.setBlock(cauldronPos, Blocks.CAULDRON);
+		helper.setBlock(anvilPos, Blocks.ANVIL);
+		helper.setBlock(pistonPos, Blocks.PISTON.defaultBlockState().setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.UP));
+		helper.setBlock(tablePos, BlocksTC.tableStone.get());
+		helper.setBlock(barsPos, Blocks.IRON_BARS);
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		useSalisMundusOn(helper, player, pistonPos);
+		helper.assertTrue(helper.getBlockState(pistonPos).is(Blocks.PISTON), "the piston core should still be a real piston the same tick - the real conversion is delayed, not instant");
+
+		tickSchedulerPastDustTriggerDelay(helper);
+
+		helper.assertTrue(helper.getBlockState(pistonPos).is(BlocksTC.golemBuilder.get()), "the piston core should really have become a real golemBuilder after the real delayed conversion, found " + helper.getBlockState(pistonPos));
+		helper.assertTrue(helper.getBlockState(cauldronPos).is(BlocksTC.placeholderCauldron.get()), "the cauldron corner should really have become the real placeholder block");
+		helper.assertTrue(helper.getBlockState(anvilPos).is(BlocksTC.placeholderAnvil.get()), "the anvil corner should really have become the real placeholder block");
+		helper.assertTrue(helper.getBlockState(tablePos).is(BlocksTC.placeholderTable.get()), "the stone table corner should really have become the real placeholder block");
+		helper.assertTrue(helper.getBlockState(barsPos).is(BlocksTC.placeholderBars.get()), "the iron bars accent should really have become the real placeholder block");
+		helper.succeed();
+	}
+
+	/**
 	 * Real coverage for {@link thaumcraft.common.lib.crafting.DustTriggerMultiblock}'s other real registered
 	 * blueprint - the Arcane-tier Infusion Altar. Pre-places a real {@code infusionMatrix}/{@code pedestal}
 	 * (the original's own real "these already exist, the ritual doesn't touch them" validity cells - see
