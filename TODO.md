@@ -149,30 +149,76 @@ consolidation conventions:
 Large, already-investigated subsystems with their own real blockers or open
 sub-arcs — see the project memory file for full detail, not repeated here:
 
-- Research Table minigame (~4700 lines total incl. 51-file card/aid deck) —
-  real value, "many small bespoke pieces," not one clean slice.
-- Non-boss monster roster — **closed 2026-09-09, this note was stale.** A
-  precise diff of the true original's whole `entities/monster/` tree
-  against `build.gradle`'s include list found the roster (regular mobs
-  *and* most bosses) was already almost entirely built from earlier
-  sessions this memory note hadn't caught up with - only 2 real files were
-  actually missing: `ChampionModDummy` (confirmed dead-in-the-true-original
-  itself, zero real usages anywhere - no action needed) and
-  `EntityTaintacleGiant` (the Taint faction's own boss - now built, see
-  "Recently closed" below). Listed here only so it isn't mistakenly
-  reopened as a big arc by a future sweep - if a genuinely new gap turns up
-  in this area later, it's a small one, not a rebuild of this whole entry.
+- **Research Table minigame** — **re-scoped 2026-09-09, this note was very
+  stale.** The old "~4700 lines, many small bespoke pieces" estimate
+  predates a lot of real work: `TileResearchTable`/`BlockResearchTable`/
+  `ResearchTableMenu`/`GuiResearchTable`/`TileResearchTableRenderer`/
+  `ClientResearchTableCache` all already exist and are wired up (even
+  those classes' own doc comments are individually a bit stale - e.g.
+  `TileResearchTable`'s still says "no block/menu/screen yet", written
+  before those were added later the same arc). The real "core" tier
+  (`api.research.theorycraft`, all 9 cards + `AidBookshelf`) is fully
+  ported. Of the true original's larger `common.lib.research.theorycraft`
+  "extra content" tier, **18 of 19 remaining cards and 6 of 8 remaining
+  aids are already registered** (see `Thaumcraft.java`'s own `commonSetup`
+  doc comment for the exact running list - it's the authoritative, current
+  source, more current than any individual class's own comment). Genuinely
+  still open: `CardCelestial` (needs `ItemCelestialNotes`, itself
+  confirmed flavor-only/Baubles-tied by an earlier sweep - out of scope by
+  the standing Baubles exclusion unless that changes) and 3 aids each
+  blocked on their own still-unported block - `AidBasicAuromancy`
+  (`wandWorkbench`), `AidBasicEldritch` (`eldritch`), `AidBrainInAJar`
+  (`jarBrain`). All three of those blocks were already independently
+  flagged as real gaps elsewhere in this file's own history - building any
+  of them for its own sake would also unblock its aid essentially for
+  free. `AidGlyphedStone` (a 4th aid in that same blocked group) is now
+  closed - see "Recently closed" below.
 - Crystal cluster connected-texture rendering (`BlockCrystal`) — real soft
   blocker: Forge's `IExtendedBlockState`/unlisted-properties baked-model
-  pattern has no modern equivalent yet.
-- Golem construction pipeline — far bigger than it looks (~4000+ lines, 140
-  files), own API layer (`GolemHelper`) is pure stub. Multi-session arc, not
-  a quick chunk. (Note: the Golem Press *ritual* that used to unlock
-  `golemBuilder` itself is now closed — see "Recently closed" below — this
-  remaining item is the much bigger golem AI/behavior pipeline behind it.)
+  pattern has no modern equivalent yet. Not re-verified this pass - given
+  how stale the other two estimates in this section turned out to be, this
+  one's real blocker (not just an old line-count guess) makes it more
+  likely to still be accurate, but worth a fresh look before assuming so.
+- **Golem construction pipeline** — **re-scoped 2026-09-09, this note was
+  very stale too.** The old "`GolemHelper` is pure stub" claim no longer
+  holds - `GolemHelper`/`IGolemAPI`/`IGolemProperties`/`EnumGolemTrait`,
+  the real `EntityThaumcraftGolem` (827 lines in the true original) with
+  real taming/following/melee/basic-AI behavior, `GolemProperties`,
+  `ItemGolemBell`/`ItemGolemPlacer`, and a real task/seal-assignment system
+  (`golems/ai/AIGoto`/`AIGotoBlock`/`AIGotoEntity`, `golems/tasks/
+  TaskHandler`, all 15 `sealGuard`/etc. items from the original sweep) are
+  ALL already real and wired up - `EntityThaumcraftGolem`'s own top-level
+  doc comment is itself the stale one here, still describing the task
+  system as a "separate, much larger arc... not touched" when
+  `registerGoals` right below it already wires `AIGotoEntity`/`AIGotoBlock`
+  in for real. Genuinely still open, from a precise diff against the true
+  original's whole `golems`/`research/theorycraft` trees: real golem PART
+  variants (`GolemArmDart` - a ranged-attack arm, `GolemLegLevitator` -
+  flight, `GolemLegWheels` - the `WHEELED` speed trait), a few specific
+  golem AI behaviors (`AIArrowAttack`, `AINearestValidTarget` for
+  guard-type seals), and real air/ground pathfinding refinement for
+  `CLIMBER`-trait golems (`PathNavigateGolemGround`/`Air`,
+  `GolemNodeProcessor` - `createGolemNavigation` currently only
+  special-cases `FLYER`, `CLIMBER` still falls back to plain ground
+  pathing). Client-only golem-builder-screen button widgets/part-model
+  renderers were NOT diffed carefully - likely mostly moot given
+  `GuiGolemBuilder`'s own doc comment already describes a deliberate
+  "lighter, simplified screen, not a line-for-line port" treatment, same
+  as every other client screen this port has built. This is a real,
+  substantially smaller remaining scope than the old estimate - not a
+  from-scratch multi-session arc, more like 2-4 focused chunks (parts,
+  specific AI behaviors, pathfinding) on top of an already-solid base.
 - Focal Manipulator — **closed**, full arc shipped (tile, block, menu,
   screen, craft button, graph-save packet, node-graph canvas). Listed here
   only so it isn't mistakenly re-opened by a future sweep.
+
+**A pattern worth remembering for whoever picks this file up next**: this
+whole "Deferred subsystems" section had gone stale in ways the rest of this
+file hadn't - each entry here is a coarse, old estimate nobody had reason to
+revisit until someone actually went looking. Before treating any remaining
+entry above as an accurate scope, do the same precise diff this session did
+(true original's file list for that area vs. `build.gradle`'s include list)
+rather than trusting the prose - it was wrong about 2 of 4 entries here.
 
 ## Standing manual-verification item (not a code gap)
 
@@ -273,6 +319,13 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   reachable today though its true original's own real placement was
   worldgen-only, tied to the still-blocked Taint-corruption subsystem). See
   commit "Give the Taint faction its own boss - the Giant Taintacle".
+
+- **AidGlyphedStone** — closed 2026-09-09. A pure registration gap, not new
+  functionality - its own card (`CardGlyphs`) was already registered, and
+  its blocking dependency (`stoneAncientGlyphed`) shipped earlier this same
+  session as part of the Ancient/Eldritch stone family, without the two
+  being connected at the time. See commit "Register AidGlyphedStone - its
+  own real blocker shipped earlier this session".
 
 ---
 *Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
