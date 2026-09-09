@@ -18,27 +18,6 @@ Each of these is genuinely real, registered content in the true original with
 no equivalent anywhere in the current port (verified by direct source read,
 not just a name diff).
 
-- **Grapple Gun components** (`jarBrace`, `grappleGunTip`, `grappleGunSpool`).
-  The assembled `grappleGun` item exists in the modern port, but the true
-  original crafts it from two intermediate arcane-crafted components that
-  don't exist here at all:
-  ```java
-  // true original, ConfigRecipes.java:260-262
-  GrappleGunTip:   "BRB"/"RHR"/"BRB", B=plateBrass, R=nugget(redstone), H=Blocks.TRIPWIRE_HOOK
-  GrappleGunSpool: "SHS"/"SGS"/"SSS", G=mechanismSimple, S=string, H=Blocks.TRIPWIRE_HOOK
-  GrappleGun:      "  S"/"TII"/" BW", B=plateBrass, I=plateIron, T=grappleGunTip, W=plankWood, S=grappleGunSpool
-  ```
-  Need to check whether the modern `grappleGun` recipe already collapses
-  these two steps into one (likely, given the established metadata/step
-  -consolidation convention elsewhere in this port) — if so this is a
-  documentation-only close, not new code. **`jarBrace`** is unrelated to the
-  grapple gun despite being found in the same sweep pass — it's a plain
-  `ItemTCBase` tool item used directly against a placed `BlockJar`
-  (`BlockJar.java:127,182` in the true original — right-clicking a fillable
-  jar with it does something tool-like; read `BlockJar`'s true-original
-  `onBlockActivated` around line 180 to confirm the exact behavior before
-  building it). Crafted `"NSN"/"S S"/"NSN"`, N=nuggetBrass, S=stickWood.
-
 - **Triple Meat Treat** (`tripleMeatTreat`) — **re-scoped, bigger than it
   looks; not actually a quick win.** The item itself is trivial (a custom
   `ItemFood`/`FoodProperties` — 6 hunger / 0.8 saturation, always edible,
@@ -135,6 +114,20 @@ not just a name diff).
   investigation. The real Ancient/Eldritch stone family was shipped instead,
   faithfully matching the true original's own genuinely-unreachable content.
 
+## Confirmed already-built or intentionally consolidated (false positives from the raw name diff — no action needed)
+
+- **Grapple Gun components** (`grappleGunTip`, `grappleGunSpool`) — checked
+  2026-09-09. The modern `grapple_gun.json` recipe is already a single-step
+  `arcane_shaped` recipe crafted directly from raw ingredients (iron ingot,
+  string, redstone, planks), not from the true original's own two
+  intermediate arcane-crafted components. A deliberate, already-made
+  consolidation (matching this port's own established
+  metadata/step-collapsing convention elsewhere), not a gap — building the
+  two intermediate items now would just add redundant, functionally-inert
+  crafting materials. No action needed. (`jarBrace`, found in the same sweep
+  pass but unrelated to the grapple gun, is a real, separate item — see
+  "Recently closed" below, now built.)
+
 ## Confirmed already-built (false positives from the raw name diff — no action needed)
 
 These surfaced in the mechanical field-name diff but were confirmed, on
@@ -222,6 +215,12 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   `placeholderNetherbrick`/`Obsidian` pattern, not the true original's own
   heavier `BlockPlaceholder`). See commit "Give the Golem Builder its real
   acquisition ritual".
+
+- **Jar Brace** (`jarBrace`) — closed 2026-09-09. `TileJarFillable#isBlocked`
+  was hardcoded `false` (its own doc comment flagged this exact gap). Real
+  `applyBrace()` + `ItemsTC.jarBrace` (plain item, asset scaffolding already
+  in the tree) shipped, wired through `BlockJar#useItemOn`. See commit "Give
+  the Warded Jar a real jar brace".
 
 ---
 *Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
