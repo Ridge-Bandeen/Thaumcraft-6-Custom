@@ -85,6 +85,13 @@ not just a name diff).
 - **`empty`** (`BlockTranslucent`) — confirmed 2026-09-09 real (registered)
   but has zero real usages anywhere in the true original outside its own
   registration - a functionally inert novelty block, not worth porting.
+- **`thaumcraft.common.golems.ai.AINearestValidTarget`** (Java class, not
+  a block/item) — confirmed 2026-09-09, same dead-field pattern: declared
+  and implemented in the true original but **zero real usages anywhere**
+  in the whole pristine-original tree. A same-named but unrelated class
+  exists as a local inner class inside `EntityTurretCrossbow`/
+  `EntityTurretCrossbowAdvanced` (already real/shipped in this port under
+  their own separate logic) - do not confuse the two. No action needed.
 - **The "cultist dimension"** — confirmed in an earlier session chunk to
   never have existed in real shipped Thaumcraft 6 (TC5-only concept, or a
   still-open Azanor GitHub suggestion). See memory file for the full
@@ -198,16 +205,25 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   confirmed 100% client-side particle FX in the true original (zero
   server behavior), and their real trait payoffs (flight, WHEELED speed)
   were already handled independently by `EntityThaumcraftGolem`'s own
-  trait checks, so there's nothing left to build for either. Genuinely
-  still open, from a precise diff against the true original's whole
-  `golems`/`research/theorycraft` trees: a couple of specific golem AI
-  behaviors (`AINearestValidTarget` for guard-type seals - `AIArrowAttack`
-  turned out unnecessary too, vanilla's own `RangedAttackGoal` covers it
-  directly), and real air/ground pathfinding refinement for
-  `CLIMBER`-trait golems (`PathNavigateGolemGround`/`Air`,
-  `GolemNodeProcessor` - `createGolemNavigation` currently only
-  special-cases `FLYER`, `CLIMBER` still falls back to plain ground
-  pathing). Client-only golem-builder-screen button widgets/part-model
+  trait checks, so there's nothing left to build for either.
+  `AINearestValidTarget` also turned out to need no work - confirmed
+  dead-in-the-true-original itself (zero real usages anywhere in the whole
+  original codebase; a same-named but unrelated inner class exists locally
+  in `EntityTurretCrossbow`/`EntityTurretCrossbowAdvanced`, not this one).
+  `AIArrowAttack` was already confirmed unnecessary too (vanilla's own
+  `RangedAttackGoal` covers it directly - see "Recently closed"). Only
+  genuinely real item left, from a precise diff against the true
+  original's whole `golems`/`research/theorycraft` trees: air/ground
+  pathfinding refinement for `CLIMBER`-trait golems
+  (`PathNavigateGolemGround`/`Air`, `GolemNodeProcessor` -
+  `createGolemNavigation` currently only special-cases `FLYER`, `CLIMBER`
+  still falls back to plain ground pathing). Checked the true original's
+  own `PathNavigateGolemGround` directly: its real content turned out to
+  be general golem-pathing quality-of-life (door-opening, smarter
+  target-Y resolution around solid/air blocks) more than climbing-specific
+  logic - needs the modern `NodeEvaluator` API (1.21's real replacement
+  for 1.12.2's `PathNodeProcessor`) investigated properly before building,
+  not attempted this pass. Client-only golem-builder-screen button widgets/part-model
   renderers were NOT diffed carefully - likely mostly moot given
   `GuiGolemBuilder`'s own doc comment already describes a deliberate
   "lighter, simplified screen, not a line-for-line port" treatment, same
