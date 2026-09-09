@@ -10059,6 +10059,57 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crystalAttachesAndSurvivesOnlyOnItsOwnRealStoredFacing(GameTestHelper helper) {
+		// FACING is now real, stored blockstate (see BlockCrystal's own doc comment) - a crystal only
+		// survives touching a real sturdy neighbor on the specific face it's actually attached to, not "any
+		// of 6 faces" the way an earlier pass of this same class simplified it to.
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = new BlockPos(2, 2, 2);
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos.west(), net.minecraft.world.level.block.Blocks.STONE);
+
+		net.minecraft.world.level.block.state.BlockState eastFacing = BlocksTC.crystals.get(Aspect.FIRE).get()
+				.defaultBlockState().setValue(thaumcraft.common.blocks.world.ore.BlockCrystal.FACING, net.minecraft.core.Direction.EAST);
+		helper.setBlock(pos, eastFacing);
+		helper.assertTrue(level.getBlockState(abs).canSurvive(level, abs),
+				"a real crystal facing EAST (attached to a real sturdy block on its own WEST side) should really survive");
+
+		net.minecraft.world.level.block.state.BlockState southFacing =
+				eastFacing.setValue(thaumcraft.common.blocks.world.ore.BlockCrystal.FACING, net.minecraft.core.Direction.SOUTH);
+		helper.setBlock(pos, southFacing);
+		helper.assertTrue(!level.getBlockState(abs).canSurvive(level, abs),
+				"the same real sturdy WEST neighbor should NOT support a crystal facing SOUTH - only its own real stored facing counts");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crystalGetsARealFacingFromWhicheverFaceItsPlacedAgainst(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos wallPos = new BlockPos(2, 2, 2);
+		BlockPos crystalPos = wallPos.north();
+		helper.setBlock(wallPos, net.minecraft.world.level.block.Blocks.STONE);
+		BlockPos wallAbs = helper.absolutePos(wallPos);
+
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(crystalPos).above(2));
+		ItemStack stack = new ItemStack(ItemsTC.crystals.get(Aspect.FIRE).get());
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, stack);
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				net.minecraft.world.phys.Vec3.atCenterOf(wallAbs), net.minecraft.core.Direction.NORTH, wallAbs, false);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(
+				player, net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+		stack.useOn(context);
+
+		BlockPos crystalAbs = helper.absolutePos(crystalPos);
+		helper.assertTrue(level.getBlockState(crystalAbs).is(BlocksTC.crystals.get(Aspect.FIRE).get()),
+				"right-clicking the real north face of a real sturdy block with a crystal item should really place a real crystal there");
+		helper.assertTrue(level.getBlockState(crystalAbs).getValue(thaumcraft.common.blocks.world.ore.BlockCrystal.FACING) == net.minecraft.core.Direction.NORTH,
+				"a crystal placed against the real north face of a block should really be given a real FACING=NORTH state, matching the clicked face");
+
+		helper.succeed();
+	}
+
 	/**
 	 * Real coverage for {@link thaumcraft.api.items.WornGearHelper} - the shared scan every "bauble" item
 	 * this pass added relies on instead of a real dedicated equipment slot (see that class's own doc

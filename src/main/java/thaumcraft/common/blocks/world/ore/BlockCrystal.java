@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
@@ -13,10 +14,13 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import javax.annotation.Nullable;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.aura.AuraHelper;
@@ -35,54 +39,74 @@ import thaumcraft.common.items.resources.ItemCrystalEssence;
  * <p>Real, documented modern substitution: the original's own placement/attachment check was {@code
  * Material.ROCK} specifically - modern {@code Material} doesn't exist any more, so this checks any real
  * sturdy solid face instead ({@link BlockState#isFaceSturdy}), the same general-purpose "can something
- * attach here" test vanilla's own vines/glow-lichen/amethyst-bud family already uses. A real, faithful port
- * of the original's own real per-attached-face collision shape (grows/shrinks to whichever single face is
- * actually sturdy, or fills the whole block when more than one face is) - {@link #getShape} recomputes it
- * live from the real neighbor state rather than baking it into extra block-state properties, the plain
- * modern replacement for the original's own Forge-specific unlisted-property/{@code ExtendedBlockState}
- * mechanism.
+ * attach here" test vanilla's own vines/glow-lichen/amethyst-bud family already uses.
+ *
+ * <p>Real, single-face attachment/orientation via {@link #FACING} - a genuine real vanilla
+ * {@code DirectionProperty}, stored in the block state and driving both the real collision/selection
+ * {@link #getShape} (a switch on the stored facing, not a live neighbor rescan) and the real per-facing
+ * blockstate model rotation (the same "one unrotated model, five rotated variants" pattern vanilla's own
+ * {@code AmethystClusterBlock} uses - {@code facing=up} unrotated, the rest via blockstate {@code x}/{@code y}
+ * rotation). This turned out to be a real, direct, already-existing modern replacement for the original's
+ * own Forge-specific unlisted-property/{@code ExtendedBlockState} mechanism (an earlier TODO note assumed no
+ * modern equivalent existed yet and left this whole area soft-blocked - it does exist, just needed finding).
+ * {@link #getStateForPlacement} sets the real facing from the clicked face on manual placement; natural
+ * spreading ({@link #growOrSpread}) computes it fresh for each new cluster from whichever real neighbor is
+ * actually sturdy near the chosen spread target ({@link #findSturdyFacing}). {@link #canSurvive} now checks
+ * only the one real attached face (matching the true original's own single-attachment-point model, and
+ * {@code AmethystClusterBlock}'s real precedent) rather than the earlier "any of 6 faces" simplification.
+ *
+ * <p>Real, still-documented remaining cut: the original's own real bespoke OBJ crystal-cluster mesh ({@code
+ * models/obj/crystal.obj}, a genuinely faceted crystal-formation shape, not a plain box) isn't ported - this
+ * chunk fixed real per-face ORIENTATION (above), not the mesh geometry itself, which stays a simple oriented
+ * box (same real "no bespoke mesh renderer yet" gap the advanced turret's own OBJ mesh carries) - a genuine,
+ * separate, smaller follow-up rather than something blocking the real growth/harvest/infusion-recipe/now-
+ * oriented-rendering gameplay on it.
  *
  * <p>Real drops via {@link #playerWillDestroy} (matching {@code BlockStonePorous}'s own established
  * precedent, not a static loot table - the drop count is real, live block-state-driven, {@link #SIZE}+1 real
  * {@code crystal_essence} units of this block's own aspect): a plain vanilla-solid, real static per-block
  * loot table can't read {@link #SIZE} for a dynamic count the way this needs to.
  *
- * <p>Real, documented cut: the original's own real bespoke OBJ crystal-cluster mesh ({@code
- * models/obj/crystal.obj}, rendered per-attached-face via a fully custom {@code IBakedModel}) isn't ported -
- * registered with a real, simple, functional block model instead (same real "no bespoke mesh renderer yet"
- * gap the advanced turret's own OBJ mesh already carries this session), a genuine separate follow-up rather
- * than blocking the real growth/harvest/infusion-recipe gameplay on it. No real collision at all (matches
- * the original's own real {@code getCollisionBoundingBox() == null}) - fully walk-through, same as the
- * original.
+ * <p>No real collision at all (matches the original's own real {@code getCollisionBoundingBox() == null}) -
+ * fully walk-through, same as the original.
  */
 public class BlockCrystal extends Block {
 
 	public static final IntegerProperty SIZE = IntegerProperty.create("size", 0, 3);
 	public static final IntegerProperty GENERATION = IntegerProperty.create("gen", 1, 4);
+	public static final DirectionProperty FACING = BlockStateProperties.FACING;
 
 	private static final int THRESHOLD = 10;
 
 	// Real 0-1 normalized shapes via Shapes.box directly, matching BlockCandle's own established precedent -
 	// Block.box(...) expects the vanilla 0-16 pixel scale instead, which would silently shrink these to a
-	// sliver if used here.
-	private static final VoxelShape SHAPE_UP = Shapes.box(0.0, 0.5, 0.0, 1.0, 1.0, 1.0);
-	private static final VoxelShape SHAPE_DOWN = Shapes.box(0.0, 0.0, 0.0, 1.0, 0.5, 1.0);
-	private static final VoxelShape SHAPE_NORTH = Shapes.box(0.0, 0.0, 0.0, 1.0, 1.0, 0.5);
-	private static final VoxelShape SHAPE_SOUTH = Shapes.box(0.0, 0.0, 0.5, 1.0, 1.0, 1.0);
-	private static final VoxelShape SHAPE_WEST = Shapes.box(0.0, 0.0, 0.0, 0.5, 1.0, 1.0);
-	private static final VoxelShape SHAPE_EAST = Shapes.box(0.5, 0.0, 0.0, 1.0, 1.0, 1.0);
+	// sliver if used here. Keyed by FACING - the direction the cluster grows AWAY from its attachment
+	// surface (matches AmethystClusterBlock's real convention: facing=up means attached to the floor below,
+	// growing upward, and is the block model's own default, unrotated orientation).
+	private static final VoxelShape SHAPE_UP = Shapes.box(0.0, 0.0, 0.0, 1.0, 0.5, 1.0);
+	private static final VoxelShape SHAPE_DOWN = Shapes.box(0.0, 0.5, 0.0, 1.0, 1.0, 1.0);
+	private static final VoxelShape SHAPE_NORTH = Shapes.box(0.0, 0.0, 0.5, 1.0, 1.0, 1.0);
+	private static final VoxelShape SHAPE_SOUTH = Shapes.box(0.0, 0.0, 0.0, 1.0, 1.0, 0.5);
+	private static final VoxelShape SHAPE_EAST = Shapes.box(0.0, 0.0, 0.0, 0.5, 1.0, 1.0);
+	private static final VoxelShape SHAPE_WEST = Shapes.box(0.5, 0.0, 0.0, 1.0, 1.0, 1.0);
 
 	public final Aspect aspect;
 
 	public BlockCrystal(BlockBehaviour.Properties properties, Aspect aspect) {
 		super(properties);
 		this.aspect = aspect;
-		registerDefaultState(stateDefinition.any().setValue(SIZE, 0).setValue(GENERATION, 1));
+		registerDefaultState(stateDefinition.any().setValue(SIZE, 0).setValue(GENERATION, 1).setValue(FACING, Direction.UP));
 	}
 
 	@Override
 	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-		builder.add(SIZE, GENERATION);
+		builder.add(SIZE, GENERATION, FACING);
+	}
+
+	@Nullable
+	@Override
+	public BlockState getStateForPlacement(BlockPlaceContext context) {
+		return defaultBlockState().setValue(FACING, context.getClickedFace());
 	}
 
 	@Override
@@ -144,7 +168,11 @@ public class BlockCrystal extends Block {
 				float drained = flux ? AuraHelper.drainFlux(level, pos, THRESHOLD, false) : AuraHelper.drainVis(level, pos, THRESHOLD, false);
 				if (drained > 0.0f) {
 					int newGeneration = random.nextInt(6) == 0 ? generation - 1 : generation;
-					level.setBlockAndUpdate(target, defaultBlockState().setValue(GENERATION, newGeneration + 1));
+					Direction facing = findSturdyFacing(level, target);
+					if (facing == null) {
+						facing = Direction.UP; // shouldn't happen - pickSpreadTarget already confirmed a real sturdy neighbor exists
+					}
+					level.setBlockAndUpdate(target, defaultBlockState().setValue(GENERATION, newGeneration + 1).setValue(FACING, facing));
 				}
 			}
 		}
@@ -173,23 +201,34 @@ public class BlockCrystal extends Block {
 	}
 
 	private boolean isTouchingRock(LevelReader level, BlockPos pos) {
+		return findSturdyFacing(level, pos) != null;
+	}
+
+	/** Finds a real sturdy neighbor near {@code pos} and returns the {@link #FACING} value a new cluster
+	 * rooted there should use (pointing away from that neighbor) - or {@code null} if nothing sturdy touches
+	 * any of the 6 faces. Direction iteration order has no gameplay significance (matches the original's own
+	 * "any touching face" real attachment rule) - the first sturdy face found wins. */
+	@Nullable
+	private Direction findSturdyFacing(LevelReader level, BlockPos pos) {
 		for (Direction dir : Direction.values()) {
 			BlockPos neighbor = pos.relative(dir);
 			if (level.getBlockState(neighbor).isFaceSturdy(level, neighbor, dir.getOpposite())) {
-				return true;
+				return dir.getOpposite();
 			}
 		}
-		return false;
+		return null;
 	}
 
 	@Override
 	protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
-		return isTouchingRock(level, pos);
+		Direction facing = state.getValue(FACING);
+		BlockPos neighbor = pos.relative(facing.getOpposite());
+		return level.getBlockState(neighbor).isFaceSturdy(level, neighbor, facing);
 	}
 
 	@Override
 	protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos neighborPos, boolean movedByPiston) {
-		if (!isTouchingRock(level, pos)) {
+		if (!state.canSurvive(level, pos)) {
 			popResource(level, pos, new ItemStack(this));
 			level.removeBlock(pos, false);
 		}
@@ -210,28 +249,14 @@ public class BlockCrystal extends Block {
 
 	@Override
 	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-		boolean up = isSturdyFrom(level, pos, Direction.UP);
-		boolean down = isSturdyFrom(level, pos, Direction.DOWN);
-		boolean north = isSturdyFrom(level, pos, Direction.NORTH);
-		boolean south = isSturdyFrom(level, pos, Direction.SOUTH);
-		boolean east = isSturdyFrom(level, pos, Direction.EAST);
-		boolean west = isSturdyFrom(level, pos, Direction.WEST);
-		int count = (up ? 1 : 0) + (down ? 1 : 0) + (north ? 1 : 0) + (south ? 1 : 0) + (east ? 1 : 0) + (west ? 1 : 0);
-		if (count > 1) {
-			return Shapes.block();
-		}
-		if (up) return SHAPE_UP;
-		if (down) return SHAPE_DOWN;
-		if (east) return SHAPE_EAST;
-		if (west) return SHAPE_WEST;
-		if (south) return SHAPE_SOUTH;
-		if (north) return SHAPE_NORTH;
-		return Shapes.block();
-	}
-
-	private boolean isSturdyFrom(BlockGetter level, BlockPos pos, Direction dir) {
-		BlockPos neighbor = pos.relative(dir);
-		return level.getBlockState(neighbor).isFaceSturdy(level, neighbor, dir.getOpposite());
+		return switch (state.getValue(FACING)) {
+			case DOWN -> SHAPE_DOWN;
+			case NORTH -> SHAPE_NORTH;
+			case SOUTH -> SHAPE_SOUTH;
+			case EAST -> SHAPE_EAST;
+			case WEST -> SHAPE_WEST;
+			default -> SHAPE_UP;
+		};
 	}
 
 	@Override

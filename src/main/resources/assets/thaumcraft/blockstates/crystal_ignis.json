@@ -1,5 +1,10 @@
 {
-  "multipart": [
-    { "apply": { "model": "thaumcraft:block/crystal" } }
-  ]
+  "variants": {
+    "facing=down": { "model": "thaumcraft:block/crystal", "x": 180 },
+    "facing=east": { "model": "thaumcraft:block/crystal", "x": 90, "y": 90 },
+    "facing=north": { "model": "thaumcraft:block/crystal", "x": 90 },
+    "facing=south": { "model": "thaumcraft:block/crystal", "x": 90, "y": 180 },
+    "facing=up": { "model": "thaumcraft:block/crystal" },
+    "facing=west": { "model": "thaumcraft:block/crystal", "x": 90, "y": 270 }
+  }
 }
