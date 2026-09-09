@@ -191,12 +191,19 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   doc comment is itself the stale one here, still describing the task
   system as a "separate, much larger arc... not touched" when
   `registerGoals` right below it already wires `AIGotoEntity`/`AIGotoBlock`
-  in for real. Genuinely still open, from a precise diff against the true
-  original's whole `golems`/`research/theorycraft` trees: real golem PART
-  variants (`GolemArmDart` - a ranged-attack arm, `GolemLegLevitator` -
-  flight, `GolemLegWheels` - the `WHEELED` speed trait), a few specific
-  golem AI behaviors (`AIArrowAttack`, `AINearestValidTarget` for
-  guard-type seals), and real air/ground pathfinding refinement for
+  in for real. `GolemArmDart` (the "DARTS" arm's real ranged-attack
+  function - closed 2026-09-09, see "Recently closed" below) turned out to
+  be the only one of the 3 flagged part-function classes with any real
+  server-side behavior to port - `GolemLegLevitator`/`GolemLegWheels` are
+  confirmed 100% client-side particle FX in the true original (zero
+  server behavior), and their real trait payoffs (flight, WHEELED speed)
+  were already handled independently by `EntityThaumcraftGolem`'s own
+  trait checks, so there's nothing left to build for either. Genuinely
+  still open, from a precise diff against the true original's whole
+  `golems`/`research/theorycraft` trees: a couple of specific golem AI
+  behaviors (`AINearestValidTarget` for guard-type seals - `AIArrowAttack`
+  turned out unnecessary too, vanilla's own `RangedAttackGoal` covers it
+  directly), and real air/ground pathfinding refinement for
   `CLIMBER`-trait golems (`PathNavigateGolemGround`/`Air`,
   `GolemNodeProcessor` - `createGolemNavigation` currently only
   special-cases `FLYER`, `CLIMBER` still falls back to plain ground
@@ -326,6 +333,17 @@ rather than trusting the prose - it was wrong about 2 of 4 entries here.
   session as part of the Ancient/Eldritch stone family, without the two
   being connected at the time. See commit "Register AidGlyphedStone - its
   own real blocker shipped earlier this session".
+
+- **GolemArmDart** (the "DARTS" golem arm's real ranged attack) — closed
+  2026-09-09. The arm itself (components, RANGED/FIGHTER/CLUMSY/FRAGILE
+  traits) was already registered; this wired in its real
+  `GolemArm.IArmFunction` - a real vanilla `Arrow` projectile (not a new
+  `EntityType`, since the true original's own `EntityGolemDart` was itself
+  just a cosmetically-reskinned `EntityArrow`) plus vanilla's own
+  `RangedAttackGoal` (the interface already expects that return type, no
+  custom `Goal` needed) added to `EntityThaumcraftGolem#createAI` for
+  RANGED-trait golems with a wired function. See commit "Give the golem
+  Dart arm its real ranged attack".
 
 ---
 *Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
