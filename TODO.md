@@ -151,9 +151,17 @@ sub-arcs — see the project memory file for full detail, not repeated here:
 
 - Research Table minigame (~4700 lines total incl. 51-file card/aid deck) —
   real value, "many small bespoke pieces," not one clean slice.
-- Non-boss monster roster (~2700+ lines) — would be this port's first real
-  vanilla Goal-based AI port; zombie variants inside are trivial/peelable if
-  someone wants a partial slice.
+- Non-boss monster roster — **closed 2026-09-09, this note was stale.** A
+  precise diff of the true original's whole `entities/monster/` tree
+  against `build.gradle`'s include list found the roster (regular mobs
+  *and* most bosses) was already almost entirely built from earlier
+  sessions this memory note hadn't caught up with - only 2 real files were
+  actually missing: `ChampionModDummy` (confirmed dead-in-the-true-original
+  itself, zero real usages anywhere - no action needed) and
+  `EntityTaintacleGiant` (the Taint faction's own boss - now built, see
+  "Recently closed" below). Listed here only so it isn't mistakenly
+  reopened as a big arc by a future sweep - if a genuinely new gap turns up
+  in this area later, it's a small one, not a rebuild of this whole entry.
 - Crystal cluster connected-texture rendering (`BlockCrystal`) — real soft
   blocker: Forge's `IExtendedBlockState`/unlisted-properties baked-model
   pattern has no modern equivalent yet.
@@ -251,6 +259,20 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   real custom `CraftingRecipe` (`CustomRecipe`, same vanilla mechanism
   `RepairItemRecipe` uses), not a JSON shapeless recipe. See commit "Give
   Triple Meat Treat its real chunk family and custom crafting recipe".
+
+- **Non-boss monster roster** — closed 2026-09-09. **Corrects an earlier
+  "Deferred subsystems" scoping note in this same file** that estimated a
+  whole multi-session arc (~2700+ lines) - a precise diff of the true
+  original's entire `entities/monster/` tree against `build.gradle` found
+  the roster (regular mobs and most bosses) already almost entirely built
+  from earlier sessions this note hadn't caught up with. Only 2 real files
+  were missing: `ChampionModDummy` (confirmed dead-in-the-true-original
+  itself, no action needed) and `EntityTaintacleGiant` (the Taint faction's
+  own boss - real `EntityTaintacle` subclass with its own hand-duplicated
+  boss-bar/enrage/self-heal mechanic and a real death-drop dedup, `/summon`-
+  reachable today though its true original's own real placement was
+  worldgen-only, tied to the still-blocked Taint-corruption subsystem). See
+  commit "Give the Taint faction its own boss - the Giant Taintacle".
 
 ---
 *Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
