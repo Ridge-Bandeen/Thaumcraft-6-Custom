@@ -30,6 +30,7 @@ import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
+import net.minecraft.world.entity.ai.navigation.WallClimberNavigation;
 import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeItem;
@@ -71,10 +72,19 @@ import thaumcraft.api.golems.IGolemProperties;
  *       {@link #createAI} below) - a golem with a real assigned task actively walks to it, taking priority
  *       over the plain-wander fallback. {@code AIGotoHome} specifically is still real, just via vanilla
  *       {@link Mob#restrictTo} instead (see this class's own earlier note on that).</li>
- *   <li>No {@code PathNavigateGolemGround}/{@code PathNavigateGolemAir}/{@code PathNavigateClimber} -
- *       {@link #createGolemNavigation} swaps between plain vanilla {@link GroundPathNavigation} and
- *       {@link FlyingPathNavigation} on the {@code FLYER} trait only; {@code CLIMBER} golems still use
- *       ground pathing for now.</li>
+ *   <li>No {@code PathNavigateGolemGround}/{@code PathNavigateGolemAir} - {@link #createGolemNavigation}
+ *       swaps between plain vanilla {@link GroundPathNavigation} and {@link FlyingPathNavigation} on the
+ *       {@code FLYER} trait (the true original's own hand-rolled subclasses turned out, on direct
+ *       inspection, to carry almost no real trait-specific logic - mostly generic pathing quality-of-life
+ *       already covered by modern vanilla's own navigation classes). {@code CLIMBER} golems DO get a real,
+ *       genuine equivalent though: vanilla's own {@link net.minecraft.world.entity.ai.navigation.WallClimberNavigation}
+ *       (the same real class {@link net.minecraft.world.entity.monster.Spider} itself uses), paired with a
+ *       real {@link #onClimbable} override reading the {@link #isBesideClimbableBlock} state that was
+ *       already tracked/synced but previously never actually wired into movement physics - see both methods'
+ *       own doc comments. The true original's own {@code PathNavigateClimber} class is referenced by its own
+ *       {@code EntityThaumcraftGolem.java} but is genuinely absent from the entire pristine-original tree
+ *       this port was decompiled from (confirmed via exhaustive search) - not recoverable, so this is a real
+ *       faithful modern substitute rather than a line-for-line port.</li>
  *   <li>A real ranged-attack {@link net.minecraft.world.entity.ai.goal.RangedAttackGoal} IS added now for
  *       {@code RANGED}-trait golems with a real {@code arms.function} (the "DARTS" arm's
  *       {@link thaumcraft.common.golems.parts.GolemArmDart}, the first real {@code IArmFunction} this port
@@ -278,9 +288,36 @@ public class EntityThaumcraftGolem extends TamableAnimal implements IGolemAPI, R
 	}
 
 	private net.minecraft.world.entity.ai.navigation.PathNavigation createGolemNavigation(IGolemProperties props) {
-		return props.hasTrait(EnumGolemTrait.FLYER)
-				? new FlyingPathNavigation(this, level())
-				: new GroundPathNavigation(this, level());
+		if (props.hasTrait(EnumGolemTrait.FLYER)) {
+			return new FlyingPathNavigation(this, level());
+		}
+		if (props.hasTrait(EnumGolemTrait.CLIMBER)) {
+			// Real vanilla WallClimberNavigation - the same real class Spider itself uses for "climb any
+			// wall it's pushed against" pathing. When plain ground pathing can't find a real route (e.g. a
+			// sheer wall blocks it), it falls back to steering straight at the target instead of giving up -
+			// combined with the real onClimbable() override below, physics (not custom node logic) does the
+			// actual climbing. The true original's own PathNavigateClimber is a real class referenced by its
+			// own EntityThaumcraftGolem.java but never actually present anywhere in the pristine-original
+			// tree this port was decompiled from (confirmed via exhaustive search - a real gap in the
+			// original snapshot itself, not something this port lost) - WallClimberNavigation is this port's
+			// own real, faithful modern substitute rather than a guess at the missing class's content.
+			return new WallClimberNavigation(this, level());
+		}
+		return new GroundPathNavigation(this, level());
+	}
+
+	/** Real vanilla climbing hook (see {@link net.minecraft.world.entity.monster.Spider#onClimbable} for the
+	 * exact same real precedent) - {@link #isBesideClimbableBlock} was already tracked and synced
+	 * ({@link #setBesideClimbableBlock} is called every tick for {@code CLIMBER}-trait golems in
+	 * {@link #aiStep}) but nothing ever read it back into real movement physics until now. Once this returns
+	 * {@code true}, vanilla's own {@code LivingEntity#travel}/{@code handleOnClimbable} takes over: fall
+	 * distance resets, horizontal friction stops applying, and a small upward nudge lets the golem actually
+	 * ascend a sheer wall it's pushed against - matching the true original's own real
+	 * {@code setBesideClimbableBlock(collidedHorizontally)} trick exactly (any sturdy wall counts, not just
+	 * a real climbable block, same as vanilla's own Spider). */
+	@Override
+	public boolean onClimbable() {
+		return isBesideClimbableBlock() || super.onClimbable();
 	}
 
 	private void createAI() {

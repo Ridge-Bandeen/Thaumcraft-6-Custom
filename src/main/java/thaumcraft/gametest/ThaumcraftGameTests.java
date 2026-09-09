@@ -6846,6 +6846,44 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void climberLegsGiveARealWallClimberNavigationAndRealOnClimbableBehavior(GameTestHelper helper) {
+		// See EntityThaumcraftGolem's own onClimbable()/createGolemNavigation doc comments - the true
+		// original's own PathNavigateClimber is genuinely unrecoverable (referenced but absent from the
+		// whole pristine-original tree), so this uses vanilla's own real WallClimberNavigation (the same
+		// class Spider itself uses) plus a real onClimbable() override reading the already-synced
+		// isBesideClimbableBlock state.
+		thaumcraft.api.golems.parts.GolemMaterial iron = findPartByKey(thaumcraft.api.golems.parts.GolemMaterial.getMaterials(), m -> m.key, "IRON");
+		thaumcraft.api.golems.parts.GolemHead basic = findPartByKey(thaumcraft.api.golems.parts.GolemHead.getHeads(), h -> h.key, "BASIC");
+		thaumcraft.api.golems.parts.GolemArm fine = findPartByKey(thaumcraft.api.golems.parts.GolemArm.getArms(), a -> a.key, "FINE");
+		thaumcraft.api.golems.parts.GolemLeg climber = findPartByKey(thaumcraft.api.golems.parts.GolemLeg.getLegs(), l -> l.key, "CLIMBER");
+		thaumcraft.api.golems.parts.GolemAddon none = findPartByKey(thaumcraft.api.golems.parts.GolemAddon.getAddons(), a -> a.key, "NONE");
+
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setMaterial(iron);
+		props.setHead(basic);
+		props.setArms(fine);
+		props.setLegs(climber);
+		props.setAddon(none);
+		props.setRank(1);
+
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, origin);
+		golem.initializeGolem(props, 0);
+
+		helper.assertTrue(golem.getProperties().hasTrait(thaumcraft.api.golems.EnumGolemTrait.CLIMBER), "the real CLIMBER legs should really grant the CLIMBER trait");
+		helper.assertTrue(golem.getNavigation() instanceof net.minecraft.world.entity.ai.navigation.WallClimberNavigation,
+				"a real CLIMBER-trait golem should really be given vanilla's own real WallClimberNavigation");
+
+		helper.assertTrue(!golem.onClimbable(), "a fresh CLIMBER golem not beside anything climbable should really report onClimbable() == false");
+		golem.setBesideClimbableBlock(true);
+		helper.assertTrue(golem.onClimbable(), "once really marked beside a climbable block, a CLIMBER golem should really report onClimbable() == true");
+		helper.assertTrue(!golem.causeFallDamage(20.0f, 1.0f, helper.getLevel().damageSources().fall()),
+				"a real CLIMBER golem should still really take zero fall damage regardless of onClimbable state");
+
+		helper.succeed();
+	}
+
 	/** {@link thaumcraft.api.golems.IGolemAPI#hasTrait} isn't part of the interface - convenience delegate
 	 * used only by this test file. */
 	private static boolean hasTrait(thaumcraft.common.golems.EntityThaumcraftGolem golem, thaumcraft.api.golems.EnumGolemTrait trait) {
