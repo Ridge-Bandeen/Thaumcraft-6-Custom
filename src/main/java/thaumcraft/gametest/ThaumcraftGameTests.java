@@ -12926,6 +12926,20 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(thaumcraft.api.research.theorycraft.TheorycraftManager.aids.values().stream()
 						.anyMatch(a -> a instanceof thaumcraft.common.lib.research.theorycraft.AidBasicInfusion),
 				"AidBasicInfusion should really be registered");
+		helper.assertTrue(thaumcraft.api.research.theorycraft.TheorycraftManager.aids.values().stream()
+						.anyMatch(a -> a instanceof thaumcraft.common.lib.research.theorycraft.AidGlyphedStone),
+				"AidGlyphedStone should really be registered");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void aidGlyphedStoneOffersItsRealCard(GameTestHelper helper) {
+		thaumcraft.common.lib.research.theorycraft.AidGlyphedStone aid = new thaumcraft.common.lib.research.theorycraft.AidGlyphedStone();
+		helper.assertTrue(aid.getAidObject() instanceof ItemStack stack && stack.is(thaumcraft.api.blocks.BlocksTC.stoneAncientGlyphed.get().asItem()),
+				"AidGlyphedStone should really trigger off a real glyphed ancient stone item, found " + aid.getAidObject());
+		java.util.List<Class<thaumcraft.api.research.theorycraft.TheorycraftCard>> cards = java.util.Arrays.asList(aid.getCards());
+		helper.assertTrue(cards.contains(thaumcraft.common.lib.research.theorycraft.CardGlyphs.class),
+				"AidGlyphedStone should really offer CardGlyphs, found " + cards);
 		helper.succeed();
 	}
 
