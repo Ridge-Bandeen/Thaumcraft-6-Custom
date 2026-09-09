@@ -515,6 +515,12 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.crafting.BlockVoidSiphon::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f).sound(SoundType.METAL).noOcclusion());
 
+	/** Vis-powered auto-crafter - see {@link thaumcraft.common.tiles.crafting.TilePatternCrafter}'s own doc
+	 * comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.crafting.BlockPatternCrafter> patternCrafter = BLOCKS.registerBlock("pattern_crafter",
+			thaumcraft.common.blocks.crafting.BlockPatternCrafter::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f, 10.0f).sound(SoundType.METAL).noOcclusion());
+
 	/** Auto-crafting altar - finds and fills a matching Crucible recipe for whatever catalyst is inserted -
 	 * see {@link thaumcraft.common.tiles.crafting.TileThaumatorium}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.crafting.BlockThaumatorium> thaumatorium = BLOCKS.registerBlock("thaumatorium",

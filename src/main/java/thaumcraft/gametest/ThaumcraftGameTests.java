@@ -2619,6 +2619,89 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
+	// Pattern Crafter - vis-powered auto-crafter, real inventories above/below via NeoForge's own
+	// Capabilities.ItemHandler.BLOCK. See TilePatternCrafter's own doc comment for the real mechanic and
+	// what's simplified (no CodeChicken sub-hit raytracing - a plain right-click cycles the pattern).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void patternCrafterCyclesThroughAllTenRealPatternsAndWraps(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.patternCrafter.get());
+		thaumcraft.common.tiles.crafting.TilePatternCrafter tile = helper.getBlockEntity(pos);
+
+		helper.assertTrue(tile.getPatternType() == 0, "a fresh pattern crafter should start on real pattern 0, found " + tile.getPatternType());
+		for (int expected = 1; expected <= 9; expected++) {
+			tile.cycle();
+			helper.assertTrue(tile.getPatternType() == expected, "cycling should really advance to pattern " + expected + ", found " + tile.getPatternType());
+		}
+		tile.cycle();
+		helper.assertTrue(tile.getPatternType() == 0, "cycling past the real last pattern (9) should really wrap back to 0, found " + tile.getPatternType());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void patternCrafterRealAutoCraftsAMatchingVanillaRecipeFromAboveToBelow(GameTestHelper helper) {
+		BlockPos abovePos = new BlockPos(2, 3, 2);
+		BlockPos pos = new BlockPos(2, 2, 2);
+		BlockPos belowPos = new BlockPos(2, 1, 2);
+		helper.setBlock(abovePos, Blocks.CHEST);
+		helper.setBlock(pos, BlocksTC.patternCrafter.get());
+		helper.setBlock(belowPos, Blocks.CHEST);
+		BlockPos absolute = helper.absolutePos(pos);
+
+		net.minecraft.world.level.block.entity.ChestBlockEntity above = helper.getBlockEntity(abovePos);
+		net.minecraft.world.level.block.entity.ChestBlockEntity below = helper.getBlockEntity(belowPos);
+		above.setItem(0, new ItemStack(Items.IRON_INGOT, 9));
+
+		AuraHandler.addVis(helper.getLevel(), absolute, 500.0f);
+		thaumcraft.common.tiles.crafting.TilePatternCrafter tile = helper.getBlockEntity(pos);
+		// Real pattern 0 (fresh block's default) fills all 9 grid slots - exactly matching the real vanilla
+		// 9x iron ingot -> iron block shaped recipe.
+		thaumcraft.common.tiles.crafting.TilePatternCrafter.tick(helper.getLevel(), absolute, helper.getBlockState(pos), tile);
+
+		helper.assertTrue(above.getItem(0).isEmpty(), "the real 9 iron ingots above should really have been consumed, found " + above.getItem(0));
+		boolean foundIronBlock = false;
+		for (int i = 0; i < below.getContainerSize(); i++) {
+			if (below.getItem(i).is(Items.IRON_BLOCK)) foundIronBlock = true;
+		}
+		helper.assertTrue(foundIronBlock, "a real iron block should really have been auto-crafted into the chest below");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void patternCrafterDoesNothingWhenLocalAuraIsExhausted(GameTestHelper helper) {
+		BlockPos abovePos = new BlockPos(2, 3, 2);
+		BlockPos pos = new BlockPos(2, 2, 2);
+		BlockPos belowPos = new BlockPos(2, 1, 2);
+		helper.setBlock(abovePos, Blocks.CHEST);
+		helper.setBlock(pos, BlocksTC.patternCrafter.get());
+		helper.setBlock(belowPos, Blocks.CHEST);
+		BlockPos absolute = helper.absolutePos(pos);
+
+		net.minecraft.world.level.block.entity.ChestBlockEntity above = helper.getBlockEntity(abovePos);
+		above.setItem(0, new ItemStack(Items.IRON_INGOT, 9));
+
+		// Every chunk carries some real ambient baseline aura by design (matching the true original), so
+		// "no vis at all" isn't a reachable state - drain it dry first to genuinely test the real
+		// insufficient-power branch instead.
+		AuraHandler.drainVis(helper.getLevel(), absolute, 1_000_000f, false);
+
+		thaumcraft.common.tiles.crafting.TilePatternCrafter tile = helper.getBlockEntity(pos);
+		thaumcraft.common.tiles.crafting.TilePatternCrafter.tick(helper.getLevel(), absolute, helper.getBlockState(pos), tile);
+
+		helper.assertTrue(above.getItem(0).getCount() == 9, "with the real local aura exhausted, nothing should really be consumed, found " + above.getItem(0));
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void patternCrafterRecipeRegistered(GameTestHelper helper) {
+		helper.assertTrue(helper.getLevel().getRecipeManager().byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "pattern_crafter")).isPresent(),
+				"the pattern_crafter recipe should really be registered");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
 	// Thaumatorium - auto-crafting altar built on the same CrucibleRecipe type as TileCrucible. Given a
 	// heat source below and a catalyst matching a registered recipe, it sucks essentia from connected
 	// neighbors (same suction-and-fill shape as TilePotionSprayer#fill) toward that recipe's requirement

@@ -110,6 +110,9 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.crafting.TileVoidSiphon>> VOID_SIPHON = BLOCK_ENTITIES.register("void_siphon",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TileVoidSiphon::new, BlocksTC.voidSiphon.get()).build(null));
 
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.crafting.TilePatternCrafter>> PATTERN_CRAFTER = BLOCK_ENTITIES.register("pattern_crafter",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TilePatternCrafter::new, BlocksTC.patternCrafter.get()).build(null));
+
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.crafting.TileThaumatorium>> THAUMATORIUM = BLOCK_ENTITIES.register("thaumatorium",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TileThaumatorium::new, BlocksTC.thaumatorium.get()).build(null));
 

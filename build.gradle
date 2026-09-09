@@ -44,6 +44,8 @@ sourceSets {
             include 'thaumcraft/common/tiles/devices/TilePotionSprayer.java'
             include 'thaumcraft/common/blocks/crafting/BlockVoidSiphon.java'
             include 'thaumcraft/common/tiles/crafting/TileVoidSiphon.java'
+            include 'thaumcraft/common/blocks/crafting/BlockPatternCrafter.java'
+            include 'thaumcraft/common/tiles/crafting/TilePatternCrafter.java'
             include 'thaumcraft/common/blocks/crafting/BlockThaumatorium.java'
             include 'thaumcraft/common/tiles/crafting/TileThaumatorium.java'
             include 'thaumcraft/common/blocks/devices/BlockBrainBox.java'

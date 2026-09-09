@@ -733,6 +733,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> voidSiphon =
 			ITEMS.registerSimpleBlockItem("void_siphon", BlocksTC.voidSiphon);
 
+	public static final DeferredItem<BlockItem> patternCrafter =
+			ITEMS.registerSimpleBlockItem("pattern_crafter", BlocksTC.patternCrafter);
+
 	public static final DeferredItem<BlockItem> thaumatorium =
 			ITEMS.registerSimpleBlockItem("thaumatorium", BlocksTC.thaumatorium);
 
