@@ -167,6 +167,11 @@ public class Thaumcraft {
         thaumcraft.api.research.ScanningManager.addScannableThing(
                 new thaumcraft.api.research.ScanEntity("!PIG", net.minecraft.world.entity.EntityType.PIG));
 
+        // ScanSky - the real producer behind ItemCelestialNotes/CardCelestial (see ScanSky's own doc
+        // comment). Triggered by the thaumometer's own real "scan nothing" action, restored specifically
+        // for this real mechanic - see ItemThaumometer#use's own doc comment.
+        thaumcraft.api.research.ScanningManager.addScannableThing(new thaumcraft.common.lib.research.ScanSky());
+
         // Salis Mundus dust triggers (thaumcraft.api.crafting.IDustTrigger) - see
         // ThaumcraftDustTriggers' own doc comment for what this unlocks and what's still deferred.
         ThaumcraftDustTriggers.register();
@@ -218,16 +223,19 @@ public class Thaumcraft {
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidPortal.AidPortalEnd());
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidPortal.AidPortalNether());
 
-        // Second batch of the "extra content" tier - see this method's own doc comment above. 18 of the
-        // original's remaining 19 cards (all but CardCelestial, which needs the still-unported
-        // ItemCelestialNotes) plus ALL 8 of its remaining aids are now registered. AidGlyphedStone,
+        // Second batch of the "extra content" tier - see this method's own doc comment above. ALL 19 of the
+        // original's remaining cards and ALL 8 of its remaining aids are now registered. AidGlyphedStone,
         // AidBasicAuromancy and AidBasicEldritch all turned out to be the same real story - their own
         // supposedly-missing blocks (stoneAncientGlyphed/wandWorkbench/eldritch) were each already real and
         // shipped under this port's own modern names (stoneAncientGlyphed as-is, wandWorkbench as
         // focalManipulator, eldritch as cultistRitualAltar - see each aid's own doc comment) - nobody had
         // connected the aid class to its already-built block yet. AidBrainInAJar needed real new work
-        // (jarBrain, the "Brain in a Jar" tile - see BlockJarBrain's own doc comment), closed the same
-        // session. CardCelestial remains the only genuinely open item in this whole tier.
+        // (jarBrain, the "Brain in a Jar" tile - see BlockJarBrain's own doc comment). CardCelestial
+        // (this whole tier's last holdout) turned out to NOT be Baubles-gated at all, despite an old,
+        // never-re-verified note claiming so - its real dependency chain (ItemCelestialNotes, ScanSky,
+        // CELESTIALSCANNING research) has zero Baubles involvement anywhere; see ScanSky's own doc comment.
+        // This whole "extra content" tier is now fully closed.
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardCelestial.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardAwareness.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardFocus.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardGlyphs.class);

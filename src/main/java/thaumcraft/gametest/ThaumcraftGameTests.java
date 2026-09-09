@@ -5902,6 +5902,140 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** Real coverage for {@link thaumcraft.common.lib.research.ScanSky} - the real producer behind {@link
+	 * thaumcraft.common.items.curios.ItemCelestialNotes}/{@link
+	 * thaumcraft.common.lib.research.theorycraft.CardCelestial}. Rather than hand-deriving vanilla's own
+	 * real nonlinear celestial-angle curve to pick a "the sun/moon is exactly here" test day-time, this
+	 * mirrors ScanSky's own real yaw/pitch formula against whatever {@link ServerLevel#getTimeOfDay} really
+	 * reports right now and aims the player there directly - a real, honest test of the aiming/granting
+	 * logic without needing to fake or predict the underlying vanilla time curve. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void scanningTheAlignedSkyGrantsARealCelestialNoteAndConsumesRealPaper(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).addResearch("CELESTIALSCANNING");
+		// knowsResearchStrict (what ScanSky itself gates on) needs real COMPLETE status, not just
+		// known/in-progress - force it past its real stage count directly rather than walking the
+		// whole real THEORYRESEARCH prerequisite chain just for this test.
+		thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).setResearchStage("CELESTIALSCANNING", 999);
+		player.getInventory().add(new ItemStack(ItemsTC.scribingTools.get()));
+		player.getInventory().add(new ItemStack(Items.PAPER, 5));
+
+		int celestialAngle = (int) ((level.getTimeOfDay(0.0f) + 0.25f) * 360.0f) % 360;
+		if (celestialAngle > 180) celestialAngle -= 180;
+		float targetPitch;
+		float rawYawTarget;
+		if (celestialAngle > 90) {
+			rawYawTarget = 180.0f;
+			targetPitch = 180.0f - celestialAngle;
+		} else {
+			rawYawTarget = 0.0f;
+			targetPitch = celestialAngle;
+		}
+		player.setYRot(rawYawTarget - 90.0f); // real inverse of ScanSky's own (getYRot()+90)%360 raw-yaw calc
+		player.setXRot(-targetPitch); // real "not looking down" gate - zero/negative pitch only
+
+		int paperBefore = (int) player.getInventory().items.stream().filter(s -> s.is(Items.PAPER)).mapToInt(ItemStack::getCount).sum();
+		boolean scanned = thaumcraft.api.research.ScanningManager.scanTheThing(player, null);
+		helper.assertTrue(scanned, "a real aligned sky scan should really succeed");
+
+		boolean hasNote = player.getInventory().items.stream()
+				.anyMatch(s -> !s.isEmpty() && s.getItem() instanceof thaumcraft.common.items.curios.ItemCelestialNotes);
+		helper.assertTrue(hasNote, "a real aligned sky scan should really grant a real celestial note item");
+
+		int paperAfter = (int) player.getInventory().items.stream().filter(s -> s.is(Items.PAPER)).mapToInt(ItemStack::getCount).sum();
+		helper.assertTrue(paperAfter == paperBefore - 1, "a real successful sky scan should really consume exactly 1 real paper, had " + paperBefore + " now " + paperAfter);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void scanningAMisalignedNightSkyGrantsARealStarQuadrantNote(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		level.setDayTime(18000L); // real vanilla midnight - definitively night
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).addResearch("CELESTIALSCANNING");
+		// knowsResearchStrict (what ScanSky itself gates on) needs real COMPLETE status, not just
+		// known/in-progress - force it past its real stage count directly rather than walking the
+		// whole real THEORYRESEARCH prerequisite chain just for this test.
+		thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).setResearchStage("CELESTIALSCANNING", 999);
+		player.getInventory().add(new ItemStack(ItemsTC.scribingTools.get()));
+		player.getInventory().add(new ItemStack(Items.PAPER, 5));
+
+		// Deliberately NOT aligned with the moon's real current position (raw yaw (yaw+90)%360 == 90 fails
+		// both real alignment windows regardless of the actual celestial angle) - a real vanilla south-facing
+		// look, landing in the real "star quadrant" branch instead.
+		player.setYRot(0.0f);
+		player.setXRot(0.0f);
+		helper.assertTrue(player.getDirection() == net.minecraft.core.Direction.SOUTH,
+				"a real yaw of 0 should really face south, matching this test's own chosen quadrant");
+
+		boolean scanned = thaumcraft.api.research.ScanningManager.scanTheThing(player, null);
+		helper.assertTrue(scanned, "a real misaligned-but-still-night sky scan should really still succeed via the star-quadrant branch");
+
+		boolean hasSouthQuadrantNote = player.getInventory().items.stream()
+				.anyMatch(s -> !s.isEmpty() && s.is(ItemsTC.celestialNotes.get(2).get())); // South -> stars_2
+		helper.assertTrue(hasSouthQuadrantNote, "facing real south at real night should really grant the real Southern-Quadrant celestial note");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumometerRestoredScanNothingHookReachesARealRegisteredIScanThing(GameTestHelper helper) {
+		thaumcraft.api.research.ScanningManager.addScannableThing(new thaumcraft.api.research.IScanThing() {
+			@Override
+			public boolean checkThing(net.minecraft.world.entity.player.Player player, Object obj) {
+				return obj == null;
+			}
+
+			@Override
+			public String getResearchKey(net.minecraft.world.entity.player.Player player, Object obj) {
+				return "TEST_SCAN_NOTHING";
+			}
+		});
+
+		ServerLevel level = helper.getLevel();
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		helper.assertTrue(!thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("TEST_SCAN_NOTHING"),
+				"the player shouldn't know TEST_SCAN_NOTHING yet");
+
+		ItemStack thaumometer = new ItemStack(ItemsTC.thaumometer.get());
+		thaumometer.getItem().use(level, player, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+		helper.assertTrue(thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("TEST_SCAN_NOTHING"),
+				"the thaumometer's real restored use() hook should really reach a real IScanThing registered for obj == null");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cardCelestialOffersRequiredNotesMatchingItsRealCategory(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).addResearch("CELESTIALSCANNING");
+		// knowsResearchStrict (what ScanSky itself gates on) needs real COMPLETE status, not just
+		// known/in-progress - force it past its real stage count directly rather than walking the
+		// whole real THEORYRESEARCH prerequisite chain just for this test.
+		thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).setResearchStage("CELESTIALSCANNING", 999);
+		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
+		data.addTotal("GOLEMANCY", 10);
+
+		thaumcraft.common.lib.research.theorycraft.CardCelestial card = new thaumcraft.common.lib.research.theorycraft.CardCelestial();
+		card.setSeed(1L);
+		helper.assertTrue(card.initialize(player, data), "CardCelestial should really initialize with real known research and real category progress");
+		helper.assertTrue("GOLEMANCY".equals(card.getResearchCategory()), "CardCelestial should really lock onto the real highest-progress category, found " + card.getResearchCategory());
+
+		ItemStack[] required = card.getRequiredItems();
+		helper.assertTrue(required != null && required.length == 2 && !required[0].is(required[1].getItem()),
+				"CardCelestial should really require 2 real, DIFFERENT celestial note variants");
+		helper.assertTrue(required[0].getItem() instanceof thaumcraft.common.items.curios.ItemCelestialNotes
+						&& required[1].getItem() instanceof thaumcraft.common.items.curios.ItemCelestialNotes,
+				"CardCelestial's real required items should really both be real celestial notes");
+
+		helper.assertTrue(card.activate(player, data), "CardCelestial#activate should really succeed");
+		helper.assertTrue(data.getTotal("GOLEMANCY") > 10, "activating CardCelestial should really add real progress to its locked category");
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Arcane Bellows - see TileBellows' own doc comment for the furnace-speedup mechanic and the access
 	// transformer it needed (src/main/resources/META-INF/accesstransformer.cfg).

@@ -1265,6 +1265,25 @@ public final class ItemsTC {
 		crystals.put(aspect, ITEMS.registerSimpleBlockItem(id, BlocksTC.crystals.get(aspect)));
 	}
 
+	/** See {@link thaumcraft.common.items.curios.ItemCelestialNotes}'s own doc comment - the true original's
+	 * single 13-metadata-variant item, split into 13 real separate items (matching this port's own
+	 * established convention for old metadata-variant fields, e.g. {@code ingotBrass}/{@code ingotThaumium}).
+	 * Kept as one index-ordered list rather than 13 individually-named fields since every real consumer
+	 * ({@link thaumcraft.common.lib.research.ScanSky}, {@link
+	 * thaumcraft.common.lib.research.theorycraft.CardCelestial}) only ever needs "the variant at index N"
+	 * (0 = sun, 1-4 = stars quadrant, 5-12 = moon phase), matching the true original's own real damage-value
+	 * indexing exactly. */
+	public static final java.util.List<DeferredItem<thaumcraft.common.items.curios.ItemCelestialNotes>> celestialNotes = new java.util.ArrayList<>();
+	static {
+		String[] variants = { "sun", "stars_1", "stars_2", "stars_3", "stars_4",
+				"moon_1", "moon_2", "moon_3", "moon_4", "moon_5", "moon_6", "moon_7", "moon_8" };
+		for (String variant : variants) {
+			String key = variant;
+			celestialNotes.add(ITEMS.registerItem("celestial_notes_" + variant,
+					props -> new thaumcraft.common.items.curios.ItemCelestialNotes(props, key)));
+		}
+	}
+
 	private ItemsTC() {
 	}
 }

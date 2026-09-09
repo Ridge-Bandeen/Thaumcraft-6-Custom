@@ -1,31 +1,36 @@
 package thaumcraft.common.items.curios;
+
 import java.util.List;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.translation.I18n;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.common.items.ItemTCBase;
 
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Item.TooltipContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 
-public class ItemCelestialNotes extends ItemTCBase
-{
-    public ItemCelestialNotes() {
-        super("celestial_notes", "sun", "stars_1", "stars_2", "stars_3", "stars_4", "moon_1", "moon_2", "moon_3", "moon_4", "moon_5", "moon_6", "moon_7", "moon_8");
-    }
-    
-    @Override
-    public String getUnlocalizedName(ItemStack itemStack) {
-        return "item.celestial_notes";
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void addInformation(ItemStack stack, World worldIn, List<String> tooltip, ITooltipFlag flagIn) {
-        try {
-            tooltip.add(TextFormatting.AQUA + I18n.translateToLocal("item.celestial_notes." + getVariantNames()[stack.getItemDamage()] + ".text"));
-        }
-        catch (Exception ex) {}
-    }
+/**
+ * Replaces the old (1.12.2) {@code ItemCelestialNotes} - a real 13-variant "what I saw in the sky" flavor
+ * item ({@link thaumcraft.common.lib.research.ScanSky} grants one when a player scans the sun, a star
+ * quadrant, or the current real moon phase), consumed in pairs by {@link
+ * thaumcraft.common.lib.research.theorycraft.CardCelestial}. Despite living under this port's own inherited
+ * {@code common.items.curios} package (a loose "small trinket-ish item" grouping this mod uses, not every
+ * member of which is Baubles-equippable), this item implements no Baubles/curio interface at all in either
+ * the true original or this port - it is never worn, just carried and consumed. See {@link
+ * thaumcraft.api.items.ItemsTC#celestialNotes} for why this port splits the original's single 13-metadata-
+ * variant field into 13 real separate items instead.
+ */
+public class ItemCelestialNotes extends Item {
+
+	private final String variant;
+
+	public ItemCelestialNotes(Properties properties, String variant) {
+		super(properties);
+		this.variant = variant;
+	}
+
+	@Override
+	public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+		tooltip.add(Component.translatable("item.celestial_notes." + variant + ".text").withStyle(ChatFormatting.AQUA));
+	}
 }

@@ -139,6 +139,8 @@ sourceSets {
             include 'thaumcraft/api/research/ScanEntity.java'
             include 'thaumcraft/common/items/tools/ItemThaumometer.java'
             include 'thaumcraft/common/items/tools/ItemScribingTools.java'
+            include 'thaumcraft/common/lib/research/ScanSky.java'
+            include 'thaumcraft/common/items/curios/ItemCelestialNotes.java'
 
             include 'thaumcraft/api/research/theorycraft/TheorycraftCard.java'
             include 'thaumcraft/api/research/theorycraft/ITheorycraftAid.java'
@@ -174,6 +176,7 @@ sourceSets {
             include 'thaumcraft/common/lib/research/theorycraft/CardSpellbinding.java'
             include 'thaumcraft/common/lib/research/theorycraft/CardTruth.java'
             include 'thaumcraft/common/lib/research/theorycraft/CardDarkWhispers.java'
+            include 'thaumcraft/common/lib/research/theorycraft/CardCelestial.java'
             include 'thaumcraft/common/lib/research/theorycraft/CardChannel.java'
             include 'thaumcraft/common/lib/research/theorycraft/CardConcentrate.java'
             include 'thaumcraft/common/lib/research/theorycraft/CardReactions.java'
