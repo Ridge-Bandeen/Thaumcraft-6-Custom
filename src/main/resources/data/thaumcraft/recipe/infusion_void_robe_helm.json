@@ -6,6 +6,7 @@
     "sensus": 25,
     "praemunio": 25,
     "potentia": 25,
+    "alienis": 25,
     "vacuos": 25
   },
   "central": { "item": "thaumcraft:void_helm" },

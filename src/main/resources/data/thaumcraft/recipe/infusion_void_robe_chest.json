@@ -5,6 +5,7 @@
     "metallum": 35,
     "praemunio": 35,
     "potentia": 25,
+    "alienis": 25,
     "vacuos": 35
   },
   "central": { "item": "thaumcraft:void_chest" },

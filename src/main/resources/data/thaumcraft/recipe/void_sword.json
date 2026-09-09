@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "I",
+    "I",
+    "S"
+  ],
+  "key": {
+    "I": { "item": "thaumcraft:ingot_void" },
+    "S": { "item": "minecraft:stick" }
+  },
+  "result": { "id": "thaumcraft:void_sword", "count": 1 }
+}

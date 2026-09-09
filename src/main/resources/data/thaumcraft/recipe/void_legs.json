@@ -7,7 +7,7 @@
     "I I"
   ],
   "key": {
-    "I": { "item": "thaumcraft:ingot_thaumium" }
+    "I": { "item": "thaumcraft:ingot_void" }
   },
   "result": { "id": "thaumcraft:void_legs", "count": 1 }
 }

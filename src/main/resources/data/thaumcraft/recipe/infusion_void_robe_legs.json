@@ -5,6 +5,7 @@
     "metallum": 30,
     "praemunio": 30,
     "potentia": 25,
+    "alienis": 25,
     "vacuos": 30
   },
   "central": { "item": "thaumcraft:void_legs" },

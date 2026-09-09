@@ -588,14 +588,14 @@ public final class ItemsTC {
 			props -> new SwordItem(TIER_THAUMIUM, props.attributes(SwordItem.createAttributes(TIER_THAUMIUM, 3, -2.4F))));
 
 	/** {@code ThaumcraftMaterials.TOOLMAT_VOID} from the original: harvest level 4 (diamond-tier-and-up),
-	 * 150 uses, 8.0 mining speed, +3 attack damage, 10 enchantability. The original repaired with a "void
-	 * ingot" ({@code ItemsTC.ingots} meta 1) - that whole void-metal ore chain isn't ported yet (see {@link
-	 * thaumcraft.common.items.tools.ItemVoidSword}'s own doc comment for the rest of the simplifications on
-	 * this item), so this repairs with a Thaumium ingot instead as a real, documented, low-stakes
-	 * substitution - {@link thaumcraft.common.items.tools.ItemVoidSword} is a rare mob drop, not something
-	 * players craft/repair often. */
+	 * 150 uses, 8.0 mining speed, +3 attack damage, 10 enchantability. Repairs with a real {@link #ingotVoid}
+	 * now, matching the true original exactly - the void-metal chain closed a few chunks ago (see
+	 * {@code ingotVoid}'s own doc comment); this repair ingredient and the whole Void tool/armor set's own
+	 * recipes (previously shipped with an {@code ingotThaumium} placeholder) both got fixed to the real
+	 * ingredient in the same pass. See {@link thaumcraft.common.items.tools.ItemVoidSword}'s own doc comment
+	 * for this item's other simplifications. */
 	private static final Tier TIER_VOID = new SimpleTier(BlockTags.INCORRECT_FOR_DIAMOND_TOOL, 150, 8.0F, 3.0F, 10,
-			() -> Ingredient.of(ItemsTC.ingotThaumium));
+			() -> Ingredient.of(ItemsTC.ingotVoid));
 
 	/** See {@link thaumcraft.common.items.tools.ItemVoidSword}'s own doc comment. */
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemVoidSword> voidSword = ITEMS.registerItem("void_sword",
@@ -616,11 +616,10 @@ public final class ItemsTC {
 			props -> new thaumcraft.common.items.tools.ItemVoidHoe(TIER_VOID, props.attributes(HoeItem.createAttributes(TIER_VOID, -3.0F, 0.0F))));
 
 	/** {@code ItemCrimsonBlade.toolMatCrimsonVoid} from the original ("CVOID": 200 uses, 8.0 mining speed,
-	 * +3.5 attack damage, 20 enchantability) - same real repair-ingredient substitution as {@link
-	 * #TIER_VOID} (a Thaumium ingot instead of the unported void-metal chain's own ingot), same rationale
-	 * (a rare boss-only weapon, not something players repair often). */
+	 * +3.5 attack damage, 20 enchantability) - repairs with a real {@link #ingotVoid} now too, same fix as
+	 * {@link #TIER_VOID} above. */
 	private static final Tier TIER_CRIMSON_BLADE = new SimpleTier(BlockTags.INCORRECT_FOR_DIAMOND_TOOL, 200, 8.0F, 3.5F, 20,
-			() -> Ingredient.of(ItemsTC.ingotThaumium));
+			() -> Ingredient.of(ItemsTC.ingotVoid));
 
 	/** See {@link thaumcraft.common.items.tools.ItemCrimsonBlade}'s own doc comment. */
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemCrimsonBlade> crimsonBlade = ITEMS.registerItem("crimson_blade",

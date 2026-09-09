@@ -9747,18 +9747,18 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
-	 * Real coverage for the rest of the Void tool set (pickaxe/axe/shovel/hoe - the sword is already covered
-	 * elsewhere) - {@link thaumcraft.common.items.tools.ItemVoidPickaxe}'s own doc comment covers the shared
-	 * mechanics: real self-repair, real +1 warp, and (unlike the sword, which is mob-drop-only) a real
-	 * shaped crafting recipe for each, substituting a Thaumium ingot for the original's own unported
-	 * "Void Metal ingot" - same documented substitution {@link thaumcraft.api.items.ItemsTC}'s own
-	 * {@code TIER_VOID} already uses for repair.
+	 * Real coverage for the rest of the Void tool set (pickaxe/axe/shovel/hoe/sword - the sword's own
+	 * mob-drop mechanic is covered elsewhere, this just confirms its real recipe too) -
+	 * {@link thaumcraft.common.items.tools.ItemVoidPickaxe}'s own doc comment covers the shared mechanics:
+	 * real self-repair, real +1 warp, and a real shaped crafting recipe for each using a real
+	 * {@code ingot_void} - the true original's own real ingredient, not a substitute (see
+	 * {@link thaumcraft.api.items.ItemsTC}'s own {@code TIER_VOID} doc comment).
 	 */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void voidToolSetHasRealRecipesAndSharedMechanics(GameTestHelper helper) {
 		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
 
-		for (String key : new String[] {"void_pick", "void_axe", "void_shovel", "void_hoe"}) {
+		for (String key : new String[] {"void_pick", "void_axe", "void_shovel", "void_hoe", "void_sword"}) {
 			helper.assertTrue(helper.getLevel().getRecipeManager()
 					.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, key)).isPresent(),
 					"a real shaped recipe for " + key + " should be registered");

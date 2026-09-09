@@ -171,10 +171,9 @@ public final class ThaumcraftArmorMaterials {
 					0.0F));
 
 	/** {@code ThaumcraftMaterials.ARMORMAT_VOID} from the original (durability multiplier 10, protection
-	 * {@code [3,8,6,3]} - boots/legs/chest/helm, enchantability 10, chain equip sound, no toughness). Real
-	 * repair ingredient substitution: the original repaired with a void ingot ({@code ItemsTC.ingots} meta
-	 * 1) - that ore chain isn't ported (same real gap {@link thaumcraft.common.items.tools.ItemVoidSword}'s
-	 * own doc comment already documents), so this repairs with a Thaumium ingot instead, same precedent. */
+	 * {@code [3,8,6,3]} - boots/legs/chest/helm, enchantability 10, chain equip sound, no toughness). Repairs
+	 * with a real void ingot now, matching the true original exactly - the void-metal chain closed a few
+	 * chunks ago (see {@code ItemsTC#ingotVoid}'s own doc comment). */
 	public static final Holder<ArmorMaterial> VOID = ARMOR_MATERIALS.register("void",
 			() -> new ArmorMaterial(
 					Util.make(new EnumMap<>(ArmorItem.Type.class), m -> {
@@ -186,17 +185,17 @@ public final class ThaumcraftArmorMaterials {
 					}),
 					10,
 					SoundEvents.ARMOR_EQUIP_CHAIN,
-					() -> Ingredient.of(ItemsTC.ingotThaumium),
+					() -> Ingredient.of(ItemsTC.ingotVoid),
 					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "void"))),
 					1.0F,
 					0.0F));
 
 	/** {@code ThaumcraftMaterials.ARMORMAT_VOIDROBE} from the original (durability multiplier 18, protection
 	 * {@code [4,9,7,4]}, enchantability 10, leather equip sound, 2.0 toughness - a real, better upgrade tier
-	 * over {@link #VOID}). Same real Thaumium-ingot repair substitution as {@link #VOID}. The original's own
-	 * two armor-layer textures ({@code void_robe_armor.png}/{@code _overlay.png}, no separate legs-specific
-	 * art) are reused directly for both vanilla layer slots - copied to the {@code _1}/{@code _2} suffixes
-	 * the modern {@code ArmorMaterial.Layer} system expects (same file, not a new asset). */
+	 * over {@link #VOID}). Repairs with a real void ingot now too, same fix as {@link #VOID} above. The
+	 * original's own two armor-layer textures ({@code void_robe_armor.png}/{@code _overlay.png}, no separate
+	 * legs-specific art) are reused directly for both vanilla layer slots - copied to the {@code _1}/
+	 * {@code _2} suffixes the modern {@code ArmorMaterial.Layer} system expects (same file, not a new asset). */
 	public static final Holder<ArmorMaterial> VOID_ROBE = ARMOR_MATERIALS.register("void_robe_armor",
 			() -> new ArmorMaterial(
 					Util.make(new EnumMap<>(ArmorItem.Type.class), m -> {
@@ -208,7 +207,7 @@ public final class ThaumcraftArmorMaterials {
 					}),
 					10,
 					SoundEvents.ARMOR_EQUIP_LEATHER,
-					() -> Ingredient.of(ItemsTC.ingotThaumium),
+					() -> Ingredient.of(ItemsTC.ingotVoid),
 					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "void_robe_armor"))),
 					2.0F,
 					0.0F));
