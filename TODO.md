@@ -153,32 +153,24 @@ consolidation conventions:
 Large, already-investigated subsystems with their own real blockers or open
 sub-arcs — see the project memory file for full detail, not repeated here:
 
-- **Research Table minigame** — **re-scoped 2026-09-09, this note was very
-  stale.** The old "~4700 lines, many small bespoke pieces" estimate
-  predates a lot of real work: `TileResearchTable`/`BlockResearchTable`/
-  `ResearchTableMenu`/`GuiResearchTable`/`TileResearchTableRenderer`/
-  `ClientResearchTableCache` all already exist and are wired up (even
-  those classes' own doc comments are individually a bit stale - e.g.
-  `TileResearchTable`'s still says "no block/menu/screen yet", written
-  before those were added later the same arc). The real "core" tier
-  (`api.research.theorycraft`, all 9 cards + `AidBookshelf`) is fully
-  ported. Of the true original's larger `common.lib.research.theorycraft`
-  "extra content" tier, **18 of 19 remaining cards and 7 of 8 remaining
-  aids are already registered** (see `Thaumcraft.java`'s own `commonSetup`
-  doc comment for the exact running list - it's the authoritative, current
-  source, more current than any individual class's own comment). `AidGlyphedStone`/
-  `AidBasicAuromancy`/`AidBasicEldritch` all turned out to be the same real
-  story - each aid class already existed but was never registered, and each
-  one's supposedly-missing trigger block was already real and shipped under
-  this port's own modern name (`stoneAncientGlyphed` as-is, `wandWorkbench`
-  as `focalManipulator`, `eldritch` as `cultistRitualAltar`) - see
-  "Recently closed" below for both commits. Genuinely still open:
-  `CardCelestial` (needs `ItemCelestialNotes`, itself confirmed
-  flavor-only/Baubles-tied by an earlier sweep - out of scope by the
-  standing Baubles exclusion unless that changes) and `AidBrainInAJar`,
-  blocked on a real still-unported block (`jarBrain`, the "Brain in a Jar"
-  tile/jar variant) - building it would unblock this aid essentially for
-  free, same as the other 3 turned out not to even need.
+- **Research Table minigame** — **effectively closed 2026-09-09.** The
+  real "core" tier (`api.research.theorycraft`, all 9 cards + `AidBookshelf`)
+  is fully ported, and of the true original's larger
+  `common.lib.research.theorycraft` "extra content" tier, **18 of 19
+  remaining cards and ALL 8 remaining aids are now registered** (see
+  `Thaumcraft.java`'s own `commonSetup` doc comment for the exact running
+  list). `AidGlyphedStone`/`AidBasicAuromancy`/`AidBasicEldritch` turned out
+  to be the same real story - each aid class already existed but was never
+  registered, and each one's supposedly-missing trigger block was already
+  real and shipped under this port's own modern name (`stoneAncientGlyphed`
+  as-is, `wandWorkbench` as `focalManipulator`, `eldritch` as
+  `cultistRitualAltar`). `AidBrainInAJar` needed real new work - a real
+  `TileJarBrain`/`BlockJarBrain` "Brain in a Jar" XP-battery device, now
+  shipped too - see "Recently closed" below for all 4 commits. The ONLY
+  genuinely open item left in this whole arc: `CardCelestial` (needs
+  `ItemCelestialNotes`, itself confirmed flavor-only/Baubles-tied by an
+  earlier sweep - out of scope by the standing Baubles exclusion unless
+  that changes).
 - **Golem construction pipeline** — **closed 2026-09-09.** Every genuinely
   real item this arc's own re-scope turned up has now shipped:
   `GolemHelper`/`IGolemAPI`/`IGolemProperties`/`EnumGolemTrait`,
@@ -213,10 +205,11 @@ directly; crystal-cluster rendering's own claimed blocker turned out to not
 really exist either, same `AmethystClusterBlock` story; 3 of Research
 Table's own 4 flagged "block-blocked" aids turned out to not be blocked at
 all - each trigger block was already real and shipped under a different
-modern name, just never connected). This section now has only two tiny,
-genuinely open, non-blocking, low-priority items left in Research Table
-(`CardCelestial`, `AidBrainInAJar`) - everything else that was here is
-closed.
+modern name, just never connected - the 4th, `AidBrainInAJar`, DID need real
+new work, a real `TileJarBrain`/`BlockJarBrain` XP-battery device, now
+shipped). This section now has only ONE tiny, genuinely open, non-blocking,
+Baubles-gated item left anywhere in it (`CardCelestial`) - everything else
+that was here across all 4 original entries is closed.
 
 ## Standing manual-verification item (not a code gap)
 
@@ -405,6 +398,20 @@ closed.
   (needs the still-unported `jarBrain` block). See commit "Register
   AidBasicAuromancy and AidBasicEldritch - their blockers were already
   resolved".
+
+- **Brain in a Jar** (`jarBrain`) — closed 2026-09-09, closing the entire
+  Research Table "extra content" arc down to just `CardCelestial`. A real
+  `TileJarBrain`/`BlockJarBrain` pair (split off from the plain essentia
+  `BlockJar`) - passively pulls and consumes nearby real vanilla
+  `ExperienceOrb`s within 8 blocks (capping at 2000 XP), right-click drains
+  a real random amount back out as real orbs (a 40-tick cooldown stops it
+  re-swallowing what it just spawned), real comparator output scaling with
+  fill. The original's own client-only idle-animation and its
+  `getEnchantPowerBonus() -> 5.0f` (no modern per-block equivalent - tagged
+  into vanilla's own flat `minecraft:enchantment_power_provider` instead)
+  are the only real cuts. `AidBrainInAJar` wired in alongside it. See
+  commit "Give the Brain in a Jar its real XP-battery mechanic - closes the
+  Research Table arc's last block-blocked aid".
 
 ---
 *Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
