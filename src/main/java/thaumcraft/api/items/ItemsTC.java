@@ -1290,6 +1290,11 @@ public final class ItemsTC {
 		}
 	}
 
+	/** See {@link thaumcraft.common.items.misc.ItemCreativeFluxSponge}'s own doc comment - a real, if
+	 * low-priority, fresh-sweep find (a creative-only debug tool, not a real progression item). */
+	public static final DeferredItem<thaumcraft.common.items.misc.ItemCreativeFluxSponge> creativeFluxSponge =
+			ITEMS.registerItem("creative_flux_sponge", thaumcraft.common.items.misc.ItemCreativeFluxSponge::new);
+
 	private ItemsTC() {
 	}
 }

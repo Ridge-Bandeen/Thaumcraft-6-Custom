@@ -2618,6 +2618,35 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** Real coverage for {@link thaumcraft.common.items.misc.ItemCreativeFluxSponge} - a real, creative-only
+	 * debug tool, a fresh-sweep find. Real right-click drains flux from a real 9x9-chunk area; real
+	 * sneak-right-click also removes nearby real {@link thaumcraft.common.entities.EntityFluxRift}s. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void creativeFluxSpongeDrainsRealFluxAndRemovesRealRiftsWhenSneaking(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		thaumcraft.api.aura.AuraHelper.polluteAura(level, origin, 200.0f, false);
+		float fluxBefore = thaumcraft.api.aura.AuraHelper.getFlux(level, origin);
+		helper.assertTrue(fluxBefore > 0.0f, "the test area should really have real flux polluted into it before sponging");
+
+		thaumcraft.common.entities.EntityFluxRift rift =
+				new thaumcraft.common.entities.EntityFluxRift(thaumcraft.common.registry.ThaumcraftEntities.FLUX_RIFT.get(), level);
+		rift.setRiftSeed(1);
+		rift.setPos(origin.getX() + 2.5, origin.getY() + 1, origin.getZ() + 0.5);
+		rift.setRiftSize(50);
+		level.addFreshEntity(rift);
+
+		ItemStack sponge = new ItemStack(thaumcraft.api.items.ItemsTC.creativeFluxSponge.get());
+		player.setShiftKeyDown(true);
+		sponge.getItem().use(level, player, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+		float fluxAfter = thaumcraft.api.aura.AuraHelper.getFlux(level, origin);
+		helper.assertTrue(fluxAfter < fluxBefore, "using a real flux sponge should really drain real flux from the area, was " + fluxBefore + " now " + fluxAfter);
+		helper.assertTrue(!rift.isAlive(), "sneak-using a real flux sponge should really remove a real nearby flux rift");
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Pattern Crafter - vis-powered auto-crafter, real inventories above/below via NeoForge's own
 	// Capabilities.ItemHandler.BLOCK. See TilePatternCrafter's own doc comment for the real mechanic and

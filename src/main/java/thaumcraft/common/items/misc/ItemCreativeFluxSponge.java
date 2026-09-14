@@ -1,73 +1,79 @@
 package thaumcraft.common.items.misc;
-import java.util.Iterator;
+
 import java.util.List;
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.EnumRarity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentString;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Item.TooltipContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import thaumcraft.api.aura.AuraHelper;
 import thaumcraft.common.entities.EntityFluxRift;
-import thaumcraft.common.items.ItemTCBase;
-import thaumcraft.common.lib.SoundsTC;
-import thaumcraft.common.lib.utils.EntityUtils;
 
+/**
+ * Replaces the old (1.12.2) {@code ItemCreativeFluxSponge} - a real, creative-only debug/utility item, a
+ * fresh-sweep find (registered in the true original, but genuinely never a real gameplay-progression item -
+ * no crafting recipe, {@code Rarity.EPIC} flair, an explicit "Creative only" tooltip line). Right-clicking
+ * drains real flux from an 81-chunk area (a real 9x9 grid of real {@code AuraHelper.drainFlux} calls, one
+ * per chunk center, matching the original's own real {@code x/z in [-4,4]} loop and its real per-call cap
+ * of 500) centered on the player; sneak-right-clicking also removes every real {@link EntityFluxRift} within
+ * 32 blocks.
+ *
+ * <p>Real modern substitution: {@code SoundsTC.craftstart} (the original's own real activation sound) isn't
+ * registered in this port yet (see {@code EntityCultistPortalLesser}'s own doc comment for the same real
+ * gap) - a real, thematically-fitting vanilla substitute ({@code SoundEvents.EVOKER_CAST_SPELL}) is used
+ * instead.
+ */
+public class ItemCreativeFluxSponge extends Item {
 
-public class ItemCreativeFluxSponge extends ItemTCBase
-{
-    public ItemCreativeFluxSponge() {
-        super("creative_flux_sponge");
-        setMaxStackSize(1);
-        setHasSubtypes(false);
-        setMaxDamage(0);
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void addInformation(ItemStack stack, World worldIn, List<String> tooltip, ITooltipFlag flagIn) {
-        super.addInformation(stack, worldIn, tooltip, flagIn);
-        tooltip.add(TextFormatting.GREEN + "Right-click to drain all");
-        tooltip.add(TextFormatting.GREEN + "flux from 9x9 chunk area");
-        tooltip.add(TextFormatting.DARK_AQUA + "Also removes flux rifts");
-        tooltip.add(TextFormatting.DARK_AQUA + "if used while sneaking.");
-        tooltip.add(TextFormatting.DARK_PURPLE + "Creative only");
-    }
-    
-    public EnumRarity getRarity(ItemStack itemstack) {
-        return EnumRarity.EPIC;
-    }
-    
-    public ActionResult<ItemStack> onItemRightClick(World worldIn, EntityPlayer playerIn, EnumHand hand) {
-        if (worldIn.isRemote) {
-            playerIn.swingArm(hand);
-            playerIn.world.playSound(playerIn.posX, playerIn.posY, playerIn.posZ, SoundsTC.craftstart, SoundCategory.PLAYERS, 0.15f, 1.0f, false);
-        }
-        else {
-            int q = 0;
-            BlockPos p = playerIn.getPosition();
-            for (int x = -4; x <= 4; ++x) {
-                for (int z = -4; z <= 4; ++z) {
-                    q += (int)AuraHelper.drainFlux(worldIn, p.add(16 * x, 0, 16 * z), 500.0f, false);
-                }
-            }
-            playerIn.sendMessage(new TextComponentString(TextFormatting.GREEN + "" + q + " flux drained from 81 chunks."));
-            if (playerIn.isSneaking()) {
-                List<EntityFluxRift> list = EntityUtils.getEntitiesInRange(worldIn, playerIn.posX, playerIn.posY, playerIn.posZ, null, EntityFluxRift.class, 32.0);
-                for (EntityFluxRift fr : list) {
-                    fr.setDead();
-                }
-                playerIn.sendMessage(new TextComponentString(TextFormatting.DARK_AQUA + "" + list.size() + " flux rifts removed."));
-            }
-        }
-        return super.onItemRightClick(worldIn, playerIn, hand);
-    }
+	public ItemCreativeFluxSponge(Properties properties) {
+		super(properties.stacksTo(1).rarity(Rarity.EPIC));
+	}
+
+	@Override
+	public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+		tooltip.add(Component.literal("Right-click to drain all").withStyle(ChatFormatting.GREEN));
+		tooltip.add(Component.literal("flux from 9x9 chunk area").withStyle(ChatFormatting.GREEN));
+		tooltip.add(Component.literal("Also removes flux rifts").withStyle(ChatFormatting.DARK_AQUA));
+		tooltip.add(Component.literal("if used while sneaking.").withStyle(ChatFormatting.DARK_AQUA));
+		tooltip.add(Component.literal("Creative only").withStyle(ChatFormatting.DARK_PURPLE));
+	}
+
+	@Override
+	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+		ItemStack stack = player.getItemInHand(hand);
+		if (level.isClientSide) {
+			player.swing(hand);
+			level.playSound(player, player.getX(), player.getY(), player.getZ(), SoundEvents.EVOKER_CAST_SPELL, SoundSource.PLAYERS, 0.15f, 1.0f);
+			return InteractionResultHolder.success(stack);
+		}
+
+		int drained = 0;
+		net.minecraft.core.BlockPos pos = player.blockPosition();
+		for (int x = -4; x <= 4; x++) {
+			for (int z = -4; z <= 4; z++) {
+				drained += (int) AuraHelper.drainFlux(level, pos.offset(16 * x, 0, 16 * z), 500.0f, false);
+			}
+		}
+		player.displayClientMessage(Component.literal(drained + " flux drained from 81 chunks.").withStyle(ChatFormatting.GREEN), false);
+
+		if (player.isShiftKeyDown()) {
+			List<EntityFluxRift> rifts = level.getEntitiesOfClass(EntityFluxRift.class, new AABB(pos).inflate(32.0));
+			for (EntityFluxRift rift : rifts) {
+				rift.discard();
+			}
+			player.displayClientMessage(Component.literal(rifts.size() + " flux rifts removed.").withStyle(ChatFormatting.DARK_AQUA), false);
+		}
+
+		return InteractionResultHolder.success(stack);
+	}
 }
