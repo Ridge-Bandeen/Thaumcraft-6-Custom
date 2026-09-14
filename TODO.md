@@ -18,9 +18,10 @@ Each of these is genuinely real, registered content in the true original with
 no equivalent anywhere in the current port (verified by direct source read,
 not just a name diff).
 
-*(Empty as of 2026-09-09 — Loot Urns, the last item here, closed. See
-"Recently closed" below. Next work should come from "Deferred subsystems" or
-a fresh sweep.)*
+*(Empty as of 2026-09-14 — a fresh full sweep found only two real gaps
+(`banners`, `creativeFluxSponge`), both closed same day. See "Recently
+closed" and "Fresh sweep, 2026-09-14" below. Next work should come from
+user direction or another fresh sweep.)*
 
 ## Needs further triage (real content exists in the original; scope/priority unconfirmed)
 
@@ -94,6 +95,16 @@ a fresh sweep.)*
   still-open Azanor GitHub suggestion). See memory file for the full
   investigation. The real Ancient/Eldritch stone family was shipped instead,
   faithfully matching the true original's own genuinely-unreachable content.
+- **`stairsEldritch`** (block) — confirmed 2026-09-14 by the fresh sweep,
+  same dead-field pattern: declared in the true original's own
+  `BlocksTC.java` but **never assigned/registered anywhere** (its stair-
+  family siblings - `stairsArcane`/`ArcaneBrick`/`Greatwood`/`Silverwood` -
+  are all real and confirmed already built here). No action needed.
+- **`creativePlacer`** (item) — confirmed 2026-09-14 by the fresh sweep,
+  same dead-field pattern: declared in the true original's own
+  `ItemsTC.java` but **zero real assignment/usage anywhere** (unlike its
+  near-namesake `ItemCreativeFluxSponge`, which is real and now built - see
+  "Recently closed"). No action needed.
 
 ## Confirmed already-built or intentionally consolidated (false positives from the raw name diff — no action needed)
 
@@ -108,6 +119,16 @@ a fresh sweep.)*
   crafting materials. No action needed. (`jarBrace`, found in the same sweep
   pass but unrelated to the grapple gun, is a real, separate item — see
   "Recently closed" below, now built.)
+- **`enchantedPlaceholder`** (item) — checked 2026-09-14 by the fresh sweep.
+  Real and registered in the true original, but its only two real
+  consumers anywhere in that codebase are the stale, never-ported
+  `BlockUtils`/`InventoryUtils` classes' own "simulate a block break with a
+  specific tool's enchantments" helper (a fake-item stand-in used when
+  silk-touch/fortune is being overridden but the real tool item is
+  unavailable/empty). This port's own real golem-breaker-seal and turret-
+  bore mechanics already use direct modern vanilla APIs instead of that
+  generic helper, so nothing in the compiled tree actually needs this item.
+  Not tracked as an open gap unless a future consumer needs it.
 
 ## Confirmed already-built (false positives from the raw name diff — no action needed)
 
@@ -169,14 +190,16 @@ sub-arcs — see the project memory file for full detail, not repeated here:
   same session** (direct source inspection found zero Baubles/curio
   interface anywhere in its real dependency chain) - needed real new work
   too (`ItemCelestialNotes`, `ScanSky`, and restoring `ItemThaumometer`'s
-  own "scan nothing" hook). See "Recently closed" below for all 5 commits.
+  own "scan nothing" hook) - see `git log` around 2026-09-09 for the 5
+  commits closing this whole arc (trimmed from "Recently closed" below).
 - **Golem construction pipeline** — **closed 2026-09-09.** Every genuinely
   real item this arc's own re-scope turned up has now shipped:
   `GolemHelper`/`IGolemAPI`/`IGolemProperties`/`EnumGolemTrait`,
   `EntityThaumcraftGolem`, `GolemProperties`, `ItemGolemBell`/
   `ItemGolemPlacer`, the real task/seal-assignment system, `GolemArmDart`,
-  and (closing this arc) CLIMBER-trait pathfinding - see "Recently closed"
-  below for the last one. Client-only golem-builder-screen button widgets/
+  and (closing this arc) CLIMBER-trait pathfinding - see `git log` around
+  2026-09-09 for the closing commits (trimmed from "Recently closed"
+  below). Client-only golem-builder-screen button widgets/
   part-model renderers were NOT diffed carefully - likely mostly moot given
   `GuiGolemBuilder`'s own doc comment already describes a deliberate
   "lighter, simplified screen, not a line-for-line port" treatment, same as
@@ -218,220 +241,70 @@ entries are now closed - this section is empty of open work.**
 
 ## Recently closed (kept briefly for continuity, safe to delete once stale)
 
-- **Mirror of Essentia** (`mirrorEssentia`) — closed 2026-09-09. Real
-  `BlockMirrorEssentia`/`BlockMirrorEssentiaItem`/`TileMirrorEssentia`
-  shipped, following `TileMirror`'s own `MirrorLink` pairing pattern
-  exactly. See commit "Give the Essentia Mirror its real cross-dimensional
-  relay" for the real mechanic (a pure `IAspectSource` pass-through that
-  cube-scans near its linked partner, not an item-transport relay).
+*(Trimmed 2026-09-14 - the previous ~15 entries here, from Mirror of
+Essentia through CardCelestial/"Celestial Studies", are all long-since
+merged into the sections above and fully detailed in `git log` and the
+project memory file; not re-listed here to keep this file scannable.)*
 
-- **Golem Press ritual** (`GolemBuilder`'s real activation multiblock) —
-  closed 2026-09-09. Real `golemPressBlueprint()` shipped in
-  `ThaumcraftDustTriggers.java`, migrating `golemBuilder` off its
-  now-stale-precedent "direct block, no ritual" doc comment onto the same
-  real `DustTriggerMultiblock` pattern the Infernal Furnace and Thaumatorium
-  were already migrated to. 4 new purely-decorative placeholder blocks
-  (`placeholderBars`/`Cauldron`/`Anvil`/`Table`, matching the
-  `placeholderNetherbrick`/`Obsidian` pattern, not the true original's own
-  heavier `BlockPlaceholder`). See commit "Give the Golem Builder its real
-  acquisition ritual".
+- **Dyed banners** (`BlocksTC.banners`, 16 `DyeColor` variants) — closed
+  2026-09-14, found by the fresh full sweep below. `BlockBannerTC`'s own
+  doc comment already flagged this: the true original shared its class
+  between the server-placed Crimson Cult banner (already shipped) and 16
+  real, unrelated, player-craftable dyed variants (deferred - "nothing in
+  this port needs them yet"). Real client rendering work, not just
+  registration: `TileBannerRenderer` had no per-dye tint at all - added one
+  via `ModelPart`'s real color-render overload, plus a real `ItemColor`
+  handler for the held-item icon (a block color handler would be
+  unreachable - `RenderShape.INVISIBLE`). Real arcane-shaped recipe per
+  color (dyed wool + stick + any wood slab, `BASEINFUSION` research + 10
+  vis), matching the true original's own real recipe exactly. See commit
+  "Give the 16 dyed banners their real craftable variants".
 
-- **Jar Brace** (`jarBrace`) — closed 2026-09-09. `TileJarFillable#isBlocked`
-  was hardcoded `false` (its own doc comment flagged this exact gap). Real
-  `applyBrace()` + `ItemsTC.jarBrace` (plain item, asset scaffolding already
-  in the tree) shipped, wired through `BlockJar#useItemOn`. See commit "Give
-  the Warded Jar a real jar brace".
-
-- **Pattern Crafter** (`patternCrafter`) — closed 2026-09-09. Real
-  `TilePatternCrafter`/`BlockPatternCrafter` shipped: a vis-powered
-  auto-crafter using real adjacent-inventory lookups (NeoForge's
-  `Capabilities.ItemHandler.BLOCK`) and real vanilla `CraftingRecipe`
-  matching via `CraftingInput`. No CodeChicken sub-hit raytracing (a plain
-  right-click cycles the pattern instead - the same dependency wall that
-  already blocked the Levitator/Redstone Relay/Tube One-way); `ENABLED`
-  redstone toggle replaces the original's bespoke wand-toggle. See commit
-  "Give the Arcane Pattern Crafter a real vis-powered auto-crafting
+- **Flux Sponge** (`creativeFluxSponge`) — closed 2026-09-14, second fresh-
+  sweep find. A real, creative-only debug item (no recipe, `Rarity.EPIC`,
+  explicit "Creative only" tooltip) - right-click drains real flux from a
+  real 9x9-chunk area, sneak-right-click also removes nearby real
+  `EntityFluxRift`s. See commit "Give the Flux Sponge its real debug
   mechanic".
 
-- **Tube Buffer** (`tubeBuffer`) — closed 2026-09-09. Real
-  `TileTubeBuffer`/`BlockTubeBuffer` shipped: a real multi-aspect essentia
-  store (up to 10 total units, any mix), not a `TileTube` subclass (a
-  buffer's real suction is a small fixed value, not `TileTube`'s own
-  dynamic neighbor-derived one). Deliberately weak base suction (1,
-  matching the true original's own real formula and confirmed by the
-  research text) means it only pulls from a neighbor with
-  `getMinimumSuction() == 0` (a plain tube, not a jar) - by design. See
-  commit "Give the Tube Buffer a real multi-aspect essentia store".
+## Fresh sweep, 2026-09-14 (full re-diff of `BlocksTC.java`/`ItemsTC.java`)
 
-- **Essentia Transport Input/Output** (`essentiaTransportInput`/
-  `essentiaTransportOutput`) — closed 2026-09-09. **Corrects an earlier
-  scoping note in this same file** that assumed (from the true original's
-  own dispenser/hopper-themed crafting recipe) that these devices interact
-  with physical essentia-container items in an adjacent inventory - reading
-  the true original's own real `EssentiaHandler` directly disproved that:
-  both devices only ever scan for real `IAspectSource` **block entities**
-  (jars, altars, etc.), the dispenser/hopper components are just thematic
-  crafting flavor. Real long-range bridge instead: Input pulls 1 unit from
-  a real tube-network neighbor and pushes it into the nearest real
-  `IAspectSource` within 16 blocks (any direction); Output is the exact
-  mirror. `EssentiaHandler.java` gained a real `addEssentia` counterpart to
-  its existing `drainEssentia`, refactored to share one scan helper. See
-  commit "Give the Essentia Input/Output devices their real long-range
-  bridge mechanic".
+TODO.md's actionable sections were fully empty after the 2026-09-09 backlog
+closed out entirely (see git log around that date for the full arc). Rather
+than guess at what's left, re-ran the same full field-name diff the
+2026-09-09 sweep used (true original's `BlocksTC.java`/`ItemsTC.java` field
+declarations vs. this port's own registered ids, converted snake_case →
+camelCase, then hand-triaged every non-obvious miss against direct source
+reads) - 161 block fields + 111 item fields in the true original, 131/296
+ids registered here respectively. Findings:
 
-- **Triple Meat Treat** (`tripleMeatTreat`) — closed 2026-09-09. **Corrects
-  an earlier scoping note in this same file** that assumed a new generic
-  vanilla-furnace smelt-event hook was needed - reading the true original's
-  own `CommonInternals`/`ThaumcraftApi` directly showed the shared
-  `smeltingBonus` list has exactly ONE real consumer anywhere in the whole
-  original codebase: `TileInfernalFurnace`, the same device this port
-  already has its own real (ore-scoped) smelting-bonus system on. No
-  vanilla-furnace hook ever existed for this in the true original (and none
-  exists in NeoForge 1.21.1 either, confirmed directly against the jar).
-  6 new chunk items (`chunkBeef`/`Chicken`/`Pork`/`Fish`/`Rabbit`/`Mutton`)
-  registered as real Infernal Furnace smelting bonuses (33% each); Triple
-  Meat Treat's own recipe (3 distinct chunks, no duplicates, + sugar) is a
-  real custom `CraftingRecipe` (`CustomRecipe`, same vanilla mechanism
-  `RepairItemRecipe` uses), not a JSON shapeless recipe. See commit "Give
-  Triple Meat Treat its real chunk family and custom crafting recipe".
+- **Real gaps found and closed**: `banners` (16 dyed banner variants),
+  `creativeFluxSponge` - see "Recently closed" above for both.
+- **Confirmed dead-in-the-true-original** (new, added to that section
+  below): `stairsEldritch`, `creativePlacer` - both declared fields with
+  **zero real assignment/usage anywhere** in the whole pristine-original
+  tree, same vestigial-field pattern as `eldritchEye`/`fluxScrubber`/etc.
+- **Confirmed already-built or not needed** (new, added to that section
+  below): `enchantedPlaceholder` - real and registered in the true
+  original, but its only real consumers are the stale, never-ported
+  `BlockUtils`/`InventoryUtils` "simulate breaking a block with a specific
+  tool's enchantments" helpers; this port's own real golem-breaker/turret-
+  bore mechanics already use direct modern vanilla APIs instead, so nothing
+  in the compiled tree actually needs this item. Not tracked as an open gap.
+- **Everything else** in the ~70 raw candidate misses resolved to already-
+  known naming-convention differences (crystal `Aspect`-keyed ids,
+  `doubleSlab*`/reversed-word-order slab-stair names, `condenserlattice`'s
+  own casing quirk in the true original, etc.) or already-documented
+  "Needs further triage"/"Confirmed dead" entries from the 2026-09-09 sweep.
 
-- **Non-boss monster roster** — closed 2026-09-09. **Corrects an earlier
-  "Deferred subsystems" scoping note in this same file** that estimated a
-  whole multi-session arc (~2700+ lines) - a precise diff of the true
-  original's entire `entities/monster/` tree against `build.gradle` found
-  the roster (regular mobs and most bosses) already almost entirely built
-  from earlier sessions this note hadn't caught up with. Only 2 real files
-  were missing: `ChampionModDummy` (confirmed dead-in-the-true-original
-  itself, no action needed) and `EntityTaintacleGiant` (the Taint faction's
-  own boss - real `EntityTaintacle` subclass with its own hand-duplicated
-  boss-bar/enrage/self-heal mechanic and a real death-drop dedup, `/summon`-
-  reachable today though its true original's own real placement was
-  worldgen-only, tied to the still-blocked Taint-corruption subsystem). See
-  commit "Give the Taint faction its own boss - the Giant Taintacle".
-
-- **AidGlyphedStone** — closed 2026-09-09. A pure registration gap, not new
-  functionality - its own card (`CardGlyphs`) was already registered, and
-  its blocking dependency (`stoneAncientGlyphed`) shipped earlier this same
-  session as part of the Ancient/Eldritch stone family, without the two
-  being connected at the time. See commit "Register AidGlyphedStone - its
-  own real blocker shipped earlier this session".
-
-- **GolemArmDart** (the "DARTS" golem arm's real ranged attack) — closed
-  2026-09-09. The arm itself (components, RANGED/FIGHTER/CLUMSY/FRAGILE
-  traits) was already registered; this wired in its real
-  `GolemArm.IArmFunction` - a real vanilla `Arrow` projectile (not a new
-  `EntityType`, since the true original's own `EntityGolemDart` was itself
-  just a cosmetically-reskinned `EntityArrow`) plus vanilla's own
-  `RangedAttackGoal` (the interface already expects that return type, no
-  custom `Goal` needed) added to `EntityThaumcraftGolem#createAI` for
-  RANGED-trait golems with a wired function. See commit "Give the golem
-  Dart arm its real ranged attack".
-
-- **Loot Urns** (`lootUrnCommon`/`lootUrnUncommon`/`lootUrnRare`) — closed
-  2026-09-09, the last item in "Confirmed real gaps". Real `Material.ROCK`
-  sibling of the already-shipped loot crates, sharing the same `BlockLoot`
-  class and vanilla-loot-table-based drop mechanic (each tier nests
-  `gameplay/loot_bag_<tier>`, same as the crates). Block models/textures for
-  all three tiers already existed from earlier scaffolding; what was missing
-  was the `BlocksTC`/`ItemsTC` registrations, 3 blockstates (still stale
-  `forge_marker` format), 3 item models, and 3 loot tables. Real, documented
-  simplification kept: one shared `VoxelShape` across crate and urn rather
-  than the true original's own genuinely smaller urn hitbox.
-  `SoundType.DECORATED_POT` used as a real vanilla substitute for the true
-  original's own custom "urnbreak" sound (no modern equivalent exists in
-  this port). Along the way, found and fixed a real pre-existing bug: loot
-  crates and the crimson cult banner had only stale, dead `tile.X.name` lang
-  keys and no real `block.thaumcraft.X` key, so all four rendered as raw
-  untranslated keys in-game - fixed for all four. See commit "Give dungeon
-  urns their real BlockLoot registration - loot_urn_common/uncommon/rare".
-
-- **Crystal cluster connected-texture rendering** — closed 2026-09-09,
-  removed from "Deferred subsystems". The old blocker note ("Forge's
-  `IExtendedBlockState`/unlisted-properties baked-model pattern has no
-  modern equivalent yet") was itself wrong - vanilla's own real
-  `AmethystClusterBlock` already solves the identical "attach to and render
-  from a single real face" need with nothing more exotic than a stored
-  `DirectionProperty` plus per-facing blockstate model rotation, no custom
-  baked model required. `BlockCrystal` now stores a real `FACING` property
-  (set from the clicked face on placement, computed fresh per spread target
-  during natural growth); `getShape`/`canSurvive` read it directly instead
-  of live-rescanning all 6 neighbors. All 7 aspect blockstates converted
-  from `multipart` to real `variants` keyed by `facing=<direction>`, using
-  the exact rotation matrix read off vanilla's own `amethyst_cluster.json`.
-  Real, still-open remaining cut: the true original's own bespoke OBJ
-  crystal-cluster mesh (a genuinely faceted shape) isn't ported - this
-  closed the real per-face ORIENTATION gap, not the mesh geometry itself
-  (stays a simple oriented box, same "no bespoke mesh renderer yet" gap the
-  advanced turret's OBJ mesh carries - a separate, smaller, non-blocking
-  follow-up). See commit "Give crystal clusters real per-face orientation -
-  resolves the crystal-cluster rendering soft blocker".
-
-- **CLIMBER-trait golem pathfinding** — closed 2026-09-09, closing the
-  entire golem construction pipeline arc. The earlier note assumed this
-  needed the modern `NodeEvaluator` API investigated first - it didn't.
-  The true original's own real CLIMBER-specific class, `PathNavigateClimber`,
-  turned out to be genuinely absent from the whole pristine-original tree
-  this port was decompiled from (referenced by `EntityThaumcraftGolem.java`
-  but never actually present - confirmed via exhaustive search, not a
-  porting loss since it was never there). Checked whether modern vanilla
-  already solves the same "climb any wall you're pushed against" need
-  rather than guessing at the missing class: it does, via `Spider`'s own
-  real `WallClimberNavigation` + `onClimbable()` override pattern. This port
-  already had the synced `isBesideClimbableBlock` flag (from an earlier pass
-  this same session) but nothing ever read it back into real physics -
-  `createGolemNavigation` now returns `WallClimberNavigation` for
-  CLIMBER-trait golems, and a new `onClimbable()` override closes the loop.
-  See commit "Give CLIMBER-trait golems their real wall-climbing
-  pathfinding".
-
-- **AidBasicAuromancy, AidBasicEldritch** — closed 2026-09-09. Both were
-  the same real story as `AidGlyphedStone`: already-written aid classes,
-  never registered or added to `build.gradle`, each pointing (in their
-  stale, unconverted content) at a true-original field name
-  (`wandWorkbench`/`eldritch`) that this port had already shipped under a
-  different modern name (`focalManipulator`/`cultistRitualAltar`
-  respectively) - nobody had connected the aid to its already-built block.
-  Fixed the references, added both to `build.gradle`, registered both in
-  `Thaumcraft.java`. Only `AidBrainInAJar` remains genuinely blocked now
-  (needs the still-unported `jarBrain` block). See commit "Register
-  AidBasicAuromancy and AidBasicEldritch - their blockers were already
-  resolved".
-
-- **Brain in a Jar** (`jarBrain`) — closed 2026-09-09, closing the entire
-  Research Table "extra content" arc down to just `CardCelestial`. A real
-  `TileJarBrain`/`BlockJarBrain` pair (split off from the plain essentia
-  `BlockJar`) - passively pulls and consumes nearby real vanilla
-  `ExperienceOrb`s within 8 blocks (capping at 2000 XP), right-click drains
-  a real random amount back out as real orbs (a 40-tick cooldown stops it
-  re-swallowing what it just spawned), real comparator output scaling with
-  fill. The original's own client-only idle-animation and its
-  `getEnchantPowerBonus() -> 5.0f` (no modern per-block equivalent - tagged
-  into vanilla's own flat `minecraft:enchantment_power_provider` instead)
-  are the only real cuts. `AidBrainInAJar` wired in alongside it. See
-  commit "Give the Brain in a Jar its real XP-battery mechanic - closes the
-  Research Table arc's last block-blocked aid".
-
-- **CardCelestial / "Celestial Studies"** — closed 2026-09-09, closing the
-  ENTIRE Research Table "extra content" tier (all 19 cards, all 8 aids from
-  the true original now registered) and, with it, the whole "Deferred
-  subsystems" section. **This file's own earlier note calling this
-  Baubles-tied was wrong** - direct source inspection found zero Baubles/
-  curio interface anywhere in the real chain (`ItemCelestialNotes` just
-  lives under this mod's own loosely-named `common.items.curios` package,
-  not every member of which is Baubles-equippable). Real work: `ItemCelestialNotes`
-  split into 13 real separate items (matching this port's own metadata-
-  variant convention), a real `ScanSky` (this port's own already-real
-  `IScanThing`/`ScanningManager` framework's first "look at the sky, not at
-  a specific block/entity" consumer - required restoring `ItemThaumometer`'s
-  own deliberately-dropped "scan nothing" hook, since that IS `ScanSky`'s
-  real trigger), and a direct `CardCelestial` port onto the already-real
-  `TheorycraftCard` API. `CELESTIALSCANNING` research was already present
-  in this port's own converted research data - nothing exotic gated any of
-  this. See commit "Give Celestial Studies its real sky-scanning mechanic -
-  closes the whole Research Table arc".
+**TODO.md's actionable sections are empty again as of this sweep closing
+out.** The natural next step for whoever picks this up next is another
+fresh sweep (the same technique, applied again after enough new work has
+landed) or user-directed work - there's no more pre-scoped backlog here.
 
 ---
-*Generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java` field-name
-sweep against the true original (commit `31baee9`). Re-running the sweep
-from scratch isn't necessary for future work — update this file incrementally
-as items close or new gaps are found instead.*
+*Originally generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java`
+field-name sweep against the true original (commit `31baee9`); re-run in
+full 2026-09-14 once the prior backlog closed out. Re-run the same way
+again whenever this file's actionable sections go empty - update
+incrementally as items close or new gaps are found in between.*
