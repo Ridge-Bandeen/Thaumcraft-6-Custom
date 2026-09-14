@@ -31,9 +31,12 @@ import thaumcraft.api.items.IWarpingGear;
  * <li>The original's custom 3D {@code ModelRobe} biped model (a real, hand-modeled alternate armor
  * silhouette) - rendered here with the plain vanilla armor-layer system instead, same as every other armor
  * piece this port has shipped.</li>
- * <li>Dye/color support (a real leather-armor-style recolor feature, plus a cauldron right-click interaction
- * to remove it) - a real, separate, self-contained feature worth a real future pass of its own, not
- * essential to the armor actually functioning.</li>
+ * <li><s>Dye/color support.</s> <b>Restored</b> - these pieces are in the real {@code #minecraft:dyeable}
+ * item tag now, so vanilla's own real {@code ArmorDyeRecipe} and its own real cauldron-wash interaction
+ * both apply with no mod-side recipe code at all, the color living in vanilla's own
+ * {@link net.minecraft.core.component.DataComponents#DYED_COLOR} component. See {@link ItemRobeArmor}'s own
+ * doc comment for the full story (both robe families share it, and share
+ * {@link ItemRobeArmor#DEFAULT_ROBE_COLOR}, the original's own real undyed default).</li>
  * <li>{@link thaumcraft.api.items.IRevealer} (showing world nodes) is NOT implemented - the interface's own
  * doc comment already marks it {@code @Deprecated} in the original ("nodes do not exist ingame"), so this is
  * a real, already-inert feature in the original too, not a porting gap.</li>

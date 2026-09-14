@@ -86,7 +86,10 @@ public final class ThaumcraftArmorMaterials {
 					25,
 					SoundEvents.ARMOR_EQUIP_LEATHER,
 					() -> Ingredient.of(ItemsTC.fabric),
-					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "robes"))),
+					// Real dyeable layer (the third Layer arg), same shape vanilla's own leather uses - the
+					// robe's own armor texture is deliberately grayscale so a real DYED_COLOR tints it. See
+					// ItemRobeArmor's own doc comment for the rest of the real dye support.
+					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "robes"), "", true)),
 					1.0F,
 					0.0F));
 
@@ -208,7 +211,8 @@ public final class ThaumcraftArmorMaterials {
 					10,
 					SoundEvents.ARMOR_EQUIP_LEATHER,
 					() -> Ingredient.of(ItemsTC.ingotVoid),
-					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "void_robe_armor"))),
+					// Real dyeable layer, same as {@link #ROBES} above - see ItemVoidRobeArmor's own doc comment.
+					List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath("thaumcraft", "void_robe_armor"), "", true)),
 					2.0F,
 					0.0F));
 

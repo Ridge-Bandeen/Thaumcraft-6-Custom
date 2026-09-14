@@ -5637,6 +5637,36 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** Real coverage for robe/void-robe dyeing - see {@link thaumcraft.common.items.armor.ItemRobeArmor}'s
+	 * own doc comment. Both families sit in the real {@code #minecraft:dyeable} tag, so vanilla's own real
+	 * ArmorDyeRecipe applies with no mod-side recipe code at all. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void robeArmorIsRealDyeableByVanillasOwnArmorDyeRecipe(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		for (var piece : java.util.List.of(ItemsTC.clothChest, ItemsTC.clothLegs, ItemsTC.clothBoots,
+				ItemsTC.voidRobeHelm, ItemsTC.voidRobeChest, ItemsTC.voidRobeLegs)) {
+			helper.assertTrue(new ItemStack(piece.get()).is(net.minecraft.tags.ItemTags.DYEABLE),
+					"every real robe piece should really be in the real #minecraft:dyeable tag, " + piece.getId() + " wasn't");
+		}
+
+		var craftingInput = net.minecraft.world.item.crafting.CraftingInput.of(2, 1,
+				java.util.List.of(new ItemStack(ItemsTC.clothChest.get()), new ItemStack(Items.RED_DYE)));
+		var match = level.getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, craftingInput, level);
+		helper.assertTrue(match.isPresent(), "a real robe plus a real dye should really match vanilla's own real armor-dye recipe");
+
+		ItemStack dyed = match.get().value().assemble(craftingInput, level.registryAccess());
+		helper.assertTrue(dyed.is(ItemsTC.clothChest.get()), "dyeing a real robe should really give back a real robe, got " + dyed);
+		helper.assertTrue(dyed.has(net.minecraft.core.component.DataComponents.DYED_COLOR),
+				"a real dyed robe should really carry a real DYED_COLOR component");
+		int undyed = net.minecraft.world.item.component.DyedItemColor.getOrDefault(new ItemStack(ItemsTC.clothChest.get()),
+				thaumcraft.common.items.armor.ItemRobeArmor.DEFAULT_ROBE_COLOR);
+		helper.assertTrue(undyed == thaumcraft.common.items.armor.ItemRobeArmor.DEFAULT_ROBE_COLOR,
+				"an undyed real robe should really fall back to the original's own real default color");
+		helper.assertTrue(net.minecraft.world.item.component.DyedItemColor.getOrDefault(dyed, 0) != undyed,
+				"a really dyed robe should really read back a different real color than the undyed default");
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Native Iron Cluster - an ore-purification alt-path through the already-shipped Crucible (Metal +
 	// Order essentia dissolves an iron ore into a cluster), which then smelts into 2 iron ingots instead

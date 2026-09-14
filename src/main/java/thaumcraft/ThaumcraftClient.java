@@ -308,6 +308,16 @@ public class ThaumcraftClient {
         event.register(aspectTint, ItemsTC.phial.get());
         event.register(aspectTint, ItemsTC.label.get());
 
+        // Real robe/void-robe dye tint, matching the original's own handler exactly (layer 0 tinted, every
+        // later layer left alone) - the real color now lives in vanilla's own DYED_COLOR data component
+        // instead of the original's NBT display.color tag, with the original's own real default
+        // (0x6A3880, the classic purple robe) when undyed. See ItemRobeArmor's own doc comment.
+        net.minecraft.client.color.item.ItemColor robeTint = (stack, tintIndex) -> tintIndex > 0 ? -1
+                : net.minecraft.world.item.component.DyedItemColor.getOrDefault(stack,
+                        thaumcraft.common.items.armor.ItemRobeArmor.DEFAULT_ROBE_COLOR);
+        event.register(robeTint, ItemsTC.clothChest.get(), ItemsTC.clothLegs.get(), ItemsTC.clothBoots.get(),
+                ItemsTC.voidRobeHelm.get(), ItemsTC.voidRobeChest.get(), ItemsTC.voidRobeLegs.get());
+
         // banner.json's layer1 (the plain cloth) is tinted per-instance off the placed block's own real dye
         // - same real "one shared texture, tinted per-instance" shape the candles/nitor/crystal families
         // above already use, just read via Block.byItem since BlockBannerTC has no block color handler of
