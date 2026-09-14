@@ -139,7 +139,13 @@ public final class ThaumcraftBlockEntities {
 
 	/** See {@link thaumcraft.common.tiles.misc.TileBanner}'s own doc comment. */
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.misc.TileBanner>> BANNER = BLOCK_ENTITIES.register("banner",
-			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.misc.TileBanner::new, BlocksTC.bannerCrimsonCult.get()).build(null));
+			() -> {
+				java.util.List<net.minecraft.world.level.block.Block> validBlocks = new java.util.ArrayList<>();
+				validBlocks.add(BlocksTC.bannerCrimsonCult.get());
+				BlocksTC.banners.values().forEach(b -> validBlocks.add(b.get()));
+				return BlockEntityType.Builder.of(thaumcraft.common.tiles.misc.TileBanner::new,
+						validBlocks.toArray(new net.minecraft.world.level.block.Block[0])).build(null);
+			});
 
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.crafting.TileInfusionMatrix>> INFUSION_MATRIX = BLOCK_ENTITIES.register("infusion_matrix",
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TileInfusionMatrix::new, BlocksTC.infusionMatrix.get()).build(null));

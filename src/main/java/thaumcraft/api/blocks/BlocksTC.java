@@ -675,8 +675,23 @@ public final class BlocksTC {
 
 	/** See {@link thaumcraft.common.blocks.misc.BlockBannerTC}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockBannerTC> bannerCrimsonCult = BLOCKS.registerBlock("banner_crimson_cult",
-			thaumcraft.common.blocks.misc.BlockBannerTC::new,
+			props -> new thaumcraft.common.blocks.misc.BlockBannerTC(props, null),
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(1.0f).sound(SoundType.WOOD).noOcclusion().noCollission());
+
+	/** The 16 plain, real, player-craftable dyed banner variants sharing {@link
+	 * thaumcraft.common.blocks.misc.BlockBannerTC} with {@link #bannerCrimsonCult} - see that class's own
+	 * doc comment. Registry ids reuse the same {@link #candleDyeName} 1.12.2-naming-quirk helper the candles/
+	 * nitor families already established, matching the already-existing blockstate assets. */
+	public static final Map<DyeColor, DeferredBlock<thaumcraft.common.blocks.misc.BlockBannerTC>> banners = new EnumMap<>(DyeColor.class);
+	static {
+		for (DyeColor dye : DyeColor.values()) {
+			String id = "banner_" + candleDyeName(dye);
+			DeferredBlock<thaumcraft.common.blocks.misc.BlockBannerTC> block = BLOCKS.registerBlock(id,
+					props -> new thaumcraft.common.blocks.misc.BlockBannerTC(props, dye),
+					BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(1.0f).sound(SoundType.WOOD).noOcclusion().noCollission());
+			banners.put(dye, block);
+		}
+	}
 
 	/** See {@link thaumcraft.common.blocks.misc.BlockLoot}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockLoot> lootCrateCommon = BLOCKS.registerBlock("loot_crate_common",

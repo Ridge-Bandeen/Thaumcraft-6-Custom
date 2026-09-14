@@ -1,7 +1,5 @@
 {
-    "variants": {
-        "inventory": { "model": "thaumcraft:banner" }, 
-        "normal": { "model": "thaumcraft:banner" }
-    }
-
+  "variants": {
+    "": { "model": "thaumcraft:block/banner" }
+  }
 }

@@ -1,0 +1,16 @@
+{
+  "type": "thaumcraft:arcane_shaped",
+  "research": "BASEINFUSION",
+  "vis": 10,
+  "pattern": [
+    "WS",
+    "WS",
+    "WB"
+  ],
+  "key": {
+    "W": { "item": "minecraft:orange_wool" },
+    "S": { "item": "minecraft:stick" },
+    "B": { "tag": "minecraft:wooden_slabs" }
+  },
+  "result": { "id": "thaumcraft:banner_orange" }
+}

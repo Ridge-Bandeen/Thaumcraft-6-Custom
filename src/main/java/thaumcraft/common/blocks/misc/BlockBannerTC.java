@@ -2,14 +2,13 @@ package thaumcraft.common.blocks.misc;
 
 import javax.annotation.Nullable;
 
-import com.mojang.serialization.MapCodec;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -29,32 +28,39 @@ import thaumcraft.common.items.consumables.ItemPhial;
 import thaumcraft.common.tiles.misc.TileBanner;
 
 /**
- * Replaces the old (1.12.2) {@code BlockBannerTC} - scoped here to just what {@code
- * thaumcraft.common.entities.monster.boss.EntityCultistPortalGreater} actually places, the "Crimson Cult"
- * banner ({@code dye == null} in the original's own terms). The original also registered 16 plain dye-
- * colored banner variants sharing this same class (a separate, unrelated player-craftable decoration
- * feature) - not ported alongside this one, since nothing in this port needs them yet; this class's own
- * dye-tinting branch (dead code for a null-dye banner - {@code getColor()} always returns "no tint" in that
- * case) is dropped for the same reason.
+ * Replaces the old (1.12.2) {@code BlockBannerTC} - now covers both real true-original use cases that
+ * share this class: {@code thaumcraft.common.entities.monster.boss.EntityCultistPortalGreater}'s own
+ * server-placed "Crimson Cult" banner ({@link #dye} {@code == null}, the original's own {@code dye == null}
+ * case) and the 16 plain, real, player-craftable dyed banner variants ({@link
+ * thaumcraft.api.blocks.BlocksTC#banners}) - a separate, unrelated decoration feature the original also
+ * built off this same class, originally deferred ("nothing in this port needs them yet") until this pass.
  *
  * Real phial interaction, matching the original exactly: sneak-right-click clears a set {@link
  * thaumcraft.api.aspects.Aspect} tag, right-clicking with a filled {@link ItemPhial} sets one (consuming
- * the phial). {@code RenderShape.INVISIBLE} - like the original, the real visible geometry is drawn entirely
- * by {@link thaumcraft.client.render.TileBannerRenderer}, not a normal blockstate model.
+ * the phial) - real for every variant, dyed or crimson (the true original itself oddly gated this to
+ * {@code dye != null} only; this port's own real, simpler, already-shipped behavior applies it universally,
+ * a deliberate, documented improvement over replicating that original quirk). {@code RenderShape.INVISIBLE}
+ * - like the original, the real visible geometry (including the real per-{@link #dye} tint, see {@link
+ * thaumcraft.client.render.TileBannerRenderer}'s own doc comment) is drawn entirely by that renderer, not a
+ * normal blockstate model.
  */
 public class BlockBannerTC extends Block implements EntityBlock {
 
-	public static final MapCodec<BlockBannerTC> CODEC = simpleCodec(BlockBannerTC::new);
-
 	private static final VoxelShape SHAPE = Shapes.block();
 
-	public BlockBannerTC(BlockBehaviour.Properties properties) {
-		super(properties);
-	}
+	/** {@code null} for the special "Crimson Cult" banner (the true original's own {@code dye == null}
+	 * case); a real {@link DyeColor} for each of the 16 plain player-craftable
+	 * banner variants - see {@link thaumcraft.api.blocks.BlocksTC#banners}'s own doc comment. No {@code
+	 * MapCodec} override, matching {@link thaumcraft.common.blocks.basic.BlockCandle}'s own established
+	 * precedent for a per-instance-constructor-arg block family - {@link Block}'s own default {@code
+	 * codec()} is harmless to leave as-is here (only relevant for structure-void-style block serialization,
+	 * not real gameplay). */
+	@Nullable
+	public final DyeColor dye;
 
-	@Override
-	protected MapCodec<? extends Block> codec() {
-		return CODEC;
+	public BlockBannerTC(BlockBehaviour.Properties properties, @Nullable DyeColor dye) {
+		super(properties);
+		this.dye = dye;
 	}
 
 	@Override

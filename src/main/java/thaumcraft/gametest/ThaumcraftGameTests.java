@@ -8954,6 +8954,63 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** Real coverage for the 16 plain dyed banner variants ({@link thaumcraft.api.blocks.BlocksTC#banners})
+	 * - see {@link thaumcraft.common.blocks.misc.BlockBannerTC}'s own doc comment for the real story (shares
+	 * its class/mechanic with {@code bannerCrimsonCult}, deferred until this pass). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void dyedBannersAreAllRealAndDistinctPerColor(GameTestHelper helper) {
+		helper.assertTrue(thaumcraft.api.blocks.BlocksTC.banners.size() == 16,
+				"all 16 real DyeColor variants should really be registered, found " + thaumcraft.api.blocks.BlocksTC.banners.size());
+		for (net.minecraft.world.item.DyeColor dye : net.minecraft.world.item.DyeColor.values()) {
+			thaumcraft.common.blocks.misc.BlockBannerTC block = thaumcraft.api.blocks.BlocksTC.banners.get(dye).get();
+			helper.assertTrue(block.dye == dye, "the real " + dye + " banner block should really carry its own real dye, found " + block.dye);
+			helper.assertTrue(thaumcraft.api.items.ItemsTC.banners.get(dye).get() instanceof net.minecraft.world.item.BlockItem realItem && realItem.getBlock() == block,
+					"the real " + dye + " banner item should really wrap its own real block");
+		}
+		helper.assertTrue(thaumcraft.api.blocks.BlocksTC.bannerCrimsonCult.get().dye == null,
+				"the real Crimson Cult banner should still really carry a null real dye");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void dyedBannerSupportsTheRealSamePhialTaggingAsCrimsonCult(GameTestHelper helper) {
+		BlockPos bannerPos = new BlockPos(1, 1, 1);
+		BlockPos bannerAbs = helper.absolutePos(bannerPos);
+		helper.setBlock(new BlockPos(1, 0, 1), Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+
+		level.setBlockAndUpdate(bannerAbs, thaumcraft.api.blocks.BlocksTC.banners.get(net.minecraft.world.item.DyeColor.RED).get().defaultBlockState());
+		thaumcraft.common.tiles.misc.TileBanner banner = (thaumcraft.common.tiles.misc.TileBanner) level.getBlockEntity(bannerAbs);
+		helper.assertTrue(banner != null && banner.getAspect() == null, "a real freshly placed dyed banner should really start with no real aspect tagged");
+
+		ItemStack phial = thaumcraft.common.items.consumables.ItemPhial.makeFilledPhial(thaumcraft.api.aspects.Aspect.WATER);
+		ServerPlayer player = spawnCasterAt(helper, bannerAbs.above(2));
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, phial);
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				net.minecraft.world.phys.Vec3.atCenterOf(bannerAbs), net.minecraft.core.Direction.NORTH, bannerAbs, false);
+		level.getBlockState(bannerAbs).useItemOn(phial, level, player, net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+		helper.assertTrue(banner.getAspect() == thaumcraft.api.aspects.Aspect.WATER,
+				"right-clicking a real dyed banner with a real filled phial should really tag it too, same as the Crimson Cult one");
+
+		level.destroyBlock(bannerAbs, false, player);
+		helper.assertTrue(level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new AABB(bannerAbs).inflate(2))
+						.stream().anyMatch(e -> e.getItem().is(thaumcraft.api.items.ItemsTC.banners.get(net.minecraft.world.item.DyeColor.RED).get())),
+				"breaking a real dyed banner should really drop a real matching-color banner item");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void dyedBannerHasARealArcaneCraftingRecipe(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		var recipes = level.getRecipeManager().getAllRecipesFor(thaumcraft.api.crafting.ThaumcraftRecipeTypes.ARCANE_TYPE.get());
+		boolean found = recipes.stream().anyMatch(holder -> {
+			ItemStack result = holder.value().getResultItem(level.registryAccess());
+			return result.is(thaumcraft.api.items.ItemsTC.banners.get(net.minecraft.world.item.DyeColor.BLUE).get());
+		});
+		helper.assertTrue(found, "a real arcane-shaped recipe producing the real Blue Banner should really be loaded");
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void lootUrnBlocksAreRealAndFunctional(GameTestHelper helper) {
 		// The stone-material dungeon-decoration sibling of the loot crates - same BlockLoot class, same

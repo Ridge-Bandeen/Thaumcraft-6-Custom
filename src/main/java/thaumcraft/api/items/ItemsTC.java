@@ -891,6 +891,12 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> bannerCrimsonCult =
 			ITEMS.registerSimpleBlockItem("banner_crimson_cult", BlocksTC.bannerCrimsonCult);
 
+	/** See {@link BlocksTC#banners}'s own doc comment. */
+	public static final java.util.Map<net.minecraft.world.item.DyeColor, DeferredItem<BlockItem>> banners = new java.util.EnumMap<>(net.minecraft.world.item.DyeColor.class);
+	static {
+		BlocksTC.banners.forEach((dye, block) -> banners.put(dye, ITEMS.registerSimpleBlockItem("banner_" + BlocksTC.candleDyeName(dye), block)));
+	}
+
 	/** See {@link BlocksTC#lootCrateCommon}/{@link thaumcraft.common.blocks.misc.BlockLoot}'s own doc
 	 * comment. */
 	public static final DeferredItem<BlockItem> lootCrateCommon =

@@ -307,5 +307,19 @@ public class ThaumcraftClient {
         };
         event.register(aspectTint, ItemsTC.phial.get());
         event.register(aspectTint, ItemsTC.label.get());
+
+        // banner.json's layer1 (the plain cloth) is tinted per-instance off the placed block's own real dye
+        // - same real "one shared texture, tinted per-instance" shape the candles/nitor/crystal families
+        // above already use, just read via Block.byItem since BlockBannerTC has no block color handler of
+        // its own (RenderShape.INVISIBLE means a block color handler would never actually be reached - see
+        // TileBannerRenderer's own doc comment for the real in-world tint instead). layer0 (the wall
+        // mount)/layer2 (the crest) stay untinted.
+        event.register((stack, tintIndex) -> {
+            if (tintIndex != 1) return -1;
+            net.minecraft.world.level.block.Block block = net.minecraft.world.level.block.Block.byItem(stack.getItem());
+            return block instanceof thaumcraft.common.blocks.misc.BlockBannerTC banner && banner.dye != null
+                    ? banner.dye.getTextureDiffuseColor() : -1;
+        }, ItemsTC.banners.values().stream().map(net.neoforged.neoforge.registries.DeferredItem::get)
+                .toArray(net.minecraft.world.item.Item[]::new));
     }
 }

@@ -25,9 +25,15 @@ import thaumcraft.common.tiles.misc.TileBanner;
  * renderer yet or (for entities) reused a real vanilla model.
  *
  * Real facing (0/4/8/12 -> a real Y rotation) and wall-vs-floor pole visibility, matching the original's own
- * {@code renderTileEntityAt} exactly. Real texture swap: the "Crimson Cult" symbol texture normally, a
- * blank banner texture once a real {@link thaumcraft.api.aspects.Aspect} tag is set via {@link
- * thaumcraft.common.blocks.misc.BlockBannerTC}'s own phial interaction.
+ * {@code renderTileEntityAt} exactly. Real texture swap: the "Crimson Cult" symbol texture for an untagged
+ * crimson banner, a blank banner texture otherwise (a real dyed banner, or a crimson one that's had a real
+ * {@link thaumcraft.api.aspects.Aspect} tag set via {@link thaumcraft.common.blocks.misc.BlockBannerTC}'s
+ * own phial interaction). Real per-{@link net.minecraft.world.item.DyeColor} tint (read straight off the
+ * real placed block instance's own {@code dye} field, matching the original's own real "one shared blank
+ * texture, tinted per-instance" shape - the same pattern {@code BlockCandle}/{@code BlockNitor} already
+ * established for their own color handlers, applied here via {@code ModelPart}'s own real tinted-render
+ * overload instead since block/item color handlers can't reach a {@code RenderShape.INVISIBLE} block's
+ * geometry at all).
  *
  * Real, documented cuts: no per-frame cloth-sway animation (the original's own small sine-wave tilt on the
  * banner cloth part) and no aspect-icon overlay drawn on the cloth once tagged (the original's own {@code
@@ -70,19 +76,25 @@ public class TileBannerRenderer implements BlockEntityRenderer<TileBanner> {
 		poseStack.mulPose(Axis.YP.rotationDegrees(180.0f));
 		poseStack.mulPose(Axis.YP.rotationDegrees(tile.getBannerFacing() * 360.0f / 16.0f));
 
-		ResourceLocation texture = tile.getAspect() == null ? TEX_CULT : TEX_BLANK;
+		// Real dye tint, see this class's own doc comment - null for the special "Crimson Cult" banner
+		// (which keeps its own real, pre-colored TEX_CULT texture, untinted), a real color for each of the
+		// 16 plain dyed variants (all sharing the plain TEX_BLANK cloth texture, tinted per instance).
+		net.minecraft.world.item.DyeColor dye = tile.getBlockState().getBlock() instanceof thaumcraft.common.blocks.misc.BlockBannerTC bannerBlock
+				? bannerBlock.dye : null;
+		ResourceLocation texture = (dye == null && tile.getAspect() == null) ? TEX_CULT : TEX_BLANK;
+		int tint = dye != null ? net.minecraft.util.FastColor.ARGB32.opaque(dye.getTextureDiffuseColor()) : -1;
 		var vertexConsumer = bufferSource.getBuffer(RenderType.entityCutout(texture));
 
 		if (!tile.getWall()) {
-			pole.render(poseStack, vertexConsumer, packedLight, packedOverlay);
+			pole.render(poseStack, vertexConsumer, packedLight, packedOverlay, tint);
 		}
 		else {
 			poseStack.translate(0.0, 1.0, -0.4125);
 		}
-		beam.render(poseStack, vertexConsumer, packedLight, packedOverlay);
-		tab1.render(poseStack, vertexConsumer, packedLight, packedOverlay);
-		tab2.render(poseStack, vertexConsumer, packedLight, packedOverlay);
-		banner.render(poseStack, vertexConsumer, packedLight, packedOverlay);
+		beam.render(poseStack, vertexConsumer, packedLight, packedOverlay, tint);
+		tab1.render(poseStack, vertexConsumer, packedLight, packedOverlay, tint);
+		tab2.render(poseStack, vertexConsumer, packedLight, packedOverlay, tint);
+		banner.render(poseStack, vertexConsumer, packedLight, packedOverlay, tint);
 
 		poseStack.popPose();
 	}
