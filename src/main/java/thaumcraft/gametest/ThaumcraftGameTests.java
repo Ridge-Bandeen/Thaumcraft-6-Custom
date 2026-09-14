@@ -6065,6 +6065,82 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** Real coverage for {@link thaumcraft.common.lib.research.ScanGeneric} - the real general-purpose scan
+	 * handler. Scanning any real block with real aspects should really grant both its own real "!id"
+	 * research key AND real OBSERVATION progress toward every real research category. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void scanGenericGrantsRealObservationProgressForEveryCategory(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, Blocks.IRON_ORE);
+		ServerPlayer player = spawnCasterAt(helper, abs.above(2));
+		IPlayerKnowledge knowledge = thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player);
+
+		thaumcraft.api.research.ResearchCategory basics = thaumcraft.api.research.ResearchCategories.getResearchCategory("BASICS");
+		helper.assertTrue(basics != null, "the real BASICS research category should really be registered");
+		int before = knowledge.getKnowledgeRaw(IPlayerKnowledge.EnumKnowledgeType.OBSERVATION, basics);
+		helper.assertTrue(!knowledge.isResearchKnown("!minecraft:iron_ore"), "the player shouldn't know the real iron ore scan key yet");
+
+		thaumcraft.api.research.ScanningManager.scanTheThing(player, abs);
+
+		helper.assertTrue(knowledge.isResearchKnown("!minecraft:iron_ore"),
+				"scanning a real iron ore block should really grant its own real generic scan key");
+		int after = knowledge.getKnowledgeRaw(IPlayerKnowledge.EnumKnowledgeType.OBSERVATION, basics);
+		helper.assertTrue(after > before,
+				"scanning a real aspect-bearing block should really add real OBSERVATION progress, was " + before + " now " + after);
+		helper.succeed();
+	}
+
+	/** Real coverage for {@link thaumcraft.api.research.ScanningManager}'s own restored inventory recursion
+	 * plus {@link thaumcraft.common.lib.research.ScanEnchantment} - scanning a real container really scans
+	 * everything really inside it, which is the only real path by which an item-shaped scan target is
+	 * reachable at all. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void scanningARealChestAlsoScansItsRealContentsIncludingEnchantments(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, Blocks.CHEST);
+		ServerPlayer player = spawnCasterAt(helper, abs.above(2));
+		IPlayerKnowledge knowledge = thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player);
+
+		ItemStack enchanted = new ItemStack(Items.IRON_SWORD);
+		enchanted.enchant(helper.getLevel().registryAccess()
+				.lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+				.getOrThrow(net.minecraft.world.item.enchantment.Enchantments.SHARPNESS), 1);
+		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(pos);
+		chest.setItem(0, enchanted);
+
+		helper.assertTrue(!knowledge.isResearchKnown("!minecraft:iron_sword"), "the player shouldn't know the real iron sword key yet");
+		helper.assertTrue(!knowledge.isResearchKnown("!minecraft:sharpness"), "the player shouldn't know the real sharpness key yet");
+
+		thaumcraft.api.research.ScanningManager.scanTheThing(player, abs);
+
+		helper.assertTrue(knowledge.isResearchKnown("!minecraft:iron_sword"),
+				"scanning a real chest should really scan the real sword inside it too");
+		helper.assertTrue(knowledge.isResearchKnown("!minecraft:sharpness"),
+				"scanning a real enchanted item should really grant its real enchantment's own scan key");
+		helper.succeed();
+	}
+
+	/** Real coverage for {@link thaumcraft.common.lib.research.ScanPotion} - one real instance is registered
+	 * per real MobEffect, so scanning a real entity under a real effect grants that effect's own key. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void scanPotionGrantsTheRealEffectKeyOffALivingEntity(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		Zombie zombie = spawnFacedBy(helper, player, origin, EntityType.ZOMBIE);
+		zombie.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED, 200, 0));
+
+		IPlayerKnowledge knowledge = thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player);
+		helper.assertTrue(!knowledge.isResearchKnown("!minecraft:speed"), "the player shouldn't know the real speed effect key yet");
+
+		thaumcraft.api.research.ScanningManager.scanTheThing(player, zombie);
+
+		helper.assertTrue(knowledge.isResearchKnown("!minecraft:speed"),
+				"scanning a real entity under a real Speed effect should really grant that effect's own real scan key");
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Arcane Bellows - see TileBellows' own doc comment for the furnace-speedup mechanic and the access
 	// transformer it needed (src/main/resources/META-INF/accesstransformer.cfg).

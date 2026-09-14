@@ -141,6 +141,9 @@ sourceSets {
             include 'thaumcraft/common/items/tools/ItemThaumometer.java'
             include 'thaumcraft/common/items/tools/ItemScribingTools.java'
             include 'thaumcraft/common/lib/research/ScanSky.java'
+            include 'thaumcraft/common/lib/research/ScanGeneric.java'
+            include 'thaumcraft/common/lib/research/ScanEnchantment.java'
+            include 'thaumcraft/common/lib/research/ScanPotion.java'
             include 'thaumcraft/common/items/curios/ItemCelestialNotes.java'
 
             include 'thaumcraft/api/research/theorycraft/TheorycraftCard.java'

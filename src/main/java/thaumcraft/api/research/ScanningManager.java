@@ -3,8 +3,20 @@ package thaumcraft.api.research;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.items.IItemHandler;
 import thaumcraft.api.ThaumcraftApi;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
 
@@ -17,16 +29,20 @@ import thaumcraft.api.capabilities.ThaumcraftCapabilities;
  * research-gated recipes) - that class's own doc comment explicitly named this exact gap ("no way yet to
  * grant research in game") as the reason every new player starts knowing a hardcoded {@code FIRSTSTEPS}.
  *
- * Simplified vs the original, a deliberately "headless" slice (no research-tree browser/book UI, no
- * Research Table/Theorycraft minigame, no multi-stage {@code ResearchEntry} JSON data loaded) - see the
- * port-tracking memory notes for the full scoping rationale:
+ * Real inventory-scanning recursion and real {@link #getItemFromParms} block-to-item resolution are both
+ * ported now (they were the two bullets this class's own doc comment previously listed as cut). The first
+ * was originally cut for needing "an unported {@code ThaumcraftInvHelper}/{@code IItemHandler} helper" -
+ * NeoForge's own {@link Capabilities.ItemHandler#BLOCK} covers that directly, and is already this port's
+ * own established way to reach an adjacent inventory (see {@code EntityArcaneBore}/{@code SealEmpty}).
+ * Together they're what makes real item-shaped scan targets ({@link thaumcraft.common.lib.research.ScanGeneric},
+ * {@code ScanEnchantment}, {@code ScanPotion}) actually reachable at all - nothing in this port ever passed
+ * a real {@code ItemStack} to a scan handler before.
+ *
+ * Simplified vs the original, a deliberately "headless" slice (no research-tree browser/book UI):
  * <ul>
- * <li>No inventory-scanning recursion (scanning a container's contents by pointing at it) - needed an
- * unported {@code ThaumcraftInvHelper}/{@code IItemHandler} helper for no real payoff at this stage.</li>
- * <li>No {@code getItemFromParms}/block-to-pickblock resolution - {@link ScanBlock} matches directly on the
- * block in the world instead.</li>
  * <li>Chat feedback simplified to a single status line per scan attempt instead of the original's
- * suppress/found/unknown three-way branching.</li>
+ * suppress/found/unknown three-way branching (the original suppressed its own message entirely whenever a
+ * matched thing returned an empty research key).</li>
  * </ul>
  */
 public class ScanningManager {
@@ -60,7 +76,61 @@ public class ScanningManager {
 			}
 		}
 		player.displayClientMessage(Component.translatable(found ? "tc.knownobject" : "tc.unknownobject"), true);
+
+		// Real inventory recursion, matching the original exactly: scanning a real container also scans
+		// everything really inside it, capped at 100 real items so a huge modded inventory can't lag the
+		// server. Each recursive call sends its own real status line, same as the original - they land on
+		// the action bar, so the last one simply wins.
+		if (object instanceof BlockPos pos) {
+			IItemHandler handler = player.level().getCapability(Capabilities.ItemHandler.BLOCK, pos, Direction.UP);
+			if (handler != null) {
+				int scanned = 0;
+				for (int slot = 0; slot < handler.getSlots(); slot++) {
+					ItemStack stack = handler.getStackInSlot(slot);
+					if (!stack.isEmpty()) {
+						scanTheThing(player, stack);
+						scanned++;
+					}
+					if (scanned >= 100) {
+						player.displayClientMessage(Component.translatable("tc.invtoolarge"), true);
+						break;
+					}
+				}
+			}
+		}
 		return found;
+	}
+
+	/**
+	 * Resolves whatever a scan target really is into the real {@link ItemStack} that represents it, for the
+	 * item-shaped scan handlers ({@link thaumcraft.common.lib.research.ScanGeneric} and friends). Real port
+	 * of the original's own {@code getItemFromParms}, including its own real water/lava bucket fallbacks
+	 * (neither fluid has a real item form of its own to resolve to).
+	 *
+	 * @return the real stack, or {@link ItemStack#EMPTY} if this object has no real item form.
+	 */
+	public static ItemStack getItemFromParms(Player player, Object obj) {
+		if (obj instanceof ItemStack stack) return stack;
+		if (obj instanceof ItemEntity item) return item.getItem();
+		if (obj instanceof BlockPos pos) {
+			Level level = player.level();
+			BlockState state = level.getBlockState(pos);
+			ItemStack stack = ItemStack.EMPTY;
+			try {
+				BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
+				stack = state.getCloneItemStack(hit, level, pos, player);
+			}
+			catch (Exception ignored) {
+				// Real, deliberate catch, matching the original's own: a block's own pick-block logic is
+				// third-party code that can genuinely throw on an unexpected state, and a failed scan
+				// should never take the interaction down with it.
+			}
+			if (stack.isEmpty()) stack = new ItemStack(state.getBlock());
+			if (stack.isEmpty() && state.getFluidState().is(Fluids.WATER)) stack = new ItemStack(Items.WATER_BUCKET);
+			if (stack.isEmpty() && state.getFluidState().is(Fluids.LAVA)) stack = new ItemStack(Items.LAVA_BUCKET);
+			return stack;
+		}
+		return ItemStack.EMPTY;
 	}
 
 	/**

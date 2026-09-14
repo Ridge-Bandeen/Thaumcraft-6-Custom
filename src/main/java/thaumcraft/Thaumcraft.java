@@ -145,15 +145,12 @@ public class Thaumcraft {
         thaumcraft.api.potions.MobEffectFluxTaint.instance = thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT.get();
 
         // A small, real scan target for ItemThaumometer - see ScanningManager's own doc comment for the
-        // overall scope of this "headless" (no book UI) slice of the research system. ItemThaumometer only
-        // has two real dispatch paths right now (interactLivingEntity and a block right-click), so the one
-        // registered here has to be block-shaped, not item-shaped, to actually be reachable in-game -
-        // ScanItem is still ported and usable by a future block/entity-and-item scan target, just not
-        // demonstrated with a live registration yet. Scanning the Runic Matrix is an invented substitute
-        // trigger for BOOTSTRAVELLER (the original granted it via a Thaumonomicon research-tree node, not
-        // ported) - it's the one already-shipped recipe this session has that's real but currently
-        // unreachable outside creative mode (TileInfusionMatrix#craftingStart checks its research key
-        // against player knowledge, and nothing before this granted BOOTSTRAVELLER to anyone).
+        // overall scope of this "headless" (no book UI) slice of the research system. Scanning the Runic
+        // Matrix is an invented substitute trigger for BOOTSTRAVELLER (the original granted it via a
+        // Thaumonomicon research-tree node, not ported) - it's the one already-shipped recipe this session
+        // has that's real but currently unreachable outside creative mode (TileInfusionMatrix#craftingStart
+        // checks its research key against player knowledge, and nothing before this granted BOOTSTRAVELLER
+        // to anyone).
         thaumcraft.api.research.ScanningManager.addScannableThing(
                 new thaumcraft.api.research.ScanBlock("BOOTSTRAVELLER", BlocksTC.infusionMatrix.get()));
 
@@ -171,6 +168,24 @@ public class Thaumcraft {
         // comment). Triggered by the thaumometer's own real "scan nothing" action, restored specifically
         // for this real mechanic - see ItemThaumometer#use's own doc comment.
         thaumcraft.api.research.ScanningManager.addScannableThing(new thaumcraft.common.lib.research.ScanSky());
+
+        // ScanGeneric - the real general-purpose catch-all: anything with real aspects at all grants real
+        // OBSERVATION progress toward every real research category on its first scan. See its own doc
+        // comment; this is what makes the thaumometer a real research tool rather than a lookup for the
+        // handful of hardcoded targets above.
+        thaumcraft.api.research.ScanningManager.addScannableThing(new thaumcraft.common.lib.research.ScanGeneric());
+
+        // ScanEnchantment/ScanPotion - real "discovering an enchantment/effect" scan targets, both reachable
+        // now that ScanningManager's own real inventory recursion and item resolution are ported. The
+        // original registered one instance per enchantment AND per potion; modern enchantments are
+        // data-driven (nothing to enumerate at setup) so that one is a single dynamic instance instead,
+        // while mob effects are still a real code-registered registry and keep the original's own
+        // one-instance-per-effect shape. Both classes' own doc comments cover the difference.
+        thaumcraft.api.research.ScanningManager.addScannableThing(new thaumcraft.common.lib.research.ScanEnchantment());
+        for (net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> effect
+                : net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.asHolderIdMap()) {
+            thaumcraft.api.research.ScanningManager.addScannableThing(new thaumcraft.common.lib.research.ScanPotion(effect));
+        }
 
         // Salis Mundus dust triggers (thaumcraft.api.crafting.IDustTrigger) - see
         // ThaumcraftDustTriggers' own doc comment for what this unlocks and what's still deferred.
