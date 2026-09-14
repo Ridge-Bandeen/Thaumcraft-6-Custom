@@ -18,10 +18,34 @@ Each of these is genuinely real, registered content in the true original with
 no equivalent anywhere in the current port (verified by direct source read,
 not just a name diff).
 
-*(Empty as of 2026-09-14 — a fresh full sweep found only two real gaps
-(`banners`, `creativeFluxSponge`), both closed same day. See "Recently
-closed" and "Fresh sweep, 2026-09-14" below. Next work should come from
-user direction or another fresh sweep.)*
+- **`ScanGeneric`, `ScanEnchantment`, `ScanPotion`** (`thaumcraft.common.lib.research`,
+  real `IScanThing` implementations) — confirmed real 2026-09-14 by a
+  **broader** sweep (the whole true-original file tree vs. `build.gradle`'s
+  include list, not just `BlocksTC`/`ItemsTC` fields - see "Fresh sweep,
+  2026-09-14 (part 2)" below for the full methodology). `ScanGeneric`
+  especially is real, valuable, and currently missing real functionality:
+  it's the true original's own **generic catch-all** thaumometer scan
+  handler - any entity or block with real aspects grants real Observation
+  progress toward *every* real research category (`ResearchCategories`/
+  `ResearchCategory#applyFormula`/`IInternalMethodHandler#addKnowledge` are
+  all already real APIs this port has). Right now the thaumometer can only
+  recognize a tiny hardcoded set of things (2 `ScanEntity` examples, 1
+  `ScanBlock`, this session's own new `ScanSky`) - `ScanGeneric` is the
+  real, general mechanic the original actually shipped. `ScanEnchantment`/
+  `ScanPotion` are smaller, real, per-enchantment/per-potion-effect scan
+  targets, same real pattern. All three are real, well-scoped, non-client,
+  buildable chunks - a strong next-pick candidate.
+- **Robe/Void-robe armor dye recipes** (`RecipesRobeArmorDyes`,
+  `RecipesVoidRobeArmorDyes`) — confirmed real 2026-09-14, same broader
+  sweep. Real but small and purely cosmetic (re-dye the Thaumaturge Robe/
+  Void Robe armor pieces); the robe items themselves have no dye-related
+  data component wired up yet either. Low priority.
+
+*(`BlocksTC`/`ItemsTC` registries themselves are confirmed complete as of
+2026-09-14 - two field-name sweeps in a row found nothing real left there.
+The two items above came from a broader, deeper sweep of the whole file
+tree. See "Fresh sweep, 2026-09-14 (part 2)" below for what else that
+turned up and what's still unscoped.)*
 
 ## Needs further triage (real content exists in the original; scope/priority unconfirmed)
 
@@ -48,6 +72,20 @@ user direction or another fresh sweep.)*
   for its own real distinguishing feature (multi-aspect storage), but
   one-way tubes are *defined* by a single configurable facing, so this one
   stays blocked until that raytracing gap is addressed some other way.
+- **Player/World/Entity/Chunk/Crafting/Server lifecycle events**
+  (`common/lib/events/PlayerEvents`/`WorldEvents`/`EntityEvents`/
+  `ChunkEvents`/`CraftingEvents`/`ServerEvents`/`KeyHandler`) — found
+  2026-09-14 by the broader whole-tree sweep. Real: 34 total
+  `@SubscribeEvent` handler methods across these 7 files in the true
+  original (13 in `PlayerEvents` alone), vs. only 12 total in this port's
+  own `Thaumcraft.java` (which also covers non-lifecycle registration
+  events, so the real overlap is smaller still). **Scope genuinely
+  unconfirmed** - this needs its own dedicated per-handler investigation
+  (many of these 34 may already be covered by other already-built
+  mechanisms elsewhere in this large port; this sweep didn't have budget to
+  check each one individually) before treating it as a single ~34-handler
+  gap. A real, moderately-sized candidate for the next session to actually
+  scope properly, not build blind.
 
 ## Confirmed dead-in-the-true-original (do not port — matches nothing real)
 
@@ -267,7 +305,7 @@ project memory file; not re-listed here to keep this file scannable.)*
   `EntityFluxRift`s. See commit "Give the Flux Sponge its real debug
   mechanic".
 
-## Fresh sweep, 2026-09-14 (full re-diff of `BlocksTC.java`/`ItemsTC.java`)
+## Fresh sweep, 2026-09-14 part 1 (full re-diff of `BlocksTC.java`/`ItemsTC.java`)
 
 TODO.md's actionable sections were fully empty after the 2026-09-09 backlog
 closed out entirely (see git log around that date for the full arc). Rather
@@ -302,9 +340,104 @@ out.** The natural next step for whoever picks this up next is another
 fresh sweep (the same technique, applied again after enough new work has
 landed) or user-directed work - there's no more pre-scoped backlog here.
 
+## Fresh sweep, 2026-09-14 part 2 (whole-tree, "how close to done are we?")
+
+User asked to verify how close to complete the whole port really is, not
+just `BlocksTC`/`ItemsTC` (already confirmed complete twice - see part 1
+above). Broadened the method: diffed the true original's **entire**
+`src/main/java` file tree (903 real `.java` files via
+`git show 31baee9 --stat --name-only`) against every file currently listed
+in `build.gradle`'s own `include` list (572 files) - 482 raw "missing path"
+candidates, 151 confirmed genuinely-new modern-only files (no 1.12.2
+counterpart at all - registries, data components, etc.), the rest
+hand-triaged by directory.
+
+**Real, honest picture**: the ~482 raw misses break down into a few large,
+well-understood buckets, most of which are NOT oversights:
+
+- **Client-only rendering/GUI/particle FX/OBJ loading** (~120 files across
+  `client/renderers/*`, `client/fx/*`, `client/gui/*`, `client/lib/obj`) -
+  a real, large, but already **consistently, deliberately deferred**
+  boundary this whole port has respected from the start (every device this
+  session ships documents its own "no bespoke renderer/GUI yet" cut where
+  relevant). Not new information, just now has a real total file count.
+- **CodeChicken library dependency** (~30 files under `codechicken/lib/`) -
+  the same already-known wand-raytracing blocker (tube facing, Levitator,
+  Redstone Relay, Pattern Crafter, Tube One-way) at its real total size.
+  Needs a real modern-API replacement investigated as its own chunk before
+  any of its dependents can unblock.
+- **Old 1.12.2 architecture, fully superseded** (`proxies/` - the whole
+  Forge client/server-proxy split doesn't exist as a concept in modern
+  NeoForge; `common/container/Container*`/`Inventory*`/`Slot*` - superseded
+  by this port's own real `*Menu` classes, confirmed 1:1 for every real
+  device that has one; `common/config/Config*.java` - superseded by
+  `BlocksTC`/`ItemsTC`/`Thaumcraft.java` themselves; `common/blocks/BlockTC*`
+  base classes/`IBlockFacing*` interfaces - superseded by direct vanilla
+  base classes + `BlockStateProperties.ENABLED`/`FACING`, already this
+  port's own established convention). None of these are gaps - checked a
+  representative sample of each bucket directly, not just assumed.
+- **Worldgen** (`common/world/biomes`, `common/world/objects` - custom
+  biomes, tree/flower/mound generators) - the same already-established
+  "worldgen is out of near-term scope" bucket `grassAmbient`/`shimmerleaf`/
+  etc. already covered, just confirmed to extend to the whole layer.
+- **Networking packets** (~35 old files vs. 4 real modern ones) - not
+  individually audited this pass, but the large gap is consistent with
+  most of the originals existing purely to sync now-deferred client
+  rendering/particle state, not real gameplay - flagged as an assumption,
+  not independently confirmed like the buckets above.
+- **`common/golems/ai`** (12 files, `AIArrowAttack`/`AIFollowOwner`/
+  `AIGotoHome`/`AINearestValidTarget`/`AIOwnerHurtByTarget`/`AIOwnerHurtTarget`/
+  `FlightMoveHelper`/`FlightNodeProcessor`/`GolemNodeProcessor`/`ITargets`/
+  `PathNavigateGolemAir`/`PathNavigateGolemGround`) - re-verified individually
+  given the golem arc's own "fully closed" claim; ALL confirmed either dead-
+  in-the-true-original, or already faithfully replaced by direct vanilla
+  API reuse (`FollowOwnerGoal`, `Mob#restrictTo`, `OwnerHurtByTargetGoal`/
+  `OwnerHurtTargetGoal`, `FlyingPathNavigation`, `WallClimberNavigation`),
+  matching this session's own already-documented "reuse vanilla directly"
+  precedent exactly. The golem arc's closure holds up under this deeper check.
+- **Tool/potion/recipe-type "missing files" that were really just renames**:
+  `common/items/tools/ItemThaumium*`/`ItemElemental*` (all real, just
+  registered as plain `Item` inline rather than as ported custom classes -
+  `thaumiumPick`/`elementalPick`/`voidPick` etc. all confirmed real and
+  already covered by the part-1 field sweep); `common/lib/potions/Potion*`
+  (all real, renamed `Potion*` → `MobEffect*` matching modern Minecraft's
+  own 1.20.5+ rename, all 9 registered in `ThaumcraftMobEffects`);
+  `InfusionRunicAugmentRecipe` (real, ported as `RunicArmorRecipe`);
+  `ShapedArcaneVoidJar`/`RecipeMagicDust` (real, both now real modern
+  data-driven recipe JSON instead of a hardcoded Java recipe class -
+  `jar_void.json`/`salis_mundus.json` already exist); `DustTriggerOre`
+  (already explicitly documented as intentionally not ported -
+  `ThaumcraftDustTriggers`'s own doc comment: "no real registered trigger
+  in the original ever needed it for anything this port has built").
+
+**Real gaps this deeper sweep actually found** (added to "Confirmed real
+gaps"/"Needs further triage" above): `ScanGeneric`/`ScanEnchantment`/
+`ScanPotion` (real, valuable, well-scoped - the generic thaumometer-scan-
+for-research mechanic), robe/void-robe armor dye recipes (real, small,
+cosmetic), and the `common/lib/events` lifecycle-handler subsystem (real,
+34 total handlers, genuinely **unscoped** - not confirmed as a real gap of
+that exact size, just confirmed NOT already fully covered by
+`Thaumcraft.java`'s own much smaller 12-handler surface; needs its own
+per-handler investigation before treating it as a single big gap).
+
+**Honest answer to "are we near the end"**: for real, player-facing
+gameplay content (blocks, items, devices, mobs, recipes, research), yes -
+`BlocksTC`/`ItemsTC` are confirmed complete, and this deeper sweep found
+only 2 small-to-medium real gaps (`ScanGeneric` trio, robe dyes) plus one
+genuinely-unscoped-but-possibly-smaller-than-it-looks area (lifecycle
+events). The large remaining file count is real but is almost entirely
+**already-known, already-accepted scope boundaries** (client rendering,
+CodeChicken, worldgen) rather than undiscovered gameplay gaps - this port
+is much closer to "content-complete, client-and-polish-incomplete" than
+"still missing mechanics."
+
 ---
 *Originally generated 2026-09-09 via a full `BlocksTC.java`/`ItemsTC.java`
 field-name sweep against the true original (commit `31baee9`); re-run in
-full 2026-09-14 once the prior backlog closed out. Re-run the same way
-again whenever this file's actionable sections go empty - update
+full 2026-09-14 once the prior backlog closed out, then broadened the same
+day to a whole-tree sweep to answer "how close to done are we." Re-run the
+`BlocksTC`/`ItemsTC` sweep whenever this file's actionable sections go
+empty again; the whole-tree sweep is worth re-running much less often
+(most of its own findings are large, slow-moving scope buckets, not fast-
+changing content) - update
 incrementally as items close or new gaps are found in between.*
