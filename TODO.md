@@ -18,28 +18,33 @@ Each of these is genuinely real, registered content in the true original with
 no equivalent anywhere in the current port (verified by direct source read,
 not just a name diff).
 
-- **`ScanGeneric`, `ScanEnchantment`, `ScanPotion`** (`thaumcraft.common.lib.research`,
-  real `IScanThing` implementations) — confirmed real 2026-09-14 by a
-  **broader** sweep (the whole true-original file tree vs. `build.gradle`'s
-  include list, not just `BlocksTC`/`ItemsTC` fields - see "Fresh sweep,
-  2026-09-14 (part 2)" below for the full methodology). `ScanGeneric`
-  especially is real, valuable, and currently missing real functionality:
-  it's the true original's own **generic catch-all** thaumometer scan
-  handler - any entity or block with real aspects grants real Observation
-  progress toward *every* real research category (`ResearchCategories`/
-  `ResearchCategory#applyFormula`/`IInternalMethodHandler#addKnowledge` are
-  all already real APIs this port has). Right now the thaumometer can only
-  recognize a tiny hardcoded set of things (2 `ScanEntity` examples, 1
-  `ScanBlock`, this session's own new `ScanSky`) - `ScanGeneric` is the
-  real, general mechanic the original actually shipped. `ScanEnchantment`/
-  `ScanPotion` are smaller, real, per-enchantment/per-potion-effect scan
-  targets, same real pattern. All three are real, well-scoped, non-client,
-  buildable chunks - a strong next-pick candidate.
-- **Robe/Void-robe armor dye recipes** (`RecipesRobeArmorDyes`,
-  `RecipesVoidRobeArmorDyes`) — confirmed real 2026-09-14, same broader
-  sweep. Real but small and purely cosmetic (re-dye the Thaumaturge Robe/
-  Void Robe armor pieces); the robe items themselves have no dye-related
-  data component wired up yet either. Low priority.
+- **`required_craft`/`required_item` research auto-progression** — found
+  2026-09-14 while scoping the events package (below). Real, coherent, and
+  genuinely two-part: `ThaumcraftResearchLoader`'s own doc comment says it
+  deliberately skips parsing both stage gates ("display-only without the
+  crafting/possession-triggered auto-progression hook, itself a real,
+  separate, not-yet-ported system"), and that hook is indeed the one real
+  piece of the true original's own `CraftingEvents` still open. The real
+  research JSON this port already ships **does** carry `required_craft`
+  entries, and `ResearchStage#getCraftReference` is already real API - so
+  this is: (1) parse both gates into `ResearchStage`, (2) add a real
+  crafting/possession hook that progresses a stage once satisfied. That's
+  one of the original's real "just play the game and research progresses"
+  paths, currently entirely absent. Note the original keyed this off its own
+  `ResearchManager.craftingReferences` set + an item-stack hash; this port
+  has no `ResearchManager`, so the lookup needs re-deriving against the real
+  loaded `ResearchEntry`/`ResearchStage` data instead.
+- **Label dyeing recipe** (a real component-matching custom `Ingredient`) —
+  {@code ItemLabel}'s own doc comment already flags this as a deliberate,
+  known scope cut: the original dyed a blank label with a specific aspect
+  using a filled Phial matched by NBT (`IngredientNBTTC`, a custom 1.12.2
+  ingredient type). Needs a real custom `Ingredient` matching a specific
+  `ASPECTS` component value - new recipe-system work. The true original's
+  own `CraftingEvents` phial-refund hook (crafting an aspected label gives
+  the filled phial back rather than consuming it) is downstream of this and
+  only worth building alongside it. Small and niche - the core
+  apply-a-label-to-lock-a-jar mechanic is already real and tested regardless
+  of how a filled label is obtained.
 
 *(`BlocksTC`/`ItemsTC` registries themselves are confirmed complete as of
 2026-09-14 - two field-name sweeps in a row found nothing real left there.
@@ -72,20 +77,31 @@ turned up and what's still unscoped.)*
   for its own real distinguishing feature (multi-aspect storage), but
   one-way tubes are *defined* by a single configurable facing, so this one
   stays blocked until that raytracing gap is addressed some other way.
-- **Player/World/Entity/Chunk/Crafting/Server lifecycle events**
-  (`common/lib/events/PlayerEvents`/`WorldEvents`/`EntityEvents`/
-  `ChunkEvents`/`CraftingEvents`/`ServerEvents`/`KeyHandler`) — found
-  2026-09-14 by the broader whole-tree sweep. Real: 34 total
-  `@SubscribeEvent` handler methods across these 7 files in the true
-  original (13 in `PlayerEvents` alone), vs. only 12 total in this port's
-  own `Thaumcraft.java` (which also covers non-lifecycle registration
-  events, so the real overlap is smaller still). **Scope genuinely
-  unconfirmed** - this needs its own dedicated per-handler investigation
-  (many of these 34 may already be covered by other already-built
-  mechanisms elsewhere in this large port; this sweep didn't have budget to
-  check each one individually) before treating it as a single ~34-handler
-  gap. A real, moderately-sized candidate for the next session to actually
-  scope properly, not build blind.
+- ~~**Player/World/Entity/Chunk/Crafting/Server lifecycle events**~~ —
+  **scoped 2026-09-14, and it was a false alarm: this package is already
+  done.** The whole-tree sweep flagged it because all 7 original files are
+  missing from `build.gradle`, and the raw handler count (34) dwarfed
+  `Thaumcraft.java`'s own 12. But the files were never meant to be ported
+  *as files* - earlier sessions (see the memory file's own 2026-09-06/07
+  entries) already read all 7 in full and redistributed their real content
+  into **10 focused, real, compiled modern classes** that all exist today:
+  `ChampionModEvents`, `FortressMaskEvents`, `MobDeathDropEvents`,
+  `RunicShieldEvents`, `PassiveResearchEvents`, `WarpEvents`,
+  `WornGearEvents`, `GearTooltipEvents`, `ToolEvents`, `EssentiaHandler` -
+  plus `Thaumcraft`'s own `tickGolemSeals`/`onNoteBlockPlay`. The rest was
+  confirmed moot: `ChunkEvents`/`WorldEvents`' aura+seal persistence is
+  superseded by the real `SavedData` migration, `KeyHandler`'s two keys are
+  superseded by `FocusRadialOverlay` and `ItemGolemBell`'s own real
+  interactions, and `ServerEvents`' gradual-mining `VirtualSwapper` is an
+  already-documented, already-accepted drop. **The real lesson this
+  re-confirms: a file-path diff measures files, not behaviour** - always
+  check where the behaviour actually went before calling it a gap.
+  Two genuinely-open leftovers did fall out of this scoping pass and are
+  listed under "Confirmed real gaps" above (`required_craft`/`required_item`
+  auto-progression, label dyeing); a third, `CraftingEvents`' warp-on-craft
+  penalty, is a real **no-op even if ported** - it reads a per-item warp
+  value that nothing in this port ever assigns (see `GearTooltipEvents`'
+  own doc comment), so it isn't worth building until something else does.
 
 ## Confirmed dead-in-the-true-original (do not port — matches nothing real)
 
@@ -304,6 +320,35 @@ project memory file; not re-listed here to keep this file scannable.)*
   real 9x9-chunk area, sneak-right-click also removes nearby real
   `EntityFluxRift`s. See commit "Give the Flux Sponge its real debug
   mechanic".
+
+- **`ScanGeneric`/`ScanEnchantment`/`ScanPotion`** — closed 2026-09-14, the
+  first of the whole-tree sweep's own real gaps. `ScanGeneric` is the true
+  original's own general catch-all: anything with real aspects grants real
+  OBSERVATION progress toward every real research category on its first
+  scan. Restored two things `ScanningManager`'s own doc comment listed as
+  cut, because the item-shaped handlers need them to be reachable at all -
+  real inventory-scanning recursion (via NeoForge's own
+  `Capabilities.ItemHandler.BLOCK`, the helper whose absence was the
+  original stated reason for the cut) and real `getItemFromParms`
+  block-to-item resolution. `ScanPotion` keeps the original's own
+  one-instance-per-effect shape; `ScanEnchantment` couldn't (modern
+  enchantments are data-driven, nothing to enumerate at setup) so it's one
+  dynamic instance that walks the player through an item's enchantments one
+  scan at a time. See commit "Give the thaumometer its real general scan
+  mechanic".
+
+- **Robe/Void-robe dye support** — closed 2026-09-14. Both robe classes'
+  own doc comments already listed this as a cut, and `ItemRobeArmor`'s even
+  named the modern replacement. The original's two dye recipe classes were
+  byte-for-byte clones of vanilla's own 1.12.2 `RecipesArmorDyes`, so
+  instead of porting them the six pieces now sit in the real
+  `#minecraft:dyeable` tag - which is exactly what vanilla's own
+  `ArmorDyeRecipe` **and** its own cauldron-wash interaction key off, so
+  both are real again with zero mod-side recipe code. Color lives in
+  vanilla's own `DYED_COLOR` component and tints both the real worn armor
+  layer (both materials' `Layer` now passes `dyeable=true`) and the real
+  item icon, falling back to the original's own real default purple when
+  undyed. See commit "Give the robe armor sets their real dye support".
 
 ## Fresh sweep, 2026-09-14 part 1 (full re-diff of `BlocksTC.java`/`ItemsTC.java`)
 
