@@ -49,10 +49,13 @@ import thaumcraft.common.entities.projectile.EntityEldritchOrb;
  * Real, documented cuts: no arm-lift swing animation ({@code armLiftL}/{@code armLiftR}, tied to the not-yet-
  * ported mesh - see {@link thaumcraft.client.render.ModelEldritchPlaceholder}'s own doc comment), no sonic-
  * scream client FX broadcast ({@code PacketFXSonic}, tied to the unported {@code FXDispatcher}), no per-
- * dimension absorption buff (the original's own Eldritch-dimension-only extra half-health shield via {@code
- * ModConfig.CONFIG_WORLD.dimensionOuterId} - that dimension isn't ported), no multiplayer aggro-scaling (same
- * cut as {@link thaumcraft.common.entities.monster.boss.EntityThaumcraftBoss}'s own doc comment explains for
- * the same reason - the unported {@code EntityUtils}).
+ * dimension absorption buff (the original's own extra half-health shield gated on
+ * {@code ModConfig.CONFIG_WORLD.dimensionOuterId} - confirmed 2026-09-09, not just a porting gap: Thaumcraft
+ * 6 never shipped a real custom dimension at all, exhaustively checked directly against the true original
+ * source and a community wiki; that config field is a real, generic "recognize some OTHER mod's dimension by
+ * numeric id" compatibility knob, not a TC6-authored place. Permanently inapplicable, not a future item), no
+ * multiplayer aggro-scaling (same cut as {@link thaumcraft.common.entities.monster.boss.EntityThaumcraftBoss}'s
+ * own doc comment explains for the same reason - the unported {@code EntityUtils}).
  */
 public class EntityEldritchGuardian extends Monster implements RangedAttackMob, IEldritchMob {
 

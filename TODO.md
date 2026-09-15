@@ -20,15 +20,15 @@ files matched) for staleness, the same pattern that found `effectSap`'s own
 stale reasoning - per the user's own standing directive, see
 [[thaumcraft-port-autonomy]]. Most of the 51 remain genuinely, correctly
 blocked (mostly on the large unported `EntityUtils`/`InventoryUtils` utility
-classes, or on subsystems with no evidence of landing since - Baubles/Curios,
-the custom Eldritch dimension, the magical-node system, the config-driven
-starter-book system). The entries below are the real ones whose own cited
-blocker has since resolved, or that were simply never picked up once
-reachable - each cross-checked directly against current `build.gradle`/
-registry state, not assumed from the doc comment alone.
+classes, the magical-node system, and the config-driven starter-book system -
+Baubles/Curios stays a separate, standing exclusion, not a "blocked" item).
+The entries below are the real ones whose own cited blocker has since
+resolved, or that were simply never picked up once reachable - each
+cross-checked directly against current `build.gradle`/registry state, not
+assumed from the doc comment alone.
 
-**Correction, same day**: the user directly questioned my own first pass at
-this sweep - "I think we've already done at least one of them (the
+**Correction #1, same day**: the user directly questioned my own first pass
+at this sweep - "I think we've already done at least one of them (the
 champion-mod system) so the others might be in better states than we think
 too." They were right: the champion-mod system (`ThaumcraftAttributes
 .CHAMPION_MOD`, `ChampionModEvents`, `ChampionUtils`, wired into
@@ -41,13 +41,38 @@ leftover files, confirmed absent from `build.gradle`, and no focused
 extraction exists yet for the SPECIFIC methods still cited -
 `isFriendly`/`isVisibleTo`/`getPlayerSlotFor` - the way `ChampionUtils` was
 already extracted from `EntityUtils` for the champion-mod half specifically),
-the custom Eldritch dimension (confirmed: no dimension type/class exists
-anywhere, a much bigger undertaking than the Eldritch *biome* already
-shipped), the magical-node system (confirmed: no such system exists; the one
-"Node" hit is an unrelated caster-focus concept), and the starter-book system
+the magical-node system (confirmed: no such system exists; the one "Node"
+hit is an unrelated caster-focus concept), and the starter-book system
 (confirmed: `ConfigItems.startBook`'s only real consumer, `PlayerEvents.java`,
-is still the stale, uncompiled 1.12.2 leftover). Those 4 really are still
-correctly blocked - only champion-mod was a real miss.
+is still the stale, uncompiled 1.12.2 leftover). Those 3 really are still
+correctly blocked - champion-mod was a real miss.
+
+**Correction #2, same day**: the user then asked about "the custom Eldritch
+dimension" specifically, which this sweep had also filed under "still
+blocked." That framing was wrong too, but in the OTHER direction from
+champion-mod - not "it's actually real," but "it's not real at all, and
+already confirmed so": a 2026-09-09 session (a different one) already
+investigated this exhaustively after the user asked to build "the cultist
+dimension" - a full-tree `git grep` for `DimensionType`/`WorldProvider`/
+`PopulateChunkEvent`/`GenerateMinable`/`StructureComponent`/`MapGenStructure`
+across the true original found zero real hits, and a community wiki
+cross-check confirmed **Thaumcraft 6 has no custom dimension of any kind**
+(the "Eldritch Obelisk"/"Outer Lands" concept that surfaced belongs to
+Thaumcraft 5, a different mod version). `ModConfig.CONFIG_WORLD
+.dimensionOuterId` (the config field this port's one remaining real doc
+comment on it cites, `EntityEldritchGuardian`'s own per-dimension
+absorption buff) is a real, generic "recognize some other mod's dimension
+by numeric id" compatibility knob, not a TC6-authored place - so that cut
+is permanently inapplicable, not a future item. Moved to "Confirmed
+dead-in-the-true-original" below. `EntityEldritchGuardian`'s own doc
+comment corrected to match. Also caught a real methodology gap while
+checking this: the sweep's own `build.gradle` presence checks matched by
+bare filename, not full path - `RenderEldritchGuardian
+.java` exists TWICE (the real modern one at `client/render/`, a stale
+1.12.2 leftover at `client/renderers/entity/mob/`), so a same-named file
+could false-positive as "real" when only its stale namesake actually
+matched. Worth double-checking full paths, not just filenames, on any future
+sweep-style `build.gradle` check.
 
 - ~~**`BlockTaintFibre`'s leaf-touching "grow into `taintFeature`" branch**~~
   — closed 2026-09-15, and turned out much bigger once actually
@@ -322,11 +347,20 @@ re-confirming.
   exists as a local inner class inside `EntityTurretCrossbow`/
   `EntityTurretCrossbowAdvanced` (already real/shipped in this port under
   their own separate logic) - do not confuse the two. No action needed.
-- **The "cultist dimension"** — confirmed in an earlier session chunk to
-  never have existed in real shipped Thaumcraft 6 (TC5-only concept, or a
-  still-open Azanor GitHub suggestion). See memory file for the full
-  investigation. The real Ancient/Eldritch stone family was shipped instead,
-  faithfully matching the true original's own genuinely-unreachable content.
+- **The "cultist dimension" / custom Eldritch dimension** — confirmed in an
+  earlier session chunk (2026-09-09) to never have existed in real shipped
+  Thaumcraft 6 (TC5-only concept, or a still-open Azanor GitHub suggestion).
+  See memory file for the full investigation. The real Ancient/Eldritch
+  stone family was shipped instead, faithfully matching the true original's
+  own genuinely-unreachable content. Re-surfaced 2026-09-15 by the
+  whole-tree sweep, which had wrongly filed it as "still blocked" (real
+  content, not yet reachable) rather than "confirmed dead" (never real at
+  all) - `ModConfig.CONFIG_WORLD.dimensionOuterId` (the config field this
+  port's one remaining real citation, `EntityEldritchGuardian`'s own
+  per-dimension absorption buff, references) is a real, generic "recognize
+  some other mod's dimension by numeric id" compatibility knob, not a
+  TC6-authored place; that cut is permanently inapplicable, not a future
+  item. `EntityEldritchGuardian`'s own doc comment corrected to match.
 - **`stairsEldritch`** (block) — confirmed 2026-09-14 by the fresh sweep,
   same dead-field pattern: declared in the true original's own
   `BlocksTC.java` but **never assigned/registered anywhere** (its stair-
