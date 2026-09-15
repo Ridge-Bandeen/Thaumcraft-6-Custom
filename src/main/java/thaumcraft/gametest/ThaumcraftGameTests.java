@@ -4291,6 +4291,52 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
+	 * Real coverage for the 2-tube chain suction-deadlock bug found and deliberately routed around while
+	 * building {@link #tubeFaceNubTogglesThatSideClosedAndMirrorsToTheRealNeighborTube} above (that test
+	 * intentionally kept its own mirror-neighbor tube off the real flow path to avoid tripping it) - fixed for
+	 * real 2026-09-15 by restoring {@link thaumcraft.common.tiles.essentia.TileTube}'s own real per-hop
+	 * suction decay (see that class's own doc comment). Before the fix, 2 real tubes chained straight in a
+	 * row between a source and a demanding jar would permanently stall: both tubes adopted the exact same
+	 * suction value from the same downstream jar, and the strictly-greater pull condition never resolved the
+	 * tie either way - essentia would reach the first tube and then sit there forever.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeChainOfTwoRelaysEssentiaAllTheWayFromSourceToJarWithoutDeadlocking(GameTestHelper helper) {
+		BlockPos sourcePos = new BlockPos(4, 3, 4);
+		BlockPos tubeAPos = sourcePos.below();
+		BlockPos tubeBPos = tubeAPos.below();
+		BlockPos jarPos = tubeBPos.below();
+
+		helper.setBlock(sourcePos, TEST_ESSENTIA_SOURCE_BLOCK.get());
+		helper.setBlock(tubeAPos, BlocksTC.tube.get());
+		helper.setBlock(tubeBPos, BlocksTC.tube.get());
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+
+		BlockPos tubeAAbs = helper.absolutePos(tubeAPos);
+		BlockPos tubeBAbs = helper.absolutePos(tubeBPos);
+		BlockPos jarAbs = helper.absolutePos(jarPos);
+
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(sourcePos);
+		source.aspect = Aspect.EARTH;
+		source.amount = 999;
+
+		thaumcraft.common.tiles.essentia.TileTube tubeA = helper.getBlockEntity(tubeAPos);
+		thaumcraft.common.tiles.essentia.TileTube tubeB = helper.getBlockEntity(tubeBPos);
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(jarPos);
+
+		for (int i = 0; i < 400; i++) {
+			thaumcraft.common.tiles.essentia.TileTube.tick(helper.getLevel(), tubeAAbs, helper.getBlockState(tubeAPos), tubeA);
+			thaumcraft.common.tiles.essentia.TileTube.tick(helper.getLevel(), tubeBAbs, helper.getBlockState(tubeBPos), tubeB);
+			thaumcraft.common.tiles.essentia.TileJarFillable.tick(helper.getLevel(), jarAbs, helper.getBlockState(jarPos), jar);
+		}
+
+		helper.assertTrue(jar.getAspects().getAmount(Aspect.EARTH) > 0,
+				"essentia should really have relayed all the way from the source, through 2 chained tubes, into the jar - no deadlock, got " + jar.getAspects());
+		helper.assertTrue(source.amount < 999, "the original source should really have been drawn down, still at " + source.amount);
+		helper.succeed();
+	}
+
+	/**
 	 * Real coverage for {@link thaumcraft.common.tiles.essentia.TileTubeOneway}'s real directional
 	 * suction/flow restriction, re-derived directly from the true original's own
 	 * {@code facing == loc.getOpposite()}/{@code facing != loc.getOpposite()} conditions (see its own doc

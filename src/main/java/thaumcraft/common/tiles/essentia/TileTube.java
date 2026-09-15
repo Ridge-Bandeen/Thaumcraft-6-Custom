@@ -126,7 +126,18 @@ public class TileTube extends BlockEntity implements IEssentiaTransport, IIntera
 
 	/** Recomputes {@link #suction}/{@link #suctionType} from the strongest of the 6 neighbors' own demand.
 	 * {@link TileTubeFilter}/{@link TileTubeRestrict} hook in via {@link #acceptsNeighborSuctionType},
-	 * {@link #adjustSuction}, and {@link #forcedSuctionType} rather than overriding this loop itself. */
+	 * {@link #adjustSuction}, and {@link #forcedSuctionType} rather than overriding this loop itself.
+	 *
+	 * <p>Real per-hop decay, restored 2026-09-15 after being found missing by direct comparison against the
+	 * true original: the threshold check here compares against a neighbor's raw reported demand, but what
+	 * actually gets STORED (via {@link #adjustSuction}) is one less than that (the true original's own real
+	 * {@code setSuction(st, restrict ? suck/2 : suck-1)} - this port had been storing the raw, un-decayed
+	 * {@code suck} value verbatim, a real regression from the true original, not a deliberate simplification.
+	 * Without this decay, 2 real tubes chained straight in a row can permanently deadlock: both adopt the
+	 * exact same suction value from the same downstream demand, and {@link #equalizeWithNeighbours}'s own
+	 * pull condition requires strictly-greater suction to pull - a tie never resolves either way. With the
+	 * real per-hop decay restored, suction strictly decreases moving away from the real demand source, so
+	 * ties between neighbors can't happen at all - exactly the true original's own real behavior. */
 	protected void calculateSuction(Level level, BlockPos pos) {
 		suction = 0;
 		suctionType = null;
@@ -137,9 +148,9 @@ public class TileTube extends BlockEntity implements IEssentiaTransport, IIntera
 			if (!neighbor.isConnectable(dir.getOpposite())) continue;
 			Aspect neighborType = neighbor.getSuctionType(dir.getOpposite());
 			if (!acceptsNeighborSuctionType(neighborType)) continue;
-			int suck = adjustSuction(neighbor.getSuctionAmount(dir.getOpposite()));
+			int suck = neighbor.getSuctionAmount(dir.getOpposite());
 			if (suck > 0 && suck > suction + 1) {
-				suction = suck;
+				suction = adjustSuction(suck);
 				suctionType = neighborType != null ? neighborType : forcedSuctionType();
 			}
 		}
@@ -176,10 +187,15 @@ public class TileTube extends BlockEntity implements IEssentiaTransport, IIntera
 		return true;
 	}
 
-	/** {@link TileTubeRestrict} halves the suction value it reports/uses, throttling its effective flow
-	 * rate and priority against other demand on the network. */
+	/** The real value this tube stores as its own effective suction once a neighbor's raw demand has already
+	 * beaten the current running threshold in {@link #calculateSuction} - NOT applied to the threshold
+	 * comparison itself, matching the true original's own real {@code setSuction(st, restrict ? suck/2 :
+	 * suck-1)} split exactly. Plain tubes decay by 1 per hop (see {@link #calculateSuction}'s own doc comment
+	 * for why this matters); {@link TileTubeRestrict} instead halves it, throttling its effective flow rate
+	 * and priority against other demand on the network (a stronger, real, deliberate penalty on top of the
+	 * same real per-hop decay every tube needs). */
 	protected int adjustSuction(int suck) {
-		return suck;
+		return suck - 1;
 	}
 
 	/** {@link TileTubeFilter} forces this tube's own declared demand to its filter aspect even when no

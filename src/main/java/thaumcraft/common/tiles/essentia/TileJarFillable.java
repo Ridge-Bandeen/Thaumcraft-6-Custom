@@ -39,10 +39,9 @@ import thaumcraft.common.world.aura.AuraHandler;
  * NBT) - same already-accepted "plain empty jar on break" precedent this class's own next bullet already
  * covers for aspect contents, not a new loss.</li>
  * <li>Aspect filter/label support <b>is</b> ported (see {@link #aspectFilter}/{@link #applyLabel} and
- * {@link thaumcraft.common.blocks.essentia.BlockJar#applyLabel}) - a labelled jar's raised 64 suction can
- * out-pull a plain jar/tube's 32 outright. {@link #tick} still allows ties ({@code <=}, not the original's
- * strict {@code <}) though: a plain Tube's own suction matches whatever a plain jar below it demands, so
- * Tube-to-jar relaying (a real, tested path) ties at 32 on both sides - see {@link #tick}'s own comment.</li>
+ * {@link thaumcraft.common.blocks.essentia.BlockJar#applyLabel}) - a labelled jar's raised 64 suction lets it
+ * out-pull a plain jar/tube's 32 outright, using the real original's own strict {@code <} comparison (see
+ * {@link #tick}'s own comment for why an earlier {@code <=} workaround here is gone again).</li>
  * <li>No fill-level model swapping - the original rendered this via a client-only
  * {@code TileEntitySpecialRenderer} picking between 5 baked models (0/25/50/75/100%) at draw time, entirely
  * outside the blockstate system; same "drop the animation, keep the function" precedent as every other
@@ -96,14 +95,16 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 			want = source.getEssentiaType(Direction.DOWN);
 		}
 		if (want == null || source.getEssentiaAmount(Direction.DOWN) <= 0) return;
-		// The original requires the target's suction to be strictly greater than the source's. Reverting to
-		// that strict comparison here breaks a real, common, already-tested case though: a plain Tube's own
-		// computed suction matches whatever its strongest neighbor demands, so a Tube relaying into a plain
-		// jar below ties at 32 suction on both sides (tubeRelaysEssentiaFromASourceToAJarBelow, caught by
-		// this exact regression during the Label chunk) - so ties are still allowed here ("<=", not "<").
-		// aspectFilter still differentiates meaningfully even so: a labelled jar's 64 genuinely beats a plain
-		// jar/tube's 32 outright, it just isn't the *only* way two jars can exchange essentia any more.
-		if (source.getSuctionAmount(Direction.DOWN) > tile.getSuctionAmount(Direction.UP)) return;
+		// The real original requires the target's suction to be strictly greater than the source's
+		// (`ic.getSuctionAmount(DOWN) < this.getSuctionAmount(UP)`) - restored 2026-09-15 now that it's really
+		// safe to. This used to need loosening to "<=" because a plain Tube's own computed suction matched
+		// whatever its strongest neighbor demanded exactly (a real regression from the true original's own
+		// per-hop suction decay, fixed in TileTube#calculateSuction/#adjustSuction - see that class's own doc
+		// comment), so a Tube relaying into a plain jar below always tied at 32 suction on both sides. With
+		// the real decay restored, a relaying Tube's own reported suction is now always strictly LESS than
+		// whatever it's relaying, so this real strict comparison holds without ties again, matching the
+		// original exactly.
+		if (source.getSuctionAmount(Direction.DOWN) >= tile.getSuctionAmount(Direction.UP)) return;
 
 		int taken = source.takeEssentia(want, 1, Direction.DOWN);
 		if (taken > 0) {
