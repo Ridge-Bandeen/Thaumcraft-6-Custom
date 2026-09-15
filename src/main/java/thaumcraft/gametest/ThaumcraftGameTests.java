@@ -4556,6 +4556,63 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for the 2026-09-15 restoration of the buffer's own real per-face open/close toggling
+	 * (see {@link thaumcraft.common.tiles.essentia.TileTubeBuffer}'s own doc comment): a real Caster click on
+	 * a face nub should really toggle that side closed, mirror the new state onto a real neighboring
+	 * {@link thaumcraft.common.tiles.essentia.TileTube}'s own opposite side, and a closed side should really
+	 * stop {@code fillBuffer} from pulling through it.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeBufferTogglesAFaceClosedMirrorsOntoARealNeighborAndStopsPullingThroughIt(GameTestHelper helper) {
+		BlockPos bufferPos = new BlockPos(4, 3, 4);
+		BlockPos sourcePos = bufferPos.above();
+		BlockPos mirrorPos = bufferPos.north();
+		helper.setBlock(sourcePos, TEST_ESSENTIA_SOURCE_BLOCK.get());
+		helper.setBlock(bufferPos, BlocksTC.tubeBuffer.get());
+		helper.setBlock(mirrorPos, BlocksTC.tube.get());
+		BlockPos bufferAbs = helper.absolutePos(bufferPos);
+
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(sourcePos);
+		source.aspect = Aspect.FIRE;
+		source.amount = 999;
+
+		thaumcraft.common.tiles.essentia.TileTubeBuffer buffer = helper.getBlockEntity(bufferPos);
+		thaumcraft.common.tiles.essentia.TileTube mirrorNeighbor = helper.getBlockEntity(mirrorPos);
+
+		helper.assertTrue(buffer.isSideOpen(net.minecraft.core.Direction.UP) && buffer.isSideOpen(net.minecraft.core.Direction.NORTH),
+				"a freshly placed tube buffer should really default to open on every real side");
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		ItemStack caster = new ItemStack(ItemsTC.casterBasic.get());
+
+		// Close the NORTH nub (toward the mirror neighbor) - real state change, mirrored onto the real
+		// neighbor's own opposite (SOUTH) side.
+		player.setPos(bufferAbs.getX() + 0.5, bufferAbs.getY() + 0.5, bufferAbs.getZ() - 2.5);
+		player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES,
+				new Vec3(bufferAbs.getX() + 0.5, bufferAbs.getY() + 0.5, bufferAbs.getZ() + 0.5));
+		boolean handled = buffer.onCasterRightClick(helper.getLevel(), caster, player, bufferAbs, net.minecraft.core.Direction.UP, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(handled, "a real Caster click precisely on the NORTH nub should really be handled");
+		helper.assertTrue(!buffer.isSideOpen(net.minecraft.core.Direction.NORTH), "clicking the NORTH nub should really close that real side");
+		helper.assertTrue(!mirrorNeighbor.isSideOpen(net.minecraft.core.Direction.SOUTH),
+				"closing the NORTH side should really mirror onto the real neighboring tube's own opposite (SOUTH) side");
+
+		// Now close the UP nub (toward the source, the real single-hop pull path) the same way, and confirm
+		// it really stops fillBuffer from pulling through it.
+		player.setPos(bufferAbs.getX() + 0.5, bufferAbs.getY() + 2.5, bufferAbs.getZ() + 0.5);
+		player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES,
+				new Vec3(bufferAbs.getX() + 0.5, bufferAbs.getY() + 0.5, bufferAbs.getZ() + 0.5));
+		handled = buffer.onCasterRightClick(helper.getLevel(), caster, player, bufferAbs, net.minecraft.core.Direction.UP, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(handled, "a real Caster click precisely on the UP nub should really be handled");
+		helper.assertTrue(!buffer.isSideOpen(net.minecraft.core.Direction.UP), "clicking the UP nub should really close that real side");
+
+		for (int i = 0; i < 20; i++) {
+			thaumcraft.common.tiles.essentia.TileTubeBuffer.tick(helper.getLevel(), bufferAbs, helper.getBlockState(bufferPos), buffer);
+		}
+		helper.assertTrue(buffer.getAspects().visSize() == 0, "closing the real UP side should really stop the buffer from pulling through it, got " + buffer.getAspects());
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Essentia Input/Output - real long-range bridges between a tube network and a distant IAspectSource
 	// (a jar, altar, etc.), NOT a physical-inventory device despite the true original's own thematic
@@ -5673,6 +5730,38 @@ public class ThaumcraftGameTests {
 		net.minecraft.world.InteractionResult result = resonator.getItem().onItemUseFirst(resonator, context);
 
 		helper.assertTrue(result == net.minecraft.world.InteractionResult.FAIL, "the resonator should fail against a block with no IEssentiaTransport tile, got " + result);
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for the 2026-09-15 restoration of the resonator's own real {@code TileTubeBuffer} branch:
+	 * a plain {@code IEssentiaTransport#getEssentiaType} query can only ever report ONE aspect, which would
+	 * silently hide the rest of a real multi-aspect buffer's own held essentia - the real branch should
+	 * really succeed (no crash iterating a real multi-aspect {@code AspectList} against a mock player)
+	 * against a buffer holding more than one distinct real aspect.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void resonatorReportsEveryRealAspectAMultiAspectTubeBufferHolds(GameTestHelper helper) {
+		BlockPos bufferPos = new BlockPos(2, 2, 2);
+		helper.setBlock(bufferPos, BlocksTC.tubeBuffer.get());
+		BlockPos bufferAbs = helper.absolutePos(bufferPos);
+		thaumcraft.common.tiles.essentia.TileTubeBuffer buffer = helper.getBlockEntity(bufferPos);
+		buffer.addToContainer(Aspect.FIRE, 1);
+		buffer.addToContainer(Aspect.WATER, 1);
+		buffer.addToContainer(Aspect.EARTH, 1);
+		helper.assertTrue(buffer.getAspects().visSize() == 3, "sanity check: the buffer should really hold 3 distinct real aspects before this test's own real assertions");
+
+		ServerPlayer player = spawnCasterAt(helper, bufferAbs.above());
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		ItemStack resonator = new ItemStack(ItemsTC.resonator.get());
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(bufferAbs), net.minecraft.core.Direction.UP, bufferAbs, false);
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(helper.getLevel(), player, hand, resonator, hit);
+
+		net.minecraft.world.InteractionResult result = resonator.getItem().onItemUseFirst(resonator, context);
+
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.SUCCESS,
+				"the resonator's real TileTubeBuffer branch should really succeed against a real multi-aspect buffer without crashing, got " + result);
 		helper.succeed();
 	}
 

@@ -224,6 +224,14 @@ public class TileTube extends BlockEntity implements IEssentiaTransport, IIntera
 		return openSides[dir.ordinal()];
 	}
 
+	/** Real public mirroring hook - lets a neighboring {@link TileTubeBuffer} (a separate class, not a
+	 * {@code TileTube} subclass) push its own toggled state onto this tube's matching side, the same way
+	 * {@link #onCasterRightClick} already mirrors between two plain tubes directly. */
+	public void setSideOpen(Direction dir, boolean open) {
+		openSides[dir.ordinal()] = open;
+		setChanged();
+	}
+
 	/**
 	 * The real click precision restored - see this class's own doc comment. Does its own fresh raytrace
 	 * against the real current nub/core geometry (only registering a nub for a direction with a real,
@@ -255,8 +263,7 @@ public class TileTube extends BlockEntity implements IEssentiaTransport, IIntera
 			openSides[dir.ordinal()] = !openSides[dir.ordinal()];
 			setChanged();
 			if (world.getBlockEntity(worldPosition.relative(dir)) instanceof TileTube neighbor) {
-				neighbor.openSides[dir.getOpposite().ordinal()] = openSides[dir.ordinal()];
-				neighbor.setChanged();
+				neighbor.setSideOpen(dir.getOpposite(), openSides[dir.ordinal()]);
 			}
 		} else {
 			cycleFacing(world, worldPosition);
