@@ -28,16 +28,19 @@ import thaumcraft.common.tiles.essentia.TileTube;
 
 /**
  * Replaces the old (1.12.2) {@code BlockTube} - see {@link TileTube}'s own doc comment for the relay
- * mechanic and what's simplified. Reuses vanilla's own {@code PipeBlock.PROPERTY_BY_DIRECTION} (the same
- * {@code NORTH}/{@code SOUTH}/{@code EAST}/{@code WEST}/{@code UP}/{@code DOWN} booleans
- * {@link net.minecraft.world.level.block.IronBarsBlock}/the pane family use) - recomputed from real neighbor
- * state on placement and on every neighbor change, purely for the multipart model to pick the right stub
- * pieces; connecting doesn't gate function here since there's no per-face toggle left to gate (see
- * {@link TileTube}).
+ * mechanic, including its real wand-gated per-face open/close toggling. Reuses vanilla's own
+ * {@code PipeBlock.PROPERTY_BY_DIRECTION} (the same {@code NORTH}/{@code SOUTH}/{@code EAST}/{@code WEST}/
+ * {@code UP}/{@code DOWN} booleans {@link net.minecraft.world.level.block.IronBarsBlock}/the pane family
+ * use) - recomputed from real neighbor state on placement and on every neighbor change, purely for the
+ * multipart model to pick the right stub pieces. Deliberately independent of {@link TileTube}'s own real
+ * open/close state - a closed side still visually connects (physically joined, just not electrically open),
+ * matching the true original's own real distinction between the two.
  *
- * Simplified collision shape: a single fixed inset box rather than the original's precise per-direction
- * stub hitboxes (itself built on the same CodeChicken raytracing library already dropped for the
- * interaction model) - a reasonable, if less exact, physical shape.
+ * <p>Simplified collision shape: a single fixed inset box rather than the original's precise per-direction
+ * stub hitboxes. Real click precision is restored, just independently of this general shape - see
+ * {@link TileTube#onCasterRightClick}'s own doc comment for why the click logic does its own fresh raytrace
+ * rather than needing this shape narrowed to match (the true original's own real architecture, not a
+ * simplification).
  */
 public class BlockTube extends Block implements EntityBlock {
 

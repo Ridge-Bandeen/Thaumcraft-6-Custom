@@ -3889,14 +3889,15 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
-	 * Real coverage for {@link thaumcraft.common.tiles.essentia.TileTubeOneway}'s real click-to-cycle
-	 * interaction - the same real "drop the multi-hitbox raytrace, cycle on a plain click" substitute
-	 * {@code BlockLevitator}/{@code BlockRedstoneRelay} already established, now closing out the last
-	 * "Needs further triage" item that raytracing wall was blocking.
+	 * Real coverage for {@link thaumcraft.common.tiles.essentia.TileTube}'s real wand-gated click precision,
+	 * restored via {@link thaumcraft.common.lib.utils.CuboidTargeting} (see its own doc comment - this
+	 * replaces an earlier "plain right-click cycles facing" placeholder with the true original's own real
+	 * requirement: an actual Caster in hand, and a precise click on the real central core). Looking precisely
+	 * at the core should cycle facing; a Caster right-click that misses every real region entirely should be
+	 * a real no-op (matching the true original's own "subHit didn't match anything" fallthrough).
 	 */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
-	public static void tubeOnewayCyclesItsFacingToARealConnectedNeighbor(GameTestHelper helper) {
-		ServerLevel level = helper.getLevel();
+	public static void tubeOnewayCoreClickCyclesFacingToARealConnectedNeighbor(GameTestHelper helper) {
 		BlockPos tubePos = new BlockPos(3, 2, 3);
 		BlockPos jarPos = tubePos.below();
 		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
@@ -3907,19 +3908,108 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(tube.getFacing() == net.minecraft.core.Direction.NORTH, "a freshly placed one-way tube should really default to NORTH, found: " + tube.getFacing());
 
 		ServerPlayer player = spawnCasterAt(helper, tubeAbs.above(2));
-		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
-				net.minecraft.world.phys.Vec3.atCenterOf(tubeAbs), net.minecraft.core.Direction.UP, tubeAbs, false);
+		ItemStack caster = new ItemStack(ItemsTC.casterBasic.get());
 
-		// The only real connected neighbor is the jar below - a plain right-click should skip every other
-		// (unconnected) direction and land on DOWN.
-		helper.getBlockState(tubePos).useWithoutItem(level, player, hit);
+		// A real Caster right-click aimed off to one side - missing the core, and missing the one real face
+		// nub (below, toward the jar) too - should be a real no-op.
+		player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES,
+				new Vec3(tubeAbs.getX() + 0.95, tubeAbs.getY() + 0.5, tubeAbs.getZ() + 0.5));
+		boolean handled = tube.onCasterRightClick(helper.getLevel(), caster, player, tubeAbs, net.minecraft.core.Direction.UP, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(!handled, "a real Caster click that misses every real region should be a real no-op");
+		helper.assertTrue(tube.getFacing() == net.minecraft.core.Direction.NORTH, "a missed click should never change facing");
+
+		// The only real connected neighbor is the jar below - clicking the real central core should skip
+		// every other (unconnected) direction and land on DOWN.
+		player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, Vec3.atCenterOf(tubeAbs));
+		handled = tube.onCasterRightClick(helper.getLevel(), caster, player, tubeAbs, net.minecraft.core.Direction.UP, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(handled, "a real Caster click precisely on the core should really be handled");
 		helper.assertTrue(tube.getFacing() == net.minecraft.core.Direction.DOWN,
-				"cycling with only a real connected neighbor below should really land on DOWN, found: " + tube.getFacing());
+				"clicking the core with only a real connected neighbor below should really land on DOWN, found: " + tube.getFacing());
 
 		// With no other real connected neighbor, cycling again should just come back around to DOWN.
-		helper.getBlockState(tubePos).useWithoutItem(level, player, hit);
+		tube.onCasterRightClick(helper.getLevel(), caster, player, tubeAbs, net.minecraft.core.Direction.UP, net.minecraft.world.InteractionHand.MAIN_HAND);
 		helper.assertTrue(tube.getFacing() == net.minecraft.core.Direction.DOWN,
 				"cycling again with still only one real connected neighbor should stay on DOWN, found: " + tube.getFacing());
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.tiles.essentia.TileTube}'s real per-face open/close
+	 * toggling, restored via the same {@link thaumcraft.common.lib.utils.CuboidTargeting}-based click
+	 * precision (see {@code TileTube}'s own doc comment). Clicking a real connected face's nub should close
+	 * it (stopping suction relay/essentia flow across just that face) and mirror the new closed state onto a
+	 * real neighboring tube's own opposite side, matching the true original exactly; clicking it again
+	 * should reopen it.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeFaceNubTogglesThatSideClosedAndMirrorsToTheRealNeighborTube(GameTestHelper helper) {
+		BlockPos sourcePos = new BlockPos(4, 3, 4);
+		BlockPos tubePos = sourcePos.below();
+		BlockPos jarPos = tubePos.below();
+		// A second real tube, off to the side rather than in-line with source/jar - real flow verification
+		// stays a single real hop (matching every other real flow test in this file, e.g.
+		// tubeRelaysEssentiaFromASourceToAJarBelow); this one exists purely to prove mirroring reaches a
+		// real neighboring TileTube, checked directly via its own real state.
+		BlockPos mirrorPos = tubePos.north();
+
+		helper.setBlock(sourcePos, TEST_ESSENTIA_SOURCE_BLOCK.get());
+		helper.setBlock(tubePos, BlocksTC.tube.get());
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		helper.setBlock(mirrorPos, BlocksTC.tube.get());
+		BlockPos tubeAbs = helper.absolutePos(tubePos);
+		BlockPos jarAbs = helper.absolutePos(jarPos);
+
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(sourcePos);
+		source.aspect = Aspect.EARTH;
+		source.amount = 999;
+
+		thaumcraft.common.tiles.essentia.TileTube tube = helper.getBlockEntity(tubePos);
+		thaumcraft.common.tiles.essentia.TileTube mirrorNeighbor = helper.getBlockEntity(mirrorPos);
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(jarPos);
+
+		helper.assertTrue(tube.isSideOpen(net.minecraft.core.Direction.DOWN) && tube.isSideOpen(net.minecraft.core.Direction.NORTH),
+				"a freshly placed tube should really default to open on every real side");
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		ItemStack caster = new ItemStack(ItemsTC.casterBasic.get());
+
+		// Close the NORTH nub (toward the mirror neighbor) - real state change, mirrored onto the real
+		// neighbor's own opposite (SOUTH) side. The NORTH nub and the central core share the same X/Y
+		// footprint, adjacent in Z - approaching from due north (decreasing Z) hits the nub first, before
+		// ever reaching the core behind it, so a constant-X/Y approach works here (unlike the DOWN nub,
+		// which sits behind the core from directly above).
+		player.setPos(tubeAbs.getX() + 0.5, tubeAbs.getY() + 0.5, tubeAbs.getZ() - 2.5);
+		player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES,
+				new Vec3(tubeAbs.getX() + 0.5, tubeAbs.getY() + 0.5, tubeAbs.getZ() + 0.5));
+		boolean handled = tube.onCasterRightClick(helper.getLevel(), caster, player, tubeAbs, net.minecraft.core.Direction.UP, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(handled, "a real Caster click precisely on the NORTH nub should really be handled");
+		helper.assertTrue(!tube.isSideOpen(net.minecraft.core.Direction.NORTH), "clicking the NORTH nub should really close that real side");
+		helper.assertTrue(!mirrorNeighbor.isSideOpen(net.minecraft.core.Direction.SOUTH),
+				"closing the NORTH side should really mirror onto the real neighbor's own opposite (SOUTH) side");
+
+		// Now close the DOWN nub (toward the jar, the real single-hop flow path) the same way, and confirm
+		// it really gates real essentia flow.
+		player.setPos(tubeAbs.getX() + 2.5, tubeAbs.getY() + 0.1, tubeAbs.getZ() + 0.5);
+		player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES,
+				new Vec3(tubeAbs.getX() + 0.5, tubeAbs.getY() + 0.1, tubeAbs.getZ() + 0.5));
+		handled = tube.onCasterRightClick(helper.getLevel(), caster, player, tubeAbs, net.minecraft.core.Direction.UP, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(handled, "a real Caster click precisely on the DOWN nub should really be handled");
+		helper.assertTrue(!tube.isSideOpen(net.minecraft.core.Direction.DOWN), "clicking the DOWN nub should really close that real side");
+
+		for (int i = 0; i < 200; i++) {
+			thaumcraft.common.tiles.essentia.TileTube.tick(helper.getLevel(), tubeAbs, helper.getBlockState(tubePos), tube);
+			thaumcraft.common.tiles.essentia.TileJarFillable.tick(helper.getLevel(), jarAbs, helper.getBlockState(jarPos), jar);
+		}
+		helper.assertTrue(jar.getAspects().size() == 0, "closing the real DOWN side should really stop essentia from reaching the jar, got " + jar.getAspects());
+
+		handled = tube.onCasterRightClick(helper.getLevel(), caster, player, tubeAbs, net.minecraft.core.Direction.UP, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(handled && tube.isSideOpen(net.minecraft.core.Direction.DOWN), "clicking the DOWN nub again should really reopen it");
+
+		for (int i = 0; i < 200; i++) {
+			thaumcraft.common.tiles.essentia.TileTube.tick(helper.getLevel(), tubeAbs, helper.getBlockState(tubePos), tube);
+			thaumcraft.common.tiles.essentia.TileJarFillable.tick(helper.getLevel(), jarAbs, helper.getBlockState(jarPos), jar);
+		}
+		helper.assertTrue(jar.getAspects().getAmount(Aspect.EARTH) > 0, "reopening the real DOWN side should really let essentia flow again, jar got " + jar.getAspects());
 		helper.succeed();
 	}
 
