@@ -143,11 +143,12 @@ Primal Crystal Clusters - is also already real and shipped. Moved to
   real but serves an unrelated real purpose - a plain passive stabilizer,
   not the charge-network conduit the original doc comment was picturing,
   worth a doc fix on top of the real restoration).
-- **`ItemPechWand`'s real acquisition path** — its own doc comment already
-  calls this out directly ("real, currently-unaddressed acquisition gap"),
-  citing `EntityPech` as unported; Pech has been real (with a working
-  Pech Trade GUI, `GuiPechTrade`) for a while now. Give the wand a real
-  trade/loot source instead of staying creative-only.
+- ~~**`ItemPechWand`'s real acquisition path**~~ — corrected 2026-09-15, not
+  actually a gap: `EntityPech`'s own real `TRADE_REWARDS` table already
+  lists the wand as a real tier-5 "thaum/wand" reward, matching the true
+  original's own `ConfigEntities#tradeInventory` placement exactly - the
+  doc comment just hadn't caught up to the Pech trading chunk landing.
+  Added real GameTest coverage confirming it. Committed `90d7e50`.
 - ~~**`AspectList(ItemStack)`'s dead constructor stub**~~ — closed
   2026-09-15. Now routes through `AspectHelper#getObjectAspects`, already
   fully wired (`ThaumcraftInternalMethodHandler` → `ThaumcraftObjectTags`)
