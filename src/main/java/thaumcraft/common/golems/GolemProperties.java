@@ -47,9 +47,9 @@ import thaumcraft.api.items.ItemsTC;
  * flight navigation) is already handled independently, by {@link thaumcraft.common.golems.EntityThaumcraftGolem}'s
  * own {@code getGolemMoveSpeed}/{@code createGolemNavigation} trait checks. Every part is real and
  * selectable with its real traits/components regardless.</li>
- * <li>{@code BlocksTC.levitator} (the FLYER leg's real cost item) isn't ported yet - substituted with
- * {@code Items.FEATHER} (same "substitute the unreachable ingredient, keep the rest real" precedent used
- * repeatedly this session), documented rather than silent.</li>
+ * <li>The FLYER leg's real cost item is {@link BlocksTC#levitator} again, real since the CodeChicken-
+ * precision restoration arc (its own earlier {@code Items.FEATHER} placeholder was written when that block
+ * wasn't real yet).</li>
  * <li>{@code Blocks.HARDENED_CLAY}/{@code Blocks.WOOL}/{@code Blocks.CHEST} become their modern
  * equivalents ({@code Blocks.TERRACOTTA}/{@code Blocks.WHITE_WOOL}/{@code Items.CHEST}) - renames, not
  * simplifications.</li>
@@ -288,7 +288,7 @@ public class GolemProperties implements IGolemProperties {
 				new Object[] { new ItemStack(Items.FLINT, 4), "base", "mech", "mech" }, new EnumGolemTrait[] { EnumGolemTrait.CLIMBER }));
 		GolemLeg.register(new GolemLeg("FLYER", new String[] { "GOLEMFLYER" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/legs_flyer"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_legs_floater.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_legs_floater"), PartModel.EnumAttachPoint.BODY),
-				new Object[] { new ItemStack(Items.FEATHER), new ItemStack(ItemsTC.plateIron.get(), 4), new ItemStack(Items.SLIME_BALL), "mech" }, new EnumGolemTrait[] { EnumGolemTrait.FLYER, EnumGolemTrait.FRAGILE }));
+				new Object[] { new ItemStack(BlocksTC.levitator.get()), new ItemStack(ItemsTC.plateIron.get(), 4), new ItemStack(Items.SLIME_BALL), "mech" }, new EnumGolemTrait[] { EnumGolemTrait.FLYER, EnumGolemTrait.FRAGILE }));
 
 		GolemAddon.register(new GolemAddon("NONE", new String[] { "MINDCLOCKWORK" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/blocks/blank"), null, new Object[0], new EnumGolemTrait[0]));
 		GolemAddon.register(new GolemAddon("ARMORED", new String[] { "GOLEMCOMBATADV" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/addon_armored"),

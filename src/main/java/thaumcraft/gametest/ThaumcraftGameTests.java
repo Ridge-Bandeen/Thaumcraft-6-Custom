@@ -11879,6 +11879,38 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
+	 * Real coverage for the whole-tree sweep's 3 quick fixes: {@code primal_crusher}'s repair ingredient
+	 * (was stale {@code ingotThaumium}, should really match its sibling void tiers), the FLYER golem leg's
+	 * real cost item (was a placeholder {@code Items.FEATHER}, should really be {@code BlocksTC.levitator}
+	 * now that it's real), and {@link thaumcraft.api.aspects.AspectList}'s real
+	 * {@code AspectList(ItemStack)} constructor (was a dead stub, should really return the item's own
+	 * registered object tags now).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sweepQuickFixesRealRepairIngredientLevitatorCostAndAspectListConstructor(GameTestHelper helper) {
+		ItemStack crusher = new ItemStack(ItemsTC.primalCrusher.get());
+		helper.assertTrue(crusher.getItem().isValidRepairItem(crusher, new ItemStack(ItemsTC.ingotVoid.get())),
+				"primal_crusher should really be repairable with a real void ingot");
+		helper.assertFalse(crusher.getItem().isValidRepairItem(crusher, new ItemStack(ItemsTC.ingotThaumium.get())),
+				"primal_crusher should really no longer accept a plain Thaumium ingot");
+
+		thaumcraft.api.golems.parts.GolemLeg flyer = findPartByKey(thaumcraft.api.golems.parts.GolemLeg.getLegs(), l -> l.key, "FLYER");
+		helper.assertTrue(flyer != null, "the real FLYER golem leg should really be registered");
+		boolean hasLevitator = false;
+		for (Object component : flyer.components) {
+			if (component instanceof ItemStack stack && stack.is(BlocksTC.levitator.get().asItem())) {
+				hasLevitator = true;
+			}
+		}
+		helper.assertTrue(hasLevitator, "the real FLYER leg's own cost should really include a real levitator, not the old feather placeholder");
+
+		thaumcraft.api.aspects.AspectList fromCoal = new thaumcraft.api.aspects.AspectList(new ItemStack(Items.COAL));
+		helper.assertTrue(fromCoal.getAmount(Aspect.ENERGY) == 10 && fromCoal.getAmount(Aspect.FIRE) == 10,
+				"the real AspectList(ItemStack) constructor should really return coal's own registered real aspects, got " + fromCoal);
+		helper.succeed();
+	}
+
+	/**
 	 * Names the real Fortress armor recipes (3 base pieces + 4 helm upgrades) and asserts each one is
 	 * actually registered - same "name every id" pattern as {@link #focusRecipesRegistered} and siblings.
 	 */

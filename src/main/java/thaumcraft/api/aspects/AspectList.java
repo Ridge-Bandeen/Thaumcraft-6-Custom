@@ -34,12 +34,17 @@ public class AspectList implements Serializable {
 	 * this creates a new aspect list with preloaded values based off the aspects of the given item.
 	 * @param the itemstack of the given item
 	 *
-	 * TODO: was backed by AspectHelper.getObjectAspects(stack), which needs the full
-	 * ThaumcraftApi/golems/capabilities/research chain (not yet ported). Wire this back up once
-	 * that lands - until then this behaves like a lookup miss (empty list), same as the original
-	 * did on any exception.
+	 * Real again as of 2026-09-15: {@link AspectHelper#getObjectAspects} is fully wired now
+	 * ({@code ThaumcraftInternalMethodHandler} routes it to the real {@code ThaumcraftObjectTags}
+	 * database) - this constructor was the one remaining piece still returning an empty list on
+	 * every call. Matches the original's own real behavior of a lookup miss (empty list) whenever
+	 * the item has no known aspects, not an exception path.
 	 */
 	public AspectList(ItemStack stack) {
+		AspectList found = AspectHelper.getObjectAspects(stack);
+		if (found != null) {
+			aspects.putAll(found.aspects);
+		}
 	}
 
 	public AspectList() {

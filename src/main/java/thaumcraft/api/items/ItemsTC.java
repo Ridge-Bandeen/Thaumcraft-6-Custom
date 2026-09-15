@@ -708,10 +708,11 @@ public final class ItemsTC {
 			ITEMS.registerItem("grapple_gun", thaumcraft.common.items.tools.ItemGrappleGun::new);
 
 	/** {@code ItemPrimalCrusher.material} ("PRIMALVOID") from the original: 500 uses, 8.0 speed, +4.0 attack
-	 * damage, 20 enchantability - same real Thaumium-ingot repair substitution as {@link #TIER_VOID}/{@link
-	 * #TIER_CRIMSON_BLADE} above (the original repaired with a void ingot; that ore chain isn't ported). */
+	 * damage, 20 enchantability - repairs with a real {@link #ingotVoid} now too, matching {@link #TIER_VOID}/
+	 * {@link #TIER_CRIMSON_BLADE} above exactly (this one was stale - both of those already got the real
+	 * fix when the void-metal chain closed, this tier's own doc comment just never got updated to match). */
 	private static final Tier TIER_PRIMAL = new SimpleTier(BlockTags.INCORRECT_FOR_DIAMOND_TOOL, 500, 8.0F, 4.0F, 20,
-			() -> Ingredient.of(ItemsTC.ingotThaumium));
+			() -> Ingredient.of(ItemsTC.ingotVoid));
 
 	/** See {@link thaumcraft.common.items.tools.ItemPrimalCrusher}'s own doc comment. */
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemPrimalCrusher> primalCrusher = ITEMS.registerItem("primal_crusher",
