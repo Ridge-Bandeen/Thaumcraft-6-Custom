@@ -4786,6 +4786,64 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
+	 * Real coverage for the 2026-09-15 restoration of the real full 24-weighted-outcome instability table
+	 * (previously trimmed to 12 because {@code BlockFluxGoo}/the Flux-Taint/Vis-Exhaust mob effects weren't
+	 * real yet - both are now): drives {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix#triggerInstabilityEvent}
+	 * directly (made public specifically for this - see its own doc comment) rather than waiting on real
+	 * probabilistic craft-cycle stability loss, which would be far too slow to reliably exercise every one of
+	 * the 24 real outcomes. Confirms both restored outcome families actually fire: real flux-goo placement
+	 * above an ejected pedestal, and real Flux Taint/Vis Exhaust affliction on a nearby living entity.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionMatrixInstabilityEventCanPlaceRealFluxGooAndAfflictRealFluxTaintOrVisExhaust(GameTestHelper helper) {
+		BlockPos matrixPos = new BlockPos(4, 4, 4);
+		BlockPos centralPos = matrixPos.below(2);
+		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, matrixPos);
+		helper.setBlock(centralPos, BlocksTC.pedestal.get());
+		thaumcraft.common.tiles.crafting.TilePedestal central = helper.getBlockEntity(centralPos);
+		central.setItem(new ItemStack(Items.STICK));
+
+		BlockPos componentPos = matrixPos.offset(2, 0, 0);
+		helper.setBlock(componentPos, BlocksTC.pedestal.get());
+		BlockPos componentAbs = helper.absolutePos(componentPos);
+
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		ServerPlayer player = spawnCasterAt(helper, matrixAbs);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+		matrix.activate(helper.getLevel(), player);
+		matrix.activate(helper.getLevel(), player);
+
+		net.minecraft.world.entity.npc.Villager bystander = net.minecraft.world.entity.EntityType.VILLAGER.create(helper.getLevel());
+		bystander.moveTo(matrixAbs.getX() + 0.5, matrixAbs.getY() + 1.0, matrixAbs.getZ() + 0.5, 0.0f, 0.0f);
+		helper.getLevel().addFreshEntity(bystander);
+
+		ServerLevel level = helper.getLevel();
+		boolean foundFluxGoo = false;
+		boolean foundHarm = false;
+		for (int i = 0; i < 400 && !(foundFluxGoo && foundHarm); i++) {
+			// Re-place the component pedestal fresh every iteration, not just refresh its item - a real
+			// type-5 roll (weight 2/24) sets off a real explosion AT the pedestal itself, which can really
+			// destroy it (matching the true original exactly), leaving nothing left for later iterations to
+			// eject from otherwise.
+			helper.setBlock(componentPos, BlocksTC.pedestal.get());
+			thaumcraft.common.tiles.crafting.TilePedestal component = helper.getBlockEntity(componentPos);
+			component.setItem(new ItemStack(Items.STICK));
+			net.minecraft.world.level.block.state.BlockState above = level.getBlockState(componentAbs.above());
+			if (!above.isAir() && !above.is(BlocksTC.fluxGoo.get())) {
+				level.setBlockAndUpdate(componentAbs.above(), Blocks.AIR.defaultBlockState());
+			}
+			matrix.triggerInstabilityEvent(level, level.getRandom());
+			if (level.getBlockState(componentAbs.above()).is(BlocksTC.fluxGoo.get())) foundFluxGoo = true;
+			if (bystander.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT)
+					|| bystander.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.VIS_EXHAUST)) foundHarm = true;
+		}
+		helper.assertTrue(foundFluxGoo, "the real restored instability table should really be able to place real flux_goo above an ejected pedestal within a generous number of real rolls");
+		helper.assertTrue(foundHarm, "the real restored instability table should really be able to afflict a real nearby living entity with real Flux Taint or Vis Exhaust within a generous number of real rolls");
+		helper.succeed();
+	}
+
+	/**
 	 * Real coverage for {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix#getActivatedTick()}/
 	 * {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix#getCraftTick()} - the two purely-derived
 	 * fields {@link thaumcraft.client.render.TileInfusionMatrixRenderer} uses for its startup ease-in/halo

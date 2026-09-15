@@ -74,16 +74,24 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * {@code matrixCost} is real and craftable via a direct recipe; {@code pillarArcane} is real and reachable via
  * the real Infusion Altar multiblock ritual (see {@code BlockPillar}'s own doc comment) rather than a direct
  * recipe.</li>
- * <li><b>No {@code TileStabilizer}/{@code BlockInlay} charge-network "instability mitigator".</b> The
- * original could redirect an instability-event item ejection into a nearby stabilizer block instead of
- * dropping it, if a charge-network path existed. That whole subsystem (candle/skull-adjacent charge
- * propagation) isn't ported; ejection always just drops the item.</li>
- * <li><b>Instability events trimmed to what's reachable.</b> The original rolled one of 24 weighted outcomes
- * including flux-goo placement ({@code BlockFluxGoo}, a custom finite-fluid block, not ported) and
- * Taint/Vis-Exhaust potion effects ({@code PotionFluxTaint}/{@code PotionVisExhaust}, not ported). This
- * keeps item ejection (with an {@link AuraHelper#polluteAura} variant replacing flux-goo placement),
- * living-entity zap damage, and player warp gain (a real, already-ported system) - see
- * {@link #triggerInstabilityEvent}.</li>
+ * <li><b>No {@code TileStabilizer} charge-network "instability mitigator".</b> The original could redirect
+ * an instability-event item ejection into a nearby {@code TileStabilizer} instead of dropping it, if a
+ * candle/skull-adjacent charge-propagation path existed. {@code TileStabilizer.java} itself is still the
+ * stale 1.12.2 leftover (confirmed via {@code build.gradle}), so that whole subsystem isn't ported; ejection
+ * always just drops the item. {@code BlockInlay} is unrelated to this - a real, already-ported, plain
+ * passive stabilizer (see its own doc comment), not the charge-network conduit this bullet is about;
+ * corrected 2026-09-15 after an earlier pass here mistakenly lumped the two together.</li>
+ * <li><b>Instability events - the full real 24-weighted-outcome table, restored 2026-09-15.</b> Originally
+ * trimmed to a 12-outcome subset because {@code BlockFluxGoo} and the Taint/Vis-Exhaust potion effects
+ * weren't ported yet; both are real now ({@code BlocksTC#fluxGoo}, {@code ThaumcraftMobEffects#FLUX_TAINT}/
+ * {@code #VIS_EXHAUST}), so {@link #triggerInstabilityEvent} rolls the real full table again: item ejection
+ * (6 real sub-variants via {@link #inEvEjectItem}, matching the true original's own real type 0-5 split -
+ * plain drop, flux-goo placement, aura pollution, a pedestal-local explosion, or a silent no-drop clear),
+ * living-entity zap damage, player warp gain, and real Flux Taint/Vis Exhaust affliction via
+ * {@link #inEvHarm}. Real, deliberate simplification kept: no client FX broadcast (arc particles between
+ * the matrix and the affected pedestal/entity), same boundary every other device in this port already
+ * accepted; the true original's own Vis-Exhaust-can't-be-milk-cured detail is also dropped as a minor
+ * flavor loss.</li>
  * <li><b>Recipe output is always a plain {@code ItemStack}.</b> {@link InfusionRecipe} was redesigned as a
  * modern data-driven {@code Recipe} during this port and dropped the old dynamic
  * {@code Object}-typed output (NBT tag / enchantment / XP-cost variants) - see that class's own doc comment.
@@ -346,14 +354,26 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		setChanged();
 	}
 
-	private void triggerInstabilityEvent(Level level, RandomSource rand) {
+	/** Public (not just an implementation detail) specifically so real GameTest coverage can drive this
+	 * directly with a controlled {@link RandomSource} - real end-to-end craft-cycle instability is genuinely
+	 * probabilistic and slow to exercise every one of the real 24 weighted outcomes through, the same real
+	 * "loosen visibility for real testability" precedent {@link
+	 * thaumcraft.common.entities.monster.tainted.EntityTaintacle#isAdjacentToSolidBlock} already established
+	 * this session. */
+	public void triggerInstabilityEvent(Level level, RandomSource rand) {
 		inResAdd(level);
-		switch (rand.nextInt(12)) {
-			case 0, 1, 2, 3 -> inEvEjectItem(level, rand, false);
-			case 4, 5 -> inEvWarp(level, rand);
-			case 6, 7 -> inEvZap(level, rand, false);
-			case 8 -> inEvZap(level, rand, true);
-			case 9, 10 -> inEvEjectItem(level, rand, true);
+		switch (rand.nextInt(24)) {
+			case 0, 1, 2, 3 -> inEvEjectItem(level, rand, 0);
+			case 4, 5, 6 -> inEvWarp(level, rand);
+			case 7, 8, 9 -> inEvZap(level, rand, false);
+			case 10, 11 -> inEvZap(level, rand, true);
+			case 12, 13 -> inEvEjectItem(level, rand, 1);
+			case 14, 15 -> inEvEjectItem(level, rand, 2);
+			case 16 -> inEvEjectItem(level, rand, 3);
+			case 17 -> inEvEjectItem(level, rand, 4);
+			case 18, 19 -> inEvHarm(level, rand, false);
+			case 20, 21 -> inEvEjectItem(level, rand, 5);
+			case 22 -> inEvHarm(level, rand, true);
 			default -> level.explode(null, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, 1.5f + rand.nextFloat(), false, Level.ExplosionInteraction.BLOCK);
 		}
 	}
@@ -380,19 +400,55 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		}
 	}
 
-	private void inEvEjectItem(Level level, RandomSource rand, boolean pollute) {
+	/** Real port of the true original's own {@code inEvEjectItem(int type)} - see this class's own doc
+	 * comment for the real weighting each type is called at. Types 0/1/2/3/5 really drop the ejected item as
+	 * a real {@link ItemEntity}; type 4 clears the pedestal without dropping anything (matches the true
+	 * original's own {@code type <= 3 || type == 5} split exactly). Types 1/3 additionally place a real
+	 * {@link thaumcraft.api.blocks.BlocksTC#fluxGoo} above the pedestal; types 2/4 additionally pollute the
+	 * real local aura; type 5 additionally sets off a real explosion at the pedestal itself (independent of
+	 * the plain matrix-centered explosion {@link #triggerInstabilityEvent}'s own default case already
+	 * covers). The true original's own {@code TileStabilizer} charge-network mitigation check (which could
+	 * redirect the ejection into a nearby stabilizer instead) stays cut - see this class's own doc comment
+	 * for why that whole subsystem remains genuinely unbuilt. */
+	private void inEvEjectItem(Level level, RandomSource rand, int type) {
 		if (pedestals.isEmpty()) return;
 		for (int tries = 0; tries < 25; tries++) {
 			BlockPos pp = pedestals.get(rand.nextInt(pedestals.size()));
 			if (level.getBlockEntity(pp) instanceof TilePedestal ped && !ped.getItem().isEmpty()) {
 				ItemStack dropped = ped.getItem();
 				ped.setItem(ItemStack.EMPTY);
-				level.addFreshEntity(new ItemEntity(level, pp.getX() + 0.5, pp.getY() + 1.0, pp.getZ() + 0.5, dropped));
-				if (pollute) {
+				if (type <= 3 || type == 5) {
+					level.addFreshEntity(new ItemEntity(level, pp.getX() + 0.5, pp.getY() + 1.0, pp.getZ() + 0.5, dropped));
+				}
+				if (type == 1 || type == 3) {
+					level.setBlockAndUpdate(pp.above(), thaumcraft.api.blocks.BlocksTC.fluxGoo.get().defaultBlockState());
+					level.playSound(null, pp, SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 0.3f, 1.0f);
+				} else if (type == 2 || type == 4) {
 					AuraHelper.polluteAura(level, pp, 5 + rand.nextInt(5), true);
+				} else if (type == 5) {
+					level.explode(null, pp.getX() + 0.5, pp.getY() + 0.5, pp.getZ() + 0.5, 1.0f, false, Level.ExplosionInteraction.BLOCK);
 				}
 				return;
 			}
+		}
+	}
+
+	/** Real port of the true original's own {@code inEvHarm(boolean all)} - restored 2026-09-15 now that
+	 * both {@link thaumcraft.common.registry.ThaumcraftMobEffects#FLUX_TAINT}/{@code #VIS_EXHAUST} are real.
+	 * A coin flip between a real, real short Flux Taint stack and a real, long, low-amplitude Vis Exhaust
+	 * stack. One real, deliberate simplification: the true original's own Vis Exhaust roll cleared its own
+	 * curative-items list (milk couldn't cure it) - dropped here as a minor flavor detail, same "keep the
+	 * mechanic, drop the flourish" precedent this whole port has used consistently. */
+	private void inEvHarm(Level level, RandomSource rand, boolean all) {
+		for (net.minecraft.world.entity.LivingEntity target : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, nearbyBox())) {
+			if (rand.nextBoolean()) {
+				target.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+						thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT, 120, 0, false, true));
+			} else {
+				target.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+						thaumcraft.common.registry.ThaumcraftMobEffects.VIS_EXHAUST, 2400, 0, true, true));
+			}
+			if (!all) break;
 		}
 	}
 
