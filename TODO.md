@@ -35,13 +35,15 @@ sweep turned up and what's still unscoped.)*
 
 ## Needs further triage (real content exists in the original; scope/priority unconfirmed)
 
-- **`effectSap`** (`BlockEffect`, a sticky-web trap block) — confirmed real
-  but low priority. Its only two true-original placers are
-  `EntityEldritchWarden` (an unbuilt boss) and `FocusEffectCurse`'s own
-  block-hit branch - which this port's modern `FocusEffectCurse` already
-  documents dropping deliberately ("that block isn't ported, and there's
-  nothing sensible to fall back to"). Not worth building until either real
-  consumer exists.
+**Empty as of 2026-09-15.** The last entry here, `effectSap`, closed the same
+day it was scoped - see "Recently closed" below. Its own "low priority, no
+real consumer" reasoning was itself stale: `EntityEldritchWarden` turned out
+to already be a fully shipped boss, just missing 2 of its own real mechanics
+specifically because this block didn't exist yet - the same
+"re-check the reason, not just the cut" lesson this whole project keeps
+re-confirming.
+
+- ~~**`effectSap`**~~ — closed 2026-09-15. See "Recently closed" below.
 - ~~**`liquidDeath`**~~ — closed 2026-09-14. The "tangled with the
   finite-fluid subsystem" reasoning above was itself stale/wrong once
   re-checked directly: `BlockFluidDeath`'s own true original base class is
@@ -587,6 +589,32 @@ project memory file; not re-listed here to keep this file scannable.)*
   layer (both materials' `Layer` now passes `dyeable=true`) and the real
   item icon, falling back to the original's own real default purple when
   undyed. See commit "Give the robe armor sets their real dye support".
+
+- **`effectSap`** — closed 2026-09-15. The user asked directly what this
+  block was; explaining it surfaced that its "low priority, no real
+  consumer" reasoning was stale - `EntityEldritchWarden` is already a fully
+  shipped boss, just missing 2 of its own real mechanics specifically
+  because this block didn't exist yet. New `BlockEffectSap` (an invisible,
+  self-destroying ground trap - Wither/Slowness/Hunger on touch for any
+  real non-Eldritch living entity) replaces the one real, actually-consumed
+  slice of the true original's shared `BlockEffect` (`effect_glimmer`
+  doesn't need porting - its own 2 real placers already use real vanilla
+  `Blocks.LIGHT`, a strictly better modern fit, already documented on those
+  classes; `effect_shock` has zero real placers anywhere in the whole true
+  original, confirmed by a full-tree search - never wired up even
+  upstream). Restored 3 real cuts: `FocusEffectCurse`'s block-hit branch
+  (blankets full-cube surfaces near the impact point with sap), the
+  Warden's own constant per-tick self-seeding under its feet, and the
+  Warden's real one-shot "field frenzy" phase (a real vanilla absorption
+  shield - 66% max health, regenerating, automatically soaking damage via
+  vanilla's own pipeline - whose first depletion triggers a real 150-tick
+  invulnerability window, a real teleport to a safe spot near its own
+  restricted home, and a real expanding/thickening sap spiral, exact
+  original radius/density formulas). Also found and fixed a real, separate
+  bug along the way: the Warden was missing `implements IEldritchMob` (the
+  true original always had it), so other Eldritch mobs never recognized it
+  as one of their own. See commit "Give effect_sap its real port and
+  restore 3 real cuts it was blocking".
 
 ## Fresh sweep, 2026-09-14 part 1 (full re-diff of `BlocksTC.java`/`ItemsTC.java`)
 
