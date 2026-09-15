@@ -781,6 +781,64 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
+	 * Real coverage that this session's own new datapack worldgen (both crystal clusters and cinderpearl's
+	 * real {@code RandomPatchFeature} restoration) actually parsed and registered - a malformed configured/
+	 * placed feature JSON fails to register at all rather than throwing where it'd be easy to notice, so
+	 * this is the real, automated way to catch that.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void realWorldgenFeaturesAreRegistered(GameTestHelper helper) {
+		var placedFeatures = helper.getLevel().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.PLACED_FEATURE);
+		for (String id : new String[] { "crystal_cluster", "cinderpearl", "cultist_portal_spawn" }) {
+			helper.assertTrue(placedFeatures.get(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.PLACED_FEATURE,
+					net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id))).isPresent(),
+					"the real placed feature '" + id + "' should really have registered - a malformed configured/placed feature JSON would silently fail to");
+		}
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.world.CultistPortalSpawnFeature} - the true original's own
+	 * real rare surface spawn for {@link thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser},
+	 * re-derived directly from {@code ThaumcraftWorldGenerator#generateSurface}. The entity itself was
+	 * already real and fully shipped with no natural spawn trigger anywhere - this is that trigger. Given a
+	 * real solid floor with real air above, placing the feature should really spawn one.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cultistPortalSpawnFeaturePlacesARealPortalOnSolidGround(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos floor = new BlockPos(4, 3, 4);
+		BlockPos spawnPos = floor.above();
+		helper.setBlock(floor, net.minecraft.world.level.block.Blocks.STONE);
+		helper.setBlock(spawnPos, net.minecraft.world.level.block.Blocks.AIR);
+		BlockPos spawnAbs = helper.absolutePos(spawnPos);
+
+		int before = level.getEntitiesOfClass(thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser.class,
+				new net.minecraft.world.phys.AABB(spawnAbs).inflate(3)).size();
+
+		var context = new net.minecraft.world.level.levelgen.feature.FeaturePlaceContext<>(
+				java.util.Optional.empty(), level, level.getChunkSource().getGenerator(), level.getRandom(), spawnAbs,
+				net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration.INSTANCE);
+		boolean placed = thaumcraft.common.registry.ThaumcraftFeatures.CULTIST_PORTAL_SPAWN.get().place(context);
+		helper.assertTrue(placed, "placing the feature on real solid ground with real air above should really succeed");
+
+		int after = level.getEntitiesOfClass(thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser.class,
+				new net.minecraft.world.phys.AABB(spawnAbs).inflate(3)).size();
+		helper.assertTrue(after == before + 1, "a real cultist portal should really have been spawned, found " + after + " (was " + before + ")");
+
+		// Same spot, but with no real air above the floor at all - should really fail cleanly, not crash.
+		BlockPos blockedPos = floor.offset(3, 0, 0).above();
+		helper.setBlock(blockedPos.below(), net.minecraft.world.level.block.Blocks.STONE);
+		helper.setBlock(blockedPos, net.minecraft.world.level.block.Blocks.STONE);
+		var blockedContext = new net.minecraft.world.level.levelgen.feature.FeaturePlaceContext<>(
+				java.util.Optional.empty(), level, level.getChunkSource().getGenerator(), level.getRandom(), helper.absolutePos(blockedPos),
+				net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration.INSTANCE);
+		helper.assertTrue(!thaumcraft.common.registry.ThaumcraftFeatures.CULTIST_PORTAL_SPAWN.get().place(blockedContext),
+				"a real solid block where the portal would spawn should really block placement");
+		helper.succeed();
+	}
+
+	/**
 	 * Coverage for {@link AuraHandler#shouldPreserveAura} - gates {@code RechargeHelper}'s vis draining and
 	 * (per its own doc comment) is meant to require the "AURAPRESERVE" research when a real player is
 	 * involved, but bypass that check entirely when called with a null player.

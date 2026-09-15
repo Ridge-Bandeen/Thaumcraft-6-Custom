@@ -28,11 +28,15 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * Essentia Smeltery, exactly like any other object-tagged item.
  *
  * Simplified: {@code HARDENED_CLAY}/{@code STAINED_HARDENED_CLAY} (16 variants) collapse to the modern
- * {@code BlockTags.TERRACOTTA} tag, which covers all of them in one check. World generation isn't ported
- * this pass - the original hooked a hand-rolled {@code IWorldGenerator}/{@code WorldGenCustomFlowers}
- * patch-scatter; a real placement isn't needed for the block to be useful (both real uses above only need
- * the item to exist), and would be its own follow-up using vanilla's own {@code RandomPatchFeature} (the
- * same "modern feature, not the original's hand-rolled generator" move already used for Silverwood).
+ * {@code BlockTags.TERRACOTTA} tag, which covers all of them in one check.
+ *
+ * <p>Real natural worldgen now too (see {@code data/thaumcraft/worldgen/configured_feature/cinderpearl.json}) -
+ * the original hooked a hand-rolled {@code IWorldGenerator}/{@code WorldGenCustomFlowers} patch-scatter
+ * (sand-topped, hot biomes only); this uses vanilla's own real {@code RandomPatchFeature} instead, the same
+ * "modern feature, not the original's hand-rolled generator" move already used for Silverwood, restricted to
+ * real {@code c:is_sandy} biomes (a real, close modern approximation of the original's own real "sand block
+ * + hot temperature" check - guarantees the actual ground matches, which {@link #mayPlaceOn} already
+ * requires anyway).
  */
 public class BlockPlantCinderpearl extends BushBlock {
 

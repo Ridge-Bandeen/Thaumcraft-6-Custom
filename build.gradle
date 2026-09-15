@@ -436,6 +436,7 @@ sourceSets {
             include 'thaumcraft/api/items/ItemsTC.java'
             include 'thaumcraft/common/blocks/world/ore/BlockCrystal.java'
             include 'thaumcraft/common/world/CrystalClusterFeature.java'
+            include 'thaumcraft/common/world/CultistPortalSpawnFeature.java'
 
             include 'thaumcraft/common/blocks/crafting/BlockArcaneWorkbench.java'
             include 'thaumcraft/common/tiles/crafting/TileArcaneWorkbench.java'

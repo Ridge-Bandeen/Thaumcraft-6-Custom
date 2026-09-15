@@ -1,0 +1,6 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#c:is_sandy",
+  "features": "thaumcraft:cinderpearl",
+  "step": "vegetal_decoration"
+}
