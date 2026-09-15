@@ -57,13 +57,8 @@ sweep turned up and what's still unscoped.)*
   a real standalone block at all - only shader/model texture assets exist
   for it in the true original, most likely a decoration on the (still
   not-ported) big magic tree feature.
-- **Mound generation** (`WorldGenMound`, part of `ThaumcraftWorldGenerator`) —
-  confirmed real 2026-09-14 but turned out to be a ~2500-line hand-placed
-  block schematic in the true original's own decompiled source, not a
-  small feature. A rare (1% per chunk-attempt) decorative debris pile with
-  a buried loot chest - real, but low value for the effort a faithful port
-  would need; worth a real modern NBT structure-template rebuild as its
-  own separate pass, not attempted piecemeal.
+- ~~**Mound generation**~~ — closed 2026-09-14. See "World generation,
+  part 3" under "Recently closed" below.
 - **Essentia tube chains can deadlock on a suction tie** — found 2026-09-14
   while testing the tube click-precision restoration (below), not a gap in
   the true original's own registered content but a real bug in this port's
@@ -399,6 +394,25 @@ project memory file; not re-listed here to keep this file scannable.)*
   See commits "Add Biolith and the 2 real Magical-Forest-only plants" and
   "Ship the real Eerie/Magical Forest/Eldritch biomes and their real
   overworld placement".
+
+- **World generation, part 3 - mound dungeon** — closed 2026-09-14.
+  `WorldGenMound` was deferred in part 1 as "too big" purely by its
+  2560-line decompiled file size, without actually reading it - re-checked
+  directly this pass and it turned out to be purely mechanical: ~2441
+  static `setBlockState` calls (23 distinct block expressions, translated
+  by a hand-written script), not algorithmic complexity, plus only 5 real
+  dynamic positions computed at runtime. The static bulk became a real
+  modern structure NBT template (`data/thaumcraft/structure/mound.nbt`,
+  19x16x19, hand-written gzip'd NBT since no Python NBT library was
+  available offline); new `MoundFeature` places it via the real
+  `StructureTemplateManager` API, then places the 5 dynamic extras with the
+  exact same real weighted-random logic and offsets as the original: 2
+  tiered loot-crate/urn spots, a chest (1-in-3 trapped + buried TNT)
+  carrying the real vanilla `minecraft:chests/simple_dungeon` loot table,
+  and 2 monster spawners (Skeleton/Zombie). Real placement: the original's
+  own real 1-in-100-per-chunk-attempt rarity, gated by a
+  `neoforge:add_features` biome modifier. See commit "Give the true
+  original's mound dungeon its real worldgen".
 
 - **`required_craft`/`required_item` research auto-progression** — closed
   2026-09-14. `ThaumcraftResearchLoader` deliberately skipped parsing both
