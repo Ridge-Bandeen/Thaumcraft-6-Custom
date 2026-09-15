@@ -39,11 +39,17 @@ import thaumcraft.api.research.ResearchStage.Knowledge;
  * {@link ResearchCategories}/{@link ResearchCategory#research} registered by {@code ThaumcraftResearchCategories}.
  *
  * Deliberately narrower than the original parser in one respect: <b>reward_item</b>/<b>reward_knowledge</b>
- * (unused by any of the 8 real content files - verified directly) and the <b>required_item</b>/<b>required_craft</b>
- * stage gates (display-only without the crafting/possession-triggered auto-progression hook, itself a real,
- * separate, not-yet-ported system) are skipped. Everything else the real hex-grid browser needs - key/name/
- * category/parents/siblings/meta/location, icons, stage text, stage recipes, required_knowledge,
- * required_research, warp, and addenda - is parsed for real.
+ * (unused by any of the 8 real content files - verified directly) are skipped. Everything else the real
+ * hex-grid browser needs - key/name/category/parents/siblings/meta/location, icons, stage text, stage
+ * recipes, required_knowledge, required_research, warp, and addenda - is parsed for real.
+ *
+ * <b>required_item</b>/<b>required_craft</b> are parsed for real too now. They used to be skipped here, on
+ * the grounds that they were display-only without the crafting/possession-triggered auto-progression hook -
+ * that hook is real as of {@link thaumcraft.common.lib.events.ResearchCraftingEvents}, so the reason no
+ * longer holds and the gates are resolved into {@link ResearchStage#setObtain}/{@link ResearchStage#setCraft}/
+ * {@link ResearchStage#setCraftReference} through {@link ResearchRequirements}. What those gates still don't
+ * do is <i>gate</i> anything - that part is blocked on the Thaumonomicon reader's atomic-completion
+ * architecture, which {@link ResearchRequirements}' own doc comment lays out in full.
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID)
 public class ThaumcraftResearchLoader extends SimpleJsonResourceReloadListener {
@@ -61,6 +67,7 @@ public class ThaumcraftResearchLoader extends SimpleJsonResourceReloadListener {
 
 	@Override
 	protected void apply(Map<ResourceLocation, JsonElement> resources, ResourceManager resourceManager, ProfilerFiller profiler) {
+		ResearchRequirements.clear();
 		for (ResearchCategory category : ResearchCategories.researchCategories.values()) {
 			category.research.clear();
 			category.minDisplayColumn = 0;
@@ -177,9 +184,43 @@ public class ThaumcraftResearchLoader extends SimpleJsonResourceReloadListener {
 			}
 		}
 
+		if (obj.has("required_item")) {
+			Object[] obtain = resolveSpecs(obj.getAsJsonArray("required_item"));
+			if (obtain.length > 0) stage.setObtain(obtain);
+		}
+
+		if (obj.has("required_craft")) {
+			Object[] craft = resolveSpecs(obj.getAsJsonArray("required_craft"));
+			if (craft.length > 0) {
+				stage.setCraft(craft);
+				int[] references = new int[craft.length];
+				for (int i = 0; i < craft.length; i++) {
+					references[i] = ResearchRequirements.registerCraftReference(craft[i]);
+				}
+				stage.setCraftReference(references);
+			}
+		}
+
 		if (obj.has("warp")) stage.setWarp(obj.getAsJsonPrimitive("warp").getAsInt());
 
 		return stage;
+	}
+
+	/**
+	 * Resolves a real {@code required_item}/{@code required_craft} array, dropping the entries that have no
+	 * real modern form. See {@link ResearchRequirements#resolveSpec} for exactly which those are and why -
+	 * notably, several are specs that were already dead in shipped Thaumcraft 6 itself, so dropping them is
+	 * faithful rather than lossy.
+	 */
+	private static Object[] resolveSpecs(JsonArray array) {
+		if (array == null) return new Object[0];
+		List<Object> resolved = new ArrayList<>();
+		for (JsonElement el : array) {
+			if (!el.isJsonPrimitive()) continue;
+			Object target = ResearchRequirements.resolveSpec(el.getAsString());
+			if (target != null) resolved.add(target);
+		}
+		return resolved.toArray();
 	}
 
 	private static void addToCategory(ResearchEntry entry) {

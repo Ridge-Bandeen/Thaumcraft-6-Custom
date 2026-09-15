@@ -463,6 +463,7 @@ sourceSets {
             include 'thaumcraft/common/lib/research/PlayerKnowledge.java'
             include 'thaumcraft/common/lib/research/PlayerWarp.java'
             include 'thaumcraft/common/lib/research/ThaumcraftResearchLoader.java'
+            include 'thaumcraft/common/lib/research/ResearchRequirements.java'
 
             include 'thaumcraft/common/blocks/crafting/BlockCrucible.java'
             include 'thaumcraft/common/tiles/crafting/TileCrucible.java'
@@ -626,6 +627,7 @@ sourceSets {
             include 'thaumcraft/common/lib/events/FortressMaskEvents.java'
             include 'thaumcraft/common/lib/events/WarpEvents.java'
             include 'thaumcraft/common/lib/events/PassiveResearchEvents.java'
+            include 'thaumcraft/common/lib/events/ResearchCraftingEvents.java'
             include 'thaumcraft/common/lib/events/MobDeathDropEvents.java'
             include 'thaumcraft/common/lib/scheduling/BlockScheduler.java'
             include 'thaumcraft/common/lib/events/GearTooltipEvents.java'

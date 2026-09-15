@@ -11,6 +11,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -40,6 +41,8 @@ import thaumcraft.api.items.ItemGenericEssentiaContainer;
 import thaumcraft.api.items.ItemsTC;
 import thaumcraft.api.research.ResearchCategories;
 import thaumcraft.api.research.ResearchCategory;
+import thaumcraft.api.research.ResearchStage;
+import thaumcraft.common.lib.research.ResearchRequirements;
 import thaumcraft.common.container.ArcaneWorkbenchMenu;
 import thaumcraft.common.items.casters.ItemFocus;
 import thaumcraft.common.tiles.crafting.TileArcaneWorkbench;
@@ -353,6 +356,119 @@ public class ThaumcraftGameTests {
 		// AND: true only when every side is known.
 		helper.assertTrue(ThaumcraftCapabilities.knowsResearch(player, "KNOWNA&&KNOWNB"), "AND should be true when both entries are known");
 		helper.assertFalse(ThaumcraftCapabilities.knowsResearch(player, "KNOWNA&&UNKNOWNC"), "AND should be false when only one entry is known");
+
+		helper.succeed();
+	}
+
+	/**
+	 * The real legacy-spec resolver behind the {@code required_craft}/{@code required_item} research gates.
+	 * Pins down all three real kinds of case at once, because each of them was a place where guessing would
+	 * have produced a silently-wrong answer: a plain id, a metadata variant whose modern item has an entirely
+	 * different name (the subtype orders came from the original's own {@code ConfigItems} arrays - nothing
+	 * about {@code ingot;1;2} says "brass" without them), a legacy vanilla rename, and a spec that resolves
+	 * to nothing. That last group matters most: several of the shipped specs were already dead in
+	 * Thaumcraft 6 itself, so "resolves to nothing" is the correct, faithful answer, and this test is what
+	 * stops a later change from "helpfully" inventing a mapping for them.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void researchLegacyItemSpecsResolve(GameTestHelper helper) {
+		helper.assertTrue(ResearchRequirements.resolveSpec("minecraft:gunpowder") == Items.GUNPOWDER,
+				"a plain vanilla id should resolve to that item");
+		helper.assertTrue(ResearchRequirements.resolveSpec("thaumcraft:tallow") == ItemsTC.tallow.get(),
+				"a plain thaumcraft id should resolve to that item");
+
+		// Metadata variants this port split into separate real items.
+		helper.assertTrue(ResearchRequirements.resolveSpec("thaumcraft:ingot;1;2") == ItemsTC.ingotBrass.get(),
+				"ingot metadata 2 should resolve to brass, per the original's own subtype order");
+		helper.assertTrue(ResearchRequirements.resolveSpec("thaumcraft:ingot;1;0") == ItemsTC.ingotThaumium.get(),
+				"ingot metadata 0 should resolve to thaumium");
+		helper.assertTrue(ResearchRequirements.resolveSpec("thaumcraft:plate;1;3") == ItemsTC.plateVoid.get(),
+				"plate metadata 3 should resolve to void");
+		helper.assertTrue(ResearchRequirements.resolveSpec("thaumcraft:nugget;1;10") == ItemsTC.nuggetRareearth.get(),
+				"nugget metadata 10 should resolve to rare earth");
+
+		// Legacy vanilla renames, including the flattened dye metadata.
+		helper.assertTrue(ResearchRequirements.resolveSpec("minecraft:web") == Items.COBWEB,
+				"the legacy 'web' id should resolve to the modern cobweb");
+		helper.assertTrue(ResearchRequirements.resolveSpec("minecraft:dye;1;15") == Items.BONE_MEAL,
+				"legacy dye metadata 15 should resolve to bone meal");
+
+		// Ore-dictionary names become real modern tags.
+		helper.assertTrue(ResearchRequirements.resolveSpec("oredict:chest") instanceof TagKey<?>,
+				"an oredict spec should resolve to a tag, not an item");
+
+		// Specs with no real modern form - all of these were already dead in shipped Thaumcraft 6.
+		helper.assertTrue(ResearchRequirements.resolveSpec("thaumcraft:metal;1;2") == null,
+				"thaumcraft:metal was never a registered item, even in the original");
+		helper.assertTrue(ResearchRequirements.resolveSpec("thaumcraft:nitor;1;4") == null,
+				"thaumcraft:nitor was never a registered item, even in the original");
+		helper.assertTrue(ResearchRequirements.resolveSpec("minecraft:thaumcraft:enchanted_placeholder;1;0") == null,
+				"a malformed double-namespace id should resolve to nothing rather than throwing");
+
+		helper.succeed();
+	}
+
+	/**
+	 * The real end-to-end crafting half of research auto-progression: registering a real craft reference and
+	 * then really crafting that item grants the real virtual {@code "[#]"} research key, exactly as the
+	 * original recorded it, and {@link ResearchRequirements#isStageSatisfied} really sees it afterwards.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void researchCraftReferenceIsGrantedOnCrafting(GameTestHelper helper) {
+		@SuppressWarnings("removal")
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		knowledge.clear();
+
+		int code = ResearchRequirements.registerCraftReference(Items.GUNPOWDER);
+		String key = ResearchRequirements.researchKeyFor(code);
+
+		ResearchStage stage = new ResearchStage();
+		stage.setCraftReference(new int[] { code });
+
+		helper.assertFalse(knowledge.isResearchKnown(key), "the craft flag should not be known before crafting");
+		helper.assertFalse(ResearchRequirements.isStageSatisfied(player, stage), "an uncrafted stage should not be satisfied");
+
+		// Crafting something unrelated must not grant it.
+		ResearchRequirements.onItemCrafted(player, new ItemStack(Items.STICK));
+		helper.assertFalse(knowledge.isResearchKnown(key), "crafting an unrelated item should not grant the flag");
+
+		ResearchRequirements.onItemCrafted(player, new ItemStack(Items.GUNPOWDER));
+		helper.assertTrue(knowledge.isResearchKnown(key), "crafting the referenced item should grant the flag");
+		helper.assertTrue(ResearchRequirements.isStageSatisfied(player, stage), "the stage should be satisfied once crafted");
+
+		helper.succeed();
+	}
+
+	/**
+	 * The real possession half: {@code required_item} is checked live against the player's own real
+	 * inventory, so it becomes satisfied the moment they are actually carrying the item and stops being
+	 * satisfied again if they aren't - no flag is recorded for it, matching the original.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void researchObtainGateChecksTheRealInventory(GameTestHelper helper) {
+		@SuppressWarnings("removal")
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		ThaumcraftCapabilities.getKnowledge(player).clear();
+		player.getInventory().clearContent();
+
+		ResearchStage stage = new ResearchStage();
+		stage.setObtain(new Object[] { Items.DIAMOND });
+
+		helper.assertFalse(ResearchRequirements.isStageSatisfied(player, stage),
+				"an obtain gate should not be satisfied with an empty inventory");
+
+		player.getInventory().add(new ItemStack(Items.DIAMOND));
+		helper.assertTrue(ResearchRequirements.isStageSatisfied(player, stage),
+				"an obtain gate should be satisfied while really carrying the item");
+
+		player.getInventory().clearContent();
+		helper.assertFalse(ResearchRequirements.isStageSatisfied(player, stage),
+				"an obtain gate should stop being satisfied once the item is gone");
+
+		// A stage with no gates at all is trivially satisfied.
+		helper.assertTrue(ResearchRequirements.isStageSatisfied(player, new ResearchStage()),
+				"a stage with no requirements should be satisfied");
 
 		helper.succeed();
 	}
