@@ -209,7 +209,7 @@ public class BlockCrystal extends Block {
 	 * any of the 6 faces. Direction iteration order has no gameplay significance (matches the original's own
 	 * "any touching face" real attachment rule) - the first sturdy face found wins. */
 	@Nullable
-	private Direction findSturdyFacing(LevelReader level, BlockPos pos) {
+	public static Direction findSturdyFacing(LevelReader level, BlockPos pos) {
 		for (Direction dir : Direction.values()) {
 			BlockPos neighbor = pos.relative(dir);
 			if (level.getBlockState(neighbor).isFaceSturdy(level, neighbor, dir.getOpposite())) {

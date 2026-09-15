@@ -728,6 +728,59 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
+	 * Real coverage for {@link thaumcraft.common.world.CrystalClusterFeature} - the true original's own real
+	 * primal-crystal-cluster worldgen, re-derived directly from {@code ThaumcraftWorldGenerator#generateOres}'
+	 * own {@code generateCrystals} block (never ported alongside the cinnabar/quartz/amber ores it sat next
+	 * to). Real end-to-end placement: given a real carved-out rock pocket (guaranteeing every real candidate
+	 * position has a real sturdy neighbor), placing the feature should really produce at least one real
+	 * {@link thaumcraft.common.blocks.world.ore.BlockCrystal}, correctly typed to one of the true original's
+	 * own real 6 primal aspects (never Flux - see the feature's own doc comment for why).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crystalClusterFeaturePlacesARealCrystalInARealRockPocket(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos origin = new BlockPos(4, 4, 4);
+		BlockPos originAbs = helper.absolutePos(origin);
+
+		// A real solid 5x5x5 stone cube with a real 3x3x3 air pocket carved out of its center - every real
+		// candidate position the feature scatters into is guaranteed a real sturdy rock neighbor.
+		for (int xx = -2; xx <= 2; xx++) {
+			for (int yy = -2; yy <= 2; yy++) {
+				for (int zz = -2; zz <= 2; zz++) {
+					BlockPos p = origin.offset(xx, yy, zz);
+					helper.setBlock(p, Math.abs(xx) <= 1 && Math.abs(yy) <= 1 && Math.abs(zz) <= 1
+							? net.minecraft.world.level.block.Blocks.AIR : net.minecraft.world.level.block.Blocks.STONE);
+				}
+			}
+		}
+
+		var context = new net.minecraft.world.level.levelgen.feature.FeaturePlaceContext<>(
+				java.util.Optional.empty(), level, level.getChunkSource().getGenerator(), level.getRandom(), originAbs,
+				net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration.INSTANCE);
+		boolean placed = thaumcraft.common.registry.ThaumcraftFeatures.CRYSTAL_CLUSTER.get().place(context);
+		helper.assertTrue(placed, "placing the feature in a real carved-out rock pocket should really place at least one crystal");
+
+		boolean foundReal = false;
+		for (int xx = -1; xx <= 1; xx++) {
+			for (int yy = -1; yy <= 1; yy++) {
+				for (int zz = -1; zz <= 1; zz++) {
+					var state = level.getBlockState(originAbs.offset(xx, yy, zz));
+					if (state.getBlock() instanceof thaumcraft.common.blocks.world.ore.BlockCrystal crystal) {
+						foundReal = true;
+						boolean isPrimal = crystal.aspect == Aspect.AIR || crystal.aspect == Aspect.FIRE || crystal.aspect == Aspect.WATER
+								|| crystal.aspect == Aspect.EARTH || crystal.aspect == Aspect.ORDER || crystal.aspect == Aspect.ENTROPY;
+						helper.assertTrue(isPrimal, "a naturally-placed crystal should really only ever be one of the 6 real primal aspects, got " + crystal.aspect);
+						helper.assertTrue(state.getValue(thaumcraft.common.blocks.world.ore.BlockCrystal.FACING) != null,
+								"a naturally-placed crystal should really have a real facing set");
+					}
+				}
+			}
+		}
+		helper.assertTrue(foundReal, "at least one real BlockCrystal should really have been placed within the real scatter volume");
+		helper.succeed();
+	}
+
+	/**
 	 * Coverage for {@link AuraHandler#shouldPreserveAura} - gates {@code RechargeHelper}'s vis draining and
 	 * (per its own doc comment) is meant to require the "AURAPRESERVE" research when a real player is
 	 * involved, but bypass that check entirely when called with a null player.
