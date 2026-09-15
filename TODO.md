@@ -42,10 +42,14 @@ sweep turned up and what's still unscoped.)*
   documents dropping deliberately ("that block isn't ported, and there's
   nothing sensible to fall back to"). Not worth building until either real
   consumer exists.
-- **`liquidDeath`** (`BlockFluidDeath`) — confirmed real but has no
-  standalone placer outside client-rendering setup (`ProxyBlock.java`);
-  genuinely tangled with the already-known-blocked finite-fluid/Taint
-  world-spread subsystem, not a separate gap.
+- ~~**`liquidDeath`**~~ — closed 2026-09-14. The "tangled with the
+  finite-fluid subsystem" reasoning above was itself stale/wrong once
+  re-checked directly: `BlockFluidDeath`'s own true original base class is
+  Forge's OLD `BlockFluidClassic` (an infinite-source-block wrapper), NOT
+  the finite one `BlockFluxGoo`/`BlockPurifyingFluid` needed - so it never
+  actually needed the finite-fluid engine at all, and got the real modern
+  vanilla `FluidType`/`LiquidBlock`/`BucketItem` API instead. See "Recently
+  closed" below.
 - ~~**`grassAmbient`, `shimmerleaf`, `vishroom`**~~ — closed 2026-09-14.
   Confirmed placed exclusively by the true original's own
   `BiomeGenMagicalForest#decorate` override, genuinely inseparable from
@@ -413,6 +417,28 @@ project memory file; not re-listed here to keep this file scannable.)*
   own real 1-in-100-per-chunk-attempt rarity, gated by a
   `neoforge:add_features` biome modifier. See commit "Give the true
   original's mound dungeon its real worldgen".
+
+- **Liquid Death** — closed 2026-09-14. User asked to move to "finite
+  fluids" next; investigating found the real finite-fluid engineering work
+  (`BlockFluxGoo`) was already shipped 2026-09-03, and `BlockPurifyingFluid`
+  (same finite engine, a separate real fluid) was already shipped too, in
+  an earlier uncaptured session - only `liquidDeath` genuinely remained,
+  and its own true original base class (`BlockFluidClassic`, Forge's OLD
+  infinite-source-block wrapper) meant it never actually needed the
+  finite-fluid engine at all. Built real modern `FluidType`/`Fluid`
+  (source+flowing)/`LiquidBlock`/`BucketItem` registrations
+  (`ThaumcraftFluids`, new) - this port's first vanilla-style fluid.
+  `BlockLiquidDeath#entityInside` replicates the original's own real
+  `onEntityCollidedWithBlock` (dissolve damage tapering with the real
+  `FluidState` amount, real horizontal-motion slow); a dissolve kill's own
+  real consequence (victim drops its essentia as crystal-essence stacks)
+  was already shipped and needed no new wiring. Real content chain mostly
+  already in place once checked: research entry, bucket icon/texture/item
+  model, aspect-tag precedent. Added the real Crucible recipe (empty bucket
+  + Death 100/Alchemy 20/Entropy 50) and fixed a stale, silently-
+  unparseable uppercase recipe reference in `alchemy.json`'s own
+  `LIQUIDDEATH` stage. See commit "Give Liquid Death its real vanilla-style
+  fluid - the first non-finite one".
 
 - **`required_craft`/`required_item` research auto-progression** — closed
   2026-09-14. `ThaumcraftResearchLoader` deliberately skipped parsing both
