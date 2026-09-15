@@ -170,17 +170,19 @@ Primal Crystal Clusters - is also already real and shipped. Moved to
   the cut" methodology gap as the `RenderEldritchGuardian` duplicate-path
   lesson above - a single-file grep can miss real wiring that lives one hop
   away in a different class entirely.
-- **`ItemResonator`'s missing `TileTubeBuffer` branch, and `TileTubeBuffer`'s
-  own separate stale CodeChicken note** — checked directly, not assumed:
-  `TileTubeBuffer` is real and registered, but its own doc comment still
-  says "no per-face open/close toggling... both built on the same
-  CodeChicken sub-hit raytracing library already dropped for `TileTube`
-  itself" - stale, written before the CodeChicken-precision restoration arc
-  gave the rest of the tube family real per-face click UI back via
-  `CuboidTargeting` (no third-party library needed). Two real, related
-  restorations: give `TileTubeBuffer` the same real per-face toggling
+- ~~**`ItemResonator`'s missing `TileTubeBuffer` branch, and
+  `TileTubeBuffer`'s own separate stale CodeChicken note**~~ — closed
+  2026-09-15. Gave `TileTubeBuffer` the same real per-face toggling
   `TileTube`/`TileTubeFilter`/`TileTubeRestrict`/`TileTubeOneway` already
-  got, then restore `ItemResonator`'s own missing branch on top.
+  have (via `IInteractWithCaster`/`CuboidTargeting`, mirroring onto a real
+  neighboring `TileTube` via a new public `TileTube#setSideOpen` hook), then
+  restored `ItemResonator`'s own missing branch on top (lists every real
+  aspect a multi-aspect buffer holds, not just one). The true original's own
+  sneak-click "choke" throttle stays cut, now for a more precise reason:
+  without real bellows amplification its first two states are numerically
+  identical in this port, so a real 3-state cycle would show 2
+  functionally-identical settings - worse than not offering it. Committed
+  `f135fb4`.
 - ~~**`Thaumcraft.java`'s loot-bag drop uses a flat 8% chance instead of the
   real champion-mutation gate**~~ — closed 2026-09-15. Restored the true
   original's own exact `livingDrops` condition: a real champion (id 0-13,
