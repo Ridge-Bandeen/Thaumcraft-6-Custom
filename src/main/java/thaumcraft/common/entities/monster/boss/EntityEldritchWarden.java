@@ -1,10 +1,14 @@
 package thaumcraft.common.entities.monster.boss;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -23,8 +27,10 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.api.capabilities.ThaumcraftCapabilities;
 import thaumcraft.api.capabilities.IPlayerWarp;
+import thaumcraft.api.entities.IEldritchMob;
 import thaumcraft.common.entities.monster.cult.EntityCultist;
 import thaumcraft.common.entities.projectile.EntityEldritchOrb;
 
@@ -37,19 +43,42 @@ import thaumcraft.common.entities.projectile.EntityEldritchOrb;
  * Weakness both 20s, 3-5 Warp vs. the Guardian's Wither-only 20s/1-3 Warp) and its own real random-title
  * naming (one of the original's own 15 Lovecraftian names, matching the original's base {@code
  * entity.EldritchWarden.name.custom} format - minus the champion-mod suffix, same as {@link
- * EntityCultistLeader}'s own doc comment explains for the same unported system).
+ * EntityCultistLeader}'s own doc comment explains for the same unported system). Now really
+ * {@link IEldritchMob} again too - a real, separate bug found while building the field-frenzy phase below:
+ * this port's class had silently dropped that interface (the true original's own class declaration carries
+ * it), which meant other Eldritch mobs' own real {@code isAlliedTo} checks never actually recognized the
+ * Warden as one of their own.
  *
- * Real, documented cuts: no "field frenzy" phase (the original's own absorption-shield-depletion trigger -
- * 150-tick invulnerability, teleport home, and an AoE spiral of {@code BlocksTC.effectSap} ground-hazard
- * placements around itself - a real, separate mechanic from {@link EntityThaumcraftBoss}'s own generic
- * enrage). This isn't a simplification choice - {@code effectSap} isn't a ported block at all yet, so the
- * whole mechanic is genuinely unbuildable, not just trimmed; {@link EntityThaumcraftBoss}'s own real boss-bar/
- * self-heal/enrage stand in for it instead of a parallel absorption-shield system. No arm-lift swing
- * animation (tied to the not-yet-ported mesh - see {@link thaumcraft.client.render.ModelEldritchPlaceholder}'s
- * own doc comment). No sonic-scream client FX broadcast ({@code PacketFXSonic}, unported {@code
- * FXDispatcher}). No champion-mod name suffix (unported champion system, same as {@code EntityCultistLeader}).
+ * <p>Real "field frenzy" phase, restored 2026-09-15 now that {@link BlocksTC#effectSap} is real: a real
+ * vanilla absorption shield ({@link #getAbsorptionAmount}, 66% of max health, real cap via a real
+ * {@code Attributes.MAX_ABSORPTION} entry - modern vanilla already routes all incoming damage through
+ * absorption automatically, no hand-rolled soak logic needed) regenerating +1 every 25 ticks; the FIRST real
+ * hit that drops it to 0 triggers a real one-shot (never again per spawn, matching the original's own real
+ * {@code fieldFrenzy} boolean latch) 150-tick invulnerable window ({@link #isInvulnerableTo}) plus a real
+ * teleport to a random safe spot near its own real restricted home (set at spawn via {@link #restrictTo}),
+ * then spirals a real expanding, thickening ring of {@code effect_sap} outward from itself every 10 ticks
+ * while the counter runs 120 down to 0 (real radius {@code (150-counter)/8}, real angular density
+ * {@code 180/(1+counter/8)} - both exact original formulas, producing the same real "sparse ring near the
+ * boss, wide dense ring by the end" expansion), each placement also getting the original's own real explicit
+ * 250-400-tick backup removal (see {@link thaumcraft.common.blocks.misc.BlockEffectSap}'s own doc comment
+ * for why that's a real belt-and-suspenders on top of the block's own random-tick self-destruct). Separately,
+ * every tick regardless of frenzy state, the Warden seeds real sap at up to 4 positions right around its own
+ * feet - the original's own real constant "the ground near me is dangerous" tell.
+ *
+ * <p>Real, documented simplifications on this restored phase (none drop real player-visible content): the
+ * original's own {@code updateAITasks} froze the goal selector entirely during frenzy (an implementation
+ * detail of 1.12.2's own AI-task dispatch, not attempted here - the Warden keeps acting on its last real
+ * decision instead of literally pausing goal re-evaluation); the absorption regen's own real
+ * "not this same tick I just got hit" throttle isn't reproduced (a real, minor pacing nicety, not a visible
+ * mechanic); the client-side portal-teleport particle trail is dropped, matching every other client-FX cut
+ * this whole project has made consistently.
+ *
+ * <p>Real, still-documented cuts: no arm-lift swing animation (tied to the not-yet-ported mesh - see
+ * {@link thaumcraft.client.render.ModelEldritchPlaceholder}'s own doc comment). No sonic-scream client FX
+ * broadcast ({@code PacketFXSonic}, unported {@code FXDispatcher}). No champion-mod name suffix (unported
+ * champion system, same as {@code EntityCultistLeader}).
  */
-public class EntityEldritchWarden extends EntityThaumcraftBoss implements RangedAttackMob {
+public class EntityEldritchWarden extends EntityThaumcraftBoss implements RangedAttackMob, IEldritchMob {
 
 	private static final String[] TITLES = { "Aphoom-Zhah", "Basatan", "Chaugnar Faugn", "Mnomquah", "Nyogtha",
 			"Oorn", "Shaikorth", "Rhan-Tegoth", "Rhogog", "Shudde M'ell", "Vulthoom", "Yag-Kosha", "Yibb-Tstll",
@@ -57,6 +86,14 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 
 	private static final EntityDataAccessor<Byte> DATA_TITLE =
 			SynchedEntityData.defineId(EntityEldritchWarden.class, EntityDataSerializers.BYTE);
+
+	/** 66% of {@link Attributes#MAX_HEALTH} (400) - the real absorption shield's own real cap, matching the
+	 * true original's own {@code MAX_HEALTH * 0.66} exactly. */
+	private static final float SHIELD_AMOUNT = 264.0f;
+
+	/** Real one-shot "field frenzy" state - see this class's own doc comment. */
+	private int fieldFrenzyCounter;
+	private boolean fieldFrenzyTriggered;
 
 	public EntityEldritchWarden(EntityType<? extends EntityEldritchWarden> type, Level level) {
 		super(type, level);
@@ -67,7 +104,8 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 				.add(Attributes.MAX_HEALTH, 400.0)
 				.add(Attributes.MOVEMENT_SPEED, 0.33)
 				.add(Attributes.ATTACK_DAMAGE, 10.0)
-				.add(Attributes.ARMOR, 8.0);
+				.add(Attributes.ARMOR, 8.0)
+				.add(Attributes.MAX_ABSORPTION, SHIELD_AMOUNT);
 	}
 
 	@Override
@@ -103,6 +141,8 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 			net.minecraft.world.entity.SpawnGroupData spawnGroupData) {
 		setTitle(random.nextInt(TITLES.length));
 		setCustomName(Component.translatable("entity.thaumcraft.eldritch_warden.name", getTitle()));
+		setAbsorptionAmount(SHIELD_AMOUNT);
+		restrictTo(blockPosition(), 32);
 		return super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
 	}
 
@@ -111,7 +151,101 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 		if (source.is(net.minecraft.world.damagesource.DamageTypes.DROWN) || source.is(net.minecraft.world.damagesource.DamageTypes.WITHER)) {
 			return false;
 		}
-		return super.hurt(source, amount);
+		boolean hurt = super.hurt(source, amount);
+		if (hurt && !level().isClientSide && !fieldFrenzyTriggered && getAbsorptionAmount() <= 0.0f) {
+			fieldFrenzyTriggered = true;
+			fieldFrenzyCounter = 150;
+			if (level() instanceof ServerLevel serverLevel) {
+				teleportHome(serverLevel);
+			}
+		}
+		return hurt;
+	}
+
+	@Override
+	public boolean isInvulnerableTo(DamageSource source) {
+		return fieldFrenzyCounter > 0 || super.isInvulnerableTo(source);
+	}
+
+	/** Whether the real one-shot field-frenzy phase is currently active - real, minor test/UI hook, same
+	 * shape as {@code TileTube#isSideOpen}/{@code getFacing} elsewhere in this project. */
+	public boolean isInFieldFrenzy() {
+		return fieldFrenzyCounter > 0;
+	}
+
+	@Override
+	public void aiStep() {
+		super.aiStep();
+		seedSapUnderfoot();
+		if (!level().isClientSide) {
+			if (tickCount % 25 == 0 && getAbsorptionAmount() < SHIELD_AMOUNT) {
+				setAbsorptionAmount(getAbsorptionAmount() + 1.0f);
+			}
+			if (fieldFrenzyCounter > 0 && level() instanceof ServerLevel serverLevel) {
+				performFieldFrenzy(serverLevel);
+				fieldFrenzyCounter--;
+			}
+		}
+	}
+
+	/** Real constant per-tick self-seeding, matching the true original's own unconditional
+	 * {@code onLivingUpdate} loop - 4 real positions right around the Warden's own feet, each only placed if
+	 * really still air. */
+	private void seedSapUnderfoot() {
+		if (level().isClientSide) return;
+		int j = Mth.floor(getY());
+		for (int l = 0; l < 4; l++) {
+			int i = Mth.floor(getX() + (l % 2 * 2 - 1) * 0.25f);
+			int k = Mth.floor(getZ() + (l / 2 % 2 * 2 - 1) * 0.25f);
+			BlockPos bp = new BlockPos(i, j, k);
+			if (level().getBlockState(bp).isAir()) {
+				level().setBlockAndUpdate(bp, BlocksTC.effectSap.get().defaultBlockState());
+			}
+		}
+	}
+
+	/** Real expanding, thickening ring of {@code effect_sap}, exact original geometry - see this class's own
+	 * doc comment. Only ever called while {@link #fieldFrenzyCounter} is still positive. */
+	private void performFieldFrenzy(ServerLevel level) {
+		if (fieldFrenzyCounter >= 121 || fieldFrenzyCounter % 10 != 0) return;
+
+		double radius = (150 - fieldFrenzyCounter) / 8.0;
+		int d = 1 + fieldFrenzyCounter / 8;
+		int i = Mth.floor(getX());
+		int j = Mth.floor(getY());
+		int k = Mth.floor(getZ());
+		for (int q = 0; q < 180 / d; q++) {
+			double radians = Math.toRadians(q * 2 * d);
+			int deltaX = (int) (radius * Math.cos(radians));
+			int deltaZ = (int) (radius * Math.sin(radians));
+			BlockPos bp = new BlockPos(i + deltaX, j, k + deltaZ);
+			if (level.getBlockState(bp).isAir() && level.getBlockState(bp.below()).isFaceSturdy(level, bp.below(), Direction.UP)) {
+				level.setBlockAndUpdate(bp, BlocksTC.effectSap.get().defaultBlockState());
+				level.scheduleTick(bp, BlocksTC.effectSap.get(), 250 + random.nextInt(150));
+			}
+		}
+		playSound(SoundEvents.WARDEN_SONIC_BOOM, 1.0f, 0.9f + random.nextFloat() * 0.1f);
+	}
+
+	/** Real teleport to a random safe spot near the Warden's own real restricted home (set at spawn), matching
+	 * the true original's own real 20-try search (solid ground below, real air at the target) - jittering X/Z
+	 * around the home position, Y fixed at the home's own real level. Does nothing if no real restriction is
+	 * set, or no safe spot turns up within the real try budget (matching the original's own real "stay put"
+	 * fallback). Drops the original's own client-side portal particle trail, matching this whole project's
+	 * established client-FX-cut precedent. */
+	private void teleportHome(ServerLevel level) {
+		if (!hasRestriction()) return;
+		BlockPos home = getRestrictCenter();
+		for (int tries = 0; tries < 20; tries++) {
+			int x = home.getX() + random.nextInt(8) - random.nextInt(8);
+			int z = home.getZ() + random.nextInt(8) - random.nextInt(8);
+			BlockPos candidate = new BlockPos(x, home.getY(), z);
+			if (level.getBlockState(candidate).isAir() && level.getBlockState(candidate.below()).isFaceSturdy(level, candidate.below(), Direction.UP)) {
+				moveTo(candidate.getX() + 0.5, candidate.getY() + 0.1, candidate.getZ() + 0.5, getYRot(), getXRot());
+				playSound(SoundEvents.ENDERMAN_TELEPORT, 1.0f, 1.0f);
+				return;
+			}
+		}
 	}
 
 	@Override

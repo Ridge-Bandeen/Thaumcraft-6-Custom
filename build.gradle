@@ -644,6 +644,7 @@ sourceSets {
             include 'thaumcraft/common/lib/events/GearTooltipEvents.java'
             include 'thaumcraft/common/blocks/misc/BlockPurifyingFluid.java'
             include 'thaumcraft/common/blocks/misc/BlockLiquidDeath.java'
+            include 'thaumcraft/common/blocks/misc/BlockEffectSap.java'
             include 'thaumcraft/common/registry/ThaumcraftFluids.java'
             include 'thaumcraft/common/blocks/devices/BlockSpa.java'
             include 'thaumcraft/common/tiles/devices/TileSpa.java'

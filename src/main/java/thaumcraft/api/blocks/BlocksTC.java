@@ -935,6 +935,17 @@ public final class BlocksTC {
 					.noCollission().liquid().noLootTable().noOcclusion()
 					.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
 
+	/** Real invisible, self-destroying ground trap - see {@link thaumcraft.common.blocks.misc.BlockEffectSap}'s
+	 * own doc comment for the real story (why only this one of the true original's 3 shared {@code
+	 * BlockEffect} variants gets a real port). {@code lightLevel(7)} matches the true original's own real
+	 * {@code setLightLevel(0.5f)} base value exactly ({@code (int)(0.5f*15)==7}) - a faint, real tell even
+	 * though the block itself renders as nothing. */
+	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockEffectSap> effectSap = BLOCKS.registerBlock("effect_sap",
+			thaumcraft.common.blocks.misc.BlockEffectSap::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.NONE).sound(SoundType.WOOL)
+					.noCollission().noOcclusion().lightLevel(state -> 7).noLootTable().randomTicks()
+					.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
+
 	/** The Spa - see {@link thaumcraft.common.tiles.devices.TileSpa}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockSpa> spa = BLOCKS.registerBlock("spa",
 			thaumcraft.common.blocks.devices.BlockSpa::new,

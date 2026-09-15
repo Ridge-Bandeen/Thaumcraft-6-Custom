@@ -1,15 +1,20 @@
 package thaumcraft.common.items.casters.foci;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import thaumcraft.api.aspects.Aspect;
+import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.api.casters.FocusEffect;
 import thaumcraft.api.casters.NodeSetting;
 import thaumcraft.api.casters.Trajectory;
@@ -22,10 +27,11 @@ import thaumcraft.api.casters.Trajectory;
  * {@link MobEffects#DIG_SLOWDOWN} now, and {@code PotionEffect} is {@link MobEffectInstance} taking a
  * {@code Holder<MobEffect>} instead of a raw {@code Potion}.
  *
- * Simplified: drops the original's block-hit branch (surrounding the impact point with
- * {@code BlocksTC.effectSap}, a sticky-web trap block) entirely - that block isn't ported, and there's
- * nothing sensible to fall back to. Only the entity-hit branch (damage + debuffs) exists here; a block hit
- * is a no-op, same as every other focus in this package that only reacts to entities.
+ * <p>Real block-hit branch, restored 2026-09-15 now that {@link BlocksTC#effectSap} is real: blankets every
+ * real full-cube block surface within a real radius (capped at 8, scaled by power/finalPower, matching the
+ * original's own {@code min(8, 1.5*power*finalPower)} exactly) of the hit point with a real
+ * {@code effect_sap} trap, provided the space directly above each candidate is real air - a real "sow a
+ * minefield around the impact" area-denial effect, distinct from the entity-hit branch's direct damage.
  */
 public class FocusEffectCurse extends FocusEffect {
 
@@ -58,6 +64,23 @@ public class FocusEffectCurse extends FocusEffect {
 	public boolean execute(HitResult target, Trajectory trajectory, float finalPower, int num) {
 		Level level = getPackage().world;
 		if (level == null) return false;
+
+		if (target instanceof BlockHitResult blockHit) {
+			float radius = Math.min(8.0f, 1.5f * getSettingValue("power") * finalPower);
+			BlockPos center = blockHit.getBlockPos();
+			Vec3 hitVec = blockHit.getLocation();
+			int r = Mth.ceil(radius);
+			boolean placedAny = false;
+			for (BlockPos p : BlockPos.betweenClosed(center.offset(-r, -r, -r), center.offset(r, r, r))) {
+				if (p.distToCenterSqr(hitVec.x, hitVec.y, hitVec.z) <= radius * radius
+						&& level.getBlockState(p.above()).isAir()
+						&& level.getBlockState(p).isCollisionShapeFullBlock(level, p)) {
+					level.setBlock(p.above(), BlocksTC.effectSap.get().defaultBlockState(), 3);
+					placedAny = true;
+				}
+			}
+			return placedAny;
+		}
 
 		if (!(target instanceof EntityHitResult entityHit) || !(entityHit.getEntity() instanceof LivingEntity living)) {
 			return false;

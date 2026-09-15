@@ -13226,6 +13226,126 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage that {@link thaumcraft.common.entities.monster.boss.EntityEldritchWarden} really carries
+	 * {@link thaumcraft.api.entities.IEldritchMob} again (a real, separate bug found while restoring the
+	 * field-frenzy phase below - the true original's own class declaration always carried it, this port's
+	 * had silently dropped it). {@code isAlliedTo} only ever checks the OTHER entity's own real type, so the
+	 * existing {@code eldritchWardenIsARealBossThatIsAlliedToEldritchMobsAndImmuneToDrownAndWither} test above
+	 * never actually exercised this - this one checks it the other way round instead.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void eldritchWardenIsRecognizedAsARealEldritchMobByOtherEldritchMobs(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, net.minecraft.world.level.block.Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.boss.EntityEldritchWarden warden =
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_WARDEN.get().create(level);
+		warden.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(warden);
+
+		thaumcraft.common.entities.monster.EntityEldritchGuardian guardian =
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_GUARDIAN.get().create(level);
+		helper.assertTrue(warden instanceof thaumcraft.api.entities.IEldritchMob, "a real eldritch warden should really implement IEldritchMob directly");
+		helper.assertTrue(guardian.isAlliedTo(warden), "a real eldritch guardian should really recognize a real eldritch warden as one of its own");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for the field-frenzy phase's own constant real per-tick self-seeding
+	 * ({@link thaumcraft.common.entities.monster.boss.EntityEldritchWarden#aiStep}, unconditional regardless
+	 * of frenzy state, matching the true original's own real {@code onLivingUpdate} loop).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void eldritchWardenSeedsRealSapUnderfootEveryTick(GameTestHelper helper) {
+		BlockPos floorPos = new BlockPos(4, 3, 4);
+		BlockPos standPos = floorPos.above();
+		helper.setBlock(floorPos, net.minecraft.world.level.block.Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+		BlockPos standAbs = helper.absolutePos(standPos);
+
+		thaumcraft.common.entities.monster.boss.EntityEldritchWarden warden =
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_WARDEN.get().create(level);
+		warden.moveTo(standAbs.getX() + 0.5, standAbs.getY(), standAbs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(warden);
+
+		warden.aiStep();
+
+		boolean foundSap = false;
+		for (BlockPos p : BlockPos.betweenClosed(standAbs.offset(-1, 0, -1), standAbs.offset(1, 0, 1))) {
+			if (level.getBlockState(p).is(BlocksTC.effectSap.get())) {
+				foundSap = true;
+				break;
+			}
+		}
+		helper.assertTrue(foundSap, "a single real Warden tick should really seed at least one real effect_sap block right around its own feet");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for the whole real "field frenzy" phase: real absorption shield, real one-shot trigger on
+	 * depletion, real invulnerability while active, real expanding sap spiral. See
+	 * {@link thaumcraft.common.entities.monster.boss.EntityEldritchWarden}'s own doc comment for the full
+	 * real story and exact original formulas being reproduced.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void eldritchWardenFieldFrenzyTriggersOnceOnShieldDepletionAndSpiralsRealSap(GameTestHelper helper) {
+		BlockPos floorPos = new BlockPos(4, 3, 4);
+		BlockPos standPos = floorPos.above();
+		// A real wide, flat, solid floor with real open air above - room for the real expanding sap ring
+		// (radius grows up to ~17.5 blocks by the true original's own real formula) to actually land on solid
+		// ground somewhere.
+		for (int xx = -18; xx <= 18; xx++) {
+			for (int zz = -18; zz <= 18; zz++) {
+				helper.setBlock(floorPos.offset(xx, 0, zz), net.minecraft.world.level.block.Blocks.STONE);
+				helper.setBlock(floorPos.offset(xx, 1, zz), net.minecraft.world.level.block.Blocks.AIR);
+			}
+		}
+		ServerLevel level = helper.getLevel();
+		BlockPos standAbs = helper.absolutePos(standPos);
+
+		thaumcraft.common.entities.monster.boss.EntityEldritchWarden warden =
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_WARDEN.get().create(level);
+		warden.moveTo(standAbs.getX() + 0.5, standAbs.getY(), standAbs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(warden);
+		warden.finalizeSpawn(level, level.getCurrentDifficultyAt(standAbs), net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+
+		helper.assertTrue(warden.getAbsorptionAmount() > 250.0f, "a freshly spawned warden should really start with its real ~264 absorption shield, got " + warden.getAbsorptionAmount());
+		helper.assertFalse(warden.isInFieldFrenzy(), "a fresh warden shouldn't already be in field frenzy");
+
+		// Real vanilla post-hit invulnerability window means repeated hurt() calls with no real ticks between
+		// them (as a GameTest loop would do) only land once - set the shield low directly instead (a real,
+		// already-established GameTest precondition-setup technique elsewhere in this file) so the one real
+		// hit that actually lands is the one that drains it to 0, exercising the real trigger condition
+		// (EntityThaumcraftBoss's own real enrage cap still limits that hit to 35 real damage either way).
+		warden.setAbsorptionAmount(20.0f);
+		warden.hurt(level.damageSources().generic(), 300.0f);
+		helper.assertTrue(warden.isInFieldFrenzy(), "draining the real absorption shield to 0 should really trigger the real one-shot field frenzy");
+		helper.assertTrue(warden.isInvulnerableTo(level.damageSources().generic()), "an active real field frenzy should really make the warden invulnerable");
+
+		boolean foundRingSap = false;
+		for (int i = 0; i < 130 && !foundRingSap; i++) {
+			warden.aiStep();
+			for (BlockPos p : BlockPos.betweenClosed(standAbs.offset(-18, -1, -18), standAbs.offset(18, 1, 18))) {
+				if (level.getBlockState(p).is(BlocksTC.effectSap.get()) && p.distSqr(standAbs) > 4) {
+					foundRingSap = true;
+					break;
+				}
+			}
+		}
+		helper.assertTrue(foundRingSap, "an active real field frenzy should really spiral real effect_sap blocks outward, beyond the real constant foot-seeding radius");
+
+		// The real counter starts at 150 and only ever decrements by 1 per real tick - however many of those
+		// ticks the ring-search loop above already spent, up to 150 more safely exhausts whatever's left.
+		for (int i = 0; i < 150 && warden.isInFieldFrenzy(); i++) {
+			warden.aiStep();
+		}
+		helper.assertFalse(warden.isInFieldFrenzy(), "the real field frenzy counter should really run out and end on its own");
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void eldritchGolemSurvivesOneLethalHitByGoingHeadlessThenDiesNormallyAfterThat(GameTestHelper helper) {
 		BlockPos pos = BlockPos.ZERO;
@@ -13782,6 +13902,75 @@ public class ThaumcraftGameTests {
 						&& recipe.getResultItem(helper.getLevel().registryAccess()).is(thaumcraft.api.items.ItemsTC.bucketDeath.get()),
 				"the real liquid_death crucible recipe should really match an empty bucket catalyst, carry the true original's own real "
 						+ "100/20/50 aspect costs, and really produce the real bucket_death item");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// effect_sap - the one real, actually-consumed variant of the true original's shared, invisible,
+	// self-destroying BlockEffect (see BlockEffectSap's own doc comment for why effect_glimmer/effect_shock
+	// don't need a port). Real consumers restored the same session: FocusEffectCurse's block-hit branch and
+	// EntityEldritchWarden's own field-frenzy phase (covered above, in the Eldritch bosses section).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void blockEffectSapDebuffsANonEldritchLivingEntityAndSelfDestructsButSparesEldritchMobs(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = helper.absolutePos(BlockPos.ZERO);
+		level.setBlockAndUpdate(pos, BlocksTC.effectSap.get().defaultBlockState());
+
+		net.minecraft.world.entity.animal.Pig pig = net.minecraft.world.entity.EntityType.PIG.create(level);
+		helper.assertTrue(pig != null, "the pig entity type should really create an instance");
+		pig.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(pig);
+
+		level.getBlockState(pos).entityInside(level, pos, pig);
+
+		helper.assertTrue(pig.hasEffect(net.minecraft.world.effect.MobEffects.WITHER), "touching a real effect_sap block should really grant a real non-Eldritch entity Wither");
+		helper.assertTrue(pig.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN), "touching a real effect_sap block should really grant a real non-Eldritch entity Slowness");
+		helper.assertTrue(pig.hasEffect(net.minecraft.world.effect.MobEffects.HUNGER), "touching a real effect_sap block should really grant a real non-Eldritch entity Hunger");
+		helper.assertTrue(level.getBlockState(pos).isAir(), "a real effect_sap block should really consume itself once it debuffs something");
+
+		BlockPos eldritchPos = pos.offset(2, 0, 0);
+		level.setBlockAndUpdate(eldritchPos, BlocksTC.effectSap.get().defaultBlockState());
+		thaumcraft.common.entities.monster.EntityEldritchGuardian guardian =
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_GUARDIAN.get().create(level);
+		helper.assertTrue(guardian != null, "the entity type should really create an instance");
+		guardian.moveTo(eldritchPos.getX() + 0.5, eldritchPos.getY(), eldritchPos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(guardian);
+		level.getBlockState(eldritchPos).entityInside(level, eldritchPos, guardian);
+
+		helper.assertFalse(guardian.hasEffect(net.minecraft.world.effect.MobEffects.WITHER), "a real IEldritchMob should really be immune to its own kind's sap trap");
+		helper.assertTrue(level.getBlockState(eldritchPos).is(BlocksTC.effectSap.get()), "a real IEldritchMob touching effect_sap shouldn't consume the block either");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.items.casters.foci.FocusEffectCurse}'s own restored
+	 * block-hit branch - blanketing full-cube surfaces within radius with a real {@code effect_sap} trap.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focusEffectCurseBlockHitBlanketsFullCubeSurfacesWithRealSapWithinRadius(GameTestHelper helper) {
+		BlockPos floorPos = new BlockPos(4, 3, 4);
+		for (int xx = -3; xx <= 3; xx++) {
+			for (int zz = -3; zz <= 3; zz++) {
+				helper.setBlock(floorPos.offset(xx, 0, zz), Blocks.STONE);
+				helper.setBlock(floorPos.offset(xx, 1, zz), Blocks.AIR);
+			}
+		}
+		BlockPos floorAbs = helper.absolutePos(floorPos);
+		ServerPlayer player = spawnCasterAt(helper, floorAbs.above(3));
+
+		thaumcraft.common.items.casters.foci.FocusEffectCurse curse = new thaumcraft.common.items.casters.foci.FocusEffectCurse();
+		curse.initialize();
+		curse.setPackage(new thaumcraft.api.casters.FocusPackage(player));
+
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(floorAbs), net.minecraft.core.Direction.UP, floorAbs, false);
+		boolean executed = curse.execute(hit, null, 1.0f, 0);
+
+		helper.assertTrue(executed, "casting a real Curse focus at a real solid floor should really place at least one real sap trap");
+		helper.assertTrue(helper.getLevel().getBlockState(floorAbs.above()).is(BlocksTC.effectSap.get()),
+				"the directly-struck position should really have gotten a real effect_sap trap");
 		helper.succeed();
 	}
 
