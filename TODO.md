@@ -14,29 +14,19 @@ index.
 
 ## Confirmed real gaps (actionable)
 
-Each of these is genuinely real, registered content in the true original with
+**Empty as of 2026-09-14.** The last entry here, label dyeing, closed the
+same day it was scoped - see "Recently closed" below. Each entry that ever
+lived here was genuinely real, registered content in the true original with
 no equivalent anywhere in the current port (verified by direct source read,
-not just a name diff).
-
-- **Label dyeing recipe** (a real component-matching custom `Ingredient`) —
-  {@code ItemLabel}'s own doc comment already flags this as a deliberate,
-  known scope cut: the original dyed a blank label with a specific aspect
-  using a filled Phial matched by NBT (`IngredientNBTTC`, a custom 1.12.2
-  ingredient type). Needs a real custom `Ingredient` matching a specific
-  `ASPECTS` component value - new recipe-system work. The true original's
-  own `CraftingEvents` phial-refund hook (crafting an aspected label gives
-  the filled phial back rather than consuming it) is downstream of this and
-  only worth building alongside it. Small and niche - the core
-  apply-a-label-to-lock-a-jar mechanic is already real and tested regardless
-  of how a filled label is obtained.
+not just a name diff); none are currently outstanding.
 
 *(`BlocksTC`/`ItemsTC` registries themselves are confirmed complete as of
 2026-09-14 - two field-name sweeps in a row found nothing real left there.
-The item above came from a broader, deeper sweep of the whole file tree,
-which also turned up `required_craft`/`required_item` auto-progression
-and the warp-on-craft penalty - both now closed, see "Recently closed"
-below. See "Fresh sweep, 2026-09-14 (part 2)" below for what else that
-sweep turned up and what's still unscoped.)*
+The 3 items that did live here - `required_craft`/`required_item`
+auto-progression, the warp-on-craft penalty, and label dyeing - all came
+from a broader, deeper sweep of the whole file tree and are all now closed,
+see "Recently closed" below. See "Fresh sweep, 2026-09-14 (part 2)" below
+for what else that sweep turned up and what's still unscoped.)*
 
 ## Needs further triage (real content exists in the original; scope/priority unconfirmed)
 
@@ -82,11 +72,10 @@ sweep turned up and what's still unscoped.)*
   already-documented, already-accepted drop. **The real lesson this
   re-confirms: a file-path diff measures files, not behaviour** - always
   check where the behaviour actually went before calling it a gap.
-  One genuinely-open leftover did fall out of this scoping pass and is
-  listed under "Confirmed real gaps" above (label dyeing). Two more,
-  `required_craft`/`required_item` auto-progression and `CraftingEvents`'
-  warp-on-craft penalty, were also found here and are now closed (see
-  "Recently closed" below) - **the warp-on-craft one is a correction, not
+  Three real leftovers fell out of this scoping pass - label dyeing,
+  `required_craft`/`required_item` auto-progression, and `CraftingEvents`'
+  warp-on-craft penalty - and all three are now closed (see "Recently
+  closed" below) - **the warp-on-craft one is a correction, not
   just a closure**: it was first written up right here as a real no-op
   even if ported, reasoning from `ThaumcraftApi.getWarp` reading a per-item
   value nothing assigns. That reasoning conflated two unrelated mechanisms
@@ -312,6 +301,25 @@ project memory file; not re-listed here to keep this file scannable.)*
   Thaumonomicon reader's atomic-completion architecture, same as before.
   See commit "Give research its real craft/possession auto-progression
   gates".
+
+- **Label dyeing recipe family** — closed 2026-09-14, the last "Confirmed
+  real gaps" entry. `ItemLabel`'s own doc comment already flagged this as
+  a deliberate cut: the original dyed a blank label with a specific aspect
+  using a filled Phial matched by NBT (`IngredientNBTTC`, a custom 1.12.2
+  ingredient type), and washed it back to blank with a second recipe.
+  Rather than build a whole `ICustomIngredient` plumbing layer for one
+  item (a phial is one item regardless of aspect - nothing at the JSON
+  level can tell them apart), both are real `CustomRecipe`s checking the
+  real `ASPECTS` component directly - the same technique
+  `InfusionPotionRecipe`/`RecipeTripleMeatTreat` already established.
+  `LabelDyeRecipe` matches any blank label plus any single-aspect filled
+  phial and derives its output aspect from whichever the phial actually
+  carries (one class covers what the original expressed as one recipe per
+  aspect); the phial itself comes back unconsumed via a real
+  `Recipe#getRemainingItems` override, the same real mechanism vanilla's
+  own bucket/glass-bottle recipes use, replacing the original's `grow(1)`-
+  before-consumption trick. See commit "Give labels their real dye/clear
+  recipe family".
 
 - **`CraftingEvents` warp-on-craft penalty** — closed 2026-09-14, and a
   correction of an earlier session's own wrong call (see the "Fresh
