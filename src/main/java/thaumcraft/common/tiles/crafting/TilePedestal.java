@@ -25,10 +25,13 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * <li>No hopper/container capability - a single plain {@code ItemStack} field, not a real {@code Container}.
  * Automation would need to interact through a wand/player right-click, same as the original's "pedestals
  * aren't hoppers" design.</li>
- * <li>No "instability mitigator" charge network ({@code BlockInlay}/{@code TileStabilizer} chain) - that
- * whole subsystem isn't ported; see {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix}'s doc
- * comment for what else got cut alongside it.</li>
  * </ul>
+ *
+ * <p>{@link #findInstabilityMitigator}, restored 2026-09-15 - see
+ * {@link thaumcraft.common.tiles.devices.TileStabilizer}'s own doc comment for the full real story
+ * (including the one real simplification: a plain BFS through connected {@code BlockInlay} positions
+ * instead of the true original's own persistent charge-gradient blockstate search, same real reachability
+ * result).
  *
  * Now has a real floating-item renderer ({@code thaumcraft.client.render.TilePedestalRenderer}), so
  * {@link #setChanged()} is overridden to actually push the update to nearby clients - see that override's
@@ -57,6 +60,12 @@ public class TilePedestal extends BlockEntity {
 		ItemEntity out = new ItemEntity(level, worldPosition.getX() + 0.5, worldPosition.getY() + 1.0, worldPosition.getZ() + 0.5, item);
 		level.addFreshEntity(out);
 		item = ItemStack.EMPTY;
+	}
+
+	/** Real port of the true original's own {@code findInstabilityMitigator} - see this class's own doc
+	 * comment for the real simplification. */
+	public BlockPos findInstabilityMitigator() {
+		return level == null ? null : thaumcraft.common.tiles.devices.TileStabilizer.findNearbyStabilizer(level, worldPosition);
 	}
 
 	@Override

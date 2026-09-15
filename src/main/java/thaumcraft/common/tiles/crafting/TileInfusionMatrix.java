@@ -74,13 +74,14 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * {@code matrixCost} is real and craftable via a direct recipe; {@code pillarArcane} is real and reachable via
  * the real Infusion Altar multiblock ritual (see {@code BlockPillar}'s own doc comment) rather than a direct
  * recipe.</li>
- * <li><b>No {@code TileStabilizer} charge-network "instability mitigator".</b> The original could redirect
- * an instability-event item ejection into a nearby {@code TileStabilizer} instead of dropping it, if a
- * candle/skull-adjacent charge-propagation path existed. {@code TileStabilizer.java} itself is still the
- * stale 1.12.2 leftover (confirmed via {@code build.gradle}), so that whole subsystem isn't ported; ejection
- * always just drops the item. {@code BlockInlay} is unrelated to this - a real, already-ported, plain
- * passive stabilizer (see its own doc comment), not the charge-network conduit this bullet is about;
- * corrected 2026-09-15 after an earlier pass here mistakenly lumped the two together.</li>
+ * <li><b>Real {@code TileStabilizer} "instability mitigator", restored 2026-09-15.</b> An instability-event
+ * item ejection ({@link #inEvEjectItem}) now really can redirect into a nearby real, energized
+ * {@link thaumcraft.common.tiles.devices.TileStabilizer} instead of dropping - see that class's own doc
+ * comment for the real mechanics and the one real simplification (a plain BFS replacing the true original's
+ * own persistent charge-gradient blockstate search, same real reachability result). {@code BlockInlay} stays
+ * a plain passive stabilizer with no real charge propagation of its own (see its own doc comment) - it's
+ * still a real, valid hop in that BFS, just not a stateful conduit the way the true original's own version
+ * was.</li>
  * <li><b>Instability events - the full real 24-weighted-outcome table, restored 2026-09-15.</b> Originally
  * trimmed to a 12-outcome subset because {@code BlockFluxGoo} and the Taint/Vis-Exhaust potion effects
  * weren't ported yet; both are real now ({@code BlocksTC#fluxGoo}, {@code ThaumcraftMobEffects#FLUX_TAINT}/
@@ -401,20 +402,29 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 	}
 
 	/** Real port of the true original's own {@code inEvEjectItem(int type)} - see this class's own doc
-	 * comment for the real weighting each type is called at. Types 0/1/2/3/5 really drop the ejected item as
-	 * a real {@link ItemEntity}; type 4 clears the pedestal without dropping anything (matches the true
-	 * original's own {@code type <= 3 || type == 5} split exactly). Types 1/3 additionally place a real
-	 * {@link thaumcraft.api.blocks.BlocksTC#fluxGoo} above the pedestal; types 2/4 additionally pollute the
-	 * real local aura; type 5 additionally sets off a real explosion at the pedestal itself (independent of
-	 * the plain matrix-centered explosion {@link #triggerInstabilityEvent}'s own default case already
-	 * covers). The true original's own {@code TileStabilizer} charge-network mitigation check (which could
-	 * redirect the ejection into a nearby stabilizer instead) stays cut - see this class's own doc comment
-	 * for why that whole subsystem remains genuinely unbuilt. */
+	 * comment for the real weighting each type is called at. Real {@code TileStabilizer} mitigation check,
+	 * restored 2026-09-15 (see that class's own doc comment): if the matched pedestal is reachable from a
+	 * real, energized stabilizer (via {@link TilePedestal#findInstabilityMitigator}), the ejection is
+	 * absorbed there instead (a real 5-10 energy cost, matching the true original's own
+	 * {@code MathHelper.getInt(rand, 5, 10)} exactly) and nothing else about this type's own real effect
+	 * happens at all - matches the true original's own early-return exactly. Otherwise: types 0/1/2/3/5
+	 * really drop the ejected item as a real {@link ItemEntity}; type 4 clears the pedestal without dropping
+	 * anything (matches the true original's own {@code type <= 3 || type == 5} split exactly). Types 1/3
+	 * additionally place a real {@link thaumcraft.api.blocks.BlocksTC#fluxGoo} above the pedestal; types 2/4
+	 * additionally pollute the real local aura; type 5 additionally sets off a real explosion at the
+	 * pedestal itself (independent of the plain matrix-centered explosion
+	 * {@link #triggerInstabilityEvent}'s own default case already covers). */
 	private void inEvEjectItem(Level level, RandomSource rand, int type) {
 		if (pedestals.isEmpty()) return;
 		for (int tries = 0; tries < 25; tries++) {
 			BlockPos pp = pedestals.get(rand.nextInt(pedestals.size()));
 			if (level.getBlockEntity(pp) instanceof TilePedestal ped && !ped.getItem().isEmpty()) {
+				BlockPos stabPos = ped.findInstabilityMitigator();
+				if (stabPos != null && level.getBlockEntity(stabPos) instanceof thaumcraft.common.tiles.devices.TileStabilizer stabilizer
+						&& stabilizer.mitigate(5 + rand.nextInt(6))) {
+					return;
+				}
+
 				ItemStack dropped = ped.getItem();
 				ped.setItem(ItemStack.EMPTY);
 				if (type <= 3 || type == 5) {

@@ -6,12 +6,18 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import thaumcraft.api.crafting.IInfusionStabiliserExt;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
+import thaumcraft.common.tiles.devices.TileStabilizer;
 
 /**
  * Replaces the old (1.12.2) {@code BlockStabilizer}. A small decorative pillar placed near an infusion
@@ -19,16 +25,14 @@ import thaumcraft.api.crafting.IInfusionStabiliserExt;
  * boost crafting stability - {@code getSurroundings} already checks any block generically via
  * {@code instanceof IInfusionStabiliser(Ext)}, so this is a pure drop-in with no changes needed there.
  *
- * Simplified for this pass: the original's real class ({@code TileStabilizer}) was a full block entity with
- * an unrelated second job - slowly charging an "energy" meter from ambient aura (via
- * {@code AuraHelper.polluteAura}) and spending it to pacify nearby {@code EntityFluxRift} mobs, with the
- * meter's charge also driving a client-side color tint on the model. That whole mechanic is provably
- * decoupled from the block's actual stabilizing behavior - {@code canStabaliseInfusion}/
- * {@code getStabilizationAmount} in the original never read the energy field at all - and {@code EntityFluxRift}
- * isn't ported, so it's cut entirely rather than half-built. No block entity is needed as a result: both
- * {@code IInfusionStabiliser} methods only need the block instance, not any per-placement state.
+ * <p>Real {@link TileStabilizer}, restored 2026-09-15 - an earlier pass here had cut it entirely, reasoning
+ * that its real energy meter was provably decoupled from this block's own stabilizing score (true - see
+ * {@code canStabaliseInfusion}/{@code getStabilizationAmount} below, both still real and flat) and that
+ * {@code EntityFluxRift} wasn't ported (false by the time this was re-checked - it's been real for a while).
+ * See {@link TileStabilizer}'s own doc comment for the real mechanics this unlocks. No client-side charge-
+ * driven color tint - that's part of the broader client-only rendering layer, tracked separately.
  */
-public class BlockStabilizer extends Block implements IInfusionStabiliserExt {
+public class BlockStabilizer extends Block implements IInfusionStabiliserExt, EntityBlock {
 
 	public static final MapCodec<BlockStabilizer> CODEC = simpleCodec(BlockStabilizer::new);
 
@@ -60,5 +64,17 @@ public class BlockStabilizer extends Block implements IInfusionStabiliserExt {
 	@Override
 	public float getStabilizationAmount(Level world, BlockPos pos) {
 		return 0.25f;
+	}
+
+	@Override
+	public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+		return new TileStabilizer(pos, state);
+	}
+
+	@Override
+	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+		return type == ThaumcraftBlockEntities.STABILIZER.get()
+				? (lvl, pos, st, be) -> TileStabilizer.tick(lvl, pos, st, (TileStabilizer) be)
+				: null;
 	}
 }

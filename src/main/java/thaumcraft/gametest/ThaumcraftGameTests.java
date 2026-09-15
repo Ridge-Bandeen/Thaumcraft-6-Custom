@@ -5047,6 +5047,124 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	// --------------------------------------------------------------------------------------------------
+	// Stabilizer - restored 2026-09-15 (real parity-audit fix pass). Real energy meter (self-charging from
+	// ambient aura), real Flux Rift pacification, and a real TileInfusionMatrix instability-event redirect
+	// reachable through a chain of real BlockInlay tiles. See TileStabilizer's own doc comment for the one
+	// real simplification (a plain BFS reachability search standing in for the true original's own
+	// persistent charge-gradient blockstate search).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void stabilizerChargesItselfFromAuraAndPacifiesANearbyRealFluxRift(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos stabPos = new BlockPos(4, 3, 4);
+		helper.setBlock(stabPos, BlocksTC.stabilizer.get());
+		BlockPos stabAbs = helper.absolutePos(stabPos);
+		thaumcraft.common.tiles.devices.TileStabilizer stabilizer = helper.getBlockEntity(stabPos);
+
+		helper.assertTrue(stabilizer.getEnergy() == 0, "a freshly placed stabilizer should really start with 0 real energy");
+		for (int i = 0; i < 21; i++) {
+			thaumcraft.common.tiles.devices.TileStabilizer.tick(level, stabAbs, helper.getBlockState(stabPos), stabilizer);
+		}
+		helper.assertTrue(stabilizer.getEnergy() >= 1, "a real stabilizer should really gain 1 energy every real 20 ticks, found " + stabilizer.getEnergy());
+
+		// Force a real, comfortable energy reserve directly rather than waiting ~200 real ticks for it -
+		// what's under test here is the real pacification behavior, not the real charge rate (already
+		// covered just above).
+		stabilizer.setEnergyForTesting(10);
+
+		thaumcraft.common.entities.EntityFluxRift rift =
+				new thaumcraft.common.entities.EntityFluxRift(thaumcraft.common.registry.ThaumcraftEntities.FLUX_RIFT.get(), level);
+		rift.moveTo(stabAbs.getX() + 0.5, stabAbs.getY(), stabAbs.getZ() + 0.5, 0.0f, 0.0f);
+		rift.setRiftStability(-30.0f);
+		level.addFreshEntity(rift);
+		helper.assertTrue(rift.getStability() == thaumcraft.common.entities.EntityFluxRift.EnumStability.VERY_UNSTABLE, "sanity check: the real rift should really start VERY_UNSTABLE");
+
+		int energyBefore = stabilizer.getEnergy();
+		boolean stabilized = false;
+		for (int i = 0; i < 100 && !stabilized; i++) {
+			thaumcraft.common.tiles.devices.TileStabilizer.tick(level, stabAbs, helper.getBlockState(stabPos), stabilizer);
+			stabilized = rift.getRiftStability() > -30.0f;
+		}
+		helper.assertTrue(stabilized, "a real energized stabilizer should really pacify a nearby real Flux Rift over real time");
+		helper.assertTrue(stabilizer.getEnergy() < energyBefore, "pacifying a real rift should really spend real stored energy, had " + energyBefore + " now " + stabilizer.getEnergy());
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.tiles.crafting.TilePedestal#findInstabilityMitigator} - a
+	 * real stabilizer reachable through a chain of real {@link BlocksTC#inlay} tiles should really be found;
+	 * one with no real inlay path should really not be.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void pedestalFindsARealStabilizerThroughARealInlayChainButNotWithoutOne(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos pedPos = new BlockPos(4, 3, 4);
+		helper.setBlock(pedPos, BlocksTC.pedestal.get());
+		thaumcraft.common.tiles.crafting.TilePedestal pedestal = helper.getBlockEntity(pedPos);
+
+		helper.assertTrue(pedestal.findInstabilityMitigator() == null, "a real pedestal with no real inlay chain nearby should really find no mitigator");
+
+		helper.setBlock(pedPos.offset(1, 0, 0), BlocksTC.inlay.get());
+		helper.setBlock(pedPos.offset(2, 0, 0), BlocksTC.inlay.get());
+		helper.setBlock(pedPos.offset(3, 0, 0), BlocksTC.stabilizer.get());
+
+		BlockPos found = pedestal.findInstabilityMitigator();
+		helper.assertTrue(found != null && found.equals(helper.absolutePos(pedPos.offset(3, 0, 0))),
+				"a real stabilizer reachable through a real 2-tile inlay chain should really be found, got " + found);
+		helper.succeed();
+	}
+
+	/**
+	 * Real end-to-end coverage: a real Infusion Matrix instability-event item ejection should really redirect
+	 * into a real reachable, energized stabilizer instead of dropping the item, matching the true original's
+	 * own real behavior.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusionMatrixEjectionRedirectsIntoARealReachableEnergizedStabilizer(GameTestHelper helper) {
+		BlockPos matrixPos = new BlockPos(4, 4, 4);
+		BlockPos centralPos = matrixPos.below(2);
+		helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
+		placeInfusionMatrixPillars(helper, matrixPos);
+		helper.setBlock(centralPos, BlocksTC.pedestal.get());
+		thaumcraft.common.tiles.crafting.TilePedestal central = helper.getBlockEntity(centralPos);
+		central.setItem(new ItemStack(Items.STICK));
+
+		BlockPos componentPos = matrixPos.offset(2, 0, 0);
+		helper.setBlock(componentPos, BlocksTC.pedestal.get());
+		thaumcraft.common.tiles.crafting.TilePedestal component = helper.getBlockEntity(componentPos);
+		component.setItem(new ItemStack(Items.STICK));
+		BlockPos componentAbs = helper.absolutePos(componentPos);
+
+		helper.setBlock(componentPos.offset(1, 0, 0), BlocksTC.inlay.get());
+		helper.setBlock(componentPos.offset(2, 0, 0), BlocksTC.stabilizer.get());
+		BlockPos stabAbs = helper.absolutePos(componentPos.offset(2, 0, 0));
+		thaumcraft.common.tiles.devices.TileStabilizer stabilizer = helper.getBlockEntity(componentPos.offset(2, 0, 0));
+		stabilizer.setEnergyForTesting(15);
+
+		ServerLevel level = helper.getLevel();
+		BlockPos matrixAbs = helper.absolutePos(matrixPos);
+		ServerPlayer player = spawnCasterAt(helper, matrixAbs);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
+		matrix.activate(level, player);
+		matrix.activate(level, player);
+
+		boolean redirected = false;
+		int energyBefore = stabilizer.getEnergy();
+		for (int i = 0; i < 200 && !redirected; i++) {
+			component.setItem(new ItemStack(Items.STICK));
+			matrix.triggerInstabilityEvent(level, level.getRandom());
+			redirected = !component.getItem().isEmpty() && stabilizer.getEnergy() < energyBefore
+					&& level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new AABB(componentAbs).inflate(2)).isEmpty();
+			if (stabilizer.getEnergy() <= 0) {
+				stabilizer.setEnergyForTesting(15);
+			}
+		}
+		helper.assertTrue(redirected, "a real instability-event ejection should really redirect into a real reachable, energized stabilizer instead of dropping the item at least once within a generous number of real rolls");
+		helper.succeed();
+	}
+
 	/**
 	 * Real coverage for {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix#getActivatedTick()}/
 	 * {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix#getCraftTick()} - the two purely-derived

@@ -40,6 +40,11 @@ public final class ThaumcraftBlockEntities {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileRechargePedestal>> RECHARGE_PEDESTAL = BLOCK_ENTITIES.register("recharge_pedestal",
 			() -> BlockEntityType.Builder.of(TileRechargePedestal::new, BlocksTC.rechargePedestal.get()).build(null));
 
+	/** See {@link thaumcraft.common.tiles.devices.TileStabilizer}'s own doc comment for the real energy
+	 * meter/Flux-Rift-pacification/Infusion-Matrix-mitigation mechanics restored 2026-09-15. */
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.devices.TileStabilizer>> STABILIZER = BLOCK_ENTITIES.register("stabilizer",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.devices.TileStabilizer::new, BlocksTC.stabilizer.get()).build(null));
+
 	/** See {@link thaumcraft.common.tiles.devices.TileHungryChest}'s own doc comment for why a thin
 	 * subclass of vanilla's {@link ChestBlockEntity} is needed here after all, despite adding no real
 	 * behavior of its own. */
