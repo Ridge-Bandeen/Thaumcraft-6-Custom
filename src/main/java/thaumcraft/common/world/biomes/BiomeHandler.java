@@ -14,7 +14,7 @@ import thaumcraft.api.aspects.Aspect;
 
 /**
  * Replaces the old (1.12.2) {@code BiomeHandler} - despite the name, this was never really about placing new
- * biomes (that's {@link thaumcraft.common.world.objects}, still a separate, larger, not-yet-ported arc). Its
+ * biomes (see {@link ThaumcraftBiomes}'s own doc comment for that real, separate arc). Its
  * real job, and the one {@link thaumcraft.common.world.aura.AuraHandler}'s own doc comment already flagged
  * as a real gap ("No per-biome variation on generation... the original weighted this by {@code
  * BiomeDictionary} tags... that isn't ported"), is a table of how magical a biome naturally is and which

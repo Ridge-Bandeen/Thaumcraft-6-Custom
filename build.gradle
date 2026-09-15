@@ -466,6 +466,7 @@ sourceSets {
             include 'thaumcraft/common/world/aura/AuraWorld.java'
             include 'thaumcraft/common/world/aura/AuraHandler.java'
             include 'thaumcraft/common/world/biomes/BiomeHandler.java'
+            include 'thaumcraft/common/world/biomes/ThaumcraftBiomes.java'
             include 'thaumcraft/common/world/aura/AuraThread.java'
 
             include 'thaumcraft/common/lib/research/PlayerKnowledge.java'

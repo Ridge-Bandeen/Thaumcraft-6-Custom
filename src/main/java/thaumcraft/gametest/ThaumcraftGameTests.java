@@ -789,11 +789,45 @@ public class ThaumcraftGameTests {
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void realWorldgenFeaturesAreRegistered(GameTestHelper helper) {
 		var placedFeatures = helper.getLevel().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.PLACED_FEATURE);
-		for (String id : new String[] { "crystal_cluster", "cinderpearl", "cultist_portal_spawn" }) {
+		for (String id : new String[] { "crystal_cluster", "cinderpearl", "cultist_portal_spawn", "shimmerleaf", "vishroom" }) {
 			helper.assertTrue(placedFeatures.get(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.PLACED_FEATURE,
 					net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id))).isPresent(),
 					"the real placed feature '" + id + "' should really have registered - a malformed configured/placed feature JSON would silently fail to");
 		}
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage that the 3 real custom biomes (see {@link thaumcraft.common.world.biomes.ThaumcraftBiomes}'
+	 * own doc comment) actually registered as real, valid data with the real distinguishing content each
+	 * one's own true original class carried - climate/colors, and real mob spawn lists naming the real
+	 * mobs each one should.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumcraftBiomesAreRealRegistryEntriesWithRealEffectsAndSpawns(GameTestHelper helper) {
+		var biomes = helper.getLevel().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.BIOME);
+
+		var eldritch = biomes.get(thaumcraft.common.world.biomes.ThaumcraftBiomes.ELDRITCH);
+		helper.assertTrue(eldritch.isPresent(), "eldritch should really be a real registered biome");
+		helper.assertTrue(eldritch.get().value().getSkyColor() == 0, "eldritch should really have the true original's own real pitch-black sky color");
+
+		var magicalForest = biomes.get(thaumcraft.common.world.biomes.ThaumcraftBiomes.MAGICAL_FOREST);
+		helper.assertTrue(magicalForest.isPresent(), "magical_forest should really be a real registered biome");
+		helper.assertTrue(Math.abs(magicalForest.get().value().getBaseTemperature() - 0.8f) < 0.01f,
+				"magical_forest should really carry the true original's own real 0.8 temperature");
+
+		var eerie = biomes.get(thaumcraft.common.world.biomes.ThaumcraftBiomes.EERIE);
+		helper.assertTrue(eerie.isPresent(), "eerie should really be a real registered biome");
+		boolean eerieHasBrainyZombie = eerie.get().value().getMobSettings().getMobs(net.minecraft.world.entity.MobCategory.MONSTER).unwrap().stream()
+				.anyMatch(entry -> entry.type == thaumcraft.common.registry.ThaumcraftEntities.BRAINY_ZOMBIE.get());
+		helper.assertTrue(eerieHasBrainyZombie, "eerie's real monster spawn list should really include the true original's own real Brainy Zombie");
+
+		// Pech's own real registered MobCategory is CREATURE, not MONSTER - NeoForge itself warns if a
+		// biome's spawn list disagrees with an entity's own real registered category, so this really has to
+		// match that, not the true original's own 1.12.2 "monster list" membership.
+		boolean magicalForestHasPech = magicalForest.get().value().getMobSettings().getMobs(net.minecraft.world.entity.MobCategory.CREATURE).unwrap().stream()
+				.anyMatch(entry -> entry.type == thaumcraft.common.registry.ThaumcraftEntities.PECH.get());
+		helper.assertTrue(magicalForestHasPech, "magical_forest's real creature spawn list should really include the true original's own real Pech");
 		helper.succeed();
 	}
 

@@ -77,6 +77,7 @@ public class Thaumcraft {
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::registerPayloads);
         modEventBus.addListener(this::registerEntityAttributes);
+        modEventBus.addListener(this::registerSpawnPlacements);
         modEventBus.addListener(this::registerChampionAttribute);
         NeoForge.EVENT_BUS.register(this);
 
@@ -404,6 +405,38 @@ public class Thaumcraft {
         event.put(ThaumcraftEntities.ELDRITCH_GUARDIAN.get(), thaumcraft.common.entities.monster.EntityEldritchGuardian.createAttributes().build());
         event.put(ThaumcraftEntities.ELDRITCH_WARDEN.get(), thaumcraft.common.entities.monster.boss.EntityEldritchWarden.createAttributes().build());
         event.put(ThaumcraftEntities.ELDRITCH_GOLEM.get(), thaumcraft.common.entities.monster.boss.EntityEldritchGolem.createAttributes().build());
+    }
+
+    /**
+     * Real, small, found-not-built gap this session's own Eerie biome spawn list surfaced: NeoForge warns at
+     * startup ("have not registered to the RegisterSpawnPlacementsEvent") for any entity type a real spawn
+     * list references without a real registered spawn-placement rule - a real, pre-existing gap for these 6
+     * mobs (never fixed because nothing referenced them in a spawn list before now), not something this
+     * session's biome work introduced. Real, standard vanilla predicates: {@code Monster#checkMonsterSpawnRules}
+     * for the 4 real straightforwardly-hostile ones (matching every vanilla hostile mob's own real default -
+     * dark enough, valid ground, difficulty not peaceful), {@code Mob#checkMobSpawnRules} for
+     * {@link ThaumcraftEntities#PECH}/{@link ThaumcraftEntities#WISP} (real, more permissive neutral-creature
+     * defaults, matching their own real non-hostile-monster nature).
+     */
+    private void registerSpawnPlacements(net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent event) {
+        event.register(ThaumcraftEntities.BRAINY_ZOMBIE.get(), net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND,
+                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                net.minecraft.world.entity.monster.Monster::checkMonsterSpawnRules, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
+        event.register(ThaumcraftEntities.GIANT_BRAINY_ZOMBIE.get(), net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND,
+                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                net.minecraft.world.entity.monster.Monster::checkMonsterSpawnRules, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
+        event.register(ThaumcraftEntities.INHABITED_ZOMBIE.get(), net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND,
+                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                net.minecraft.world.entity.monster.Monster::checkMonsterSpawnRules, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
+        event.register(ThaumcraftEntities.ELDRITCH_GUARDIAN.get(), net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND,
+                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                net.minecraft.world.entity.monster.Monster::checkMonsterSpawnRules, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
+        event.register(ThaumcraftEntities.PECH.get(), net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND,
+                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                net.minecraft.world.entity.Mob::checkMobSpawnRules, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
+        event.register(ThaumcraftEntities.WISP.get(), net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND,
+                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                net.minecraft.world.entity.Mob::checkMobSpawnRules, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
     }
 
     /**
