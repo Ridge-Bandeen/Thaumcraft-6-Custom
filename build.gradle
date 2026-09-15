@@ -109,6 +109,8 @@ sourceSets {
             include 'thaumcraft/common/items/armor/ItemBootsTraveller.java'
             include 'thaumcraft/common/items/armor/ItemRobeArmor.java'
             include 'thaumcraft/common/blocks/world/plants/BlockPlantCinderpearl.java'
+            include 'thaumcraft/common/blocks/world/plants/BlockPlantShimmerleaf.java'
+            include 'thaumcraft/common/blocks/world/plants/BlockPlantVishroom.java'
             include 'thaumcraft/api/damagesource/ThaumcraftDamageTypes.java'
             include 'thaumcraft/api/entities/IEldritchMob.java'
             include 'thaumcraft/api/entities/ITaintedMob.java'
@@ -670,7 +672,17 @@ sourceSets {
 }
 
 repositories {
-    // Add here additional repositories if required by some of the dependencies below.
+    // Biolith (real overworld biome placement for Eerie/Magical Forest/Eldritch - see the "Custom biomes"
+    // doc comment on ThaumcraftBiomes for the full story of why this exists: real overworld biome injection
+    // has no plain-datapack path in vanilla/NeoForge, and hand-rolling a hundreds-of-lines reimplementation
+    // of vanilla's own internal OverworldBiomeBuilder (the way e.g. Biomes O' Plenty does) is real but
+    // substantially bigger, riskier, and worse for compatibility with other biome mods than depending on a
+    // small, focused, actively-maintained library built for exactly this - bundled via jarJar below so
+    // players only ever install this one mod, never Biolith separately).
+    maven {
+        name = 'TerraformersMC'
+        url = 'https://maven.terraformersmc.com/'
+    }
 }
 
 base {
@@ -742,6 +754,16 @@ configurations {
 dependencies {
     // Baubles has no NeoForge 1.21.1 port; the API surface it provided (curio-style equipment
     // slots) will need to be re-implemented, likely against Curios, once we get to that package.
+
+    // Biolith - see the "TerraformersMC" repository comment above for the full real reasoning. Pinned to
+    // the exact real version confirmed to target this project's own exact MC/NeoForge version (1.21.1),
+    // not a range - verified directly against Biolith's own real Modrinth version listing and Maven repo,
+    // not assumed. jarJar(...) bundles it straight into this mod's own jar (NeoForge's real embedded-
+    // dependency mechanism), so players only ever install Thaumcraft - Biolith never appears as a separate
+    // required download.
+    jarJar(implementation('com.terraformersmc:biolith-neoforge:3.0.14')) {
+        version { strictly '3.0.14' }
+    }
 
     // neoForge.unitTest.enable() wires up the game-environment bootstrap for `./gradlew test` (via
     // NeoForge's "junit" run-type) but doesn't pull in JUnit Jupiter itself - that's still a normal

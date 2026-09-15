@@ -788,6 +788,20 @@ public final class BlocksTC {
 			BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().instabreak().sound(SoundType.GRASS)
 					.offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 7));
 
+	/** See {@link thaumcraft.common.blocks.world.plants.BlockPlantShimmerleaf}'s own doc comment - the true
+	 * original's own real {@code setLightLevel(0.4f)} converts to 6 on vanilla's real 0-15 scale. */
+	public static final DeferredBlock<thaumcraft.common.blocks.world.plants.BlockPlantShimmerleaf> shimmerleaf = BLOCKS.registerBlock("shimmerleaf",
+			thaumcraft.common.blocks.world.plants.BlockPlantShimmerleaf::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().instabreak().sound(SoundType.GRASS)
+					.offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 6));
+
+	/** See {@link thaumcraft.common.blocks.world.plants.BlockPlantVishroom}'s own doc comment - same real
+	 * light level as {@link #shimmerleaf} (the true original's own real {@code setLightLevel(0.4f)} too). */
+	public static final DeferredBlock<thaumcraft.common.blocks.world.plants.BlockPlantVishroom> vishroom = BLOCKS.registerBlock("vishroom",
+			thaumcraft.common.blocks.world.plants.BlockPlantVishroom::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().instabreak().sound(SoundType.GRASS)
+					.offsetType(BlockBehaviour.OffsetType.XZ).lightLevel(state -> 6));
+
 	/** See {@link thaumcraft.common.blocks.essentia.BlockAlembic}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockAlembic> alembic = BLOCKS.registerBlock("alembic",
 			thaumcraft.common.blocks.essentia.BlockAlembic::new,

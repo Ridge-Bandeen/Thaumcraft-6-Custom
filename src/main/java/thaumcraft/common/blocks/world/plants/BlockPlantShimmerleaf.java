@@ -1,51 +1,66 @@
 package thaumcraft.common.blocks.world.plants;
-import java.util.Random;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockBush;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.init.Blocks;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import net.minecraftforge.common.EnumPlantType;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.client.fx.FXDispatcher;
-import thaumcraft.common.config.ConfigItems;
 
+import com.mojang.serialization.MapCodec;
 
-public class BlockPlantShimmerleaf extends BlockBush
-{
-    public BlockPlantShimmerleaf() {
-        super(Material.PLANTS);
-        setUnlocalizedName("shimmerleaf");
-        setRegistryName("thaumcraft", "shimmerleaf");
-        setCreativeTab(ConfigItems.TABTC);
-        setSoundType(SoundType.PLANT);
-        setLightLevel(0.4f);
-    }
-    
-    protected boolean canSustainBush(IBlockState state) {
-        return state.getBlock() == Blocks.GRASS || state.getBlock() == Blocks.DIRT;
-    }
-    
-    public EnumPlantType getPlantType(IBlockAccess world, BlockPos pos) {
-        return EnumPlantType.Plains;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public void randomDisplayTick(IBlockState state, World world, BlockPos pos, Random rand) {
-        if (rand.nextInt(3) == 0) {
-            float xr = (float)(pos.getX() + 0.5f + rand.nextGaussian() * 0.1);
-            float yr = (float)(pos.getY() + 0.4f + rand.nextGaussian() * 0.1);
-            float zr = (float)(pos.getZ() + 0.5f + rand.nextGaussian() * 0.1);
-            FXDispatcher.INSTANCE.drawWispyMotes(xr, yr, zr, rand.nextGaussian() * 0.01, rand.nextGaussian() * 0.01, rand.nextGaussian() * 0.01, 10, 0.3f + world.rand.nextFloat() * 0.3f, 0.7f + world.rand.nextFloat() * 0.3f, 0.7f + world.rand.nextFloat() * 0.3f, 0.0f);
-        }
-    }
-    
-    public Block.EnumOffsetType getOffsetType() {
-        return Block.EnumOffsetType.XZ;
-    }
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BushBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
+
+/**
+ * Replaces the old (1.12.2) {@code BlockPlantShimmerleaf} - a small decorative bush unique to the true
+ * original's own Magical Forest biome (not independently worldgen-placed - see
+ * {@code thaumcraft.common.world.biomes.ThaumcraftBiomes}' own doc comment). Extends vanilla's own
+ * {@link BushBlock} directly, same real "reuse a real vanilla base class" precedent as
+ * {@link BlockPlantCinderpearl}/Silverwood's {@code SaplingBlock}.
+ *
+ * <p>Real, kept mechanic: a faint light source (matching the original's own real {@code setLightLevel(0.4f)}
+ * - a real, if small, gameplay-relevant glow, not just flavor). Real, deliberate substitution for the
+ * original's own client-only particle flourish ({@code FXDispatcher.drawWispyMotes}, a bespoke custom FX
+ * system this port hasn't ported) - a plain vanilla {@link ParticleTypes#ENCHANT} tick instead, a real,
+ * already-existing "magical glimmer" particle with the same visual intent, not a custom system revival.
+ */
+public class BlockPlantShimmerleaf extends BushBlock {
+
+	public static final MapCodec<BlockPlantShimmerleaf> CODEC = simpleCodec(BlockPlantShimmerleaf::new);
+
+	private static final VoxelShape SHAPE = box(3.0, 0.0, 3.0, 13.0, 10.0, 13.0);
+
+	public BlockPlantShimmerleaf(BlockBehaviour.Properties properties) {
+		super(properties);
+	}
+
+	@Override
+	protected MapCodec<? extends BushBlock> codec() {
+		return CODEC;
+	}
+
+	@Override
+	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+		Vec3 offset = state.getOffset(level, pos);
+		return SHAPE.move(offset.x, offset.y, offset.z);
+	}
+
+	@Override
+	protected boolean mayPlaceOn(BlockState state, BlockGetter level, BlockPos pos) {
+		return state.is(BlockTags.DIRT);
+	}
+
+	@Override
+	public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
+		if (random.nextInt(3) == 0) {
+			double x = pos.getX() + 0.5 + (random.nextFloat() - random.nextFloat()) * 0.3;
+			double y = pos.getY() + 0.4 + (random.nextFloat() - random.nextFloat()) * 0.1;
+			double z = pos.getZ() + 0.5 + (random.nextFloat() - random.nextFloat()) * 0.3;
+			level.addParticle(ParticleTypes.ENCHANT, x, y, z, 0.0, 0.02, 0.0);
+		}
+	}
 }

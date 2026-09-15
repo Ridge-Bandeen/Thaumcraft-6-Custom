@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "#"
+  ],
+  "key": {
+    "#": { "item": "thaumcraft:shimmerleaf" }
+  },
+  "result": { "id": "thaumcraft:quicksilver" }
+}

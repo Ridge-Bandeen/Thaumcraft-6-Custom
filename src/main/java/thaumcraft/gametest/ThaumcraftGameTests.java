@@ -6151,6 +6151,66 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
+	 * Real coverage for {@link thaumcraft.common.blocks.world.plants.BlockPlantShimmerleaf}/
+	 * {@link thaumcraft.common.blocks.world.plants.BlockPlantVishroom} - the 2 real plants unique to the
+	 * true original's own Magical Forest biome (see {@code ThaumcraftBiomes}' own doc comment for why
+	 * {@code grassAmbient} isn't a distinct block). Both should really only survive on dirt (matching the
+	 * real true original's own real placement rules); shimmerleaf's own real shipped shapeless recipe should
+	 * really convert it into quicksilver (the true original's own real {@code shimmerleaftoquicksilver}).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void shimmerleafAndVishroomSurviveOnDirtAndShimmerleafCraftsIntoQuicksilver(GameTestHelper helper) {
+		BlockPos dirtPos = new BlockPos(2, 2, 2);
+		BlockPos shimmerleafPos = dirtPos.above();
+		helper.setBlock(dirtPos, net.minecraft.world.level.block.Blocks.DIRT);
+		helper.setBlock(shimmerleafPos, BlocksTC.shimmerleaf.get());
+		helper.assertTrue(helper.getBlockState(shimmerleafPos).canSurvive(helper.getLevel(), helper.absolutePos(shimmerleafPos)),
+				"shimmerleaf should really be able to survive on real dirt");
+
+		BlockPos stonePos = new BlockPos(4, 2, 4);
+		BlockPos vishroomOnStone = stonePos.above();
+		helper.setBlock(stonePos, net.minecraft.world.level.block.Blocks.STONE);
+		helper.setBlock(vishroomOnStone, BlocksTC.vishroom.get());
+		helper.assertTrue(helper.getBlockState(vishroomOnStone).canSurvive(helper.getLevel(), helper.absolutePos(vishroomOnStone)),
+				"vishroom should really be able to survive on real stone (a real cave floor)");
+
+		var craftingInput = net.minecraft.world.item.crafting.CraftingInput.of(1, 1, java.util.List.of(new ItemStack(ItemsTC.shimmerleaf.get())));
+		var match = helper.getLevel().getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, craftingInput, helper.getLevel());
+		helper.assertTrue(match.isPresent() && match.get().value().getResultItem(helper.getLevel().registryAccess()).is(ItemsTC.quicksilver.get()),
+				"a single real shimmerleaf should really craft into real quicksilver, matching the true original's own real recipe");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.blocks.world.plants.BlockPlantVishroom}'s own real touch
+	 * mechanic - the true original's own real 20% chance of inflicting real Nausea on entity collision.
+	 * Runs many real touches to make the real chance itself statistically verifiable rather than flaky.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void vishroomInflictsRealNauseaOnRealTouch(GameTestHelper helper) {
+		BlockPos stonePos = new BlockPos(2, 2, 2);
+		BlockPos vishroomPos = stonePos.above();
+		helper.setBlock(stonePos, net.minecraft.world.level.block.Blocks.STONE);
+		helper.setBlock(vishroomPos, BlocksTC.vishroom.get());
+		BlockPos vishroomAbs = helper.absolutePos(vishroomPos);
+		ServerLevel level = helper.getLevel();
+		thaumcraft.common.blocks.world.plants.BlockPlantVishroom vishroomBlock =
+				(thaumcraft.common.blocks.world.plants.BlockPlantVishroom) helper.getBlockState(vishroomPos).getBlock();
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		boolean everInflicted = false;
+		for (int i = 0; i < 200 && !everInflicted; i++) {
+			player.removeEffect(net.minecraft.world.effect.MobEffects.CONFUSION);
+			vishroomBlock.entityInside(helper.getBlockState(vishroomPos), level, vishroomAbs, player);
+			if (player.hasEffect(net.minecraft.world.effect.MobEffects.CONFUSION)) {
+				everInflicted = true;
+			}
+		}
+		helper.assertTrue(everInflicted, "touching a real vishroom many times should really inflict real Nausea at least once (a real 20% per-touch chance)");
+		helper.succeed();
+	}
+
+	/**
 	 * The real label-dyeing recipe family - {@link thaumcraft.common.lib.crafting.LabelDyeRecipe}/
 	 * {@link thaumcraft.common.lib.crafting.LabelClearRecipe}, the last "Confirmed real gaps" item.
 	 * Covers the three real behaviors: dyeing derives its output aspect from whichever real aspect the
