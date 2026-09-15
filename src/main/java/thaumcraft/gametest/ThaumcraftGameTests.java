@@ -9668,6 +9668,36 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for the 2026-09-15 restoration: a real cultist knight should really target a nearby real
+	 * {@link thaumcraft.common.entities.monster.EntityEldritchGuardian}, matching the true original's own
+	 * 3rd targeting entry - that mob's own Java file was already fully real and shipped, this class's own
+	 * targeting list just hadn't caught up to it.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cultistKnightTargetsANearbyRealEldritchGuardian(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos abs = helper.absolutePos(BlockPos.ZERO);
+
+		thaumcraft.common.entities.monster.cult.EntityCultistKnight knight =
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_KNIGHT.get().create(level);
+		knight.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(knight);
+
+		thaumcraft.common.entities.monster.EntityEldritchGuardian guardian =
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_GUARDIAN.get().create(level);
+		guardian.moveTo(abs.getX() + 4.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(guardian);
+
+		boolean targeted = false;
+		for (int i = 0; i < 40 && !targeted; i++) {
+			knight.tick();
+			targeted = knight.getTarget() == guardian;
+		}
+		helper.assertTrue(targeted, "a real cultist knight should really target a nearby real eldritch guardian within a generous number of real AI ticks");
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void golemOrbHomesInOnAndDamagesItsRealTargetAndIsReallyReflectable(GameTestHelper helper) {
 		BlockPos pos = BlockPos.ZERO;

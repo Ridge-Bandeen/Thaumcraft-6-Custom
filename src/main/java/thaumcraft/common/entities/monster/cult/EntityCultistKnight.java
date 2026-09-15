@@ -42,17 +42,20 @@ import thaumcraft.api.items.ItemsTC;
  * belongs to the Cleric-tier Robe set, a later sub-chunk of this same arc (see {@link EntityCultist}'s own
  * doc comment), so this knight just keeps its plate helm in that case for now.
  *
+ * Real targeting: also engages a nearby real {@link thaumcraft.common.entities.monster.EntityEldritchGuardian}
+ * (restored 2026-09-15 - that mob is fully real and shipped now, this class's own targeting entry just hadn't
+ * caught up), on top of the base {@link EntityCultist}/{@code Player}/{@code AbstractIllager} entries every
+ * cultist rank shares. Real rare "curio" bonus drop, gated on the killer's own known research, comes free
+ * from {@link thaumcraft.common.lib.events.MobDeathDropEvents#onLivingDrops} - that real handler already
+ * covers every {@link EntityCultist} subtype (this one included), so no per-subclass wiring is needed here.
+ *
  * Real, documented cuts vs the original: no random-enchantment roll on the rare weapon drop (the original's
  * own {@code setEnchantmentBasedOnDifficulty} via {@code EnchantmentHelper.addRandomEnchantment} - modern
  * MC's registry-driven enchantment selection needs substantially more plumbing than this one cosmetic bonus
  * on an already-rare drop justifies), and the original's own data-driven {@code loot_table/cultist.json}
  * (1.12-format, unusable as-is under 1.21.1's schema - see this class's own {@link #dropCustomDeathLoot}
  * for the hand-rolled gold-nugget replacement, matching the {@code EntityEldritchCrab} precedent of a Java
- * override over a data-driven table for a single extra drop). The original's own rare "curio" bonus drop
- * (gated on the killer's own known research) isn't ported either - {@code ItemsTC.curio} and the
- * known-research query it depended on aren't real in this port yet. Also skips the original's third
- * targeting entry (nearby {@code EntityEldritchGuardian}) - that mob's own Java file exists but isn't in
- * the compiled build yet either, a separate still-unported dependency.
+ * override over a data-driven table for a single extra drop).
  */
 public class EntityCultistKnight extends EntityCultist {
 
@@ -74,7 +77,8 @@ public class EntityCultistKnight extends EntityCultist {
 		goalSelector.addGoal(8, new RandomLookAroundGoal(this));
 		targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers());
 		targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
-		targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, AbstractIllager.class, true));
+		targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, thaumcraft.common.entities.monster.EntityEldritchGuardian.class, true));
+		targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, AbstractIllager.class, true));
 	}
 
 	@Override
