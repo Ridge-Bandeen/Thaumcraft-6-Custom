@@ -122,11 +122,13 @@ Primal Crystal Clusters - is also already real and shipped. Moved to
 - ~~**`EntityCultist#isAlliedTo`'s missing `EntityCultistLeader` half**~~ —
   closed 2026-09-15. Restored, matching the true original's own
   `isOnSameTeam` exactly. Committed `bd2881c`.
-- **`EntityTaintacle#spawnTentacles`'s Eldritch-biome-gated extra fibre
-  placement** — cites the whole custom Eldritch *biome* as unported; it's
-  real since World generation part 2 (2026-09-14, this same broader
-  session). Restore the `thaumcraft:eldritch`-gated extra taint-fibre
-  placement.
+- ~~**`EntityTaintacle#spawnTentacles`'s Eldritch-biome-gated extra fibre
+  placement**~~ — closed 2026-09-15. Restored (both `EntityTaintacle` and
+  `EntityTaintSeed`, which duplicates the identical logic, same as the true
+  original). Real end-to-end coverage of the biome-gate branch itself needs
+  a real Eldritch-biome position, which GameTest's own environment can't
+  provide - tested the new `isAdjacentToSolidBlock` helper directly instead.
+  Committed `7d0af5a`.
 - **`AidPortal`'s missing `AidPortalCrimson` variant** — cites
   `EntityCultistPortalLesser` as "hasn't been ported yet"; it's been real
   since the cinderpearl/cultist-portal-spawn chunk (2026-09-14). Add the
