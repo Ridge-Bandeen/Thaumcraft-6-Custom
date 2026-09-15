@@ -95,28 +95,16 @@ correctly blocked - only champion-mod was a real miss.
   citing `EntityPech` as unported; Pech has been real (with a working
   Pech Trade GUI, `GuiPechTrade`) for a while now. Give the wand a real
   trade/loot source instead of staying creative-only.
-- **`AspectList(ItemStack)`'s dead constructor stub** — its own `TODO:`
-  comment says it needs "the full ThaumcraftApi/golems/capabilities/
-  research chain (not yet ported)"; the real implementation
-  (`ThaumcraftObjectTags#getObjectTags`) shipped this exact session
-  (the Liquid Death chunk, 2026-09-14) for a different consumer (Smelter/
-  Alembic) and was never wired back into this older stub. Currently
-  dormant, not actively wrong today - checked directly, nothing in the
-  real modern port calls this constructor yet (only the stale, uncompiled
-  1.12.2 `ConfigAspects`/`ConfigRecipes` leftover files do) - but it's a
-  real, easy, now-possible fix (`this.aspects.putAll(ThaumcraftObjectTags
-  .getObjectTags(stack).aspects)`, roughly) worth doing before anything
-  new starts relying on it and silently getting an empty list instead.
-- **`ItemsTC.TIER_PRIMAL`'s stale repair ingredient** — its own doc
-  comment claims "same real Thaumium-ingot repair substitution as
-  `TIER_VOID`/`TIER_CRIMSON_BLADE` above," but both of those were already
-  fixed to the real `ingotVoid` (their own doc comments say so directly) -
-  only `TIER_PRIMAL` itself still repairs with `ingotThaumium`. One-line
-  fix plus a doc-comment correction.
-- **`GolemProperties`' FLYER leg using `Items.FEATHER`** — cites
-  `BlocksTC.levitator` as "isn't ported yet"; it's been real (and recently
-  got real click-precision work) since the CodeChicken-restoration arc.
-  Swap the substitute back to the real item.
+- ~~**`AspectList(ItemStack)`'s dead constructor stub**~~ — closed
+  2026-09-15. Now routes through `AspectHelper#getObjectAspects`, already
+  fully wired (`ThaumcraftInternalMethodHandler` → `ThaumcraftObjectTags`)
+  for a different caller - this constructor was the one piece nobody had
+  gone back to wire up.
+- ~~**`ItemsTC.TIER_PRIMAL`'s stale repair ingredient**~~ — closed
+  2026-09-15. Now repairs with the real `ingotVoid`, matching its sibling
+  tiers.
+- ~~**`GolemProperties`' FLYER leg using `Items.FEATHER`**~~ — closed
+  2026-09-15. Now costs a real `BlocksTC.levitator`.
 - **`TileArcaneWorkbench`'s wide-vis draw never actually wired up** — its
   own doc comment claims the Workbench Charger block "isn't ported, so the
   menu always draws from this tile's own chunk for now," but
