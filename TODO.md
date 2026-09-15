@@ -49,13 +49,19 @@ deferred until now. Real findings from that audit, triaged:
   the engine entirely (confirmed via a real compile error against
   `getCurativeItems()`, not assumed) - already correctly documented
   elsewhere in this port (`BlockFluxGoo`'s own doc comment).
-- **Real gaps, still queued**: `FocusEffectExchange`/`FocusMediumPlan` (the
-  real mass block-swap focus pair - stale, uncompiled, never previously
-  triaged), `TileStabilizer`'s real charge-network instability mitigation
-  (the block it pairs with, `stabilizer`, already ships but with no tile -
-  a real, deliberate-at-the-time simplification, now being revisited), and
-  the whole client-only layer (see its own entry below - tracked separately
-  given the real scale difference).
+- ~~**`FocusEffectExchange`/`FocusMediumPlan`**~~ — closed 2026-09-15. The
+  real mass block-swap focus pair, plus `ItemCaster`'s own real block-picking
+  (sneak-click) restored alongside it. Found and fixed a real, separate
+  regression along the way: `BlockScheduler#tick` was never actually wired
+  into any real production event - `FocusEffectBreak`'s own already-shipped
+  gradual break has been silently non-functional in real live gameplay this
+  whole time (only ever exercised by tests calling `tick()` directly). Now
+  wired into a real `LevelTickEvent.Post` subscriber. Committed `5a6ebb6`.
+- **Real gaps, still queued**: `TileStabilizer`'s real charge-network
+  instability mitigation (the block it pairs with, `stabilizer`, already
+  ships but with no tile - a real, deliberate-at-the-time simplification,
+  now being revisited), and the whole client-only layer (see its own entry
+  below - tracked separately given the real scale difference).
 - **Deferred, not queued**: boss multiplayer target-scaling and the floating
   special-item death-drop visual both still route through the unported
   `EntityUtils` - same already-correctly-blocked dependency this file has
