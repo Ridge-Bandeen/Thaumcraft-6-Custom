@@ -14,6 +14,45 @@ index.
 
 ## Confirmed real gaps (actionable)
 
+**Full parity audit, 2026-09-15 evening**: user asked for 3 point-form lists
+(this port's features / true original's features via code+wiki / the player-
+facing diff between them), then to fix every real difference found except
+Baubles - including the client-only layer (custom mob renderers/models,
+particle FX, custom sounds), a boundary this whole port had deliberately
+deferred until now. Real findings from that audit, triaged:
+
+- **Not actually gaps** (re-checked directly, closing the loop the earlier
+  "not yet individually re-verified" caveat left open): `EntityGolemDart`
+  (real modern substitute already - `GolemArmDart` fires a plain vanilla
+  `Arrow`), `EntitySpecialItem` (real modern substitute already - the only
+  real/compiled original call site, `TileCrucible`, already spits a plain
+  vanilla `ItemEntity`; its other 2 real call sites live inside
+  `EntityUtils`/`ServerEvents`, both still correctly-unported separately),
+  `EntityFallingTaint` (real modern substitute already - `BlockTaint#tryToFall`
+  already uses vanilla `FallingBlockEntity.fall`).
+- **Confirmed dead-in-the-true-original** (new): `EntityHomingShard`,
+  `EntityRiftBlast` - both have real registered renderers in the true
+  original but zero real `new EntityHomingShard`/`new EntityRiftBlast` call
+  sites anywhere in the whole pristine-original tree. Move to "Confirmed
+  dead" once this audit closes.
+- **Real gaps, queued below**: `FocusEffectExchange`/`FocusMediumPlan` (the
+  real mass block-swap focus pair - stale, uncompiled, never previously
+  triaged), `TileStabilizer`'s real charge-network instability mitigation
+  (the block it pairs with, `stabilizer`, already ships but with no tile -
+  a real, deliberate-at-the-time simplification, now being revisited),
+  `TileTubeBuffer`'s bellows-amplified suction (trivially wireable -
+  `TileBellows#getBellows` is already real and public), Vis-Exhaust's
+  curative-item immunity (a real, tiny detail dropped during the
+  `TileInfusionMatrix` instability-table restoration earlier today),
+  `BlockTaintFibre`'s fortune-scaled drop chance (currently a flat 20%,
+  original reads the breaking tool's real Fortune level), and the whole
+  client-only layer (see its own entry below - tracked separately given the
+  real scale difference).
+- **Deferred, not queued**: boss multiplayer target-scaling and the floating
+  special-item death-drop visual both still route through the unported
+  `EntityUtils` - same already-correctly-blocked dependency this file has
+  documented repeatedly; not re-attempted as a side effect of this pass.
+
 **Sweep of 2026-09-15**: the user asked to re-check every "isn't ported yet"/
 "not real yet"-style doc comment across the whole `src/main/java` tree (51
 files matched) for staleness, the same pattern that found `effectSap`'s own
