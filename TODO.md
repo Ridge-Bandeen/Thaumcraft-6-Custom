@@ -35,19 +35,27 @@ deferred until now. Real findings from that audit, triaged:
   original but zero real `new EntityHomingShard`/`new EntityRiftBlast` call
   sites anywhere in the whole pristine-original tree. Move to "Confirmed
   dead" once this audit closes.
-- **Real gaps, queued below**: `FocusEffectExchange`/`FocusMediumPlan` (the
+- ~~**`BlockTaintFibre`'s fortune-scaled drop chance**~~ — closed 2026-09-15.
+  Now reads the real breaking player's own Fortune level via
+  `EnchantmentHelper#getItemEnchantmentLevel` (`rand.nextInt(5) <= fortune`,
+  matching the true original exactly) instead of a flat 20%.
+- ~~**`TileTubeBuffer`'s bellows-amplified suction + real 3-state choke
+  throttle**~~ — closed 2026-09-15, both together (the throttle's own first
+  2 states only became meaningfully distinct once bellows amplification was
+  real again).
+- **Confirmed genuinely impossible, not a gap**: Vis-Exhaust's real milk-
+  immunity - modern milk unconditionally clears every active effect, and
+  `MobEffectInstance`'s own per-effect curative-item list was removed from
+  the engine entirely (confirmed via a real compile error against
+  `getCurativeItems()`, not assumed) - already correctly documented
+  elsewhere in this port (`BlockFluxGoo`'s own doc comment).
+- **Real gaps, still queued**: `FocusEffectExchange`/`FocusMediumPlan` (the
   real mass block-swap focus pair - stale, uncompiled, never previously
   triaged), `TileStabilizer`'s real charge-network instability mitigation
   (the block it pairs with, `stabilizer`, already ships but with no tile -
-  a real, deliberate-at-the-time simplification, now being revisited),
-  `TileTubeBuffer`'s bellows-amplified suction (trivially wireable -
-  `TileBellows#getBellows` is already real and public), Vis-Exhaust's
-  curative-item immunity (a real, tiny detail dropped during the
-  `TileInfusionMatrix` instability-table restoration earlier today),
-  `BlockTaintFibre`'s fortune-scaled drop chance (currently a flat 20%,
-  original reads the breaking tool's real Fortune level), and the whole
-  client-only layer (see its own entry below - tracked separately given the
-  real scale difference).
+  a real, deliberate-at-the-time simplification, now being revisited), and
+  the whole client-only layer (see its own entry below - tracked separately
+  given the real scale difference).
 - **Deferred, not queued**: boss multiplayer target-scaling and the floating
   special-item death-drop visual both still route through the unported
   `EntityUtils` - same already-correctly-blocked dependency this file has
@@ -378,6 +386,11 @@ re-confirming.
 
 ## Confirmed dead-in-the-true-original (do not port — matches nothing real)
 
+- **`EntityHomingShard`, `EntityRiftBlast`** — confirmed 2026-09-15 during
+  the full parity audit: both have real registered client renderers in the
+  true original, but zero real `new EntityHomingShard`/`new EntityRiftBlast`
+  call sites anywhere in the whole pristine-original tree - never actually
+  spawned by anything. No action needed.
 - **`eldritchEye`, `runedTablet`** (items). Declared as public fields in the
   true original's own `ItemsTC.java` and referenced in `ConfigAspects.java`
   (object-tag registration) and `ConfigEntities.java` (a mob drop table) —
