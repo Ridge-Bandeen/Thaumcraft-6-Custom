@@ -36,16 +36,21 @@ too." They were right: the champion-mod system (`ThaumcraftAttributes
 first-pass sweep had wrongly filed it under "still blocked" without actually
 checking. Re-verified the rest of that same "still blocked" bucket directly
 after being called out (not just re-trusting my own first pass):
-`EntityUtils`/`InventoryUtils` (still genuinely just the stale 1.12.2
-leftover files, confirmed absent from `build.gradle`, and no focused
-extraction exists yet for the SPECIFIC methods still cited -
+`EntityUtils`/`InventoryUtils` (re-checked more rigorously the second time -
+confirmed no duplicate-path false positive like `RenderEldritchGuardian`
+below, still genuinely just the stale 1.12.2 leftover files, and no focused
+extraction exists for the SPECIFIC methods still cited -
 `isFriendly`/`isVisibleTo`/`getPlayerSlotFor` - the way `ChampionUtils` was
-already extracted from `EntityUtils` for the champion-mod half specifically),
-the magical-node system (confirmed: no such system exists; the one "Node"
-hit is an unrelated caster-focus concept), and the starter-book system
-(confirmed: `ConfigItems.startBook`'s only real consumer, `PlayerEvents.java`,
-is still the stale, uncompiled 1.12.2 leftover). Those 3 really are still
-correctly blocked - champion-mod was a real miss.
+already extracted from `EntityUtils` for the champion-mod half specifically;
+confirmed the whole `common/lib/utils` package itself: only `RandomItemChooser`/
+`CuboidTargeting`/`ChampionUtils` are real, everything else - including
+`BlockUtils`, `Utils`, `HexUtils` - is still the stale original) and the
+starter-book system (confirmed: `ConfigItems.startBook`'s only real
+consumer, `PlayerEvents.java`, is still the stale, uncompiled 1.12.2
+leftover, and this port has no other "give a starting item on first join"
+mechanic that might have superseded it). Both really are still correctly
+blocked. The magical-node system turned out to have the SAME real problem
+as the Eldritch dimension below (see Correction #2) - see Correction #3.
 
 **Correction #2, same day**: the user then asked about "the custom Eldritch
 dimension" specifically, which this sweep had also filed under "still
@@ -73,6 +78,24 @@ bare filename, not full path - `RenderEldritchGuardian
 could false-positive as "real" when only its stale namesake actually
 matched. Worth double-checking full paths, not just filenames, on any future
 sweep-style `build.gradle` check.
+
+**Correction #3, same day**: applying that same "re-check, don't just
+re-trust" discipline to the remaining "still blocked" bucket (per the
+user's own follow-up: "update it first, then maybe do similar checks for
+the other blockers?") found the magical-node system has the exact same
+real problem as the Eldritch dimension - already investigated and
+**confirmed dead** in an earlier session (2026-09-08, a real correction at
+the time: "Aura Nodes is NOT a real Thaumcraft 6 feature"), just never
+written into this file, so this sweep's own first pass repeated the same
+"still blocked" mistake on it independently. TC6 explicitly *removed* the
+TC4-era discrete vis-node system - confirmed via both the decompiled true
+original (zero `TileNode`/`BlockNode`/world-gen-node files anywhere) and a
+community wiki ("Starting with Thaumcraft 6, the concept of vis nodes was
+completely removed"). TC6 replaced it entirely with the ambient per-chunk
+Aura system (`AuraHandler`/`AuraChunk`/`AuraWorld`, real and ported since
+the very first session), and the real TC6 equivalent world-gen feature -
+Primal Crystal Clusters - is also already real and shipped. Moved to
+"Confirmed dead-in-the-true-original" below.
 
 - ~~**`BlockTaintFibre`'s leaf-touching "grow into `taintFeature`" branch**~~
   — closed 2026-09-15, and turned out much bigger once actually
@@ -361,6 +384,24 @@ re-confirming.
   some other mod's dimension by numeric id" compatibility knob, not a
   TC6-authored place; that cut is permanently inapplicable, not a future
   item. `EntityEldritchGuardian`'s own doc comment corrected to match.
+- **The "magical-node" / Aura Nodes system** — confirmed dead 2026-09-08 (an
+  earlier session): Thaumcraft 6 explicitly *removed* the TC4-era discrete
+  vis-node system (`TileNode`/`BlockNode`/world-gen-node placement) -
+  confirmed via the decompiled true original (zero such files anywhere) and
+  a community wiki quote ("Starting with Thaumcraft 6, the concept of vis
+  nodes was completely removed... Aura no longer works the same way as in
+  Thaumcraft 4.2 where finding and tinkering with nodes are necessary"). It
+  was replaced entirely by the ambient per-chunk Aura system
+  (`AuraHandler`/`AuraChunk`/`AuraWorld`), already real and ported since the
+  very first session of this project; the real TC6-era equivalent world-gen
+  feature, Primal Crystal Clusters (`BlockCrystal`, 7 real Aspect
+  registrations), is also already real and shipped. This finding was never
+  written into this file at the time, so the 2026-09-15 whole-tree sweep
+  independently re-filed it as "still blocked" (real content, not yet
+  reachable) rather than "confirmed dead" (never real at all) - see
+  Correction #3 above. No action needed; any doc comment still citing a
+  future "Aura Node" target should be corrected to explain this the way
+  `EntityEldritchGuardian`'s was for the dimension, if one is found.
 - **`stairsEldritch`** (block) — confirmed 2026-09-14 by the fresh sweep,
   same dead-field pattern: declared in the true original's own
   `BlocksTC.java` but **never assigned/registered anywhere** (its stair-

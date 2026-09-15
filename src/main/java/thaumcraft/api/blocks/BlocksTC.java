@@ -230,7 +230,10 @@ public final class BlocksTC {
 	 * TrunkPlacer to reproduce faithfully - out of scope here, same "use vanilla's own feature/placer
 	 * instead of the hand-rolled original" precedent as the ore world-gen). Natural placement is a rare
 	 * overworld scatter (see the placed_feature/biome_modifier next to the configured_feature) rather than
-	 * the original's "only near magical nodes" restriction, since the node system isn't ported.
+	 * the original's "only near magical nodes" restriction - confirmed 2026-09-08/2026-09-15 that the
+	 * TC4-era discrete vis-node system this cites was never shipped in real Thaumcraft 6 at all (removed
+	 * entirely in favor of the already-real, already-ported ambient per-chunk Aura system), so this is a
+	 * permanently inapplicable cut, not a future item.
 	 */
 	public static final DeferredBlock<RotatedPillarBlock> logSilverwood = BLOCKS.registerBlock("log_silverwood",
 			RotatedPillarBlock::new,
