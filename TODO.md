@@ -129,10 +129,9 @@ Primal Crystal Clusters - is also already real and shipped. Moved to
   a real Eldritch-biome position, which GameTest's own environment can't
   provide - tested the new `isAdjacentToSolidBlock` helper directly instead.
   Committed `7d0af5a`.
-- **`AidPortal`'s missing `AidPortalCrimson` variant** — cites
-  `EntityCultistPortalLesser` as "hasn't been ported yet"; it's been real
-  since the cinderpearl/cultist-portal-spawn chunk (2026-09-14). Add the
-  3rd real vanilla-block variant alongside `AidPortalEnd`/`AidPortalNether`.
+- ~~**`AidPortal`'s missing `AidPortalCrimson` variant**~~ — closed
+  2026-09-15. Added, registered in `Thaumcraft.java` alongside
+  `AidPortalEnd`/`AidPortalNether`. Committed `51b13fa`.
 - **`TileInfusionMatrix#triggerInstabilityEvent`'s trimmed outcome table**
   — cites `BlockFluxGoo` (real since 2026-09-03) and
   `PotionFluxTaint`/`PotionVisExhaust` (real since the very start of this
