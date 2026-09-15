@@ -1,0 +1,9 @@
+{
+  "feature": "thaumcraft:mound",
+  "placement": [
+    { "type": "minecraft:rarity_filter", "chance": 100 },
+    { "type": "minecraft:in_square" },
+    { "type": "minecraft:heightmap", "heightmap": "WORLD_SURFACE" },
+    { "type": "minecraft:biome" }
+  ]
+}

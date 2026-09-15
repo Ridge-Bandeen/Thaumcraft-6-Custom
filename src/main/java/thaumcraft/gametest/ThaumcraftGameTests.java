@@ -789,7 +789,7 @@ public class ThaumcraftGameTests {
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void realWorldgenFeaturesAreRegistered(GameTestHelper helper) {
 		var placedFeatures = helper.getLevel().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.PLACED_FEATURE);
-		for (String id : new String[] { "crystal_cluster", "cinderpearl", "cultist_portal_spawn", "shimmerleaf", "vishroom" }) {
+		for (String id : new String[] { "crystal_cluster", "cinderpearl", "cultist_portal_spawn", "shimmerleaf", "vishroom", "mound" }) {
 			helper.assertTrue(placedFeatures.get(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.PLACED_FEATURE,
 					net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id))).isPresent(),
 					"the real placed feature '" + id + "' should really have registered - a malformed configured/placed feature JSON would silently fail to");
@@ -869,6 +869,79 @@ public class ThaumcraftGameTests {
 				net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration.INSTANCE);
 		helper.assertTrue(!thaumcraft.common.registry.ThaumcraftFeatures.CULTIST_PORTAL_SPAWN.get().place(blockedContext),
 				"a real solid block where the portal would spawn should really block placement");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.world.MoundFeature} - the true original's own real
+	 * {@code WorldGenMound} surface dungeon, re-derived directly from {@code ThaumcraftWorldGenerator#generateSurface}'
+	 * own {@code random.nextInt(100) == 0} branch. Given a real flat solid platform at the height the true
+	 * original's own real 5-corner validity check expects (one below the checked height, matching real
+	 * {@code precipitationHeight} surface semantics) with real open air above, placing the feature should
+	 * really place both the real static structure template (spot-checked via one of its own real static
+	 * cobblestone blocks) and all 5 real dynamic extras the original placed programmatically: 2 loot-tier
+	 * blocks, a chest carrying the real vanilla {@code minecraft:chests/simple_dungeon} loot table, and 2 real
+	 * monster spawners (Skeleton/Zombie).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void moundFeaturePlacesTheRealStructureAndItsRealDynamicExtras(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		// The feature's own real base position is `context.origin().below(9)` - give it a real flat solid
+		// platform one block below that check height (matching `LocationIsValidSpawn`'s own real semantics)
+		// and real open air everywhere else across the real 19x16x19 footprint the structure needs.
+		BlockPos base = new BlockPos(1, 1, 1);
+		for (int xx = -2; xx <= 20; xx++) {
+			for (int zz = -2; zz <= 20; zz++) {
+				for (int yy = -1; yy <= 20; yy++) {
+					helper.setBlock(base.offset(xx, yy, zz), (yy == -1 || yy == 8) ? Blocks.STONE : Blocks.AIR);
+				}
+			}
+		}
+		BlockPos baseAbs = helper.absolutePos(base);
+		BlockPos surfaceAbs = helper.absolutePos(base.above(9));
+
+		var context = new net.minecraft.world.level.levelgen.feature.FeaturePlaceContext<>(
+				java.util.Optional.empty(), level, level.getChunkSource().getGenerator(), level.getRandom(), surfaceAbs,
+				net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration.INSTANCE);
+		boolean placed = thaumcraft.common.registry.ThaumcraftFeatures.MOUND.get().place(context);
+		helper.assertTrue(placed, "placing the feature over a real clear, real solid-bottomed 19x16x19 footprint should really succeed");
+
+		helper.assertTrue(level.getBlockState(baseAbs.offset(0, 8, 8)).is(Blocks.COBBLESTONE),
+				"the real structure template should really have placed its own real static cobblestone at local (0,8,8)");
+
+		helper.assertTrue(level.getBlockState(baseAbs.offset(9, 1, 7)).getBlock() instanceof thaumcraft.common.blocks.misc.BlockLoot,
+				"the first real loot-tier spot should really hold a real loot crate/urn");
+		helper.assertTrue(level.getBlockState(baseAbs.offset(9, 1, 11)).getBlock() instanceof thaumcraft.common.blocks.misc.BlockLoot,
+				"the second real loot-tier spot should really hold a real loot crate/urn");
+
+		BlockPos chestPos = baseAbs.offset(10, 1, 9);
+		var chestState = level.getBlockState(chestPos);
+		helper.assertTrue(chestState.is(Blocks.CHEST) || chestState.is(Blocks.TRAPPED_CHEST),
+				"the real chest spot should really hold a real chest or trapped chest");
+		var chestBe = level.getBlockEntity(chestPos);
+		helper.assertTrue(chestBe instanceof net.minecraft.world.level.block.entity.ChestBlockEntity chest
+						&& chest.getLootTable() != null
+						&& chest.getLootTable().location().toString().equals("minecraft:chests/simple_dungeon"),
+				"the real chest should really carry the true original's own real minecraft:chests/simple_dungeon loot table");
+
+		BlockPos skeletonSpawnerPos = baseAbs.offset(4, 5, 4);
+		helper.assertTrue(level.getBlockState(skeletonSpawnerPos).is(Blocks.SPAWNER),
+				"the real Skeleton spawner spot should really hold a real spawner block");
+		var skeletonSpawnerBe = level.getBlockEntity(skeletonSpawnerPos);
+		helper.assertTrue(skeletonSpawnerBe instanceof net.minecraft.world.level.block.entity.SpawnerBlockEntity skeletonSpawner
+						&& skeletonSpawner.getSpawner().save(new net.minecraft.nbt.CompoundTag()).getCompound("SpawnData")
+								.getCompound("entity").getString("id").equals("minecraft:skeleton"),
+				"the real spawner at (4,5,4) should really be set to spawn the true original's own real Skeleton");
+
+		BlockPos zombieSpawnerPos = baseAbs.offset(4, 5, 14);
+		helper.assertTrue(level.getBlockState(zombieSpawnerPos).is(Blocks.SPAWNER),
+				"the real Zombie spawner spot should really hold a real spawner block");
+		var zombieSpawnerBe = level.getBlockEntity(zombieSpawnerPos);
+		helper.assertTrue(zombieSpawnerBe instanceof net.minecraft.world.level.block.entity.SpawnerBlockEntity zombieSpawner
+						&& zombieSpawner.getSpawner().save(new net.minecraft.nbt.CompoundTag()).getCompound("SpawnData")
+								.getCompound("entity").getString("id").equals("minecraft:zombie"),
+				"the real spawner at (4,5,14) should really be set to spawn the true original's own real Zombie");
+
 		helper.succeed();
 	}
 

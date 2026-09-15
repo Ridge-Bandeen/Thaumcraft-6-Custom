@@ -13,9 +13,9 @@ import thaumcraft.common.registry.ThaumcraftEntities;
 
 /**
  * Replaces the true original's own real, rare Cultist Portal (Lesser) surface spawn - the other real half of
- * {@code ThaumcraftWorldGenerator#generateSurface} alongside the mound generator (a real, ~2500-line hand-
- * placed block schematic in the original's own decompiled source - genuinely a separate, much larger, low-
- * value-for-effort chunk on its own, deliberately not tackled here). This one's small: a rare surface
+ * {@code ThaumcraftWorldGenerator#generateSurface} alongside the mound generator (see {@link MoundFeature},
+ * shipped separately once its own real static-schematic structure was recognized as mechanical, not
+ * algorithmically complex). This one's small: a rare surface
  * {@link thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser} spawn, and the entity itself was
  * already real and fully shipped (see its own doc comment / {@code cultistPortalLesserActivatesConjuresMinionsAndExplodesOnDeath})
  * with no natural spawn trigger anywhere - this is that trigger.

@@ -7,6 +7,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.common.world.CrystalClusterFeature;
 import thaumcraft.common.world.CultistPortalSpawnFeature;
+import thaumcraft.common.world.MoundFeature;
 
 /** Real modern {@link Feature} registrations - see each feature's own doc comment for what it replaces. */
 public final class ThaumcraftFeatures {
@@ -18,6 +19,9 @@ public final class ThaumcraftFeatures {
 
 	public static final DeferredHolder<Feature<?>, CultistPortalSpawnFeature> CULTIST_PORTAL_SPAWN = FEATURES.register("cultist_portal_spawn",
 			() -> new CultistPortalSpawnFeature(NoneFeatureConfiguration.CODEC));
+
+	public static final DeferredHolder<Feature<?>, MoundFeature> MOUND = FEATURES.register("mound",
+			() -> new MoundFeature(NoneFeatureConfiguration.CODEC));
 
 	private ThaumcraftFeatures() {
 	}
