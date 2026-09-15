@@ -180,15 +180,18 @@ Primal Crystal Clusters - is also already real and shipped. Moved to
   restorations: give `TileTubeBuffer` the same real per-face toggling
   `TileTube`/`TileTubeFilter`/`TileTubeRestrict`/`TileTubeOneway` already
   got, then restore `ItemResonator`'s own missing branch on top.
-- **`Thaumcraft.java`'s loot-bag drop uses a flat 8% chance instead of the
-  real champion-mutation gate** — its own doc comment says so directly:
-  "the real original gate was actually the 'champion' mutation system... the
-  champion attribute it checks never carries a non-default value here, so
-  translating that condition literally would make loot bags permanently
-  undroppable" - stale now that the champion-mod system is real (see the
-  correction note above). Regular vanilla `Monster`s are already on the
-  real champion-eligible list, so this one's a clean restoration with no
-  design fork attached (unlike the boss-suffix items below).
+- ~~**`Thaumcraft.java`'s loot-bag drop uses a flat 8% chance instead of the
+  real champion-mutation gate**~~ — closed 2026-09-15. Restored the true
+  original's own exact `livingDrops` condition: a real champion (id 0-13,
+  excluding Tainted/13), excluding `EntityThaumcraftBoss` (bosses get their
+  own drops), always drops one - no independent chance roll on top. Tier
+  stays a weighted pick since `LivingDropsEvent` genuinely has no modern
+  `lootingLevel` equivalent (confirmed by reading the event class directly).
+  Also caught and fixed a real regression the boss-champion-eligibility
+  commit (`abf93fe`) introduced while restoring this: `ChampionModEvents
+  #onDrops`'s bonus-XP-on-champion-death didn't exclude bosses, so a champion
+  boss would have gotten it despite the true original explicitly excluding
+  `EntityThaumcraftBoss` from that same condition. Committed `9af125c`.
 
 ~~**Real design fork surfaced by the champion-mod correction, decided
 2026-09-15**~~ — closed 2026-09-15. `Thaumcraft#registerChampionAttribute` had
