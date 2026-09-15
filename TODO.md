@@ -57,11 +57,15 @@ deferred until now. Real findings from that audit, triaged:
   gradual break has been silently non-functional in real live gameplay this
   whole time (only ever exercised by tests calling `tick()` directly). Now
   wired into a real `LevelTickEvent.Post` subscriber. Committed `5a6ebb6`.
-- **Real gaps, still queued**: `TileStabilizer`'s real charge-network
-  instability mitigation (the block it pairs with, `stabilizer`, already
-  ships but with no tile - a real, deliberate-at-the-time simplification,
-  now being revisited), and the whole client-only layer (see its own entry
-  below - tracked separately given the real scale difference).
+- ~~**`TileStabilizer`'s real charge-network instability mitigation**~~ —
+  closed 2026-09-15. Real self-charging energy meter, real Flux Rift
+  pacification, and the real `TileInfusionMatrix` ejection redirect all
+  restored - a plain BFS through connected `BlockInlay` positions stands in
+  for the true original's own persistent charge-gradient blockstate search
+  (same real reachability result, no player-visible difference). Committed
+  `0ad4d7a`.
+- **Real gaps, still queued**: the whole client-only layer (see its own
+  entry below - tracked separately given the real scale difference).
 - **Deferred, not queued**: boss multiplayer target-scaling and the floating
   special-item death-drop visual both still route through the unported
   `EntityUtils` - same already-correctly-blocked dependency this file has
