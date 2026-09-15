@@ -158,15 +158,18 @@ Primal Crystal Clusters - is also already real and shipped. Moved to
   tiers.
 - ~~**`GolemProperties`' FLYER leg using `Items.FEATHER`**~~ — closed
   2026-09-15. Now costs a real `BlocksTC.levitator`.
-- **`TileArcaneWorkbench`'s wide-vis draw never actually wired up** — its
-  own doc comment claims the Workbench Charger block "isn't ported, so the
-  menu always draws from this tile's own chunk for now," but
-  `BlockArcaneWorkbenchCharger` (with real backing `AuraHandler#getWideVis`/
-  `#drainWideVis` helpers) has been real and registered for a while -
-  confirmed by direct code read that `TileArcaneWorkbench` itself never
-  actually calls either helper anywhere. The charger block currently opens
-  the same menu and does nothing else. Real, load-bearing gap: the whole
-  point of that block doesn't work yet.
+- ~~**`TileArcaneWorkbench`'s wide-vis draw never actually wired up**~~ —
+  corrected 2026-09-15, not actually a gap: the sweep's grep-based check only
+  looked at `TileArcaneWorkbench.java` itself and found no
+  `getWideVis`/`drainWideVis` calls there, but the real wiring lives in
+  `ArcaneWorkbenchMenu` instead (a different file) - already real, fully
+  working, and already covered by its own real GameTest
+  (`workbenchChargerDrawsVisFromNeighbouringChunksToo`). Only
+  `TileArcaneWorkbench`'s own stale doc comment needed fixing. Committed
+  `897ce21`. Same "check the actual dependent file, not just the one citing
+  the cut" methodology gap as the `RenderEldritchGuardian` duplicate-path
+  lesson above - a single-file grep can miss real wiring that lives one hop
+  away in a different class entirely.
 - **`ItemResonator`'s missing `TileTubeBuffer` branch, and `TileTubeBuffer`'s
   own separate stale CodeChicken note** — checked directly, not assumed:
   `TileTubeBuffer` is real and registered, but its own doc comment still
