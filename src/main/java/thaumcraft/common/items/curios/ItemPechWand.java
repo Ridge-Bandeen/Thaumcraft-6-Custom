@@ -26,10 +26,12 @@ import thaumcraft.api.research.ResearchCategory;
  * the first time it's used, granting the real {@code FOCUSPECH} research too. Otherwise the same shape as
  * {@link ItemCurio} - same knowledge/research API, same "consume unless creative" rule, same sound.
  *
- * <b>Real, currently-unaddressed acquisition gap</b>: the original had no crafting recipe at all - it was
- * exclusively a Pech trade/loot reward ({@code EntityPech}, a ~690-line trading NPC, isn't ported). Shipped
- * here anyway (real function, real research integration) rather than invented a recipe the original never
- * had - register it as a real, if currently creative-only, item and revisit once {@code EntityPech} exists.
+ * <b>Real acquisition path</b>: the original had no crafting recipe at all - it was exclusively a Pech
+ * trade/loot reward. Restored 2026-09-15 (corrected a stale claim that this was still creative-only): a real
+ * {@link thaumcraft.common.entities.monster.EntityPech} now exists, and its own real
+ * {@code TRADE_REWARDS} table already lists this wand as a real tier-5 "thaum/wand" reward, matching the
+ * true original's own {@code ConfigEntities#tradeInventory} placement exactly - nothing needed wiring here,
+ * the doc comment just hadn't caught up to the Pech trading chunk landing.
  *
  * <b>Research gate loosened</b>: the original required {@code BASEAUROMANCY} - nothing grants that key yet
  * (only {@code FIRSTSTEPS} is a hardcoded default, per {@code PlayerKnowledge}'s own doc comment), so keeping

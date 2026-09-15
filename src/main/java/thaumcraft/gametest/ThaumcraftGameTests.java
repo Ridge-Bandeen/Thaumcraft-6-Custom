@@ -7198,8 +7198,8 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
-	// Pech Wand - see ItemPechWand's own doc comment for the loosened research gate and the real
-	// (Pech-trade) acquisition gap that isn't addressed yet.
+	// Pech Wand - see ItemPechWand's own doc comment for the loosened research gate and its real
+	// Pech-trade acquisition path (restored 2026-09-15).
 	// --------------------------------------------------------------------------------------------------
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
@@ -7217,6 +7217,38 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(knowledge.isResearchKnown("FOCUSPECH"), "using the Pech Wand should grant FOCUSPECH");
 		helper.assertTrue(player.getItemInHand(hand).isEmpty(), "a single Pech Wand should be fully consumed after one use");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for the 2026-09-15 correction: a real {@code thaum/wand}-type ({@code getPechType() == 1})
+	 * Pech's own real {@code TRADE_REWARDS} table should really be able to roll a real Pech Wand as a tier-5
+	 * trade reward, matching the true original's own {@code ConfigEntities#tradeInventory} placement - this
+	 * was already real (the doc comment claiming it was still creative-only was stale), not a restoration.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void pechTradeCanRewardARealPechWandAtTierFiveForTheWandType(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos abs = helper.absolutePos(BlockPos.ZERO);
+
+		thaumcraft.common.entities.monster.EntityPech pech =
+				thaumcraft.common.registry.ThaumcraftEntities.PECH.get().create(level);
+		pech.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(pech);
+		pech.setPechType(1);
+
+		boolean foundWand = false;
+		for (int i = 0; i < 300 && !foundWand; i++) {
+			pech.tradeItems.setStackInSlot(0, new ItemStack(net.minecraft.world.item.Items.ENDER_PEARL));
+			for (int slot = 1; slot <= 4; slot++) {
+				pech.tradeItems.setStackInSlot(slot, ItemStack.EMPTY);
+			}
+			pech.generateTradeContents();
+			for (int slot = 1; slot <= 4; slot++) {
+				if (pech.tradeItems.getStackInSlot(slot).is(ItemsTC.pechWand.get())) foundWand = true;
+			}
+		}
+		helper.assertTrue(foundWand, "a real thaum/wand-type Pech should really be able to roll a real Pech Wand as a tier-5 trade reward within a generous number of real trades");
 		helper.succeed();
 	}
 
