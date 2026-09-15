@@ -50,20 +50,32 @@ sweep turned up and what's still unscoped.)*
   plant/ambient blocks. Earlier session notes already confirmed
   `world/plants/` as worldgen-only and out of near-term scope; these are
   likely the same bucket. Low priority.
+- **Essentia tube chains can deadlock on a suction tie** — found 2026-09-14
+  while testing the tube click-precision restoration (below), not a gap in
+  the true original's own registered content but a real bug in this port's
+  own `TileTube#calculateSuction`/`equalizeWithNeighbours` worth tracking.
+  Two real tubes chained straight in a row (source → tube A → tube B →
+  sink) can permanently stall: both tubes adopt the exact same suction
+  value from the same downstream sink, and `equalizeWithNeighbours`'s own
+  pull condition requires the puller's suction to be *strictly greater*
+  than the neighbor's, so a tie never resolves either way. Never caught
+  before because every existing flow test only ever used one tube between
+  a source and a sink. Needs either a small per-hop decay (so suction
+  strictly decreases with distance, matching how real pressure/demand
+  propagation usually works) or an explicit tie-breaker; a real GameTest
+  reproducing the deadlock directly would be the right way to start.
 - ~~**`tubeOneway`**~~ — **closed 2026-09-14, and the "known,
   already-diagnosed blocker" note here was stale.** It claimed Levitator/
   Redstone Relay were *also* still blocked on the same unported CodeChicken
   raytracing (`IndexedCuboid6`/`RayTracer`) - direct inspection found both
   had already shipped, each replacing the original's precise multi-hitbox
-  click UI with a plain `useWithoutItem`-cycles-a-value interaction (see
-  their own doc comments). Only `tubeOneway` itself had never gotten the
-  same treatment. Re-derived the original's real `facing`-based suction/
-  flow restriction directly from its own source and its own in-game
-  research text ("only accept suction from one direction") rather than
-  guessing, added 2 protected hook points to the shared `TileTube` base
-  (matching the already-established Filter/Restrict extension-point
-  pattern), and gave it the same real click-to-cycle substitute. See
-  commit "Give Tube One-way its real directional suction/flow mechanic".
+  click UI with a plain `useWithoutItem`-cycles-a-value interaction. First
+  closed with the same real click-to-cycle substitute (commit "Give Tube
+  One-way its real directional suction/flow mechanic"), then **superseded
+  the same day** once the user asked how CodeChickenLib actually worked -
+  turned out fully replaceable with modern vanilla APIs (no third-party
+  library needed), so the real precise click UI came back for real instead
+  of staying a placeholder. See "Recently closed" below for the full arc.
 - ~~**Player/World/Entity/Chunk/Crafting/Server lifecycle events**~~ —
   **scoped 2026-09-14, and it was a false alarm: this package is already
   done.** The whole-tree sweep flagged it because all 7 original files are
@@ -312,6 +324,41 @@ project memory file; not re-listed here to keep this file scannable.)*
   Thaumonomicon reader's atomic-completion architecture, same as before.
   See commit "Give research its real craft/possession auto-progression
   gates".
+
+- **Real CodeChicken-precision click targeting, no library needed** —
+  closed 2026-09-14, superseding the same day's own earlier "Tube One-way"
+  closure below. User asked directly how CodeChickenLib's raytracer
+  actually worked, suspecting the click-to-cycle placeholders were a real
+  step down from the original - they were. Traced the library to source:
+  `RayTracer`/`IndexedCuboid6` was a hand-rolled per-face-plane ray/box
+  test, needed only because 1.12.2 blocks had exactly one fixed collision/
+  selection box with no way to expose several small distinguishable
+  sub-regions. Modern `VoxelShape` (unions of boxes) + `AABB#clip` (vanilla
+  now ships the exact same ray-vs-box computation natively) make the whole
+  library unnecessary - not a simplification, a capability gap that closed
+  itself. New `CuboidTargeting` (`thaumcraft.common.lib.utils`) is the real
+  replacement: given a player and a list of labeled real-world AABBs,
+  finds whichever one their current line of sight hits nearest, within
+  their real block-interaction reach - about a tenth the code of the
+  original library. Three real devices restored on top of it:
+  - **Redstone Relay**: 2 genuinely separate clickable dials (IN/OUT)
+    restored, replacing "plain click cycles OUT, shift-click cycles IN."
+  - **Levitator**: turned out to be two different shapes conflated into
+    one made-up approximation - its real solid collision (near-full block,
+    inset only on the face it blows air through) and its real small button
+    nub (opposite "control panel" side) are separate again, both
+    re-derived from the true original's own numbers.
+  - **Tube family** (base/Filter/Restrict/Oneway): the big one - real
+    per-face open/close toggling and the real central "cycle facing"
+    button both restored, wand-gated via the already-real
+    `IInteractWithCaster` hook (matching the true original's own actual
+    requirement, unlike Levitator/Redstone Relay which never needed a
+    wand). `facing` moved from `TileTubeOneway` up onto the shared
+    `TileTube` base, matching the true original's own class layout.
+  See commits "Restore real CodeChicken-precision click targeting - no
+  library needed" and "Restore the tube family's real wand-gated per-face
+  click UI". Also surfaced a real, separate, pre-existing bug - see the
+  new "Essentia tube chains can deadlock on a suction tie" entry above.
 
 - **Tube One-way** (`tubeOneway`) — closed 2026-09-14, the last "Needs
   further triage" item with a real, well-defined blocker. See the
