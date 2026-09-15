@@ -20,9 +20,11 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * addresses the same slot ranges.
  *
  * Vis cost checking/spending now happens directly in {@link ArcaneWorkbenchMenu} against the real
- * {@code AuraHandler} (the original routed it through this class's own getAura()/spendAura() methods,
- * which also supported drawing from a wider area via an Arcane Workbench Charger placed above - that
- * block isn't ported, so the menu always draws from this tile's own chunk for now).
+ * {@code AuraHandler} (the original routed it through this class's own getAura()/spendAura() methods) -
+ * including the original's own wider-area draw via a real {@code BlockArcaneWorkbenchCharger} placed
+ * above ({@link ArcaneWorkbenchMenu}'s own {@code hasCharger}/{@code AuraHandler#getWideVis}/
+ * {@code #drainWideVis}), real and fully wired since the charger block shipped - this class itself never
+ * needed to call those helpers directly, {@link ArcaneWorkbenchMenu} already does.
  */
 public class TileArcaneWorkbench extends BaseContainerBlockEntity {
 
