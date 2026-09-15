@@ -4613,6 +4613,66 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for the 2026-09-15 restoration of bellows-amplified suction and the paired real 3-state
+	 * "choke" throttle (see {@link thaumcraft.common.tiles.essentia.TileTubeBuffer}'s own doc comment for why
+	 * they were restored together).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeBufferSuctionIsBellowsAmplifiedAndRealSneakClickChokesItThreeWays(GameTestHelper helper) {
+		BlockPos bufferPos = new BlockPos(4, 3, 4);
+		helper.setBlock(bufferPos, BlocksTC.tubeBuffer.get());
+		// A real IEssentiaTransport neighbor at UP - onCasterRightClick only ever registers a real clickable
+		// nub for a direction with one, matching the true original's own canConnectSide-gated registration
+		// (see TileTube's own doc comment) - without it there's nothing for the sneak-click below to hit.
+		helper.setBlock(bufferPos.above(), TEST_ESSENTIA_SOURCE_BLOCK.get());
+		BlockPos bufferAbs = helper.absolutePos(bufferPos);
+		thaumcraft.common.tiles.essentia.TileTubeBuffer buffer = helper.getBlockEntity(bufferPos);
+
+		helper.assertTrue(buffer.getSuctionAmount(net.minecraft.core.Direction.DOWN) == 1,
+				"an unchoked buffer with no real bellows nearby should really report the real minimal suction of 1, found " + buffer.getSuctionAmount(net.minecraft.core.Direction.DOWN));
+
+		BlockPos bellowsPos = bufferPos.relative(net.minecraft.core.Direction.EAST);
+		helper.setBlock(bellowsPos, BlocksTC.bellows.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.WEST)
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED, true));
+		for (int i = 0; i < 25; i++) {
+			thaumcraft.common.tiles.essentia.TileTubeBuffer.tick(helper.getLevel(), bufferAbs, helper.getBlockState(bufferPos), buffer);
+		}
+		int amplified = buffer.getSuctionAmount(net.minecraft.core.Direction.DOWN);
+		helper.assertTrue(amplified > 1, "a real nearby bellows should really amplify the buffer's own real suction well past the base value of 1, found " + amplified);
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		ItemStack caster = new ItemStack(ItemsTC.casterBasic.get());
+		player.setPos(bufferAbs.getX() + 0.5, bufferAbs.getY() + 2.5, bufferAbs.getZ() + 0.5);
+		player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES,
+				new Vec3(bufferAbs.getX() + 0.5, bufferAbs.getY() + 0.5, bufferAbs.getZ() + 0.5));
+		player.setShiftKeyDown(true);
+
+		// Sneak-click 1: choked to forced-MIN_SUCTION (state 1) - back down to 1 despite the real bellows.
+		boolean handled = buffer.onCasterRightClick(helper.getLevel(), caster, player, bufferAbs, net.minecraft.core.Direction.UP, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(handled, "a real Caster sneak-click precisely on the UP nub should really be handled");
+		helper.assertTrue(buffer.getChokedSide(net.minecraft.core.Direction.UP) == 1, "the first real sneak-click should really cycle the UP side to real choke state 1");
+		helper.assertTrue(buffer.getSuctionAmount(net.minecraft.core.Direction.UP) == 1,
+				"real choke state 1 should really force suction back down to 1 even with a real bellows nearby, found " + buffer.getSuctionAmount(net.minecraft.core.Direction.UP));
+
+		// Sneak-click 2: choked fully blocked (state 2) - real 0 suction.
+		buffer.onCasterRightClick(helper.getLevel(), caster, player, bufferAbs, net.minecraft.core.Direction.UP, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(buffer.getChokedSide(net.minecraft.core.Direction.UP) == 2, "the second real sneak-click should really cycle the UP side to real choke state 2");
+		helper.assertTrue(buffer.getSuctionAmount(net.minecraft.core.Direction.UP) == 0,
+				"real choke state 2 should really fully block suction, found " + buffer.getSuctionAmount(net.minecraft.core.Direction.UP));
+
+		// Sneak-click 3: wraps back around to unchoked (state 0) - real bellows-amplified suction again.
+		buffer.onCasterRightClick(helper.getLevel(), caster, player, bufferAbs, net.minecraft.core.Direction.UP, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(buffer.getChokedSide(net.minecraft.core.Direction.UP) == 0, "the third real sneak-click should really wrap the real choke cycle back to state 0");
+		helper.assertTrue(buffer.getSuctionAmount(net.minecraft.core.Direction.UP) == amplified,
+				"real choke state 0 should really restore the real bellows-amplified suction, found " + buffer.getSuctionAmount(net.minecraft.core.Direction.UP));
+
+		helper.assertTrue(buffer.isSideOpen(net.minecraft.core.Direction.UP),
+				"real choke cycling should really never touch the real independent open/close toggle");
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Essentia Input/Output - real long-range bridges between a tube network and a distant IAspectSource
 	// (a jar, altar, etc.), NOT a physical-inventory device despite the true original's own thematic
@@ -10609,6 +10669,42 @@ public class ThaumcraftGameTests {
 		}
 		thaumcraft.common.blocks.world.taint.TaintHelper.removeTaintSeed(level, fringeSeedPos);
 		helper.assertTrue(sproutedSeed, "a real taint_soil patch at a real seed's own fringe with enough real flux should really eventually sprout a real new taint seed");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for the 2026-09-15 restoration: breaking a real fully-grown (GROWTH3) taint fibre with a
+	 * real Fortune III tool should really drop its real bonus Flux Crystal Essence far more often than a bare
+	 * hand does, matching the true original's own {@code rand.nextInt(5) <= fortune} formula (bare hand: 1/5;
+	 * Fortune III: 4/5).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void taintFibreFortuneScalesItsRealBonusFluxCrystalDropChance(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos floorRel = new BlockPos(4, 3, 4);
+		helper.setBlock(floorRel, Blocks.STONE);
+		BlockPos fibreRel = floorRel.above();
+		BlockPos fibreAbs = helper.absolutePos(fibreRel);
+
+		ServerPlayer player = spawnCasterAt(helper, fibreAbs.above());
+		net.minecraft.world.item.ItemStack fortuneTool = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.NETHERITE_PICKAXE);
+		fortuneTool.enchant(level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+				.getOrThrow(net.minecraft.world.item.enchantment.Enchantments.FORTUNE), 3);
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, fortuneTool);
+
+		int drops = 0;
+		for (int i = 0; i < 60; i++) {
+			level.setBlockAndUpdate(fibreAbs, BlocksTC.taintFibre.get().defaultBlockState()
+					.setValue(thaumcraft.common.blocks.world.taint.BlockTaintFibre.GROWTH3, true));
+			level.getBlockState(fibreAbs).getBlock().playerWillDestroy(level, fibreAbs, level.getBlockState(fibreAbs), player);
+			for (net.minecraft.world.entity.item.ItemEntity ie : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new AABB(fibreAbs).inflate(2))) {
+				if (ie.getItem().is(ItemsTC.crystalEssence.get())) {
+					drops++;
+					ie.discard();
+				}
+			}
+		}
+		helper.assertTrue(drops >= 30, "a real Fortune III tool should really push the bonus Flux Crystal drop rate well above the real 1/5 bare-hand baseline (60 attempts), got " + drops);
 		helper.succeed();
 	}
 

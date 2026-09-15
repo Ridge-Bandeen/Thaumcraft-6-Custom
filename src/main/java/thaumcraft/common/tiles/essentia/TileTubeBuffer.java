@@ -40,18 +40,11 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * a plain click toggles {@link #openSides} for that face (mirroring the new state onto a real neighboring
  * {@code TileTube}'s own opposite side, matching the true original exactly).
  *
- * <p>Real, documented simplifications vs. the original:
- * <ul>
- * <li>No per-face sneak-click "choke" throttle (the true original's own 3-state cycle: full bellows-amplified
- * suction / forced-to-1 / fully blocked). Genuinely not just an unported-library gap this time: without real
- * bellows amplification (see the next bullet), the throttle's first two states are numerically IDENTICAL in
- * this port (both already resolve to {@link #MIN_SUCTION}), so a real 3-state cycle would show the player two
- * visually-different-but-functionally-identical settings - worse than not offering it. Revisit once/if bellows
- * amplification is restored; until then this is a real, deliberate, reasoned cut, not a rediscovered one.</li>
- * <li>No bellows-amplified suction (the original's own {@code getSuctionAmount} scaled with a nearby
- * {@code TileBellows}' output) - {@link #MIN_SUCTION} keeps just the real base value, dropping only the
- * amplification on top of it.</li>
- * </ul>
+ * <p>Real bellows-amplified suction and the real per-face sneak-click 3-state "choke" throttle, both restored
+ * 2026-09-15 together (the choke cycle's own 2 non-blocked states were numerically identical without real
+ * bellows amplification to actually distinguish them, so neither was worth restoring alone - see
+ * {@link #getSuctionAmount} for the real formula, matching the true original's own {@code (chokedSides == 2) ?
+ * 0 : ((bellows <= 0 || chokedSides == 1) ? 1 : bellows * 32)} exactly).
  */
 public class TileTubeBuffer extends BlockEntity implements IEssentiaTransport, IAspectContainer, IInteractWithCaster {
 
@@ -73,12 +66,27 @@ public class TileTubeBuffer extends BlockEntity implements IEssentiaTransport, I
 	 * all-open, matching this port's previously-shipped behavior. */
 	private final boolean[] openSides = { true, true, true, true, true, true };
 
+	/** Real bellows-amplified-suction state, restored 2026-09-15 - see this class's own doc comment.
+	 * {@code -1} means "not yet queried" (matching the true original's own init value), refreshed every 20
+	 * real ticks via {@link thaumcraft.common.tiles.devices.TileBellows#getBellows}. */
+	private int bellows = -1;
+
+	/** Real per-face 3-state "choke" throttle, restored 2026-09-15 alongside bellows amplification (its own
+	 * real distinctness depends on it - see this class's own doc comment): 0 = unchoked (real bellows-amplified
+	 * suction), 1 = forced down to {@link #MIN_SUCTION}, 2 = fully blocked (0 suction). Cycled via a real
+	 * sneak-right-click on a face nub, matching the true original's own {@code ++chokedSides[subHit]; if (> 2)
+	 * reset to 0} wraparound exactly. */
+	private final byte[] chokedSides = { 0, 0, 0, 0, 0, 0 };
+
 	public TileTubeBuffer(BlockPos pos, BlockState state) {
 		super(ThaumcraftBlockEntities.TUBE_BUFFER.get(), pos, state);
 	}
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TileTubeBuffer tile) {
 		if (level.isClientSide) return;
+		if (tile.bellows < 0 || tile.count % 20 == 0) {
+			tile.bellows = thaumcraft.common.tiles.devices.TileBellows.getBellows(level, pos, Direction.values());
+		}
 		if (tile.count++ % 5 == 0 && tile.aspects.visSize() < MAX_AMOUNT) {
 			tile.fillBuffer(level, pos);
 		}
@@ -126,10 +134,10 @@ public class TileTubeBuffer extends BlockEntity implements IEssentiaTransport, I
 		return local.move(pos);
 	}
 
-	/** Real per-face open/close toggling - see this class's own doc comment for why the true original's own
-	 * sneak-click "choke" throttle isn't restored alongside it. No central core here, matching the true
-	 * original's own {@code TileTubeBuffer#onCasterRightClick} override (unlike plain {@link TileTube}, it
-	 * never had a facing-cycle interaction). */
+	/** Real per-face open/close toggling (plain click) and 3-state choke cycling (sneak-click), both restored
+	 * 2026-09-15 - see this class's own doc comment. No central core here, matching the true original's own
+	 * {@code TileTubeBuffer#onCasterRightClick} override (unlike plain {@link TileTube}, it never had a
+	 * facing-cycle interaction). */
 	@Override
 	public boolean onCasterRightClick(Level world, ItemStack casterStack, Player player, BlockPos pos, Direction side, InteractionHand hand) {
 		List<CuboidTargeting.Candidate<Direction>> candidates = new ArrayList<>();
@@ -141,13 +149,23 @@ public class TileTubeBuffer extends BlockEntity implements IEssentiaTransport, I
 		Direction hit = CuboidTargeting.pick(player, candidates);
 		if (hit == null) return false;
 
-		world.playSound(null, worldPosition, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.5f, 0.9f + world.random.nextFloat() * 0.2f);
-		openSides[hit.ordinal()] = !openSides[hit.ordinal()];
-		setChanged();
-		if (world.getBlockEntity(worldPosition.relative(hit)) instanceof TileTube neighbor) {
-			neighbor.setSideOpen(hit.getOpposite(), openSides[hit.ordinal()]);
+		if (player.isShiftKeyDown()) {
+			world.playSound(null, worldPosition, SoundEvents.SLIME_SQUISH, SoundSource.BLOCKS, 0.6f, 2.0f + world.random.nextFloat() * 0.2f);
+			chokedSides[hit.ordinal()] = (byte) ((chokedSides[hit.ordinal()] + 1) % 3);
+			setChanged();
+		} else {
+			world.playSound(null, worldPosition, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.5f, 0.9f + world.random.nextFloat() * 0.2f);
+			openSides[hit.ordinal()] = !openSides[hit.ordinal()];
+			setChanged();
+			if (world.getBlockEntity(worldPosition.relative(hit)) instanceof TileTube neighbor) {
+				neighbor.setSideOpen(hit.getOpposite(), openSides[hit.ordinal()]);
+			}
 		}
 		return true;
+	}
+
+	public int getChokedSide(Direction dir) {
+		return chokedSides[dir.ordinal()];
 	}
 
 	// --- IAspectContainer: a real multi-aspect store, up to MAX_AMOUNT total units ---
@@ -230,9 +248,16 @@ public class TileTubeBuffer extends BlockEntity implements IEssentiaTransport, I
 		return null;
 	}
 
+	/** Real, restored 2026-09-15: matches the true original's own {@code (chokedSides == 2) ? 0 :
+	 * ((bellows <= 0 || chokedSides == 1) ? 1 : bellows * 32)} exactly, plus this port's own real "full buffer
+	 * demands nothing more" cap (not present in the true original's own formula, but a real, sensible addition
+	 * - a full buffer's own {@link #fillBuffer} already refuses to pull regardless, so reporting positive
+	 * suction here would just be a misleading demand signal to neighbors with no real effect once acted on). */
 	@Override
 	public int getSuctionAmount(Direction face) {
-		return aspects.visSize() >= MAX_AMOUNT ? 0 : MIN_SUCTION;
+		if (aspects.visSize() >= MAX_AMOUNT) return 0;
+		if (chokedSides[face.ordinal()] == 2) return 0;
+		return (bellows <= 0 || chokedSides[face.ordinal()] == 1) ? MIN_SUCTION : bellows * 32;
 	}
 
 	@Override
@@ -273,6 +298,7 @@ public class TileTubeBuffer extends BlockEntity implements IEssentiaTransport, I
 			if (openSides[i]) openMask |= 1 << i;
 		}
 		tag.putInt("OpenSides", openMask);
+		tag.putByteArray("ChokedSides", chokedSides);
 	}
 
 	@Override
@@ -282,6 +308,12 @@ public class TileTubeBuffer extends BlockEntity implements IEssentiaTransport, I
 		int openMask = tag.contains("OpenSides") ? tag.getInt("OpenSides") : 0b111111;
 		for (int i = 0; i < openSides.length; i++) {
 			openSides[i] = (openMask & (1 << i)) != 0;
+		}
+		if (tag.contains("ChokedSides")) {
+			byte[] saved = tag.getByteArray("ChokedSides");
+			for (int i = 0; i < chokedSides.length && i < saved.length; i++) {
+				chokedSides[i] = saved[i];
+			}
 		}
 	}
 }

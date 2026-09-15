@@ -52,16 +52,15 @@ import thaumcraft.common.registry.ThaumcraftMobEffects;
  *
  * Real growth-death cycle via {@link #randomTick} (real {@code isRandomlyTicking()}): a bare, no-growth
  * fibre fully hemmed in by other taint blocks dies immediately; any fibre outside its seed's real range
- * dies; otherwise it calls the real, now-unblocked {@link TaintHelper#spreadFibres}. Real Flux Taint
+ * dies; otherwise it calls the real, now-unblocked {@link TaintHelper#spreadFibres} (real leaf-touch/hemmed-
+ * in-taint/taint-seed-edge branches all restored there - see that class's own doc comment). Real Flux Taint
  * potion-effect chance on non-undead entities that walk across it ({@link #stepOn}), real growth-tier light
  * levels, and a real fortune-flavored Flux Crystal drop (via {@link ItemsTC#crystalEssence} tagged with
- * {@link Aspect#FLUX}, replacing the original's own dedicated {@code ConfigItems.FLUX_CRYSTAL} item) plus a
- * real aura-pollution burst when a fully-grown ({@code GROWTH3}) fibre is broken by a player.
- *
- * Real, documented cuts vs the original: no leaf-touching "grow into {@code taintFeature}" branch (that
- * block isn't ported yet - a later sub-chunk of this same arc), and the original's own fortune-scaled drop
- * odds are simplified to a flat 20% chance (fortune level isn't read from the breaking tool) - both real,
- * minor simplifications, not core-mechanic losses.
+ * {@link Aspect#FLUX}, replacing the original's own dedicated {@code ConfigItems.FLUX_CRYSTAL} item) - real
+ * fortune-scaled odds, restored 2026-09-15 (reads the real breaking player's own held-item Fortune level via
+ * {@code EnchantmentHelper#getItemEnchantmentLevel}, matching the true original's own {@code rand.nextInt(5)
+ * <= fortune} exactly) - plus a real aura-pollution burst when a fully-grown ({@code GROWTH3}) fibre is
+ * broken by a player.
  */
 public class BlockTaintFibre extends Block implements ITaintBlock {
 
@@ -253,7 +252,11 @@ public class BlockTaintFibre extends Block implements ITaintBlock {
 	@Override
 	public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
 		if (!level.isClientSide && state.getValue(GROWTH3)) {
-			if (level.random.nextInt(5) == 0) {
+			int fortune = level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+					.get(net.minecraft.world.item.enchantment.Enchantments.FORTUNE)
+					.map(holder -> net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(holder, player.getMainHandItem()))
+					.orElse(0);
+			if (level.random.nextInt(5) <= fortune) {
 				ItemStack crystal = new ItemStack(ItemsTC.crystalEssence.get());
 				((thaumcraft.common.items.resources.ItemCrystalEssence) crystal.getItem()).setAspects(crystal, new AspectList().add(Aspect.FLUX, 1));
 				popResource(level, pos, crystal);
