@@ -114,13 +114,11 @@ Primal Crystal Clusters - is also already real and shipped. Moved to
   (unloading, `/kill`, etc.). A real, minor, still-open hardening item, not
   the load-bearing gap it was originally filed as - documented in
   `TaintHelper`'s own doc comment, not re-listed as a top-level entry here.
-- **`EntityCultistKnight`'s real curio bonus drop + third targeting entry**
-  — cites `ItemsTC.curio` and `EntityEldritchGuardian` as both "not real in
-  this port yet." Both are real and heavily used elsewhere now
-  (`MobDeathDropEvents` already has its own real curio-drop mechanic for
-  cultists elsewhere; `EntityEldritchGuardian` is fully shipped). Restore
-  the knight's own research-gated bonus curio chance and its real
-  nearest-Guardian targeting entry.
+- ~~**`EntityCultistKnight`'s real curio bonus drop + third targeting
+  entry**~~ — closed 2026-09-15. The curio drop turned out to already be
+  real (`MobDeathDropEvents` already covers every `EntityCultist` subtype,
+  stale doc comment only); restored the real `EntityEldritchGuardian`
+  targeting entry. Committed `157f794`.
 - ~~**`EntityCultist#isAlliedTo`'s missing `EntityCultistLeader` half**~~ —
   closed 2026-09-15. Restored, matching the true original's own
   `isOnSameTeam` exactly. Committed `bd2881c`.
