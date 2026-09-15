@@ -14,11 +14,117 @@ index.
 
 ## Confirmed real gaps (actionable)
 
-**Empty as of 2026-09-14.** The last entry here, label dyeing, closed the
-same day it was scoped - see "Recently closed" below. Each entry that ever
-lived here was genuinely real, registered content in the true original with
-no equivalent anywhere in the current port (verified by direct source read,
-not just a name diff); none are currently outstanding.
+**Sweep of 2026-09-15**: the user asked to re-check every "isn't ported yet"/
+"not real yet"-style doc comment across the whole `src/main/java` tree (51
+files matched) for staleness, the same pattern that found `effectSap`'s own
+stale reasoning - per the user's own standing directive, see
+[[thaumcraft-port-autonomy]]. Most of the 51 remain genuinely, correctly
+blocked (mostly on the large unported `EntityUtils`/`InventoryUtils` utility
+classes, or on subsystems with no evidence of landing since - Baubles/Curios,
+the champion-mod system, the custom Eldritch dimension, the magical-node
+system, the Alembic-adjacent config-book system). The entries below are the
+real ones whose own cited blocker has since resolved, or that were simply
+never picked up once reachable - each cross-checked directly against current
+`build.gradle`/registry state, not assumed from the doc comment alone.
+
+- **`BlockTaintFibre`'s leaf-touching "grow into `taintFeature`" branch** —
+  its own doc comment cites `BlockTaintFeature` as "not ported yet," but
+  it's been real and registered since the taint-terrain arc closed
+  (2026-09-03). Restore the branch.
+- **`TaintHelper`'s self-pruning stale `taintSeeds` entries** — cites
+  `EntityTaintSeed` as the blocker; that entity has been real since
+  2026-09-03, and a later memory note even flagged this exact follow-up as
+  still open at the time ("the self-pruning itself wasn't added back this
+  chunk"). `addTaintSeed`/`removeTaintSeed` still need real pairing so
+  dead entries don't linger forever.
+- **`EntityCultistKnight`'s real curio bonus drop + third targeting entry**
+  — cites `ItemsTC.curio` and `EntityEldritchGuardian` as both "not real in
+  this port yet." Both are real and heavily used elsewhere now
+  (`MobDeathDropEvents` already has its own real curio-drop mechanic for
+  cultists elsewhere; `EntityEldritchGuardian` is fully shipped). Restore
+  the knight's own research-gated bonus curio chance and its real
+  nearest-Guardian targeting entry.
+- **`EntityCultist#isAlliedTo`'s missing `EntityCultistLeader` half** —
+  cites `EntityCultistLeader` as "isn't ported yet"; it's been real since
+  the boss arc shipped. Regular cultists and their own leader should
+  really recognize each other as allies.
+- **`EntityTaintacle#spawnTentacles`'s Eldritch-biome-gated extra fibre
+  placement** — cites the whole custom Eldritch *biome* as unported; it's
+  real since World generation part 2 (2026-09-14, this same broader
+  session). Restore the `thaumcraft:eldritch`-gated extra taint-fibre
+  placement.
+- **`AidPortal`'s missing `AidPortalCrimson` variant** — cites
+  `EntityCultistPortalLesser` as "hasn't been ported yet"; it's been real
+  since the cinderpearl/cultist-portal-spawn chunk (2026-09-14). Add the
+  3rd real vanilla-block variant alongside `AidPortalEnd`/`AidPortalNether`.
+- **`TileInfusionMatrix#triggerInstabilityEvent`'s trimmed outcome table**
+  — cites `BlockFluxGoo` (real since 2026-09-03) and
+  `PotionFluxTaint`/`PotionVisExhaust` (real since the very start of this
+  port, renamed `MobEffectFluxTaint`/`MobEffectVisExhaust`) as unported
+  outcomes to skip. Both are real now - only the real
+  `TileStabilizer`/charge-network item-redirect half of this same doc
+  comment remains genuinely unbuilt (`TileStabilizer.java` itself is still
+  the stale 1.12.2 leftover, confirmed via `build.gradle`; `BlockInlay` is
+  real but serves an unrelated real purpose - a plain passive stabilizer,
+  not the charge-network conduit the original doc comment was picturing,
+  worth a doc fix on top of the real restoration).
+- **`ItemPechWand`'s real acquisition path** — its own doc comment already
+  calls this out directly ("real, currently-unaddressed acquisition gap"),
+  citing `EntityPech` as unported; Pech has been real (with a working
+  Pech Trade GUI, `GuiPechTrade`) for a while now. Give the wand a real
+  trade/loot source instead of staying creative-only.
+- **`AspectList(ItemStack)`'s dead constructor stub** — its own `TODO:`
+  comment says it needs "the full ThaumcraftApi/golems/capabilities/
+  research chain (not yet ported)"; the real implementation
+  (`ThaumcraftObjectTags#getObjectTags`) shipped this exact session
+  (the Liquid Death chunk, 2026-09-14) for a different consumer (Smelter/
+  Alembic) and was never wired back into this older stub. Currently
+  dormant, not actively wrong today - checked directly, nothing in the
+  real modern port calls this constructor yet (only the stale, uncompiled
+  1.12.2 `ConfigAspects`/`ConfigRecipes` leftover files do) - but it's a
+  real, easy, now-possible fix (`this.aspects.putAll(ThaumcraftObjectTags
+  .getObjectTags(stack).aspects)`, roughly) worth doing before anything
+  new starts relying on it and silently getting an empty list instead.
+- **`ItemsTC.TIER_PRIMAL`'s stale repair ingredient** — its own doc
+  comment claims "same real Thaumium-ingot repair substitution as
+  `TIER_VOID`/`TIER_CRIMSON_BLADE` above," but both of those were already
+  fixed to the real `ingotVoid` (their own doc comments say so directly) -
+  only `TIER_PRIMAL` itself still repairs with `ingotThaumium`. One-line
+  fix plus a doc-comment correction.
+- **`GolemProperties`' FLYER leg using `Items.FEATHER`** — cites
+  `BlocksTC.levitator` as "isn't ported yet"; it's been real (and recently
+  got real click-precision work) since the CodeChicken-restoration arc.
+  Swap the substitute back to the real item.
+- **`TileArcaneWorkbench`'s wide-vis draw never actually wired up** — its
+  own doc comment claims the Workbench Charger block "isn't ported, so the
+  menu always draws from this tile's own chunk for now," but
+  `BlockArcaneWorkbenchCharger` (with real backing `AuraHandler#getWideVis`/
+  `#drainWideVis` helpers) has been real and registered for a while -
+  confirmed by direct code read that `TileArcaneWorkbench` itself never
+  actually calls either helper anywhere. The charger block currently opens
+  the same menu and does nothing else. Real, load-bearing gap: the whole
+  point of that block doesn't work yet.
+- **`ItemResonator`'s missing `TileTubeBuffer` branch, and `TileTubeBuffer`'s
+  own separate stale CodeChicken note** — checked directly, not assumed:
+  `TileTubeBuffer` is real and registered, but its own doc comment still
+  says "no per-face open/close toggling... both built on the same
+  CodeChicken sub-hit raytracing library already dropped for `TileTube`
+  itself" - stale, written before the CodeChicken-precision restoration arc
+  gave the rest of the tube family real per-face click UI back via
+  `CuboidTargeting` (no third-party library needed). Two real, related
+  restorations: give `TileTubeBuffer` the same real per-face toggling
+  `TileTube`/`TileTubeFilter`/`TileTubeRestrict`/`TileTubeOneway` already
+  got, then restore `ItemResonator`'s own missing branch on top.
+
+*(A few lower-priority real gaps surfaced by the same sweep that were never
+blocked by anything, just not yet picked up - not stale cuts, just open:
+`BlockTaint#canFallBelow`'s wood-log-proximity check (a 3x3x3 scan, real but
+minor); `GolemInteractionHelper`'s pre-placement collision nudge (real but
+minor, current fallback already fails cleanly); `ModelTaintacle`/
+`ModelTaintSeed`'s `flailIntensity`/`attackAnim` post-attack animation spike
+(needs a small synced float added to `EntityTaintacle`/`EntityTaintSeed`
+themselves, purely cosmetic payoff). Listed here for completeness, not
+elevated to their own top-level entries.)*
 
 *(`BlocksTC`/`ItemsTC` registries themselves are confirmed complete as of
 2026-09-14 - **three** field-name sweeps in a row now (most recent one
