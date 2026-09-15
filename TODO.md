@@ -49,16 +49,23 @@ shipped), the magical-node system (confirmed: no such system exists; the one
 is still the stale, uncompiled 1.12.2 leftover). Those 4 really are still
 correctly blocked - only champion-mod was a real miss.
 
-- **`BlockTaintFibre`'s leaf-touching "grow into `taintFeature`" branch** —
-  its own doc comment cites `BlockTaintFeature` as "not ported yet," but
-  it's been real and registered since the taint-terrain arc closed
-  (2026-09-03). Restore the branch.
-- **`TaintHelper`'s self-pruning stale `taintSeeds` entries** — cites
-  `EntityTaintSeed` as the blocker; that entity has been real since
-  2026-09-03, and a later memory note even flagged this exact follow-up as
-  still open at the time ("the self-pruning itself wasn't added back this
-  chunk"). `addTaintSeed`/`removeTaintSeed` still need real pairing so
-  dead entries don't linger forever.
+- ~~**`BlockTaintFibre`'s leaf-touching "grow into `taintFeature`" branch**~~
+  — closed 2026-09-15, and turned out much bigger once actually
+  investigated: `TaintHelper#spreadFibres` was missing 3 whole real
+  branches, not just leaf-touch (hemmed-in-taint conversion, taint-seed-
+  edge spawn too - all 3 target dependency sets shipped together in the
+  2026-09-03 taint-terrain arc). Also found and fixed a real, separate bug
+  along the way: `EntityTaintSeed`/`EntityTaintSeedPrime` were both missing
+  their real hitbox override. See "Recently closed" below.
+- ~~**`TaintHelper`'s self-pruning stale `taintSeeds` entries**~~ — checked
+  2026-09-15, real but downgraded, not closed as originally scoped: turns
+  out `EntityTaintSeed`'s own real lifecycle (calls `removeTaintSeed` on
+  death, re-registers via `addTaintSeed` every 1200 ticks) already
+  substantially covers this in practice - a stale entry can only really
+  outlive its seed if the entity is removed some other way entirely
+  (unloading, `/kill`, etc.). A real, minor, still-open hardening item, not
+  the load-bearing gap it was originally filed as - documented in
+  `TaintHelper`'s own doc comment, not re-listed as a top-level entry here.
 - **`EntityCultistKnight`'s real curio bonus drop + third targeting entry**
   — cites `ItemsTC.curio` and `EntityEldritchGuardian` as both "not real in
   this port yet." Both are real and heavily used elsewhere now
@@ -763,6 +770,29 @@ project memory file; not re-listed here to keep this file scannable.)*
   true original always had it), so other Eldritch mobs never recognized it
   as one of their own. See commit "Give effect_sap its real port and
   restore 3 real cuts it was blocking".
+
+- **`TaintHelper#spreadFibres`'s full real branch structure** — closed
+  2026-09-15. Investigating the sweep's own "leaf-touch" candidate found
+  the true original's real method had 3 whole branches missing, not one:
+  leaf-touch (sprout `taint_feature` near a real touching `taint_log`),
+  hemmed-in-taint conversion (nearby log/mushroom-ish/ground-ish/rock-ish
+  surfaces convert into `taint_log`/`taint_crust`/`taint_soil`/
+  `taint_rock` once really surrounded by taint), and taint-seed-edge spawn
+  (an existing soil/rock patch at a real seed's own spread-radius fringe
+  can sprout a whole new `EntityTaintSeed`). All 3 target dependency sets
+  shipped together in the 2026-09-03 taint-terrain arc; nobody had gone
+  back to wire the rest of the method up once they landed. New
+  `BlockTaintFibre#isHemmedByTaint`. Real, deliberate simplification: the
+  original's own 1.12.2 `Material`-based surface classification (no modern
+  equivalent) is approximated with real vanilla block tags/identity checks
+  of the same rough shape. Found and fixed a real, separate bug while
+  chasing a stubborn test flake: `EntityTaintSeed`/`EntityTaintSeedPrime`
+  were both missing their real hitbox override (`setSize(1.5, 1.25)`/
+  `(2.0, 2.0)` in the true original), silently running on vanilla
+  `Monster`'s own default dimensions instead - never caught before because
+  nothing had tried to spawn one naturally until this restoration's own new
+  test did. See commit "Give TaintHelper#spreadFibres its full real branch
+  structure back".
 
 ## Fresh sweep, 2026-09-14 part 1 (full re-diff of `BlocksTC.java`/`ItemsTC.java`)
 
