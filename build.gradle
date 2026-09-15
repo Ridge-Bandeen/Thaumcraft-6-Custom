@@ -520,6 +520,9 @@ sourceSets {
             include 'thaumcraft/common/items/casters/foci/FocusMediumCloud.java'
             include 'thaumcraft/common/items/casters/ItemFocusSanctuary.java'
 
+            include 'thaumcraft/common/items/casters/foci/FocusMediumPlan.java'
+            include 'thaumcraft/common/items/casters/foci/FocusEffectExchange.java'
+
             include 'thaumcraft/common/registry/ThaumcraftResearchCategories.java'
             include 'thaumcraft/common/registry/ThaumcraftTreeGrowers.java'
             include 'thaumcraft/common/items/curios/ItemCurio.java'

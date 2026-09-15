@@ -16,6 +16,7 @@ import net.minecraft.world.level.Level;
 import thaumcraft.api.casters.FocusEngine;
 import thaumcraft.api.casters.FocusPackage;
 import thaumcraft.api.casters.ICaster;
+import thaumcraft.api.casters.IFocusBlockPicker;
 import thaumcraft.api.casters.IFocusElement;
 import thaumcraft.api.casters.IInteractWithCaster;
 import thaumcraft.api.items.IVisDiscountGear;
@@ -33,10 +34,10 @@ import thaumcraft.common.world.aura.AuraHandler;
  * block of chunks to draw vis from). Simplified here to always draw from the wand's own chunk only -
  * restore the wider search radii if/when it matters.
  *
- * Also dropped for this pass: architect/block-highlighting (IArchitect), dust triggers, block-picker foci -
- * all real features, just not part of the minimal "does casting work" slice. The caster-trigger-on-
- * right-clicked-block system (the original's {@code onItemUseFirst}) IS real now, via {@link #onItemUseFirst}
- * below - see that method's own doc comment.
+ * Also dropped for this pass: architect/block-highlighting (IArchitect), dust triggers - both real features,
+ * just not part of the minimal "does casting work" slice. The caster-trigger-on-right-clicked-block system
+ * (the original's {@code onItemUseFirst}) IS real now, via {@link #onItemUseFirst} below - see that method's
+ * own doc comment, which also covers the real block-picker foci support restored 2026-09-15.
  */
 public class ItemCaster extends Item implements ICaster {
 
@@ -101,9 +102,27 @@ public class ItemCaster extends Item implements ICaster {
 		}
 	}
 
+	/** Real, restored 2026-09-15 - see {@link #onItemUseFirst}'s own doc comment for how a block gets picked
+	 * in the first place. Matches the true original's own real gate exactly: only returns the stored block if
+	 * the currently-loaded focus package still actually contains a real {@link IFocusBlockPicker} node (e.g.
+	 * {@code FocusEffectExchange}) - swap to a different focus and this goes back to reporting empty, even if
+	 * a block is still stored underneath. */
 	@Override
 	public ItemStack getPickedBlock(ItemStack stack) {
-		return ItemStack.EMPTY;
+		ThaumcraftDataComponents.WandFocus picked = stack.get(ThaumcraftDataComponents.WAND_PICKED_BLOCK.get());
+		if (picked == null || picked.stack().isEmpty()) return ItemStack.EMPTY;
+		if (!hasBlockPickerFocus(stack)) return ItemStack.EMPTY;
+		return picked.stack();
+	}
+
+	private boolean hasBlockPickerFocus(ItemStack stack) {
+		ItemStack focusStack = getFocusStack(stack);
+		if (!(focusStack.getItem() instanceof ItemFocus focus)) return false;
+		FocusPackage core = focus.getPackage(focusStack);
+		for (IFocusElement node : core.nodes) {
+			if (node instanceof IFocusBlockPicker) return true;
+		}
+		return false;
 	}
 
 	@Override
@@ -128,6 +147,16 @@ public class ItemCaster extends Item implements ICaster {
 	 * wand item existed to call {@code onCasterRightClick} for real - this is that wiring, added with no
 	 * changes needed on the tile's side). The block right-click fallback stays in place alongside this,
 	 * purely additive - not worth removing an already-working, already-tested path.
+	 *
+	 * <p>Real block-picking, restored 2026-09-15: sneak-right-clicking a bare block (one with no real
+	 * {@code BlockEntity}, matching the true original's own {@code world.getTileEntity(pos) == null} gate)
+	 * while a real {@link IFocusBlockPicker} focus (e.g. {@code FocusEffectExchange}) is loaded stores that
+	 * block into {@link ThaumcraftDataComponents#WAND_PICKED_BLOCK}, readable back via {@link #getPickedBlock}.
+	 * Real, deliberate simplification: the true original's own silk-touch-aware drop lookup
+	 * ({@code BlockUtils#getSilkTouchDrop}, part of the still-unported {@code BlockUtils} utility class) is
+	 * replaced with the block's own plain item form ({@code Block#asItem}) - the picked block is only ever
+	 * used as a real placement template by {@code FocusEffectExchange}, never actually given to a player, so
+	 * the silk-touch-specific item form doesn't matter here the way it would for an actual drop.
 	 */
 	@Override
 	public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
@@ -139,6 +168,15 @@ public class ItemCaster extends Item implements ICaster {
 			if (handled) {
 				return level.isClientSide ? InteractionResult.SUCCESS : InteractionResult.CONSUME;
 			}
+		}
+		if (player.isShiftKeyDown() && level.getBlockEntity(context.getClickedPos()) == null && hasBlockPickerFocus(stack)) {
+			if (!level.isClientSide) {
+				net.minecraft.world.level.block.state.BlockState picked = level.getBlockState(context.getClickedPos());
+				stack.set(ThaumcraftDataComponents.WAND_PICKED_BLOCK.get(),
+						new ThaumcraftDataComponents.WandFocus(new ItemStack(picked.getBlock().asItem())));
+			}
+			player.swing(context.getHand());
+			return level.isClientSide ? InteractionResult.SUCCESS : InteractionResult.CONSUME;
 		}
 		return InteractionResult.PASS;
 	}

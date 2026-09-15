@@ -79,6 +79,18 @@ public final class ThaumcraftDataComponents {
 	}
 
 	/**
+	 * The block a real {@code IFocusBlockPicker} focus (e.g. {@code FocusEffectExchange}) has stored via a
+	 * real sneak-right-click on a bare block. Was the {@code "picked"} NBT sub-compound. Restored 2026-09-15
+	 * alongside {@code FocusEffectExchange}/{@code FocusMediumPlan}. Wrapped the same way {@link #WAND_FOCUS}
+	 * is, for the same real reason - see that field's own doc comment.
+	 */
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<WandFocus>> WAND_PICKED_BLOCK = DATA_COMPONENTS.register("wand_picked_block",
+			() -> DataComponentType.<WandFocus>builder()
+					.persistent(WandFocus.CODEC)
+					.networkSynchronized(WandFocus.STREAM_CODEC)
+					.build());
+
+	/**
 	 * Levels of each {@link thaumcraft.common.lib.enchantment.EnumInfusionEnchantment} an item carries, keyed
 	 * by the enchantment's enum name. Was the {@code "infench"} NBTTagList (a list of {@code {id: short,
 	 * lvl: short}} compounds, {@code id} an enum ordinal) on the original {@code EnumInfusionEnchantment} -

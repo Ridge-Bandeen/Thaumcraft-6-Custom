@@ -217,6 +217,8 @@ public class Thaumcraft {
         FocusEngine.registerElement(FocusMediumMine.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/mine.png"), 8760709);
         FocusEngine.registerElement(FocusMediumCloud.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/cloud.png"), 10071429);
         FocusEngine.registerElement(thaumcraft.common.items.casters.foci.FocusEffectRift.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/rift.png"), 3084645);
+        FocusEngine.registerElement(thaumcraft.common.items.casters.foci.FocusMediumPlan.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/plan.png"), 8760728);
+        FocusEngine.registerElement(thaumcraft.common.items.casters.foci.FocusEffectExchange.class, ResourceLocation.fromNamespaceAndPath(MODID, "textures/foci/exchange.png"), 5735255);
 
         // Theorycraft card registry (thaumcraft.api.research.theorycraft.TheorycraftManager) - see
         // ResearchTableData's own doc comment. The real api.research.theorycraft package (the extensible
@@ -649,6 +651,21 @@ public class Thaumcraft {
     @SubscribeEvent
     public void onLevelTickPost(LevelTickEvent.Post event) {
         TileArcaneEar.clearNoteEvents(event.getLevel());
+    }
+
+    /** Drives {@link thaumcraft.common.lib.scheduling.BlockScheduler}'s own real per-level queues (delayed
+     * block breaking/swapping) - a real, previously-missing wire found 2026-09-15 while restoring
+     * {@code FocusEffectExchange}: the scheduler class itself, and {@link thaumcraft.common.items.casters.foci.FocusEffectBreak}'s
+     * own real call into it, were both already real and shipped, but nothing ever actually ticked the queue -
+     * meaning a real gradual break/swap in live gameplay would queue correctly and then just sit there
+     * forever, never actually progressing. Confirmed via a real {@code grep} for any existing caller (found
+     * none) before adding this, not assumed. */
+    @SubscribeEvent
+    public void tickBlockScheduler(LevelTickEvent.Post event) {
+        net.minecraft.world.level.Level level = event.getLevel();
+        if (!level.isClientSide) {
+            thaumcraft.common.lib.scheduling.BlockScheduler.tick(level);
+        }
     }
 
     /** Drives the whole seals/tasks subsystem - was {@code ServerEvents#tickAuraHandler}'s own tail end

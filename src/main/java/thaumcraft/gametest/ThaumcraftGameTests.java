@@ -1666,6 +1666,150 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	// --------------------------------------------------------------------------------------------------
+	// Focus: Exchange + Plan - restored 2026-09-15 (real parity-audit fix pass). Exchange is a real
+	// IFocusBlockPicker (ItemCaster#getPickedBlock/onItemUseFirst's own real sneak-click pick), Plan a real
+	// flood-fill area-selection medium that feeds it multiple targets. Both real, direct ports; see each
+	// class's own doc comment for the one real deliberate simplification each carries (Vis-Exhaust-adjacent
+	// dead code fixed to real behavior for Exchange, CasterManager's own separate area-size UI replaced with
+	// a plain NodeSetting for Plan).
+	// --------------------------------------------------------------------------------------------------
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.items.casters.ItemCaster#onItemUseFirst}/{@link
+	 * thaumcraft.common.items.casters.ItemCaster#getPickedBlock} - a real sneak-click on a bare block with a
+	 * real {@code IFocusBlockPicker} focus (Exchange) loaded should really store it, and {@code getPickedBlock}
+	 * should really go back to reporting empty once a non-picker focus is loaded instead, matching the true
+	 * original's own real gate exactly.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void casterSneakClickPicksABlockOnlyWhileARealBlockPickerFocusIsLoaded(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+
+		BlockPos pickRel = new BlockPos(0, 1, 3);
+		helper.setBlock(pickRel, Blocks.DIRT);
+		BlockPos pickAbs = helper.absolutePos(pickRel);
+
+		ItemStack casterStack = new ItemStack(ItemsTC.casterBasic.get());
+		caster.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, casterStack);
+		thaumcraft.common.items.casters.ItemCaster casterItem = (thaumcraft.common.items.casters.ItemCaster) casterStack.getItem();
+
+		FocusPackage exchangePackage = new FocusPackage();
+		exchangePackage.addNode(new thaumcraft.api.casters.FocusMediumRoot());
+		exchangePackage.addNode(new thaumcraft.common.items.casters.foci.FocusMediumTouch());
+		exchangePackage.addNode(new thaumcraft.common.items.casters.foci.FocusEffectExchange());
+		ItemStack exchangeFocus = new ItemStack(ItemsTC.focusBlank1.get());
+		exchangeFocus.set(thaumcraft.api.items.ThaumcraftDataComponents.ASSEMBLED_FOCUS.get(),
+				new thaumcraft.api.items.ThaumcraftDataComponents.AssembledFocus(exchangePackage));
+		casterItem.setFocus(casterStack, exchangeFocus);
+
+		net.minecraft.world.phys.BlockHitResult pickHit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(pickAbs), net.minecraft.core.Direction.UP, pickAbs, false);
+		net.minecraft.world.item.context.UseOnContext pickContext = new net.minecraft.world.item.context.UseOnContext(
+				level, caster, net.minecraft.world.InteractionHand.MAIN_HAND, casterStack, pickHit);
+		caster.setShiftKeyDown(true);
+		net.minecraft.world.InteractionResult result = casterItem.onItemUseFirst(casterStack, pickContext);
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.CONSUME, "a real sneak-click on a bare block with a real Exchange focus loaded should really be handled");
+
+		ItemStack picked = casterItem.getPickedBlock(casterStack);
+		helper.assertTrue(picked.is(Blocks.DIRT.asItem()), "the real picked block should really be dirt, got " + picked);
+
+		FocusPackage plainPackage = new FocusPackage();
+		plainPackage.addNode(new thaumcraft.api.casters.FocusMediumRoot());
+		plainPackage.addNode(new thaumcraft.common.items.casters.foci.FocusMediumTouch());
+		plainPackage.addNode(new thaumcraft.common.items.casters.foci.FocusEffectEarth());
+		ItemStack plainFocus = new ItemStack(ItemsTC.focusBlank1.get());
+		plainFocus.set(thaumcraft.api.items.ThaumcraftDataComponents.ASSEMBLED_FOCUS.get(),
+				new thaumcraft.api.items.ThaumcraftDataComponents.AssembledFocus(plainPackage));
+		casterItem.setFocus(casterStack, plainFocus);
+		helper.assertTrue(casterItem.getPickedBlock(casterStack).isEmpty(),
+				"swapping to a real non-block-picker focus should really make getPickedBlock report empty again, even though a block is still stored underneath");
+
+		helper.succeed();
+	}
+
+	/**
+	 * Real end-to-end coverage for the restored Plan+Exchange pair: picking a real block via a real
+	 * sneak-click, then casting Touch+Plan+Exchange at a real connected stone cluster, should really swap
+	 * most of it for the real picked block, consuming a real unit of the picked block from the caster's own
+	 * inventory per swap - matching the true original's own real research text ("I must be carrying enough of
+	 * the selected blocks for the exchange to happen").
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void castExchangeFocusThroughPlanSwapsARealStoneClusterForTheRealPickedBlock(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer caster = spawnCasterAt(helper, origin);
+
+		BlockPos clusterCenterRel = new BlockPos(0, 1, 4);
+		List<BlockPos> clusterRel = new java.util.ArrayList<>();
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				BlockPos p = clusterCenterRel.offset(dx, 0, dz);
+				helper.setBlock(p, Blocks.STONE);
+				clusterRel.add(p);
+			}
+		}
+		caster.lookAt(EntityAnchorArgument.Anchor.EYES, Vec3.atCenterOf(helper.absolutePos(clusterCenterRel)));
+		caster.getInventory().add(new ItemStack(Blocks.DIRT.asItem(), 64));
+
+		BlockPos pickRel = new BlockPos(2, 1, 0);
+		helper.setBlock(pickRel, Blocks.DIRT);
+		BlockPos pickAbs = helper.absolutePos(pickRel);
+
+		ItemStack casterStack = new ItemStack(ItemsTC.casterBasic.get());
+		caster.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, casterStack);
+		thaumcraft.common.items.casters.ItemCaster casterItem = (thaumcraft.common.items.casters.ItemCaster) casterStack.getItem();
+
+		FocusPackage exchangePackage = new FocusPackage();
+		exchangePackage.addNode(new thaumcraft.api.casters.FocusMediumRoot());
+		exchangePackage.addNode(new thaumcraft.common.items.casters.foci.FocusMediumTouch());
+		exchangePackage.addNode(new thaumcraft.common.items.casters.foci.FocusMediumPlan());
+		exchangePackage.addNode(new thaumcraft.common.items.casters.foci.FocusEffectExchange());
+		ItemStack blankFocus = new ItemStack(ItemsTC.focusBlank1.get());
+		blankFocus.set(thaumcraft.api.items.ThaumcraftDataComponents.ASSEMBLED_FOCUS.get(),
+				new thaumcraft.api.items.ThaumcraftDataComponents.AssembledFocus(exchangePackage));
+		casterItem.setFocus(casterStack, blankFocus);
+
+		net.minecraft.world.phys.BlockHitResult pickHit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(pickAbs), net.minecraft.core.Direction.UP, pickAbs, false);
+		net.minecraft.world.item.context.UseOnContext pickContext = new net.minecraft.world.item.context.UseOnContext(
+				level, caster, net.minecraft.world.InteractionHand.MAIN_HAND, casterStack, pickHit);
+		caster.setShiftKeyDown(true);
+		casterItem.onItemUseFirst(casterStack, pickContext);
+		helper.assertTrue(casterItem.getPickedBlock(casterStack).is(Blocks.DIRT.asItem()), "sanity check: the real picked block should really be dirt before casting");
+		caster.setShiftKeyDown(false);
+		caster.lookAt(EntityAnchorArgument.Anchor.EYES, Vec3.atCenterOf(helper.absolutePos(clusterCenterRel)));
+
+		FocusPackage core = new FocusPackage();
+		core.addNode(new thaumcraft.api.casters.FocusMediumRoot());
+		core.addNode(new thaumcraft.common.items.casters.foci.FocusMediumTouch());
+		core.addNode(new thaumcraft.common.items.casters.foci.FocusMediumPlan());
+		core.addNode(new thaumcraft.common.items.casters.foci.FocusEffectExchange());
+		core.initialize(caster);
+		FocusEngine.castFocusPackage(caster, core, true);
+
+		for (int i = 0; i < 40; i++) {
+			thaumcraft.common.lib.scheduling.BlockScheduler.tick(level);
+		}
+
+		int swapped = 0;
+		for (BlockPos p : clusterRel) {
+			if (helper.getBlockState(p).is(Blocks.DIRT)) swapped++;
+		}
+		helper.assertTrue(swapped >= 5, "casting Exchange through Plan at a real stone cluster should really swap most of it for the real picked block (dirt), got " + swapped + "/9");
+
+		int dirtLeft = 0;
+		for (ItemStack stack : caster.getInventory().items) {
+			if (stack.is(Blocks.DIRT.asItem())) dirtLeft += stack.getCount();
+		}
+		helper.assertTrue(dirtLeft < 64, "each real swap should really consume one real unit of the picked block from the caster's own inventory, got " + dirtLeft + " left");
+
+		helper.succeed();
+	}
+
 	/**
 	 * Focus: Fireball - the wand's first entity-backed medium (see
 	 * {@link thaumcraft.common.entities.projectile.EntityFocusProjectile}'s doc comment). Unlike every
