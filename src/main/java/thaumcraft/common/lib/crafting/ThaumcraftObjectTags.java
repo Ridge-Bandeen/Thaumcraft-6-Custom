@@ -264,5 +264,9 @@ public final class ThaumcraftObjectTags {
 		register(thaumcraft.api.items.ItemsTC.amuletVisCrafted.get(), new AspectList().add(Aspect.AURA, 20).add(Aspect.METAL, 5).add(Aspect.MAGIC, 5));
 		register(thaumcraft.api.items.ItemsTC.curiosityBand.get(), new AspectList().add(Aspect.AURA, 5).add(Aspect.METAL, 5).add(Aspect.MAGIC, 20));
 		register(thaumcraft.api.items.ItemsTC.voidseerCharm.get(), new AspectList().add(Aspect.VOID, 15).add(Aspect.SENSES, 15).add(Aspect.MAGIC, 5));
+
+		// Real ConfigAspects#registerObjectTag entry carried forward verbatim (Death 15/Entropy 15) - the
+		// true original tagged the real filled bucket, same real target here.
+		register(thaumcraft.api.items.ItemsTC.bucketDeath.get(), new AspectList().add(Aspect.DEATH, 15).add(Aspect.ENTROPY, 15));
 	}
 }

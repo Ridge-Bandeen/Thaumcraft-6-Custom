@@ -123,8 +123,8 @@
                     "warp": 3
                 },
                 {
-                    "text": "research.LIQUIDDEATH.stage.2", 
-                    "recipes": ["thaumcraft:LiquidDeath"]
+                    "text": "research.LIQUIDDEATH.stage.2",
+                    "recipes": ["thaumcraft:liquid_death"]
                 }
             ]
         },

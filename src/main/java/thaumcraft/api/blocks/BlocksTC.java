@@ -924,6 +924,17 @@ public final class BlocksTC {
 					.noCollission().liquid().noLootTable().noOcclusion()
 					.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
 
+	/** Real, from-scratch vanilla-style fluid - see {@link thaumcraft.common.blocks.misc.BlockLiquidDeath}'s
+	 * own doc comment for why this one gets the real modern {@code LiquidBlock}/{@code FlowingFluid} API
+	 * rather than {@link #fluxGoo}/{@link #purifyingFluid}'s own finite-quanta engine. {@code .noLootTable()}
+	 * matches every other fluid block here (fluids don't drop themselves when "mined" - a bucket is the real
+	 * way to pick one up, handled by {@code LiquidBlock} itself via {@link net.minecraft.world.level.block.BucketPickup}). */
+	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockLiquidDeath> liquidDeath = BLOCKS.registerBlock("liquid_death",
+			props -> new thaumcraft.common.blocks.misc.BlockLiquidDeath(thaumcraft.common.registry.ThaumcraftFluids.LIQUID_DEATH.get(), props),
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).sound(SoundType.SLIME_BLOCK)
+					.noCollission().liquid().noLootTable().noOcclusion()
+					.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
+
 	/** The Spa - see {@link thaumcraft.common.tiles.devices.TileSpa}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockSpa> spa = BLOCKS.registerBlock("spa",
 			thaumcraft.common.blocks.devices.BlockSpa::new,

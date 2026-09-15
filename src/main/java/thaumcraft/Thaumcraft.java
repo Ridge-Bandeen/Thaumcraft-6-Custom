@@ -86,6 +86,8 @@ public class Thaumcraft {
         ThaumcraftRecipeTypes.RECIPE_TYPES.register(modEventBus);
         ThaumcraftRecipeTypes.RECIPE_SERIALIZERS.register(modEventBus);
         ThaumcraftDataComponents.DATA_COMPONENTS.register(modEventBus);
+        thaumcraft.common.registry.ThaumcraftFluids.FLUID_TYPES.register(modEventBus);
+        thaumcraft.common.registry.ThaumcraftFluids.FLUIDS.register(modEventBus);
         BlocksTC.BLOCKS.register(modEventBus);
         ItemsTC.ITEMS.register(modEventBus);
         ThaumcraftBlockEntities.BLOCK_ENTITIES.register(modEventBus);

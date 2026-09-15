@@ -13677,6 +13677,69 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
+	// liquid_death - the true original's own real BlockFluidClassic-based hazard fluid (not a finite-quanta
+	// block like fluxGoo/purifyingFluid above - see BlockLiquidDeath's own doc comment for why this one gets
+	// the real modern vanilla LiquidBlock/FlowingFluid API instead), crafted via a real Crucible recipe, no
+	// natural worldgen placement.
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void liquidDeathDamagesAndSlowsARealLivingEntityOnTouch(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = helper.absolutePos(BlockPos.ZERO);
+		level.setBlockAndUpdate(pos, BlocksTC.liquidDeath.get().defaultBlockState());
+
+		net.minecraft.world.entity.animal.Pig pig = net.minecraft.world.entity.EntityType.PIG.create(level);
+		helper.assertTrue(pig != null, "the pig entity type should really create an instance");
+		pig.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(pig);
+		pig.setDeltaMovement(1.0, 0.0, 1.0);
+		float healthBefore = pig.getHealth();
+
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
+		state.entityInside(level, pos, pig);
+
+		helper.assertTrue(pig.getHealth() < healthBefore,
+				"touching a real full-level (source) liquid_death block should really damage a real living entity");
+		helper.assertTrue(Math.abs(pig.getDeltaMovement().x) < 1.0,
+				"touching liquid_death should really slow a real entity's horizontal motion, was " + pig.getDeltaMovement().x);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void liquidDeathBucketWrapsTheRealFluidAndCarriesItsRealAspectTag(GameTestHelper helper) {
+		helper.assertTrue(thaumcraft.api.items.ItemsTC.bucketDeath.get() instanceof net.minecraft.world.item.BucketItem bucket
+						&& bucket.content == thaumcraft.common.registry.ThaumcraftFluids.LIQUID_DEATH.get(),
+				"the real bucket_death item should really wrap the real registered liquid_death fluid");
+
+		thaumcraft.api.aspects.AspectList aspects = thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(
+				new ItemStack(thaumcraft.api.items.ItemsTC.bucketDeath.get()));
+		helper.assertTrue(aspects != null && aspects.getAmount(thaumcraft.api.aspects.Aspect.DEATH) == 15
+						&& aspects.getAmount(thaumcraft.api.aspects.Aspect.ENTROPY) == 15,
+				"the real bucket_death item should really carry the true original's own real Death 15/Entropy 15 aspect tag, got " + aspects);
+		helper.succeed();
+	}
+
+	/** Real coverage that {@code data/thaumcraft/recipe/liquid_death.json} really parses/registers and
+	 * really matches the true original's own real {@code ConfigRecipes} entry (empty bucket catalyst,
+	 * Death 100/Alchemy 20/Entropy 50, producing the real {@code bucket_death} item). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void liquidDeathCrucibleRecipeIsRealRegisteredAndProducesTheRealBucket(GameTestHelper helper) {
+		RecipeManager recipes = helper.getLevel().getRecipeManager();
+		Optional<RecipeHolder<?>> found = recipes.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "liquid_death"));
+		helper.assertTrue(found.isPresent(), "the real liquid_death crucible recipe should really be registered");
+		helper.assertTrue(found.get().value() instanceof CrucibleRecipe recipe
+						&& recipe.catalystMatches(new ItemStack(Items.BUCKET))
+						&& recipe.getAspects().getAmount(thaumcraft.api.aspects.Aspect.DEATH) == 100
+						&& recipe.getAspects().getAmount(thaumcraft.api.aspects.Aspect.ALCHEMY) == 20
+						&& recipe.getAspects().getAmount(thaumcraft.api.aspects.Aspect.ENTROPY) == 50
+						&& recipe.getResultItem(helper.getLevel().registryAccess()).is(thaumcraft.api.items.ItemsTC.bucketDeath.get()),
+				"the real liquid_death crucible recipe should really match an empty bucket catalyst, carry the true original's own real "
+						+ "100/20/50 aspect costs, and really produce the real bucket_death item");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
 	// CasterFocusHelper - the real common-side logic backing the focus-radial HUD's actual bind/swap
 	// (FocusRadialOverlay's own rendering/hover/hit-test is client-only and has no automated coverage at
 	// all - see its own doc comment and the port-tracking memory's UI-visual-parity checklist for the

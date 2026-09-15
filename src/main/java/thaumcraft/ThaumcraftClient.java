@@ -83,6 +83,25 @@ public class ThaumcraftClient {
     }
 
     @SubscribeEvent
+    static void onRegisterClientExtensions(net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent event) {
+        // Real still/flowing texture for liquid_death - the true original's own real Fluid definition used
+        // the same real animatedglow texture for both (see ThaumcraftFluids' own doc comment), no tint.
+        event.registerFluidType(new net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions() {
+            private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "blocks/animatedglow");
+
+            @Override
+            public ResourceLocation getStillTexture() {
+                return TEXTURE;
+            }
+
+            @Override
+            public ResourceLocation getFlowingTexture() {
+                return TEXTURE;
+            }
+        }, thaumcraft.common.registry.ThaumcraftFluids.LIQUID_DEATH_TYPE);
+    }
+
+    @SubscribeEvent
     static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
         event.register(ThaumcraftMenus.ARCANE_WORKBENCH.get(), GuiArcaneWorkbench::new);
         event.register(ThaumcraftMenus.FOCAL_MANIPULATOR.get(), thaumcraft.client.gui.GuiFocalManipulator::new);

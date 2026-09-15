@@ -5,8 +5,10 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.PickaxeItem;
 import net.minecraft.world.item.ShovelItem;
 import net.minecraft.world.item.SwordItem;
@@ -112,6 +114,12 @@ public final class ItemsTC {
 
 	public static final DeferredItem<thaumcraft.common.items.resources.ItemCrystalEssence> crystalEssence =
 			ITEMS.registerItem("crystal_essence", thaumcraft.common.items.resources.ItemCrystalEssence::new);
+
+	/** Real bucket for {@link thaumcraft.api.blocks.BlocksTC#liquidDeath} - the true original's own real
+	 * {@code FluidRegistry.addBucketForFluid} equivalent. {@code .craftRemainder(Items.BUCKET)} matches every
+	 * vanilla fluid bucket's own real "using it up returns an empty bucket" behavior. */
+	public static final DeferredItem<BucketItem> bucketDeath = ITEMS.registerItem("bucket_death",
+			props -> new BucketItem(thaumcraft.common.registry.ThaumcraftFluids.LIQUID_DEATH.get(), props.craftRemainder(Items.BUCKET).stacksTo(1)));
 
 	public static final DeferredItem<ItemFocusFrost> focusFrost =
 			ITEMS.registerItem("focus_frost", ItemFocusFrost::new);
