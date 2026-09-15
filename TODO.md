@@ -21,12 +21,17 @@ no equivalent anywhere in the current port (verified by direct source read,
 not just a name diff); none are currently outstanding.
 
 *(`BlocksTC`/`ItemsTC` registries themselves are confirmed complete as of
-2026-09-14 - two field-name sweeps in a row found nothing real left there.
-The 3 items that did live here - `required_craft`/`required_item`
-auto-progression, the warp-on-craft penalty, and label dyeing - all came
-from a broader, deeper sweep of the whole file tree and are all now closed,
-see "Recently closed" below. See "Fresh sweep, 2026-09-14 (part 2)" below
-for what else that sweep turned up and what's still unscoped.)*
+2026-09-14 - **three** field-name sweeps in a row now (most recent one
+re-run after Tube One-way's new registrations landed) have found nothing
+real left there; the ~70 raw candidate misses on the 3rd pass were all
+already-known naming-convention differences or already-documented
+false positives, re-verified individually rather than assumed - see
+`git log`/session memory for the exact list checked. The 3 items that did
+live here - `required_craft`/`required_item` auto-progression, the
+warp-on-craft penalty, and label dyeing - all came from a broader, deeper
+sweep of the whole file tree and are all now closed, see "Recently closed"
+below. See "Fresh sweep, 2026-09-14 (part 2)" below for what else that
+sweep turned up and what's still unscoped.)*
 
 ## Needs further triage (real content exists in the original; scope/priority unconfirmed)
 
