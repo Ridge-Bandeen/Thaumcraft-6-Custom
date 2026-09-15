@@ -46,10 +46,22 @@ sweep turned up and what's still unscoped.)*
   standalone placer outside client-rendering setup (`ProxyBlock.java`);
   genuinely tangled with the already-known-blocked finite-fluid/Taint
   world-spread subsystem, not a separate gap.
-- **`grassAmbient`, `shimmerleaf`, `vishroom`, `bloom`** — worldgen
-  plant/ambient blocks. Earlier session notes already confirmed
-  `world/plants/` as worldgen-only and out of near-term scope; these are
-  likely the same bucket. Low priority.
+- **`grassAmbient`, `shimmerleaf`, `vishroom`** — confirmed 2026-09-14
+  (see "World generation" below): these 3 are placed exclusively by the
+  true original's own `BiomeGenMagicalForest#decorate` override, not the
+  general world generator - genuinely inseparable from the not-yet-scoped
+  "build new custom biomes" arc, not a standalone plant-scatter task the
+  way `cinderpearl` (now closed, see "Recently closed") was. `bloom`
+  turned out not to be a real standalone block at all - only shader/model
+  texture assets exist for it in the true original, most likely used as a
+  decoration on the (also not-yet-ported) big magic tree feature.
+- **Mound generation** (`WorldGenMound`, part of `ThaumcraftWorldGenerator`) —
+  confirmed real 2026-09-14 but turned out to be a ~2500-line hand-placed
+  block schematic in the true original's own decompiled source, not a
+  small feature. A rare (1% per chunk-attempt) decorative debris pile with
+  a buried loot chest - real, but low value for the effort a faithful port
+  would need; worth a real modern NBT structure-template rebuild as its
+  own separate pass, not attempted piecemeal.
 - **Essentia tube chains can deadlock on a suction tie** — found 2026-09-14
   while testing the tube click-precision restoration (below), not a gap in
   the true original's own registered content but a real bug in this port's
@@ -305,6 +317,47 @@ entries are now closed - this section is empty of open work.**
 Essentia through CardCelestial/"Celestial Studies", are all long-since
 merged into the sections above and fully detailed in `git log` and the
 project memory file; not re-listed here to keep this file scannable.)*
+
+- **World generation, part 1** — closed 2026-09-14. User asked to tackle
+  "the world generation stuff we postponed." Turned out much larger than
+  a single item once actually investigated - 4 real, independent pieces
+  closed this pass:
+  - **Biome-weighted aura generation** - `AuraHandler`'s own doc comment
+    had already flagged this ("every chunk seeds with the same flat
+    baseline... the original weighted this by `BiomeDictionary` tags...
+    that isn't ported"). New `thaumcraft.common.world.biomes.BiomeHandler`
+    replaces the stale, never-compiled 1.12.2 leftover at the same path,
+    re-derived onto NeoForge's own real `c:` common biome tags - a clean
+    near-1:1 modern replacement for `BiomeDictionary.Type`. Found and
+    fixed a real quirk while reading the original: it registered `DRY`
+    twice, and real `HashMap` overwrite semantics meant only the second
+    (ENTROPY, not the first's FIRE) was ever really in play.
+  - **Primal crystal cluster worldgen** - a real branch of
+    `ThaumcraftWorldGenerator#generateOres` never ported alongside the
+    cinnabar/quartz/amber ores it sat next to. New `CrystalClusterFeature`
+    (real modern `Feature`, JSON-driven placement) picks one real Aspect
+    per vein (biome-weighted 2/3 of the time via the new `BiomeHandler`,
+    uniformly random among the 6 primal aspects otherwise - Flux
+    deliberately excluded, matching the original's own real bound).
+  - **Cinderpearl worldgen** - the block's own doc comment already named
+    the exact plan (vanilla's own `RandomPatchFeature`); just executed it.
+  - **Cultist Portal (Lesser) natural spawn** - the entity was already
+    real and fully shipped with zero natural spawn trigger anywhere. New
+    `CultistPortalSpawnFeature` restores the true original's own rare
+    surface spawn.
+
+  See commits "Give aura generation its real per-biome weighting", "Give
+  primal crystal clusters their real natural worldgen", "Give cinderpearl
+  real worldgen and restore the cultist portal spawn". Deliberately
+  deferred, not closed: mound generation (a ~2500-line hand-placed
+  schematic, real but low value for the effort) and the 3 plants tied
+  exclusively to the not-yet-built custom biomes (`grassAmbient`/
+  `shimmerleaf`/`vishroom`) - see "Needs further triage" above for both.
+  **The one remaining real question**: whether/how far to go building the
+  true original's own 3 custom overworld biomes (Eerie, Magical Forest,
+  Eldritch) - a genuinely different, much larger undertaking in modern
+  Minecraft's noise-based biome system than anything else in this list,
+  not yet scoped.
 
 - **`required_craft`/`required_item` research auto-progression** — closed
   2026-09-14. `ThaumcraftResearchLoader` deliberately skipped parsing both
