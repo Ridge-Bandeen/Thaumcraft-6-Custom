@@ -41,10 +41,13 @@ import thaumcraft.common.items.resources.ItemCrystalEssence;
  * for the original's own {@code !(this instanceof EntityTaintacleSmall)} instanceof check - same real
  * behavior, just resolved through overriding rather than a runtime type test).
  *
- * Real, documented cuts: the original's own {@code BiomeHandler.ELDRITCH}-gated extra taint-fibre placement
- * inside {@link #spawnTentacles} is dropped (that custom biome isn't ported in this whole project yet, same
- * real gap {@code EntityWisp}'s own doc comment already documents) - the taint-block-adjacency branch alone
- * still spawns the real tentacle. No client-side flail animation ({@code flailIntensity}, purely cosmetic,
+ * Real {@code BiomeHandler.ELDRITCH}-gated behavior in {@link #spawnTentacles}, restored 2026-09-15 now that
+ * the real {@code thaumcraft:eldritch} biome exists (see {@link thaumcraft.common.world.biomes.ThaumcraftBiomes}):
+ * the outer taintlet-spawn gate is really an OR across being in that biome OR standing on/above real taint
+ * terrain (previously only the taint-terrain half was ported), and being in that biome over real air adjacent
+ * to a real solid block additionally places a real {@code taint_fibre} there too, matching the true original's
+ * own real {@code BlockUtils.isAdjacentToSolidBlock} check (ported as {@link #isAdjacentToSolidBlock}, the
+ * modern equivalent). No client-side flail animation ({@code flailIntensity}, purely cosmetic,
  * driven by a status-event this port doesn't broadcast since there's no renderer to consume it yet - same
  * real "no renderer yet" gap {@code FIRE_BAT}/{@code SPELL_BAT} already carry). The original's own {@code
  * faceEntity}/{@code updateRotation} pair is real, harmless dead code in the original itself (a 2-argument
@@ -120,7 +123,9 @@ public class EntityTaintacle extends Monster implements ITaintedMob {
 
 	protected void spawnTentacles(Entity entity) {
 		BlockPos pos = entity.blockPosition();
-		if (!(level().getBlockState(pos).getBlock() instanceof ITaintBlock) && !(level().getBlockState(pos.below()).getBlock() instanceof ITaintBlock)) {
+		boolean inEldritchBiome = level().getBiome(pos).is(thaumcraft.common.world.biomes.ThaumcraftBiomes.ELDRITCH);
+		boolean onTaint = level().getBlockState(pos).getBlock() instanceof ITaintBlock || level().getBlockState(pos.below()).getBlock() instanceof ITaintBlock;
+		if (!inEldritchBiome && !onTaint) {
 			return;
 		}
 		if (!(level() instanceof ServerLevel serverLevel)) {
@@ -134,6 +139,20 @@ public class EntityTaintacle extends Monster implements ITaintedMob {
 				entity.getZ() + random.nextFloat() - random.nextFloat(), 0.0f, 0.0f);
 		serverLevel.addFreshEntity(taintlet);
 		playSound(SoundEvents.WARDEN_TENDRIL_CLICKS, getSoundVolume(), getVoicePitch());
+		if (inEldritchBiome && level().getBlockState(pos).isAir() && isAdjacentToSolidBlock(level(), pos)) {
+			level().setBlock(pos, thaumcraft.api.blocks.BlocksTC.taintFibre.get().defaultBlockState(), 3);
+		}
+	}
+
+	/** Real modern equivalent of the true original's own {@code BlockUtils.isAdjacentToSolidBlock}. */
+	public static boolean isAdjacentToSolidBlock(Level level, BlockPos pos) {
+		for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+			BlockPos neighbor = pos.relative(dir);
+			if (level.getBlockState(neighbor).isFaceSturdy(level, neighbor, dir.getOpposite())) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@Override

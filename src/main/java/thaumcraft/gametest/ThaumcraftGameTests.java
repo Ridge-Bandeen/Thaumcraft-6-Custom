@@ -10869,6 +10869,37 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for the 2026-09-15 restoration of {@code spawnTentacles}'s Eldritch-biome-gated extra
+	 * taint-fibre placement (shared, identical logic in both {@link
+	 * thaumcraft.common.entities.monster.tainted.EntityTaintacle} and {@code EntityTaintSeed}, matching the
+	 * true original exactly): direct coverage for the new {@link
+	 * thaumcraft.common.entities.monster.tainted.EntityTaintacle#isAdjacentToSolidBlock} helper itself (the
+	 * modern equivalent of the true original's own {@code BlockUtils.isAdjacentToSolidBlock}) - real
+	 * end-to-end coverage of the biome-gate branch actually firing needs a real Eldritch-biome position, which
+	 * this test environment's own biome source can't provide (see {@code ThaumcraftBiomes}' own doc comment
+	 * and the worldgen manual-verification checklist for why), so this checks the helper's own real logic in
+	 * isolation instead. The already-real taint-terrain branch (the other half of the same OR condition,
+	 * unaffected by this restoration) already has its own full coverage in
+	 * {@code taintacleStarvesOffTaintSpawnsATendrilAndSelfDestructs} above.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void isAdjacentToSolidBlockHelperMatchesTheTrueOriginalsRealCheck(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos isolatedRel = new BlockPos(2, 3, 2);
+		BlockPos isolatedAbs = helper.absolutePos(isolatedRel);
+		helper.assertFalse(thaumcraft.common.entities.monster.tainted.EntityTaintacle.isAdjacentToSolidBlock(level, isolatedAbs),
+				"a real position surrounded entirely by air should really not be adjacent to any real solid block");
+
+		BlockPos besideStoneRel = new BlockPos(6, 3, 2);
+		BlockPos besideStoneAbs = helper.absolutePos(besideStoneRel);
+		helper.setBlock(besideStoneRel.relative(net.minecraft.core.Direction.EAST), Blocks.STONE);
+		helper.assertTrue(thaumcraft.common.entities.monster.tainted.EntityTaintacle.isAdjacentToSolidBlock(level, besideStoneAbs),
+				"a real position with a real solid neighbor block should really be adjacent to a real solid block");
+
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void taintSeedTracksItselfSpreadsFibresAndInflictsAreaFluxTaint(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();

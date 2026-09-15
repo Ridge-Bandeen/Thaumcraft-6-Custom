@@ -53,10 +53,12 @@ import thaumcraft.common.world.aura.AuraHandler;
  * "starves/spreads instead of dying to zero flux" mechanic {@code EntityTaintacle} doesn't have (that one
  * just starves outright off-taint; this one has a real flux-driven middle state via {@link #boost}).
  *
- * Real, documented cuts: same {@code BiomeHandler.ELDRITCH} drop as {@link EntityTaintacle#spawnTentacles}
- * (unported custom biome); {@link #getArea} defaults to 1 real chunk-ish unit, matching the original exactly
- * ({@link EntityTaintSeedPrime} doubles it). Custom {@code SoundsTC.tentacle} audio substitution, same real
- * vanilla Warden tendril-click stand-in {@code EntityTaintacle} already established.
+ * Real {@code BiomeHandler.ELDRITCH}-gated behavior in {@link #spawnTentacles}, restored 2026-09-15 alongside
+ * {@link EntityTaintacle#spawnTentacles} (identical logic, duplicated the same way in the true original) now
+ * that the real {@code thaumcraft:eldritch} biome exists - see that method's own doc comment for the full
+ * real story. {@link #getArea} defaults to 1 real chunk-ish unit, matching the original exactly ({@link
+ * EntityTaintSeedPrime} doubles it). Custom {@code SoundsTC.tentacle} audio substitution, same real vanilla
+ * Warden tendril-click stand-in {@code EntityTaintacle} already established.
  */
 public class EntityTaintSeed extends Monster implements ITaintedMob {
 
@@ -169,7 +171,9 @@ public class EntityTaintSeed extends Monster implements ITaintedMob {
 
 	protected void spawnTentacles(Entity entity) {
 		BlockPos pos = entity.blockPosition();
-		if (!(level().getBlockState(pos).getBlock() instanceof ITaintBlock) && !(level().getBlockState(pos.below()).getBlock() instanceof ITaintBlock)) {
+		boolean inEldritchBiome = level().getBiome(pos).is(thaumcraft.common.world.biomes.ThaumcraftBiomes.ELDRITCH);
+		boolean onTaint = level().getBlockState(pos).getBlock() instanceof ITaintBlock || level().getBlockState(pos.below()).getBlock() instanceof ITaintBlock;
+		if (!inEldritchBiome && !onTaint) {
 			return;
 		}
 		if (!(level() instanceof ServerLevel serverLevel)) {
@@ -183,6 +187,9 @@ public class EntityTaintSeed extends Monster implements ITaintedMob {
 				entity.getZ() + random.nextFloat() - random.nextFloat(), 0.0f, 0.0f);
 		serverLevel.addFreshEntity(taintlet);
 		playSound(SoundEvents.WARDEN_TENDRIL_CLICKS, getSoundVolume(), getVoicePitch());
+		if (inEldritchBiome && level().getBlockState(pos).isAir() && EntityTaintacle.isAdjacentToSolidBlock(level(), pos)) {
+			level().setBlock(pos, thaumcraft.api.blocks.BlocksTC.taintFibre.get().defaultBlockState(), 3);
+		}
 	}
 
 	public boolean canSpawnHere() {
