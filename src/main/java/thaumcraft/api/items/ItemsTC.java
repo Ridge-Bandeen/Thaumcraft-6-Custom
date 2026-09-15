@@ -582,6 +582,9 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> tubeRestrict =
 			ITEMS.registerSimpleBlockItem("tube_restrict", BlocksTC.tubeRestrict);
 
+	public static final DeferredItem<BlockItem> tubeOneway =
+			ITEMS.registerSimpleBlockItem("tube_oneway", BlocksTC.tubeOneway);
+
 	public static final DeferredItem<BlockItem> tubeValve =
 			ITEMS.registerSimpleBlockItem("tube_valve", BlocksTC.tubeValve);
 

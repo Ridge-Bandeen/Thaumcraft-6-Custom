@@ -25,22 +25,27 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  *
  * Simplified vs the original:
  * <ul>
- * <li>No per-face open/close toggling or "priority output facing" - both were configured by right-clicking
- * individual faces with a wand, built on CodeChicken's raytracing library ({@code IndexedCuboid6}/
- * {@code RayTracer}) for per-face click detection, the same sub-hit-raytrace wall that blocked the Levitator
- * and Redstone Relay earlier this session. All 6 sides are always electrically open here - simpler, and the
- * only way this device can be meaningfully functional without that click-UI at all.</li>
+ * <li>No per-face open/close toggling - the original configured this by right-clicking one of 6 small
+ * per-face "nub" hitboxes with a wand, built on CodeChicken's raytracing library ({@code IndexedCuboid6}/
+ * {@code RayTracer}) for that precise sub-block click detection. All 6 sides are always electrically open
+ * here instead - the same real "drop the precise multi-hitbox click UI, keep the mechanic" simplification
+ * {@link thaumcraft.common.blocks.devices.BlockLevitator}/{@link thaumcraft.common.blocks.devices.BlockRedstoneRelay}
+ * already established for their own single-value cycles (see their own doc comments) - there's just no
+ * single value left to cycle here once every side is always open, so this one has no click interaction at
+ * all rather than a whole-block-click substitute.</li>
  * <li>No venting warning FX/sound when two neighbors want conflicting aspects (client FX + a flavor cue,
  * dropped like everywhere else this session).</li>
  * </ul>
  *
- * {@link TileTubeFilter} (aspect-locks a tube) and {@link TileTubeRestrict} (halves its effective suction)
- * both extend this class, hooking into {@link #calculateSuction}/{@link #equalizeWithNeighbours} via a
- * handful of protected extension points rather than overriding those methods wholesale - a plain
- * {@code TileTube} exercises the exact same loop either way, just with every hook a no-op. The original's
- * third variant, Tube One-way, isn't ported: it relies on a single wand-configured "facing" direction this
- * simplified tube deliberately doesn't have (see the "no per-face toggling" note above) - a real, separate
- * design gap, not an oversight shared with Filter/Restrict.
+ * {@link TileTubeFilter} (aspect-locks a tube), {@link TileTubeRestrict} (halves its effective suction), and
+ * {@link TileTubeOneway} (accepts suction from - and only feeds essentia toward - a single facing) all
+ * extend this class, hooking into {@link #calculateSuction}/{@link #equalizeWithNeighbours} via a handful of
+ * protected extension points rather than overriding those methods wholesale - a plain {@code TileTube}
+ * exercises the exact same loop either way, just with every hook a no-op. {@code TileTubeOneway}'s own
+ * "priority facing" configuration is the one case here that <i>does</i> get a real substitute click
+ * interaction (see its own doc comment) - the same {@code useWithoutItem}-cycles-a-value trick as
+ * Levitator/Redstone Relay, since it only has the one field to configure, not 6 independent per-face
+ * toggles.
  *
  * The connecting-pipe blockstate ({@code data/thaumcraft/blockstates/tube.json}) already used vanilla's own
  * {@code multipart}/{@code when}/{@code apply} format unchanged since 1.12 - migrated with only a model-path
@@ -89,6 +94,7 @@ public class TileTube extends BlockEntity implements IEssentiaTransport {
 		suction = 0;
 		suctionType = null;
 		for (Direction dir : Direction.values()) {
+			if (!isRelayDirection(dir)) continue;
 			if (!(level.getBlockEntity(pos.relative(dir)) instanceof IEssentiaTransport neighbor)) continue;
 			if (!neighbor.isConnectable(dir.getOpposite())) continue;
 			Aspect neighborType = neighbor.getSuctionType(dir.getOpposite());
@@ -104,6 +110,7 @@ public class TileTube extends BlockEntity implements IEssentiaTransport {
 	protected void equalizeWithNeighbours(Level level, BlockPos pos) {
 		if (essentiaAmount > 0) return;
 		for (Direction dir : Direction.values()) {
+			if (!isPullDirection(dir)) continue;
 			if (!(level.getBlockEntity(pos.relative(dir)) instanceof IEssentiaTransport neighbor)) continue;
 			if (!neighbor.isConnectable(dir.getOpposite()) || !neighbor.canOutputTo(dir.getOpposite())) continue;
 
@@ -140,6 +147,18 @@ public class TileTube extends BlockEntity implements IEssentiaTransport {
 	 * neighbor currently states a type of its own. */
 	protected Aspect forcedSuctionType() {
 		return null;
+	}
+
+	/** {@link TileTubeOneway} restricts which neighbor's demand gets relayed as this tube's own suction -
+	 * see its own doc comment for the real semantics. Every other variant listens on all 6. */
+	protected boolean isRelayDirection(Direction dir) {
+		return true;
+	}
+
+	/** {@link TileTubeOneway} restricts which neighbor essentia can be pulled from - see its own doc comment.
+	 * Every other variant pulls from all 6. */
+	protected boolean isPullDirection(Direction dir) {
+		return true;
 	}
 
 	@Override

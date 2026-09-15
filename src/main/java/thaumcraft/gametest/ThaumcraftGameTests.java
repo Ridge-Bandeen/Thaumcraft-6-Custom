@@ -3802,9 +3802,8 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
-	// Tube Filter/Restrict - both extend TileTube via a handful of protected hooks rather than duplicating
-	// its suction/relay loop (see TileTube's own doc comment). Tube One-way isn't ported - it needs a
-	// wand-configured "facing" direction this simplified tube deliberately doesn't have.
+	// Tube Filter/Restrict/One-way - all extend TileTube via a handful of protected hooks rather than
+	// duplicating its suction/relay loop (see TileTube's own doc comment).
 	// --------------------------------------------------------------------------------------------------
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
@@ -3886,6 +3885,123 @@ public class ThaumcraftGameTests {
 		// A plain jar's own suction is 32 (see TileJarFillable); a restrict tube should report half that.
 		helper.assertTrue(tube.getSuctionAmount(net.minecraft.core.Direction.DOWN) == 16,
 				"a restrict tube facing a plain jar's 32 suction should report half (16), found: " + tube.getSuctionAmount(net.minecraft.core.Direction.DOWN));
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.tiles.essentia.TileTubeOneway}'s real click-to-cycle
+	 * interaction - the same real "drop the multi-hitbox raytrace, cycle on a plain click" substitute
+	 * {@code BlockLevitator}/{@code BlockRedstoneRelay} already established, now closing out the last
+	 * "Needs further triage" item that raytracing wall was blocking.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeOnewayCyclesItsFacingToARealConnectedNeighbor(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos tubePos = new BlockPos(3, 2, 3);
+		BlockPos jarPos = tubePos.below();
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		helper.setBlock(tubePos, BlocksTC.tubeOneway.get());
+		BlockPos tubeAbs = helper.absolutePos(tubePos);
+
+		thaumcraft.common.tiles.essentia.TileTubeOneway tube = helper.getBlockEntity(tubePos);
+		helper.assertTrue(tube.getFacing() == net.minecraft.core.Direction.NORTH, "a freshly placed one-way tube should really default to NORTH, found: " + tube.getFacing());
+
+		ServerPlayer player = spawnCasterAt(helper, tubeAbs.above(2));
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				net.minecraft.world.phys.Vec3.atCenterOf(tubeAbs), net.minecraft.core.Direction.UP, tubeAbs, false);
+
+		// The only real connected neighbor is the jar below - a plain right-click should skip every other
+		// (unconnected) direction and land on DOWN.
+		helper.getBlockState(tubePos).useWithoutItem(level, player, hit);
+		helper.assertTrue(tube.getFacing() == net.minecraft.core.Direction.DOWN,
+				"cycling with only a real connected neighbor below should really land on DOWN, found: " + tube.getFacing());
+
+		// With no other real connected neighbor, cycling again should just come back around to DOWN.
+		helper.getBlockState(tubePos).useWithoutItem(level, player, hit);
+		helper.assertTrue(tube.getFacing() == net.minecraft.core.Direction.DOWN,
+				"cycling again with still only one real connected neighbor should stay on DOWN, found: " + tube.getFacing());
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.tiles.essentia.TileTubeOneway}'s real directional
+	 * suction/flow restriction, re-derived directly from the true original's own
+	 * {@code facing == loc.getOpposite()}/{@code facing != loc.getOpposite()} conditions (see its own doc
+	 * comment). A one-way tube correctly facing its real downstream consumer should relay essentia exactly
+	 * like a plain tube; facing anywhere else should relay nothing at all, even with a real source and a real
+	 * demanding jar both still present.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeOnewayOnlyRelaysEssentiaWhenFacingItsRealDownstreamConsumer(GameTestHelper helper) {
+		BlockPos sourcePos = new BlockPos(4, 3, 4);
+		BlockPos tubePos = sourcePos.below();
+		BlockPos jarPos = tubePos.below();
+
+		helper.setBlock(sourcePos, TEST_ESSENTIA_SOURCE_BLOCK.get());
+		helper.setBlock(tubePos, BlocksTC.tubeOneway.get());
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		BlockPos tubeAbs = helper.absolutePos(tubePos);
+		BlockPos jarAbs = helper.absolutePos(jarPos);
+
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(sourcePos);
+		source.aspect = Aspect.EARTH;
+		source.amount = 999;
+
+		thaumcraft.common.tiles.essentia.TileTubeOneway tube = helper.getBlockEntity(tubePos);
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(jarPos);
+
+		// Facing NORTH (nothing real there) should relay nothing at all, even with a real source above and a
+		// real demanding jar below both present.
+		for (int i = 0; i < 200; i++) {
+			thaumcraft.common.tiles.essentia.TileTube.tick(helper.getLevel(), tubeAbs, helper.getBlockState(tubePos), tube);
+			thaumcraft.common.tiles.essentia.TileJarFillable.tick(helper.getLevel(), jarAbs, helper.getBlockState(jarPos), jar);
+		}
+		helper.assertTrue(jar.getAspects().size() == 0,
+				"a one-way tube facing away from its real downstream consumer should relay nothing, jar got " + jar.getAspects());
+
+		// Facing DOWN (the real jar) should relay exactly like a plain tube would.
+		tube.cycleFacing(helper.getLevel(), tubeAbs);
+		tube.cycleFacing(helper.getLevel(), tubeAbs);
+		tube.cycleFacing(helper.getLevel(), tubeAbs);
+		helper.assertTrue(tube.getFacing() == net.minecraft.core.Direction.DOWN, "cycling from NORTH 3 times should land on DOWN, found: " + tube.getFacing());
+
+		for (int i = 0; i < 200; i++) {
+			thaumcraft.common.tiles.essentia.TileTube.tick(helper.getLevel(), tubeAbs, helper.getBlockState(tubePos), tube);
+			thaumcraft.common.tiles.essentia.TileJarFillable.tick(helper.getLevel(), jarAbs, helper.getBlockState(jarPos), jar);
+		}
+		helper.assertTrue(jar.getAspects().getAmount(Aspect.EARTH) > 0,
+				"a one-way tube correctly facing its real downstream consumer should relay essentia to it, jar got " + jar.getAspects());
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for the other real half of {@link thaumcraft.common.tiles.essentia.TileTubeOneway}'s
+	 * directional restriction - it should never pull essentia back FROM the direction it's facing (real
+	 * backflow prevention), even though a plain tube happily would.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tubeOnewayNeverPullsEssentiaBackFromItsFacingDirection(GameTestHelper helper) {
+		BlockPos tubePos = new BlockPos(4, 3, 4);
+		BlockPos jarPos = tubePos.below();
+		helper.setBlock(jarPos, BlocksTC.jarNormal.get());
+		helper.setBlock(tubePos, BlocksTC.tubeOneway.get());
+		BlockPos tubeAbs = helper.absolutePos(tubePos);
+		BlockPos jarAbs = helper.absolutePos(jarPos);
+
+		thaumcraft.common.tiles.essentia.TileTubeOneway tube = helper.getBlockEntity(tubePos);
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(jarPos);
+		tube.cycleFacing(helper.getLevel(), tubeAbs);
+		helper.assertTrue(tube.getFacing() == net.minecraft.core.Direction.DOWN, "cycling with only the jar connected should land on DOWN, found: " + tube.getFacing());
+
+		jar.addToContainer(Aspect.EARTH, 10);
+		helper.assertTrue(jar.getAspects().getAmount(Aspect.EARTH) == 10, "the jar should really start with 10 real Earth essentia, got " + jar.getAspects());
+
+		for (int i = 0; i < 200; i++) {
+			thaumcraft.common.tiles.essentia.TileTube.tick(helper.getLevel(), tubeAbs, helper.getBlockState(tubePos), tube);
+		}
+		helper.assertTrue(tube.getEssentiaAmount(net.minecraft.core.Direction.DOWN) == 0,
+				"a one-way tube should never pull essentia back from the direction it's facing, tube got " + tube.getEssentiaAmount(net.minecraft.core.Direction.DOWN));
+		helper.assertTrue(jar.getAspects().getAmount(Aspect.EARTH) == 10, "the jar's real essentia should be untouched, got " + jar.getAspects());
 		helper.succeed();
 	}
 

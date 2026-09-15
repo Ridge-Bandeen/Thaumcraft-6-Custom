@@ -445,6 +445,12 @@ public final class BlocksTC {
 			thaumcraft.common.blocks.essentia.BlockTubeFilter::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.5f).sound(SoundType.METAL).noOcclusion());
 
+	/** Accepts suction from, and only feeds essentia toward, one facing - see
+	 * {@link thaumcraft.common.blocks.essentia.BlockTubeOneway}'s own doc comment. */
+	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockTubeOneway> tubeOneway = BLOCKS.registerBlock("tube_oneway",
+			thaumcraft.common.blocks.essentia.BlockTubeOneway::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.5f).sound(SoundType.METAL).noOcclusion());
+
 	/** Halves a tube's own suction - see {@link thaumcraft.common.blocks.essentia.BlockTubeRestrict}'s own
 	 * doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockTubeRestrict> tubeRestrict = BLOCKS.registerBlock("tube_restrict",
