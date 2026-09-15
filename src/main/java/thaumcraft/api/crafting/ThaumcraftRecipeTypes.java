@@ -77,6 +77,18 @@ public final class ThaumcraftRecipeTypes {
 			RECIPE_SERIALIZERS.register("triple_meat_treat",
 					() -> new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>(thaumcraft.common.lib.crafting.RecipeTripleMeatTreat::new));
 
+	/** Same real {@link net.minecraft.world.item.crafting.CustomRecipe} shape as {@link #TRIPLE_MEAT_TREAT_SERIALIZER}
+	 * - see {@link thaumcraft.common.lib.crafting.LabelDyeRecipe}'s own doc comment. */
+	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.LabelDyeRecipe>> LABEL_DYE_SERIALIZER =
+			RECIPE_SERIALIZERS.register("label_dye",
+					() -> new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>(thaumcraft.common.lib.crafting.LabelDyeRecipe::new));
+
+	/** See {@link thaumcraft.common.lib.crafting.LabelClearRecipe}'s own doc comment - the other real half of
+	 * the label recipe family, alongside {@link #LABEL_DYE_SERIALIZER}. */
+	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.LabelClearRecipe>> LABEL_CLEAR_SERIALIZER =
+			RECIPE_SERIALIZERS.register("label_clear",
+					() -> new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>(thaumcraft.common.lib.crafting.LabelClearRecipe::new));
+
 	private static <T extends net.minecraft.world.item.crafting.Recipe<?>> Supplier<RecipeType<T>> registerType(String name) {
 		return RECIPE_TYPES.register(name, () -> new RecipeType<T>() {
 			@Override

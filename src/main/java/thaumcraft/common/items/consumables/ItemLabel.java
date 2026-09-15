@@ -27,14 +27,16 @@ import thaumcraft.api.items.ThaumcraftDataComponents;
  * Uses the same {@code onItemUseFirst} hook as {@link ItemPhial} to intercept the click before the target
  * block's own right-click handling runs.
  *
- * Simplified vs the original: only the blank label has a real crafting recipe. The original dyed a blank
- * label with a specific aspect using a filled Phial as an ingredient, matched by its NBT contents
- * ({@code IngredientNBTTC}, a custom 1.12.2 ingredient type - vanilla shapeless recipes couldn't match NBT
- * either, then or now). Reproducing that needs a real custom {@code Ingredient} type matching a specific
- * {@code ASPECTS} component value, which is new recipe-system work this pass didn't build - a genuine,
- * flagged scope cut, not a hidden gap. The core mechanic (applying an aspected label to lock a jar) is fully
+ * Dyeing and clearing both have real crafting recipes now (see
+ * {@link thaumcraft.common.lib.crafting.LabelDyeRecipe}/{@link thaumcraft.common.lib.crafting.LabelClearRecipe}),
+ * matching the true original's own {@code label_<aspect>}/{@code JarLabelNull} recipe family. The original
+ * matched a filled Phial by its exact NBT contents ({@code IngredientNBTTC}, a custom 1.12.2 ingredient type -
+ * vanilla shapeless recipes couldn't match NBT either, then or now); rather than build a whole new
+ * {@code ICustomIngredient} plumbing layer for it, both are real {@code CustomRecipe}s checking the real
+ * {@code ASPECTS} component directly - the same technique {@code InfusionPotionRecipe}/{@code RecipeTripleMeatTreat}
+ * already established for this port. The core mechanic (applying an aspected label to lock a jar) is fully
  * implemented and tested regardless of how a filled label is obtained (creative mode, {@link ItemLabel}'s
- * own {@code setAspects}, etc.).
+ * own {@code setAspects}, crafting, etc.).
  */
 public class ItemLabel extends Item implements IEssentiaContainerItem {
 

@@ -5774,6 +5774,73 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * The real label-dyeing recipe family - {@link thaumcraft.common.lib.crafting.LabelDyeRecipe}/
+	 * {@link thaumcraft.common.lib.crafting.LabelClearRecipe}, the last "Confirmed real gaps" item.
+	 * Covers the three real behaviors: dyeing derives its output aspect from whichever real aspect the
+	 * matched Phial actually carries (not a fixed per-recipe aspect - one recipe class covers all of them),
+	 * the Phial itself comes back unconsumed via a real {@code getRemainingItems} override, and washing a
+	 * dyed label back to blank only matches an actually-dyed one.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void labelDyeingDerivesItsAspectFromTheRealPhialAndKeepsIt(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ItemStack blankLabel = new ItemStack(ItemsTC.label.get());
+		ItemStack filledPhial = thaumcraft.common.items.consumables.ItemPhial.makeFilledPhial(Aspect.FIRE);
+
+		var craftingInput = net.minecraft.world.item.crafting.CraftingInput.of(2, 1, java.util.List.of(blankLabel, filledPhial));
+		var match = level.getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, craftingInput, level);
+		helper.assertTrue(match.isPresent(), "a blank label plus a filled phial should really match a real recipe");
+
+		ItemStack dyed = match.get().value().assemble(craftingInput, level.registryAccess());
+		helper.assertTrue(dyed.is(ItemsTC.label.get()), "dyeing should really produce a real label, got " + dyed);
+		AspectList dyedAspects = dyed.get(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get());
+		helper.assertTrue(dyedAspects != null && dyedAspects.getAmount(Aspect.FIRE) == 1,
+				"a label dyed with a Fire phial should really carry 1 real Fire aspect, got " + dyedAspects);
+
+		var remaining = match.get().value().getRemainingItems(craftingInput);
+		boolean phialReturned = false;
+		for (ItemStack stack : remaining) {
+			if (stack.is(thaumcraft.api.items.ItemsTC.phial.get())) {
+				AspectList returnedAspects = stack.get(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get());
+				helper.assertTrue(returnedAspects != null && returnedAspects.getAmount(Aspect.FIRE) == 10,
+						"the real remaining phial should really still be a full Fire phial, got " + returnedAspects);
+				phialReturned = true;
+			}
+		}
+		helper.assertTrue(phialReturned, "dyeing a label should really return the real phial unconsumed via getRemainingItems");
+
+		// Two aspects on the phial, or two phials/labels at once, shouldn't match at all.
+		ItemStack tooManyAspects = new ItemStack(thaumcraft.api.items.ItemsTC.phial.get());
+		tooManyAspects.set(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get(),
+				new AspectList().add(Aspect.FIRE, 10).add(Aspect.WATER, 10));
+		var badInput = net.minecraft.world.item.crafting.CraftingInput.of(2, 1, java.util.List.of(blankLabel, tooManyAspects));
+		helper.assertTrue(level.getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, badInput, level).isEmpty(),
+				"a phial with more than one real aspect should never match the real label-dye recipe");
+
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void labelClearOnlyMatchesARealDyedLabel(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+
+		ItemStack dyedLabel = new ItemStack(ItemsTC.label.get());
+		dyedLabel.set(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get(), new AspectList().add(Aspect.WATER, 1));
+		var dyedInput = net.minecraft.world.item.crafting.CraftingInput.of(1, 1, java.util.List.of(dyedLabel));
+		var dyedMatch = level.getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, dyedInput, level);
+		helper.assertTrue(dyedMatch.isPresent(), "a real dyed label should really match the real clear recipe");
+		ItemStack cleared = dyedMatch.get().value().assemble(dyedInput, level.registryAccess());
+		helper.assertTrue(cleared.is(ItemsTC.label.get()) && !cleared.has(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get()),
+				"clearing a real dyed label should really produce a real blank label, got " + cleared);
+
+		var blankInput = net.minecraft.world.item.crafting.CraftingInput.of(1, 1, java.util.List.of(new ItemStack(ItemsTC.label.get())));
+		helper.assertTrue(level.getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, blankInput, level).isEmpty(),
+				"an already-blank label should never match the real clear recipe");
+
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void cinderpearlCraftsIntoBlazePowder(GameTestHelper helper) {
 		var craftingInput = net.minecraft.world.item.crafting.CraftingInput.of(1, 1, java.util.List.of(new ItemStack(ItemsTC.cinderpearl.get())));
