@@ -63,20 +63,22 @@ sweep turned up and what's still unscoped.)*
   not-ported) big magic tree feature.
 - ~~**Mound generation**~~ — closed 2026-09-14. See "World generation,
   part 3" under "Recently closed" below.
-- **Essentia tube chains can deadlock on a suction tie** — found 2026-09-14
-  while testing the tube click-precision restoration (below), not a gap in
-  the true original's own registered content but a real bug in this port's
-  own `TileTube#calculateSuction`/`equalizeWithNeighbours` worth tracking.
-  Two real tubes chained straight in a row (source → tube A → tube B →
-  sink) can permanently stall: both tubes adopt the exact same suction
-  value from the same downstream sink, and `equalizeWithNeighbours`'s own
-  pull condition requires the puller's suction to be *strictly greater*
-  than the neighbor's, so a tie never resolves either way. Never caught
-  before because every existing flow test only ever used one tube between
-  a source and a sink. Needs either a small per-hop decay (so suction
-  strictly decreases with distance, matching how real pressure/demand
-  propagation usually works) or an explicit tie-breaker; a real GameTest
-  reproducing the deadlock directly would be the right way to start.
+- ~~**Essentia tube chains can deadlock on a suction tie**~~ — closed
+  2026-09-15. Found 2026-09-14 while testing the tube click-precision
+  restoration, a real bug in this port's own `TileTube#calculateSuction`,
+  not a gap in the original's own content. Root cause, confirmed by direct
+  comparison against the true original rather than inventing a fix: the
+  original always stored a neighbor's demand *minus one* per hop
+  (`setSuction(st, restrict ? suck/2 : suck-1)`) - this port had silently
+  dropped that real per-hop decay, storing the raw value verbatim instead,
+  which is exactly what let 2 chained tubes tie. Restored the real decay
+  (now applied via `adjustSuction`, called after the threshold check rather
+  than before, matching the original's exact formula split); also reverted
+  a related, now-provably-unnecessary `<=` workaround in
+  `TileJarFillable#tick` back to the original's real strict `<`. New
+  GameTest reproduces the exact deadlock scenario and confirms it's gone.
+  See commit "Fix the real essentia tube chain suction deadlock - restore
+  per-hop decay".
 - ~~**`tubeOneway`**~~ — **closed 2026-09-14, and the "known,
   already-diagnosed blocker" note here was stale.** It claimed Levitator/
   Redstone Relay were *also* still blocked on the same unported CodeChicken
