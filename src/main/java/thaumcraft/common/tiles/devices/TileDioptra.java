@@ -56,7 +56,7 @@ public class TileDioptra extends BlockEntity {
 		Arrays.fill(tile.gridAmount, (byte) 0);
 		for (int xx = 0; xx < 13; xx++) {
 			for (int zz = 0; zz < 13; zz++) {
-				AuraChunk ac = AuraHandler.getAuraChunk(level.dimension(), (pos.getX() >> 4) + xx - 6, (pos.getZ() >> 4) + zz - 6);
+				AuraChunk ac = AuraHandler.getAuraChunk(level, (pos.getX() >> 4) + xx - 6, (pos.getZ() >> 4) + zz - 6);
 				if (ac == null) continue;
 				float amount = visMode ? ac.getVis() : ac.getFlux();
 				tile.gridAmount[xx + zz * 13] = (byte) Math.min(64.0f, amount / 500.0f * 64.0f);

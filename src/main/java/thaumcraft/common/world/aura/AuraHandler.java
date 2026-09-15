@@ -10,6 +10,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import thaumcraft.Thaumcraft;
+import thaumcraft.common.world.biomes.BiomeHandler;
 
 /**
  * Replaces the old (1.12.2) {@code AuraHandler}. This is the real vis/flux simulation the rest of the port
@@ -33,11 +34,13 @@ import thaumcraft.Thaumcraft;
  * AuraThread} calls it from the background simulation thread, which hands the actual spawn off to the main
  * server thread via {@code MinecraftServer#execute} rather than touching the level off-thread.
  *
- * Still deliberately simplified versus the original, worth revisiting later:
+ * <p>Real per-biome variation on generation is real again - {@link #generateAuraChunk} weights the baseline
+ * by {@link BiomeHandler#getAuraModifier}, sampled from the real biome at the chunk's own real center,
+ * matching the true original's own real {@code BiomeDictionary}-tag-weighted seeding (see that class's own
+ * doc comment for the full story, including a real duplicate-registration quirk it found in the original).
+ *
+ * <p>Still deliberately simplified versus the original, worth revisiting later:
  * <ul>
- * <li>No per-biome variation on generation - every chunk seeds with the same flat baseline (+ noise). The
- * original weighted this by {@code BiomeDictionary} tags (a whole extra file, {@code BiomeHandler}) that
- * isn't ported.</li>
  * <li>Chunks are created lazily on first read/write instead of via a world-gen hook, which sidesteps
  * needing to port that wiring for now - functionally equivalent from a "does this block have vis"
  * standpoint, just not primed ahead of time.</li>
@@ -46,7 +49,6 @@ import thaumcraft.Thaumcraft;
 public class AuraHandler
 {
     public static final int AURA_CEILING = 500;
-    private static final float BASELINE = 1.0f;
 
     private static final ConcurrentHashMap<ResourceKey<Level>, AuraWorld> auras = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<ResourceKey<Level>, AuraThread> auraThreads = new ConcurrentHashMap<>();
@@ -66,19 +68,26 @@ public class AuraHandler
         ensureThreadStarted(level.dimension());
     }
 
-    public static AuraChunk getAuraChunk(ResourceKey<Level> dim, int x, int z) {
+    /** Real per-biome seeding needs a real {@link Level} to sample - every real caller in this codebase
+     * already has one in scope, so unlike the original's own dimension-keyed lookup, this takes the level
+     * directly rather than carrying a dimension-key-only overload nothing would call. */
+    public static AuraChunk getAuraChunk(Level level, int x, int z) {
+        ResourceKey<Level> dim = level.dimension();
         boolean isNewDimension = !auras.containsKey(dim);
         AuraWorld world = auras.computeIfAbsent(dim, key -> new AuraWorld());
         if (isNewDimension) ensureThreadStarted(dim);
         return world.getAuraChunks().computeIfAbsent(ChunkPos.asLong(x, z), key -> {
             world.setDirty();
-            return generateAuraChunk(new ChunkPos(x, z));
+            return generateAuraChunk(level, new ChunkPos(x, z));
         });
     }
 
-    private static AuraChunk generateAuraChunk(ChunkPos pos) {
+    /** Seeds a freshly-touched chunk's baseline aura, real biome weighting included - see this class's own
+     * doc comment. */
+    private static AuraChunk generateAuraChunk(Level level, ChunkPos pos) {
         float noise = (float) (1.0 + rand.nextGaussian() * 0.1);
-        short base = (short) Math.max(0, Math.min(AURA_CEILING, (int) (BASELINE * AURA_CEILING * noise)));
+        float biomeModifier = BiomeHandler.getAuraModifier(level.getBiome(pos.getMiddleBlockPosition(64)));
+        short base = (short) Math.max(0, Math.min(AURA_CEILING, (int) (biomeModifier * AURA_CEILING * noise)));
         return new AuraChunk(pos, base, base, 0.0f);
     }
 
@@ -115,27 +124,27 @@ public class AuraHandler
     }
 
     public static float getTotalAura(Level level, BlockPos pos) {
-        AuraChunk ac = getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4);
+        AuraChunk ac = getAuraChunk(level, pos.getX() >> 4, pos.getZ() >> 4);
         return ac.getVis() + ac.getFlux();
     }
 
     public static float getVis(Level level, BlockPos pos) {
-        return getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4).getVis();
+        return getAuraChunk(level, pos.getX() >> 4, pos.getZ() >> 4).getVis();
     }
 
     public static float getFlux(Level level, BlockPos pos) {
-        return getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4).getFlux();
+        return getAuraChunk(level, pos.getX() >> 4, pos.getZ() >> 4).getFlux();
     }
 
     public static int getAuraBase(Level level, BlockPos pos) {
-        return getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4).getBase();
+        return getAuraChunk(level, pos.getX() >> 4, pos.getZ() >> 4).getBase();
     }
 
     /** How flux-saturated this chunk currently is (flux / base), matching the original's own real formula
      * - used by {@link thaumcraft.common.blocks.world.taint.TaintHelper#spreadFibres} to scale taint's own
      * spread rate up in already-corrupted areas. */
     public static float getFluxSaturation(Level level, BlockPos pos) {
-        AuraChunk ac = getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4);
+        AuraChunk ac = getAuraChunk(level, pos.getX() >> 4, pos.getZ() >> 4);
         return ac.getBase() > 0 ? ac.getFlux() / ac.getBase() : 0.0f;
     }
 
@@ -148,20 +157,20 @@ public class AuraHandler
 
     public static void addVis(Level level, BlockPos pos, float amount) {
         if (amount < 0.0f) return;
-        AuraChunk ac = getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4);
+        AuraChunk ac = getAuraChunk(level, pos.getX() >> 4, pos.getZ() >> 4);
         ac.setVis(ac.getVis() + amount);
         markDirty(level.dimension());
     }
 
     public static void addFlux(Level level, BlockPos pos, float amount) {
         if (amount < 0.0f) return;
-        AuraChunk ac = getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4);
+        AuraChunk ac = getAuraChunk(level, pos.getX() >> 4, pos.getZ() >> 4);
         ac.setFlux(ac.getFlux() + amount);
         markDirty(level.dimension());
     }
 
     public static float drainVis(Level level, BlockPos pos, float amount, boolean simulate) {
-        AuraChunk ac = getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4);
+        AuraChunk ac = getAuraChunk(level, pos.getX() >> 4, pos.getZ() >> 4);
         amount = Math.min(amount, ac.getVis());
         if (!simulate) {
             ac.setVis(ac.getVis() - amount);
@@ -171,7 +180,7 @@ public class AuraHandler
     }
 
     public static float drainFlux(Level level, BlockPos pos, float amount, boolean simulate) {
-        AuraChunk ac = getAuraChunk(level.dimension(), pos.getX() >> 4, pos.getZ() >> 4);
+        AuraChunk ac = getAuraChunk(level, pos.getX() >> 4, pos.getZ() >> 4);
         amount = Math.min(amount, ac.getFlux());
         if (!simulate) {
             ac.setFlux(ac.getFlux() - amount);
@@ -189,7 +198,7 @@ public class AuraHandler
         int sz = pos.getZ() >> 4;
         for (int xx = -1; xx <= 1; xx++) {
             for (int zz = -1; zz <= 1; zz++) {
-                AuraChunk ac = getAuraChunk(level.dimension(), sx + xx, sz + zz);
+                AuraChunk ac = getAuraChunk(level, sx + xx, sz + zz);
                 if (ac != null) t += ac.getVis();
             }
         }

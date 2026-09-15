@@ -669,6 +669,65 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
+	 * Real coverage for {@link thaumcraft.common.world.biomes.BiomeHandler}'s own real biome-tag-weighted
+	 * table (the true original's own {@code BiomeDictionary}-based aura/aspect table, re-derived onto
+	 * NeoForge's real {@code c:} common biome tags - see its own doc comment). Checks 3 real vanilla biomes
+	 * with real, distinctly different tag sets to confirm the averaging/first-match/random-match behaviors
+	 * are all real and correct, not just "returns something."
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void biomeHandlerRealTagTableWeightsKnownBiomesCorrectly(GameTestHelper helper) {
+		var biomes = helper.getLevel().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.BIOME);
+		net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome> desert = biomes.getOrThrow(net.minecraft.world.level.biome.Biomes.DESERT);
+		net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome> forest = biomes.getOrThrow(net.minecraft.world.level.biome.Biomes.FOREST);
+
+		// Desert is really tagged c:is_hot, c:is_dry, and c:is_sandy - all 3 real entries in the table
+		// (confirmed directly against NeoForge's own real tag provider, not guessed), so the real modifier
+		// should be their real average.
+		helper.assertTrue(desert.is(net.neoforged.neoforge.common.Tags.Biomes.IS_HOT) && desert.is(net.neoforged.neoforge.common.Tags.Biomes.IS_DRY)
+						&& desert.is(net.neoforged.neoforge.common.Tags.Biomes.IS_SANDY),
+				"desert should really carry all 3 real tags this test assumes");
+		float desertModifier = thaumcraft.common.world.biomes.BiomeHandler.getAuraModifier(desert);
+		helper.assertTrue(Math.abs(desertModifier - (0.33f + 0.125f + 0.25f) / 3f) < 0.001f,
+				"desert's real aura modifier should really average its 3 real matching tags, got " + desertModifier);
+
+		// Forest is really tagged c:is_forest alone among this table's own real entries - a real Earth lean,
+		// and the real original's own table gives Forest the real max Greatwood chance (1.0).
+		helper.assertTrue(forest.is(net.neoforged.neoforge.common.Tags.Biomes.IS_FOREST), "forest should really carry the real tag this test assumes");
+		helper.assertTrue(thaumcraft.common.world.biomes.BiomeHandler.getRandomAspect(forest, helper.getLevel().getRandom()) == Aspect.EARTH,
+				"forest should really lean Earth, its only real matching tag");
+		helper.assertTrue(thaumcraft.common.world.biomes.BiomeHandler.getAuraModifier(forest) == 0.5f, "forest's real aura modifier should really be exactly its one real matching tag's value");
+		helper.assertTrue(thaumcraft.common.world.biomes.BiomeHandler.getGreatwoodChance(forest) == 1.0f,
+				"forest should really carry the true original's own real max Greatwood chance");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link AuraHandler}'s own real per-biome-weighted chunk seeding - re-derived
+	 * verbatim from the true original's own {@code BiomeDictionary}-weighted generation, which this port's
+	 * own doc comment had flagged as a real, deliberately-simplified-away gap until now. A freshly-seeded
+	 * chunk's real base should track {@link thaumcraft.common.world.biomes.BiomeHandler#getAuraModifier} for
+	 * the real biome actually present there, not a flat baseline - averaged across several real chunks to
+	 * smooth out the real per-chunk gaussian noise.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void auraChunkSeedingRealWeightsByTheRealBiomeThere(GameTestHelper helper) {
+		Level level = helper.getLevel();
+		float expectedModifier = thaumcraft.common.world.biomes.BiomeHandler.getAuraModifier(level.getBiome(helper.absolutePos(BlockPos.ZERO)));
+
+		long total = 0;
+		int samples = 30;
+		for (int i = 0; i < samples; i++) {
+			thaumcraft.common.world.aura.AuraChunk ac = AuraHandler.getAuraChunk(level, i, i + 1000);
+			total += ac.getBase();
+		}
+		float observedModifier = (total / (float) samples) / AuraHandler.AURA_CEILING;
+		helper.assertTrue(Math.abs(observedModifier - expectedModifier) < 0.05f,
+				"freshly-seeded chunks should really average close to the real biome's own modifier (" + expectedModifier + "), observed " + observedModifier);
+		helper.succeed();
+	}
+
+	/**
 	 * Coverage for {@link AuraHandler#shouldPreserveAura} - gates {@code RechargeHelper}'s vis draining and
 	 * (per its own doc comment) is meant to require the "AURAPRESERVE" research when a real player is
 	 * involved, but bypass that check entirely when called with a null player.
@@ -8015,7 +8074,7 @@ public class ThaumcraftGameTests {
 		net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dim = helper.getLevel().dimension();
 		ServerPlayer owner = spawnCasterAt(helper, pos.above(2));
 
-		thaumcraft.common.world.aura.AuraHandler.getAuraChunk(dim, pos.getX() >> 4, pos.getZ() >> 4);
+		thaumcraft.common.world.aura.AuraHandler.getAuraChunk(helper.getLevel(), pos.getX() >> 4, pos.getZ() >> 4);
 		helper.assertTrue(thaumcraft.common.world.aura.AuraHandler.getAuraWorld(dim) != null, "a real aura chunk access should have created this dimension's real AuraWorld");
 
 		thaumcraft.api.golems.seals.SealPos sealPos2 = new thaumcraft.api.golems.seals.SealPos(pos, net.minecraft.core.Direction.UP);
@@ -8031,7 +8090,7 @@ public class ThaumcraftGameTests {
 
 		// The real "never loses state permanently" property - a later real access should just recreate both,
 		// same as a dimension being reloaded after this real unload.
-		thaumcraft.common.world.aura.AuraHandler.getAuraChunk(dim, pos.getX() >> 4, pos.getZ() >> 4);
+		thaumcraft.common.world.aura.AuraHandler.getAuraChunk(helper.getLevel(), pos.getX() >> 4, pos.getZ() >> 4);
 		helper.assertTrue(thaumcraft.common.world.aura.AuraHandler.getAuraWorld(dim) != null, "a real aura chunk access after unload should lazily recreate this dimension's AuraWorld");
 
 		helper.succeed();
