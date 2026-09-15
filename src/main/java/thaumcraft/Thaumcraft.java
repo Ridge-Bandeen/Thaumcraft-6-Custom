@@ -247,6 +247,7 @@ public class Thaumcraft {
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidEnchantmentTable());
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidPortal.AidPortalEnd());
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidPortal.AidPortalNether());
+        thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidPortal.AidPortalCrimson());
 
         // Second batch of the "extra content" tier - see this method's own doc comment above. ALL 19 of the
         // original's remaining cards and ALL 8 of its remaining aids are now registered. AidGlyphedStone,

@@ -3,12 +3,12 @@ package thaumcraft.common.lib.research.theorycraft;
 import net.minecraft.world.level.block.Blocks;
 import thaumcraft.api.research.theorycraft.ITheorycraftAid;
 import thaumcraft.api.research.theorycraft.TheorycraftCard;
+import thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser;
 
-/** Replaces the old (1.12.2) {@code AidPortal} - direct translation of its real vanilla-block variants only
- * ({@link AidPortalEnd}/{@link AidPortalNether}). The original's 3rd variant, {@code AidPortalCrimson},
- * triggered off a real {@code EntityCultistPortalLesser} - that entity hasn't been ported yet, so this
- * variant is deliberately left out rather than referencing something that doesn't exist; add it back once
- * that entity is real. */
+/** Replaces the old (1.12.2) {@code AidPortal} - direct translation, all 3 real variants
+ * ({@link AidPortalEnd}/{@link AidPortalNether}/{@link AidPortalCrimson}). {@code AidPortalCrimson} was
+ * deliberately left out until 2026-09-15 (its real trigger, {@link EntityCultistPortalLesser}, hadn't been
+ * ported yet at the time) - restored now that it's real and shipped. */
 public abstract class AidPortal implements ITheorycraftAid {
 
 	private final Object portal;
@@ -37,6 +37,12 @@ public abstract class AidPortal implements ITheorycraftAid {
 	public static class AidPortalNether extends AidPortal {
 		public AidPortalNether() {
 			super(Blocks.NETHER_PORTAL);
+		}
+	}
+
+	public static class AidPortalCrimson extends AidPortal {
+		public AidPortalCrimson() {
+			super(EntityCultistPortalLesser.class);
 		}
 	}
 }

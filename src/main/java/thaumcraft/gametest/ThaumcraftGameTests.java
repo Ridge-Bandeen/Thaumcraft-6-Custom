@@ -7903,6 +7903,32 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for the 2026-09-15 restoration: {@code AidPortalCrimson} (deliberately left out until
+	 * {@link thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser} was real) should really
+	 * register when a real instance of that entity is nearby, matching {@link
+	 * thaumcraft.common.tiles.crafting.TileResearchTable#checkSurroundingAids}'s own real entity-class-based
+	 * aid detection (already generic, no change needed there).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void checkSurroundingAidsDetectsARealCultistPortalLesser(GameTestHelper helper) {
+		BlockPos tablePos = new BlockPos(3, 2, 3);
+		helper.setBlock(tablePos, thaumcraft.api.blocks.BlocksTC.researchTable.get());
+		thaumcraft.common.tiles.crafting.TileResearchTable tile = helper.getBlockEntity(tablePos);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser portal =
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_PORTAL_LESSER.get().create(level);
+		BlockPos portalAbs = helper.absolutePos(tablePos.offset(2, 0, 0));
+		portal.moveTo(portalAbs.getX() + 0.5, portalAbs.getY() + 1.0, portalAbs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(portal);
+
+		java.util.Set<String> found = tile.checkSurroundingAids();
+		helper.assertTrue(found.contains(thaumcraft.common.lib.research.theorycraft.AidPortal.AidPortalCrimson.class.getName()),
+				"a real cultist portal lesser within scan range should register AidPortalCrimson, found " + found);
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void cardSynergyConvertsCombinedProgressIntoRealGolemancyProgress(GameTestHelper helper) {
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
