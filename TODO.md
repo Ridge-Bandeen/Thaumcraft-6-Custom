@@ -21,11 +21,33 @@ stale reasoning - per the user's own standing directive, see
 [[thaumcraft-port-autonomy]]. Most of the 51 remain genuinely, correctly
 blocked (mostly on the large unported `EntityUtils`/`InventoryUtils` utility
 classes, or on subsystems with no evidence of landing since - Baubles/Curios,
-the champion-mod system, the custom Eldritch dimension, the magical-node
-system, the Alembic-adjacent config-book system). The entries below are the
-real ones whose own cited blocker has since resolved, or that were simply
-never picked up once reachable - each cross-checked directly against current
-`build.gradle`/registry state, not assumed from the doc comment alone.
+the custom Eldritch dimension, the magical-node system, the config-driven
+starter-book system). The entries below are the real ones whose own cited
+blocker has since resolved, or that were simply never picked up once
+reachable - each cross-checked directly against current `build.gradle`/
+registry state, not assumed from the doc comment alone.
+
+**Correction, same day**: the user directly questioned my own first pass at
+this sweep - "I think we've already done at least one of them (the
+champion-mod system) so the others might be in better states than we think
+too." They were right: the champion-mod system (`ThaumcraftAttributes
+.CHAMPION_MOD`, `ChampionModEvents`, `ChampionUtils`, wired into
+`Thaumcraft#registerChampionAttribute`) is fully real and complete - my own
+first-pass sweep had wrongly filed it under "still blocked" without actually
+checking. Re-verified the rest of that same "still blocked" bucket directly
+after being called out (not just re-trusting my own first pass):
+`EntityUtils`/`InventoryUtils` (still genuinely just the stale 1.12.2
+leftover files, confirmed absent from `build.gradle`, and no focused
+extraction exists yet for the SPECIFIC methods still cited -
+`isFriendly`/`isVisibleTo`/`getPlayerSlotFor` - the way `ChampionUtils` was
+already extracted from `EntityUtils` for the champion-mod half specifically),
+the custom Eldritch dimension (confirmed: no dimension type/class exists
+anywhere, a much bigger undertaking than the Eldritch *biome* already
+shipped), the magical-node system (confirmed: no such system exists; the one
+"Node" hit is an unrelated caster-focus concept), and the starter-book system
+(confirmed: `ConfigItems.startBook`'s only real consumer, `PlayerEvents.java`,
+is still the stale, uncompiled 1.12.2 leftover). Those 4 really are still
+correctly blocked - only champion-mod was a real miss.
 
 - **`BlockTaintFibre`'s leaf-touching "grow into `taintFeature`" branch** —
   its own doc comment cites `BlockTaintFeature` as "not ported yet," but
@@ -115,8 +137,33 @@ never picked up once reachable - each cross-checked directly against current
   restorations: give `TileTubeBuffer` the same real per-face toggling
   `TileTube`/`TileTubeFilter`/`TileTubeRestrict`/`TileTubeOneway` already
   got, then restore `ItemResonator`'s own missing branch on top.
+- **`Thaumcraft.java`'s loot-bag drop uses a flat 8% chance instead of the
+  real champion-mutation gate** — its own doc comment says so directly:
+  "the real original gate was actually the 'champion' mutation system... the
+  champion attribute it checks never carries a non-default value here, so
+  translating that condition literally would make loot bags permanently
+  undroppable" - stale now that the champion-mod system is real (see the
+  correction note above). Regular vanilla `Monster`s are already on the
+  real champion-eligible list, so this one's a clean restoration with no
+  design fork attached (unlike the boss-suffix items below).
 
-*(A few lower-priority real gaps surfaced by the same sweep that were never
+**Real design fork surfaced by the champion-mod correction, not yet
+decided - flagged rather than guessed:** `Thaumcraft#registerChampionAttribute`
+deliberately excludes this mod's own boss-tier entities from ever rolling as
+a champion, with its own doc comment explaining why (no modern per-instance
+"every `EntityCreature`" equivalent to the original's blanket 1.12
+`EntityConstructing` approach, so a curated type list was used instead - and
+bosses simply weren't added to it). But the true original's own blanket
+approach WOULD have included bosses too, meaning the real original probably
+let a `CultistLeader`/`EldritchWarden`/`TaintacleGiant` roll as a champion on
+top of already being that boss. Three boss doc comments (`EntityCultistLeader`,
+`EntityEldritchWarden`, `EntityTaintacleGiant`) still cite "champion system
+isn't ported" for their own missing name-suffix/tie-in - but since the real
+reason they can't show one today is this port's own current exclusion, not a
+missing system, restoring those specifically requires first deciding whether
+to reverse that exclusion (real parity, matching the original) or keep it (a
+real, deliberate, but not-yet-explicitly-chosen deviation). Not resolved
+yet - see `git log`/session record for when this gets decided.
 blocked by anything, just not yet picked up - not stale cuts, just open:
 `BlockTaint#canFallBelow`'s wood-log-proximity check (a 3x3x3 scan, real but
 minor); `GolemInteractionHelper`'s pre-placement collision nudge (real but
