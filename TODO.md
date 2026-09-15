@@ -121,10 +121,9 @@ Primal Crystal Clusters - is also already real and shipped. Moved to
   cultists elsewhere; `EntityEldritchGuardian` is fully shipped). Restore
   the knight's own research-gated bonus curio chance and its real
   nearest-Guardian targeting entry.
-- **`EntityCultist#isAlliedTo`'s missing `EntityCultistLeader` half** —
-  cites `EntityCultistLeader` as "isn't ported yet"; it's been real since
-  the boss arc shipped. Regular cultists and their own leader should
-  really recognize each other as allies.
+- ~~**`EntityCultist#isAlliedTo`'s missing `EntityCultistLeader` half**~~ —
+  closed 2026-09-15. Restored, matching the true original's own
+  `isOnSameTeam` exactly. Committed `bd2881c`.
 - **`EntityTaintacle#spawnTentacles`'s Eldritch-biome-gated extra fibre
   placement** — cites the whole custom Eldritch *biome* as unported; it's
   real since World generation part 2 (2026-09-14, this same broader
