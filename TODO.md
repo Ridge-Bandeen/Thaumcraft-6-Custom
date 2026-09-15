@@ -18,22 +18,6 @@ Each of these is genuinely real, registered content in the true original with
 no equivalent anywhere in the current port (verified by direct source read,
 not just a name diff).
 
-- **`required_craft`/`required_item` research auto-progression** — found
-  2026-09-14 while scoping the events package (below). Real, coherent, and
-  genuinely two-part: `ThaumcraftResearchLoader`'s own doc comment says it
-  deliberately skips parsing both stage gates ("display-only without the
-  crafting/possession-triggered auto-progression hook, itself a real,
-  separate, not-yet-ported system"), and that hook is indeed the one real
-  piece of the true original's own `CraftingEvents` still open. The real
-  research JSON this port already ships **does** carry `required_craft`
-  entries, and `ResearchStage#getCraftReference` is already real API - so
-  this is: (1) parse both gates into `ResearchStage`, (2) add a real
-  crafting/possession hook that progresses a stage once satisfied. That's
-  one of the original's real "just play the game and research progresses"
-  paths, currently entirely absent. Note the original keyed this off its own
-  `ResearchManager.craftingReferences` set + an item-stack hash; this port
-  has no `ResearchManager`, so the lookup needs re-deriving against the real
-  loaded `ResearchEntry`/`ResearchStage` data instead.
 - **Label dyeing recipe** (a real component-matching custom `Ingredient`) —
   {@code ItemLabel}'s own doc comment already flags this as a deliberate,
   known scope cut: the original dyed a blank label with a specific aspect
@@ -48,9 +32,11 @@ not just a name diff).
 
 *(`BlocksTC`/`ItemsTC` registries themselves are confirmed complete as of
 2026-09-14 - two field-name sweeps in a row found nothing real left there.
-The two items above came from a broader, deeper sweep of the whole file
-tree. See "Fresh sweep, 2026-09-14 (part 2)" below for what else that
-turned up and what's still unscoped.)*
+The item above came from a broader, deeper sweep of the whole file tree,
+which also turned up `required_craft`/`required_item` auto-progression
+and the warp-on-craft penalty - both now closed, see "Recently closed"
+below. See "Fresh sweep, 2026-09-14 (part 2)" below for what else that
+sweep turned up and what's still unscoped.)*
 
 ## Needs further triage (real content exists in the original; scope/priority unconfirmed)
 
@@ -96,12 +82,20 @@ turned up and what's still unscoped.)*
   already-documented, already-accepted drop. **The real lesson this
   re-confirms: a file-path diff measures files, not behaviour** - always
   check where the behaviour actually went before calling it a gap.
-  Two genuinely-open leftovers did fall out of this scoping pass and are
-  listed under "Confirmed real gaps" above (`required_craft`/`required_item`
-  auto-progression, label dyeing); a third, `CraftingEvents`' warp-on-craft
-  penalty, is a real **no-op even if ported** - it reads a per-item warp
-  value that nothing in this port ever assigns (see `GearTooltipEvents`'
-  own doc comment), so it isn't worth building until something else does.
+  One genuinely-open leftover did fall out of this scoping pass and is
+  listed under "Confirmed real gaps" above (label dyeing). Two more,
+  `required_craft`/`required_item` auto-progression and `CraftingEvents`'
+  warp-on-craft penalty, were also found here and are now closed (see
+  "Recently closed" below) - **the warp-on-craft one is a correction, not
+  just a closure**: it was first written up right here as a real no-op
+  even if ported, reasoning from `ThaumcraftApi.getWarp` reading a per-item
+  value nothing assigns. That reasoning conflated two unrelated mechanisms
+  that both happen to be called "warp" - see the commit message ("Restore
+  the real warp-on-craft penalty - an earlier call here was wrong") and
+  `WarpEvents#onItemCrafted`'s own doc comment for the full story. The
+  `GearTooltipEvents` cut this originally pointed at is real and still
+  open (the separate `TC.WARP`-NBT worn-gear addend), just not the same
+  thing.
 
 ## Confirmed dead-in-the-true-original (do not port — matches nothing real)
 
@@ -299,6 +293,39 @@ entries are now closed - this section is empty of open work.**
 Essentia through CardCelestial/"Celestial Studies", are all long-since
 merged into the sections above and fully detailed in `git log` and the
 project memory file; not re-listed here to keep this file scannable.)*
+
+- **`required_craft`/`required_item` research auto-progression** — closed
+  2026-09-14. `ThaumcraftResearchLoader` deliberately skipped parsing both
+  stage gates, saying why: display-only without a crafting/possession
+  hook that didn't exist yet. New `ResearchRequirements` + real
+  `ResearchCraftingEvents` build that hook - a real craft-reference
+  registry granting the original's own `"[#]"`-keyed virtual research
+  flags, plus a real live inventory check for `required_item`, both
+  exposed as a real `isStageSatisfied` query. The legacy-spec resolver
+  (1.12.2 metadata-variant specs like `ingot;1;2`) was built by reading
+  the true original's own `ConfigItems` subtype arrays rather than
+  guessing - and that reading also turned up several specs that are
+  already dead in the true original itself (`thaumcraft:metal`,
+  `thaumcraft:nitor`, `thaumcraft:leather` were never real registered
+  items), so resolving those to nothing is faithful, not a gap.
+  Deliberately **not** wired to actual stage advancement - blocked on the
+  Thaumonomicon reader's atomic-completion architecture, same as before.
+  See commit "Give research its real craft/possession auto-progression
+  gates".
+
+- **`CraftingEvents` warp-on-craft penalty** — closed 2026-09-14, and a
+  correction of an earlier session's own wrong call (see the "Fresh
+  sweep, 2026-09-14 part 2" note above for the full story). The user
+  asked for a wiki double-check of the "must be a decompilation artifact"
+  claim; reading the true original directly disproved it outright -
+  `ThaumcraftApi.getWarp(ItemStack)` reads a static item→warp map
+  (`addWarpToItem`), never the `TC.WARP` NBT tag that was the basis for
+  the original wrong conclusion. New `ThaumcraftApi.addWarpToItem`/
+  `getWarp` plus a real `WarpEvents#onItemCrafted` hook (gated on
+  `wussMode`, matching the original) restore the mechanic; the one real
+  registration shipped Thaumcraft 6 has - Brain in a Jar, 1 permanent
+  warp - is wired in `Thaumcraft`'s setup. See commit "Restore the real
+  warp-on-craft penalty - an earlier call here was wrong".
 
 - **Dyed banners** (`BlocksTC.banners`, 16 `DyeColor` variants) — closed
   2026-09-14, found by the fresh full sweep below. `BlockBannerTC`'s own
