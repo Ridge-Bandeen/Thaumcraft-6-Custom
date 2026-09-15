@@ -3613,9 +3613,10 @@ public class ThaumcraftGameTests {
 
 	// --------------------------------------------------------------------------------------------------
 	// Loot Bag - rolls a real vanilla-format loot table (LootContextParamSets.GIFT) rather than the
-	// original's hand-written weighted item generator. A recently-hit vanilla hostile mob has a chance to
-	// drop one, tiered by a simple weighted pick - see Thaumcraft#rollLootBagDrop's own doc comment for why
-	// the original's champion-gated condition and looting-level scaling are both simplified away.
+	// original's hand-written weighted item generator. Restored 2026-09-15 to the true original's own real
+	// champion-gated drop condition (a real champion always drops one, no independent chance roll) - see
+	// Thaumcraft#rollLootBagDrop's own doc comment for why the looting-level tier scaling alone stays
+	// simplified (genuinely no modern equivalent, confirmed by reading the modern event class directly).
 	// --------------------------------------------------------------------------------------------------
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
@@ -3634,21 +3635,93 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for the 2026-09-15 restoration: a real champion mob should really always drop a loot bag
+	 * (no independent chance gate on top, matching the true original's own real condition exactly), a real
+	 * non-champion mob never should, and neither should a real Tainted (id 13) champion - the true original's
+	 * own explicit exclusion.
+	 */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
-	public static void monsterKillsSometimesDropALootBag(GameTestHelper helper) {
-		net.minecraft.world.entity.monster.Monster monster = net.minecraft.world.entity.EntityType.ZOMBIE.create(helper.getLevel());
+	public static void championMonsterKillsAlwaysDropARealLootBagButNonChampionsAndTaintedNeverDo(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
 		BlockPos absolute = helper.absolutePos(BlockPos.ZERO);
-		monster.moveTo(absolute.getX() + 0.5, absolute.getY(), absolute.getZ() + 0.5, 0, 0);
-		helper.getLevel().addFreshEntity(monster);
+
+		// Each mob's own real natural join-level champion roll already fired once for real when addFreshEntity
+		// ran (see freshlySpawnedMonsterRollsRealChampionStatus) - removeModifiers() first resets to a clean
+		// unrolled slate so this test's own explicit modifier below is the only one present, same technique
+		// makeChampionAppliesRealAttributeAndBuffs uses (addOrReplacePermanentModifier alone only replaces a
+		// same-id modifier, so without this reset a real natural roll could still be stacked underneath).
+		net.minecraft.world.entity.monster.Monster nonChampion = net.minecraft.world.entity.EntityType.ZOMBIE.create(level);
+		nonChampion.moveTo(absolute.getX() + 0.5, absolute.getY(), absolute.getZ() + 0.5, 0, 0);
+		level.addFreshEntity(nonChampion);
+		net.minecraft.world.entity.ai.attributes.AttributeInstance nonChampionAttr =
+				nonChampion.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD);
+		nonChampionAttr.removeModifiers();
+		nonChampionAttr.addOrReplacePermanentModifier(thaumcraft.common.entities.monster.mods.ChampionModifier.ATTRIBUTE_NOT_CHAMPION);
+		List<ItemEntity> nonChampionDrops = new java.util.ArrayList<>();
+		thaumcraft.Thaumcraft.rollLootBagDrop(nonChampion, nonChampionDrops);
+		helper.assertTrue(nonChampionDrops.isEmpty(), "a real non-champion mob should never drop a real loot bag");
+
+		net.minecraft.world.entity.monster.Monster tainted = net.minecraft.world.entity.EntityType.ZOMBIE.create(level);
+		tainted.moveTo(absolute.getX() + 2.5, absolute.getY(), absolute.getZ() + 0.5, 0, 0);
+		level.addFreshEntity(tainted);
+		net.minecraft.world.entity.ai.attributes.AttributeInstance taintedAttr =
+				tainted.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD);
+		taintedAttr.removeModifiers();
+		taintedAttr.addOrReplacePermanentModifier(thaumcraft.common.entities.monster.mods.ChampionModifier.MODS[13].attributeMod);
+		List<ItemEntity> taintedDrops = new java.util.ArrayList<>();
+		thaumcraft.Thaumcraft.rollLootBagDrop(tainted, taintedDrops);
+		helper.assertTrue(taintedDrops.isEmpty(), "a real Tainted (id 13) champion should never drop a real loot bag, matching the true original's own explicit exclusion");
+
+		net.minecraft.world.entity.monster.Monster champion = net.minecraft.world.entity.EntityType.ZOMBIE.create(level);
+		champion.moveTo(absolute.getX() + 4.5, absolute.getY(), absolute.getZ() + 0.5, 0, 0);
+		level.addFreshEntity(champion);
+		net.minecraft.world.entity.ai.attributes.AttributeInstance championAttrInstance =
+				champion.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD);
+		championAttrInstance.removeModifiers();
+		championAttrInstance.addOrReplacePermanentModifier(thaumcraft.common.entities.monster.mods.ChampionModifier.MODS[0].attributeMod);
+		List<ItemEntity> championDrops = new java.util.ArrayList<>();
+		thaumcraft.Thaumcraft.rollLootBagDrop(champion, championDrops);
+		boolean foundDrop = championDrops.stream().anyMatch(e -> e.getItem().getItem() instanceof thaumcraft.common.items.curios.ItemLootBag);
+		helper.assertTrue(foundDrop, "a real champion mob should really always drop a real loot bag, no independent chance gate on top");
+
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage that {@link thaumcraft.Thaumcraft#onLivingDrops} really excludes real
+	 * {@link thaumcraft.common.entities.monster.boss.EntityThaumcraftBoss} bosses, matching the true
+	 * original's own explicit {@code !(entity instanceof EntityThaumcraftBoss)} condition - a real boss
+	 * already gets its own real death drops (a Cultist Leader's own {@code dropCustomDeathLoot} guarantees a
+	 * rare loot bag unconditionally, unrelated to this generic champion-gated mechanic entirely - see
+	 * {@code cultistLeaderIsARealBossWithRealNamingEquipmentSupportBuffAndRangedAttack}'s own death-drop
+	 * assertions). Posts a real {@code LivingDropsEvent} onto the real event bus rather than calling
+	 * {@code onLivingDrops} directly (an instance method, registered on a live mod instance this test can't
+	 * construct itself) - the real registered handler picks it up the same way a real death would.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void championBossKillsNeverDropTheGenericLootBag(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos absolute = helper.absolutePos(BlockPos.ZERO);
+
+		thaumcraft.common.entities.monster.boss.EntityCultistLeader leader =
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_LEADER.get().create(level);
+		leader.moveTo(absolute.getX() + 0.5, absolute.getY(), absolute.getZ() + 0.5, 0, 0);
+		level.addFreshEntity(leader);
+		net.minecraft.world.entity.ai.attributes.AttributeInstance leaderChampionAttr =
+				leader.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD);
+		leaderChampionAttr.removeModifiers();
+		leaderChampionAttr.addOrReplacePermanentModifier(thaumcraft.common.entities.monster.mods.ChampionModifier.MODS[0].attributeMod);
 
 		List<ItemEntity> drops = new java.util.ArrayList<>();
-		boolean foundDrop = false;
-		for (int i = 0; i < 300 && !foundDrop; i++) {
-			thaumcraft.Thaumcraft.rollLootBagDrop(monster, drops);
-			foundDrop = drops.stream().anyMatch(e -> e.getItem().getItem() instanceof thaumcraft.common.items.curios.ItemLootBag);
-		}
+		net.neoforged.neoforge.event.entity.living.LivingDropsEvent event =
+				new net.neoforged.neoforge.event.entity.living.LivingDropsEvent(leader, level.damageSources().generic(), drops, true);
+		net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(event);
 
-		helper.assertTrue(foundDrop, "a loot bag should have dropped at least once in 300 rolls at an 8% chance each");
+		boolean foundLootBag = drops.stream().anyMatch(e -> e.getItem().getItem() instanceof thaumcraft.common.items.curios.ItemLootBag);
+		helper.assertFalse(foundLootBag, "a real champion boss should never drop the generic champion loot bag via Thaumcraft#onLivingDrops, matching the true original's own explicit EntityThaumcraftBoss exclusion");
+		boolean foundOrb = !level.getEntitiesOfClass(net.minecraft.world.entity.ExperienceOrb.class, new AABB(absolute).inflate(4)).isEmpty();
+		helper.assertFalse(foundOrb, "a real champion boss should never get the generic champion bonus XP either, matching ChampionModEvents#onDrops' own real EntityThaumcraftBoss exclusion");
 		helper.succeed();
 	}
 

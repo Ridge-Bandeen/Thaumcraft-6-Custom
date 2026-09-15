@@ -103,12 +103,18 @@ public class ChampionModEvents {
 	}
 
 	/** Real bonus XP on a champion's death (5-7, matching the original's own real {@code 5 + rand(3)}
-	 * formula) - drops the original's paired loot-bag drop, since no loot bag item exists in this port yet.
-	 * Tainted (id 13) is excluded from this bonus, same real exclusion the original used. */
+	 * formula) - the paired real loot-bag drop lives in {@link Thaumcraft#onLivingDrops} instead (restored
+	 * 2026-09-15 now that a real loot bag item exists), matching the true original's own single
+	 * {@code livingDrops} handler doing both under the identical real condition. Tainted (id 13) is excluded
+	 * from this bonus, same real exclusion the original used. Bosses are excluded too (real, restored
+	 * 2026-09-15 alongside making bosses champion-eligible in the first place - the true original's own
+	 * condition explicitly excludes {@code EntityThaumcraftBoss}; bosses already grant their own real
+	 * {@code xpReward} on death instead). */
 	@SubscribeEvent
 	public static void onDrops(LivingDropsEvent event) {
 		LivingEntity entity = event.getEntity();
 		if (!event.isRecentlyHit() || !(entity instanceof Mob mob) || !(entity.level() instanceof ServerLevel serverLevel)) return;
+		if (mob instanceof thaumcraft.common.entities.monster.boss.EntityThaumcraftBoss) return;
 		int t = championId(mob);
 		if (t < 0 || t == 13) return;
 

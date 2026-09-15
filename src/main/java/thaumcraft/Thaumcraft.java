@@ -681,15 +681,18 @@ public class Thaumcraft {
         return left.is(thaumcraft.api.items.ItemsTC.primordialPearl.get()) || right.is(thaumcraft.api.items.ItemsTC.primordialPearl.get());
     }
 
-    /** A recently-hit vanilla hostile mob has a chance to drop a loot bag - see {@code ItemLootBag}'s own
-     * doc comment. Simplified vs the original: the real original gate was actually the "champion" mutation
-     * system (a whole separate Taint subsystem this session hasn't built - the champion attribute it checks
-     * never carries a non-default value here, so translating that condition literally would make loot bags
-     * permanently undroppable), replaced with a flat 8% chance on any recently-hit vanilla {@code Monster}.
-     * Tier is a simple weighted pick (60% common/30% uncommon/10% rare) rather than the original's real
-     * looting-level scaling - that event field isn't exposed by NeoForge's modern {@code LivingDropsEvent}
-     * the same way (deriving it from the weapon's own Looting enchantment level is possible but adds real
-     * complexity for a flavor-only scaling factor).
+    /** A real champion mob's own real guaranteed loot-bag drop - see {@code ItemLootBag}'s own doc comment.
+     * Restored 2026-09-15 to the true original's own real gate now that the champion-mod system is real (see
+     * the champion-mod correction in the port-tracking memory/TODO.md): matches the true original's own
+     * {@code livingDrops} condition exactly - recently hit, a real {@link net.minecraft.world.entity.monster.Monster},
+     * NOT a {@link thaumcraft.common.entities.monster.boss.EntityThaumcraftBoss} (bosses get their own real
+     * drops instead, same exclusion {@link thaumcraft.common.lib.events.ChampionModEvents#onDrops}'s own
+     * paired real XP bonus uses), a real rolled champion mod id (0-13) excluding Tainted (13). No independent
+     * chance roll on top - a confirmed real champion always drops one, same as the true original. Tier is
+     * still a simple weighted pick (60% common/30% uncommon/10% rare) rather than the original's real
+     * looting-level scaling - that stays a real, deliberate simplification, confirmed by reading the modern
+     * {@code LivingDropsEvent} class directly: it genuinely has no {@code lootingLevel} field or equivalent
+     * at all (unlike the original's own event), not just an oversight.
      *
      * (Zombie -&gt; Brain drops used to be rolled from this same {@code LivingDropsEvent} subscriber too -
      * removed once {@code MobDeathDropEvents#onLivingDrops} shipped a more complete real version, correctly
@@ -701,14 +704,19 @@ public class Thaumcraft {
     public void onLivingDrops(net.neoforged.neoforge.event.entity.living.LivingDropsEvent event) {
         if (event.getEntity().level().isClientSide) return;
         if (!event.isRecentlyHit()) return;
-        if (event.getEntity() instanceof net.minecraft.world.entity.monster.Monster monster) {
-            rollLootBagDrop(monster, event.getDrops());
-        }
+        if (!(event.getEntity() instanceof net.minecraft.world.entity.monster.Monster monster)) return;
+        if (monster instanceof thaumcraft.common.entities.monster.boss.EntityThaumcraftBoss) return;
+        rollLootBagDrop(monster, event.getDrops());
     }
 
     public static void rollLootBagDrop(net.minecraft.world.entity.monster.Monster monster, java.util.Collection<net.minecraft.world.entity.item.ItemEntity> drops) {
+        net.minecraft.world.entity.ai.attributes.AttributeInstance championAttr =
+                monster.getAttribute(ThaumcraftAttributes.CHAMPION_MOD);
+        if (championAttr == null) return;
+        double championId = championAttr.getValue();
+        if (championId < 0.0 || championId == 13.0) return;
+
         net.minecraft.util.RandomSource random = monster.getRandom();
-        if (random.nextFloat() >= 0.08f) return;
         float roll = random.nextFloat();
         net.neoforged.neoforge.registries.DeferredItem<thaumcraft.common.items.curios.ItemLootBag> tier =
                 roll < 0.6f ? thaumcraft.api.items.ItemsTC.lootBagCommon
