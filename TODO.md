@@ -190,31 +190,33 @@ Primal Crystal Clusters - is also already real and shipped. Moved to
   real champion-eligible list, so this one's a clean restoration with no
   design fork attached (unlike the boss-suffix items below).
 
-**Real design fork surfaced by the champion-mod correction, decided
-2026-09-15:** `Thaumcraft#registerChampionAttribute` deliberately excludes
-this mod's own boss-tier entities from ever rolling as a champion, with its
-own doc comment explaining why (no modern per-instance "every
-`EntityCreature`" equivalent to the original's blanket 1.12
-`EntityConstructing` approach, so a curated type list was used instead - and
-bosses simply weren't added to it). Flagged to the user rather than decided
-unilaterally, since the true original's own blanket approach would really
-have included bosses too. **User's call: "Yes, make them eligible" - real
-parity, matching the original.** Real, actionable now:
+~~**Real design fork surfaced by the champion-mod correction, decided
+2026-09-15**~~ — closed 2026-09-15. `Thaumcraft#registerChampionAttribute` had
+deliberately excluded this mod's own boss-tier entities from ever rolling as a
+champion (no modern per-instance "every `EntityCreature`" equivalent to the
+original's blanket 1.12 `EntityConstructing` approach, so a curated type list
+was used instead - and bosses simply weren't added to it). Flagged to the user
+rather than decided unilaterally, since the true original's own blanket
+approach would really have included bosses too. **User's call: "Yes, make
+them eligible" - real parity, matching the original.** Shipped:
+`CultistLeader`/`EldritchWarden`/`EldritchGolem`/`TaintacleGiant` (a 4th boss,
+`EldritchGolem`, found only by re-reading the true original directly rather
+than trusting the other 3 bosses' own citations as exhaustive - it has the
+same real champion tie-in too) added to `registerChampionAttribute`'s
+eligible list; `ChampionUtils#makeChampion` now branches on
+`EntityThaumcraftBoss` the same way the true original's own
+`EntityUtils#makeChampion` did, calling a new `onChampionRolled` hook instead
+of the generic flat-buff/name-overwrite treatment; `CultistLeader`/
+`EldritchWarden`/`EldritchGolem` each override it to fold the champion mod's
+name into their own real title-based name (also fixing a real `%d`/`String`
+format-string bug the true original's own Praetor/Warden name formats share);
+`TaintacleGiant` (not an `EntityThaumcraftBoss`) gets a real
+`finalizeSpawn` calling `ChampionUtils.makeChampion` unconditionally, matching
+the true original's own unconditional `onInitialSpawn` call. Committed
+`abf93fe`.
 
-- Add `EntityCultistLeader`/`EntityEldritchWarden`/`EntityTaintacleGiant` to
-  `registerChampionAttribute`'s own eligible list (and update that method's
-  own doc comment, which currently documents excluding them on purpose).
-- Restore `EntityCultistLeader`'s and `EntityEldritchWarden`'s real
-  champion-mod name suffix (their own `generateName`-equivalent already has
-  a real slot for it, just never wired to `ChampionUtils`/`ThaumcraftAttributes
-  .CHAMPION_MOD`).
-- Restore `EntityTaintacleGiant`'s real champion-system tie-in
-  (`ChampionUtils.makeChampion`, the modern equivalent of the original's
-  cited `EntityUtils.makeChampion`).
-- Update `EntityThaumcraftBoss`'s own shared base-class doc comment, which
-  also still says "No champion-system tie-ins... unported" for all bosses
-  sharing that base.
-blocked by anything, just not yet picked up - not stale cuts, just open:
+A few more sweep items are real but not blocked by anything, just not yet
+picked up - not stale cuts, just open:
 `BlockTaint#canFallBelow`'s wood-log-proximity check (a 3x3x3 scan, real but
 minor); `GolemInteractionHelper`'s pre-placement collision nudge (real but
 minor, current fallback already fails cleanly); `ModelTaintacle`/
