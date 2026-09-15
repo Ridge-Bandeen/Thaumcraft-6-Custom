@@ -675,6 +675,8 @@ sourceSets {
             include 'thaumcraft/common/container/HandMirrorMenu.java'
             include 'thaumcraft/client/gui/GuiHandMirror.java'
 
+            include 'thaumcraft/common/registry/ThaumcraftSounds.java'
+
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
     }

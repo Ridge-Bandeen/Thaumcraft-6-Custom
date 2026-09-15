@@ -96,6 +96,7 @@ public class Thaumcraft {
         ThaumcraftEntities.ENTITY_TYPES.register(modEventBus);
         thaumcraft.common.registry.ThaumcraftMobEffects.MOB_EFFECTS.register(modEventBus);
         thaumcraft.common.registry.ThaumcraftFeatures.FEATURES.register(modEventBus);
+        thaumcraft.common.registry.ThaumcraftSounds.SOUNDS.register(modEventBus);
         ThaumcraftGameTests.register(modEventBus);
 
         // Installs the real IInternalMethodHandler over ThaumcraftApi's DummyInternalMethodHandler default -

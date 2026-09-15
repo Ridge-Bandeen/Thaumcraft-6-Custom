@@ -15835,4 +15835,29 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(after > before, "CardSynthesis should really hand back a real compound crystal to the player's real inventory, found before=" + before + " after=" + after);
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// ThaumcraftSounds - real, restored 2026-09-15 (the client-only layer's own first chunk of the parity
+	// audit). Only checks real registration here - actually playing a sound isn't observable from a
+	// dedicated GameTest server with no real client connection (see this whole file's own established
+	// "no real client connection" precedent elsewhere).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumcraftSoundsAllRegisterWithTheirRealResourceLocations(GameTestHelper helper) {
+		java.util.Map<String, net.neoforged.neoforge.registries.DeferredHolder<net.minecraft.sounds.SoundEvent, net.minecraft.sounds.SoundEvent>> spotCheck = java.util.Map.of(
+				"zap", thaumcraft.common.registry.ThaumcraftSounds.ZAP,
+				"craftfail", thaumcraft.common.registry.ThaumcraftSounds.CRAFTFAIL,
+				"runicshieldcharge", thaumcraft.common.registry.ThaumcraftSounds.RUNICSHIELDCHARGE,
+				"egscreech", thaumcraft.common.registry.ThaumcraftSounds.EGSCREECH,
+				"dust", thaumcraft.common.registry.ThaumcraftSounds.DUST);
+		for (var entry : spotCheck.entrySet()) {
+			net.minecraft.sounds.SoundEvent sound = entry.getValue().get();
+			helper.assertTrue(sound != null, "ThaumcraftSounds." + entry.getKey() + " should really be registered");
+			helper.assertTrue(sound.getLocation().getPath().equals(entry.getKey())
+							&& sound.getLocation().getNamespace().equals(Thaumcraft.MODID),
+					"the real sound's own resource location should really be thaumcraft:" + entry.getKey() + ", got " + sound.getLocation());
+		}
+		helper.succeed();
+	}
 }
