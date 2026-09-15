@@ -132,17 +132,16 @@ Primal Crystal Clusters - is also already real and shipped. Moved to
 - ~~**`AidPortal`'s missing `AidPortalCrimson` variant**~~ — closed
   2026-09-15. Added, registered in `Thaumcraft.java` alongside
   `AidPortalEnd`/`AidPortalNether`. Committed `51b13fa`.
-- **`TileInfusionMatrix#triggerInstabilityEvent`'s trimmed outcome table**
-  — cites `BlockFluxGoo` (real since 2026-09-03) and
-  `PotionFluxTaint`/`PotionVisExhaust` (real since the very start of this
-  port, renamed `MobEffectFluxTaint`/`MobEffectVisExhaust`) as unported
-  outcomes to skip. Both are real now - only the real
-  `TileStabilizer`/charge-network item-redirect half of this same doc
-  comment remains genuinely unbuilt (`TileStabilizer.java` itself is still
-  the stale 1.12.2 leftover, confirmed via `build.gradle`; `BlockInlay` is
-  real but serves an unrelated real purpose - a plain passive stabilizer,
-  not the charge-network conduit the original doc comment was picturing,
-  worth a doc fix on top of the real restoration).
+- ~~**`TileInfusionMatrix#triggerInstabilityEvent`'s trimmed outcome
+  table**~~ — closed 2026-09-15. Restored the true original's own full real
+  24-weighted-outcome table (`BlockFluxGoo` placement, real Flux Taint/Vis
+  Exhaust affliction via a new `inEvHarm`, and `inEvEjectItem`'s real type
+  0-5 split) now that both dependencies are real. `TileStabilizer`'s
+  charge-network item-redirect mitigation stays genuinely unbuilt
+  (`TileStabilizer.java` itself is still the stale 1.12.2 leftover); also
+  fixed a doc-comment mix-up that lumped the unrelated, already-real
+  `BlockInlay` (a plain passive stabilizer) in with that unbuilt subsystem.
+  Committed `243918d`.
 - ~~**`ItemPechWand`'s real acquisition path**~~ — corrected 2026-09-15, not
   actually a gap: `EntityPech`'s own real `TRADE_REWARDS` table already
   lists the wand as a real tier-5 "thaum/wand" reward, matching the true
