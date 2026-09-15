@@ -451,11 +451,20 @@ public class Thaumcraft {
      * for arbitrary/dynamic per-instance registration exists, so this port uses an explicit, curated type
      * list instead of the original's blanket "every {@code EntityCreature}").
      *
-     * <p>Excluded on purpose: this mod's own boss-tier entities ({@code CultistLeader}, the portal bosses),
-     * its construct entities (turrets, the Arcane Bore, golems - not hostile creatures), and its stationary
-     * taint hazards ({@code Taintacle}/{@code TaintSeed} - environmental growths, not roaming creatures a
-     * player fights as a champion encounter). {@code TaintCrawler}/{@code TaintSwarm} ARE included - real
-     * mobile hostile creatures.
+     * <p>{@code CultistLeader}/{@code EldritchWarden}/{@code EldritchGolem}/{@code TaintacleGiant} ARE
+     * included, real parity with the true original's own blanket {@code EntityConstructing} approach (which
+     * never excluded bosses) - decided 2026-09-15 after this exclusion was flagged as an unnecessary design
+     * fork the sweep introduced, not something the true original ever did. All 4 are real: the true
+     * original's own {@code EntityCultistLeader}/{@code EntityEldritchWarden}/{@code EntityEldritchGolem}
+     * each override {@code EntityThaumcraftBoss#generateName} to fold a rolled champion mod's name into their
+     * own display name, and {@code EntityTaintacleGiant} calls {@code EntityUtils#makeChampion} directly
+     * (unconditionally) at spawn - {@code EntityEldritchGolem}'s own tie-in was missed on the first pass of
+     * this correction and only found by re-reading its true-original source directly rather than trusting the
+     * other 3 bosses' own citations as exhaustive. Excluded on purpose otherwise: this mod's construct
+     * entities (turrets, the Arcane Bore, golems - not hostile creatures), and its stationary taint hazards
+     * ({@code Taintacle}/{@code TaintSeed} - environmental growths, not roaming creatures a player fights as
+     * a champion encounter). {@code TaintCrawler}/{@code TaintSwarm} ARE included - real mobile hostile
+     * creatures.
      */
     private void registerChampionAttribute(net.neoforged.neoforge.event.entity.EntityAttributeModificationEvent event) {
         net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> championMod = ThaumcraftAttributes.CHAMPION_MOD;
@@ -494,6 +503,10 @@ public class Thaumcraft {
         event.add(ThaumcraftEntities.INHABITED_ZOMBIE.get(), championMod, -2.0);
         event.add(ThaumcraftEntities.TAINT_CRAWLER.get(), championMod, -2.0);
         event.add(ThaumcraftEntities.TAINT_SWARM.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.CULTIST_LEADER.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.ELDRITCH_WARDEN.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.ELDRITCH_GOLEM.get(), championMod, -2.0);
+        event.add(ThaumcraftEntities.TAINTACLE_GIANT.get(), championMod, -2.0);
     }
 
     private void onRegisterGameTests(RegisterGameTestsEvent event) {

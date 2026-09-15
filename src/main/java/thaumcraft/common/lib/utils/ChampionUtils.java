@@ -8,6 +8,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Creeper;
 import thaumcraft.Thaumcraft;
+import thaumcraft.common.entities.monster.boss.EntityThaumcraftBoss;
 import thaumcraft.common.entities.monster.mods.ChampionModifier;
 import thaumcraft.api.ThaumcraftAttributes;
 
@@ -33,11 +34,15 @@ public final class ChampionUtils {
 	/**
 	 * Turns a real hostile mob into a real champion: picks a random real {@link ChampionModifier}, applies
 	 * its real attribute mod (readable back off {@link ThaumcraftAttributes#CHAMPION_MOD} as the mod's own
-	 * id), a real flat +100 health / real x3 damage buff, a real +25 heal, a real custom name, and (for the
+	 * id), then either the generic real flat +100 health / real x3 damage buff / real +25 heal / real custom
+	 * name (for a plain mob), or - real, restored 2026-09-15 - just {@link EntityThaumcraftBoss#onChampionRolled}
+	 * for a boss (skips all of that, matching the original's own {@code EntityUtils#makeChampion}'s
+	 * {@code instanceof EntityThaumcraftBoss} branch exactly - a boss's own title-based name matters more than
+	 * the generic naming, and its own health/damage are already boss-scaled). Both paths still get (for the
 	 * 3 real mods with no per-event dispatch of their own - bold/mighty/warded) their own real one-time extra
-	 * buff. Real, as-is from the original's own {@code EntityUtils#makeChampion} (minus the boss-entity and
-	 * persistence-flag branches - no {@code EntityThaumcraftBoss} champion tie-in yet, and callers that want
-	 * persistence can call {@link Mob#setPersistenceRequired()} themselves).
+	 * buff. Real, as-is from the original's own {@code EntityUtils#makeChampion} (minus the persistence-flag
+	 * parameter - callers that want persistence can call {@link Mob#setPersistenceRequired()} themselves, as
+	 * {@link thaumcraft.common.entities.monster.boss.EntityTaintacleGiant}'s own spawn hook now does).
 	 */
 	public static void makeChampion(Mob entity) {
 		AttributeInstance championAttr = entity.getAttribute(ThaumcraftAttributes.CHAMPION_MOD);
@@ -48,13 +53,18 @@ public final class ChampionUtils {
 		championAttr.addOrReplacePermanentModifier(mod.attributeMod);
 
 		AttributeInstance health = entity.getAttribute(Attributes.MAX_HEALTH);
-		if (health != null) health.addOrReplacePermanentModifier(CHAMPION_HEALTH);
 		AttributeInstance damage = entity.getAttribute(Attributes.ATTACK_DAMAGE);
-		if (damage != null) damage.addOrReplacePermanentModifier(CHAMPION_DAMAGE);
 
-		entity.heal(25.0f);
-		entity.setCustomName(mod.getModNameLocalized().copy().append(" ").append(entity.getType().getDescription()));
-		entity.setCustomNameVisible(true);
+		if (entity instanceof EntityThaumcraftBoss boss) {
+			boss.onChampionRolled(mod.getModNameLocalized());
+		} else {
+			if (health != null) health.addOrReplacePermanentModifier(CHAMPION_HEALTH);
+			if (damage != null) damage.addOrReplacePermanentModifier(CHAMPION_DAMAGE);
+
+			entity.heal(25.0f);
+			entity.setCustomName(mod.getModNameLocalized().copy().append(" ").append(entity.getType().getDescription()));
+			entity.setCustomNameVisible(true);
+		}
 
 		switch (type) {
 			case 0 -> {

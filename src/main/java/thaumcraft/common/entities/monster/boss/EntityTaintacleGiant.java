@@ -8,15 +8,20 @@ import net.minecraft.world.BossEvent;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
 import thaumcraft.api.entities.IEldritchMob;
 import thaumcraft.api.items.ItemsTC;
 import thaumcraft.common.entities.monster.tainted.EntityTaintacle;
+import thaumcraft.common.lib.utils.ChampionUtils;
 
 /**
  * Replaces the old (1.12.2) {@code EntityTaintacleGiant} - the Taint faction's own boss, real
@@ -44,10 +49,16 @@ import thaumcraft.common.entities.monster.tainted.EntityTaintacle;
  * reachable via {@code /summon} today, matching the same "ship it real even though nothing spawns it yet"
  * precedent this port has used repeatedly.
  *
+ * Real champion-mod tie-in, restored 2026-09-15: {@link #finalizeSpawn} calls {@link ChampionUtils#makeChampion}
+ * unconditionally (plus a real {@link #setPersistenceRequired}), matching the true original's own {@code
+ * onInitialSpawn}'s unconditional {@code EntityUtils.makeChampion(this, true)} exactly - unlike the other 3
+ * champion-eligible bosses, this one isn't an {@link EntityThaumcraftBoss} subclass, so it gets the same
+ * generic champion treatment (flat health/damage buffs, a heal, a "&lt;Modifier&gt; Giant Taintacle" name) any
+ * other real hostile creature would, not a boss-specific title suffix.
+ *
  * Real, documented cuts: no enrage chat message to the attacking player (same cut
- * {@link EntityThaumcraftBoss#hurt} already made for every other boss sharing that mechanic). No champion-
- * system tie-in ({@code EntityUtils.makeChampion}, unported - same cut {@link EntityThaumcraftBoss}'s own
- * doc comment documents). The true original's own {@code canBreatheUnderwater() -> true} has no direct
+ * {@link EntityThaumcraftBoss#hurt} already made for every other boss sharing that mechanic). The true
+ * original's own {@code canBreatheUnderwater() -> true} has no direct
  * modern equivalent ({@code LivingEntity#canBreatheUnderwater} is final now) - not needed anyway, since
  * {@link EntityTaintacle#decreaseAirSupply} (inherited unchanged) already makes air supply never actually
  * drop, the real mechanism that mattered.
@@ -96,6 +107,13 @@ public class EntityTaintacleGiant extends EntityTaintacle implements IEldritchMo
 	@Override
 	public boolean canSpawnHere() {
 		return false;
+	}
+
+	@Override
+	public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType, SpawnGroupData spawnGroupData) {
+		ChampionUtils.makeChampion(this);
+		setPersistenceRequired();
+		return super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
 	}
 
 	@Override

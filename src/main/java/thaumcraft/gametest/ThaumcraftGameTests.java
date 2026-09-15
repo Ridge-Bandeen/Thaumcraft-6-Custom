@@ -12770,6 +12770,105 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for the 2026-09-15 boss-champion-eligibility restoration: all 4 real champion-eligible
+	 * bosses ({@code CultistLeader}/{@code EldritchWarden}/{@code EldritchGolem}/{@code TaintacleGiant}) should
+	 * really carry the real {@code CHAMPION_MOD} attribute now that {@code Thaumcraft#registerChampionAttribute}
+	 * includes them, matching the true original's own blanket {@code EntityConstructing} approach.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void championModIsRegisteredOnAllFourRealChampionEligibleBosses(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		net.minecraft.world.entity.EntityType<?>[] types = {
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_LEADER.get(),
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_WARDEN.get(),
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_GOLEM.get(),
+				thaumcraft.common.registry.ThaumcraftEntities.TAINTACLE_GIANT.get(),
+		};
+		for (net.minecraft.world.entity.EntityType<?> type : types) {
+			net.minecraft.world.entity.Entity entity = type.create(level);
+			helper.assertTrue(entity instanceof net.minecraft.world.entity.Mob mob
+							&& mob.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD) != null,
+					"expected " + type + " to really carry the CHAMPION_MOD attribute now that bosses are champion-eligible");
+		}
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage that {@link thaumcraft.common.lib.utils.ChampionUtils#makeChampion} really takes the
+	 * true original's own {@code instanceof EntityThaumcraftBoss} branch for a boss: folding the rolled
+	 * champion mod's name into the boss's own real title-based name via {@code onChampionRolled}, rather than
+	 * the generic flat health/damage buffs and name overwrite every other real champion mob gets.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void makeChampionOnABossFoldsTheModNameIntoItsOwnTitleInsteadOfTheGenericTreatment(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.boss.EntityCultistLeader leader =
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_LEADER.get().create(level);
+		leader.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(leader);
+		leader.finalizeSpawn(level, level.getCurrentDifficultyAt(abs), net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+
+		// addFreshEntity above already fired the real natural join-level roll (see
+		// freshlySpawnedMonsterRollsRealChampionStatus) - reset back to a clean unrolled slate so this test's
+		// own explicit makeChampion call below has something real to do, same technique
+		// makeChampionAppliesRealAttributeAndBuffs uses.
+		leader.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD).removeModifiers();
+
+		String baseName = leader.getDisplayName().getString();
+		helper.assertTrue(baseName.startsWith("Praetor "), "a freshly spawned Praetor should really have its own real title-based name before rolling champion, got " + baseName);
+		double baseMaxHealth = leader.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).getBaseValue();
+
+		thaumcraft.common.lib.utils.ChampionUtils.makeChampion(leader);
+
+		String championName = leader.getDisplayName().getString();
+		helper.assertTrue(championName.startsWith(baseName + " the "),
+				"a champion Praetor's real name should really append ' the <Modifier>' onto its own base title, got " + championName);
+		double afterMaxHealth = leader.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).getBaseValue();
+		helper.assertTrue(afterMaxHealth == baseMaxHealth,
+				"a champion boss should really skip the generic +100 flat health buff other champions get, matching the true original's own instanceof EntityThaumcraftBoss branch, got "
+						+ afterMaxHealth + " vs base " + baseMaxHealth);
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.entities.monster.boss.EntityTaintacleGiant#finalizeSpawn} -
+	 * matches the true original's own unconditional {@code EntityUtils.makeChampion(this, true)} call: this
+	 * boss always spawns as a real champion (no roll gate, unlike every other real hostile creature), and
+	 * always ends up persistence-required (the original's {@code persist=true} argument).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void taintacleGiantAlwaysSpawnsAsARealChampion(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, Blocks.STONE);
+		ServerLevel level = helper.getLevel();
+
+		thaumcraft.common.entities.monster.boss.EntityTaintacleGiant giant =
+				thaumcraft.common.registry.ThaumcraftEntities.TAINTACLE_GIANT.get().create(level);
+		giant.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		// Real vanilla spawn placement calls finalizeSpawn BEFORE the entity joins the level - matters here
+		// specifically, since ChampionModEvents#onJoinLevel (fired by addFreshEntity) would otherwise roll its
+		// own real dice first and could mark this giant "not champion", making finalizeSpawn's own explicit
+		// makeChampion call below a no-op. Real production spawn code already gets this order right; this test
+		// just needs to match it rather than the addFreshEntity-then-finalizeSpawn order some of this file's
+		// other tests use to simulate a spawn after the fact.
+		giant.finalizeSpawn(level, level.getCurrentDifficultyAt(abs), net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+		level.addFreshEntity(giant);
+
+		net.minecraft.world.entity.ai.attributes.AttributeInstance championAttr =
+				giant.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD);
+		helper.assertTrue(championAttr != null && championAttr.getValue() > -2.0,
+				"a real Taintacle Giant should really always roll as a champion on spawn, matching the true original's own unconditional makeChampion call, got " + championAttr);
+		helper.assertTrue(giant.isPersistenceRequired(), "the real taintacle giant spawn hook should really mark itself persistence-required, matching the original's persist=true argument");
+		helper.assertTrue(giant.hasCustomName(), "a real champion taintacle giant should really get the generic champion custom name");
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Rift focus effect + the real portable-hole mechanic it drives (FocusEffectRift/BlockHole/TileHole).
 	// --------------------------------------------------------------------------------------------------

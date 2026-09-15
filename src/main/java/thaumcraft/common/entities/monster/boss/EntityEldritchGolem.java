@@ -45,6 +45,14 @@ import thaumcraft.common.entities.projectile.EntityGolemOrb;
  * real {@link #beamCharge} that charges up over time and is spent per shot (matches the original's own
  * charge-then-fire pacing).
  *
+ * Real champion-mod name suffix, restored 2026-09-15 (found while re-checking the other 2 bosses' own
+ * champion-mod restoration against the true original directly - this tie-in was missed on the first pass of
+ * that correction, since nothing had flagged it): {@link #onChampionRolled} reformats this boss's name to
+ * "&lt;modifier&gt; Eldritch Construct", matching the true original's own {@code entity.EldritchGolem.name}/
+ * {@code .name.custom} ("%s Eldritch Construct") format strings exactly - no title mechanic here (unlike
+ * {@link EntityCultistLeader}/{@link EntityEldritchWarden}), and no format-type bug either (a single
+ * {@code %s} against the real {@code String} mod name lines up correctly, unlike the other two).
+ *
  * Real, documented cuts: no arc-lightning "search for a ground target" client FX (the original's own {@code
  * handleStatusUpdate} case 19 / {@code onUpdate} - purely decorative, tied to the unported {@code
  * FXDispatcher}; the actual attack it decorated, the {@link EntityGolemOrb} shot, is kept in full). No
@@ -81,6 +89,11 @@ public class EntityEldritchGolem extends EntityThaumcraftBoss implements RangedA
 
 	public boolean isHeadless() {
 		return entityData.get(DATA_HEADLESS);
+	}
+
+	@Override
+	public void onChampionRolled(net.minecraft.network.chat.Component modName) {
+		setCustomName(net.minecraft.network.chat.Component.translatable("entity.thaumcraft.eldritch_golem.name.custom", modName));
 	}
 
 	@Override

@@ -41,10 +41,13 @@ import thaumcraft.common.entities.projectile.EntityEldritchOrb;
  * attack shape (same real {@link
  * EntityEldritchOrb}, same real melee-range Wither/Warp "scream" fallback, boss-tier stronger: Wither +
  * Weakness both 20s, 3-5 Warp vs. the Guardian's Wither-only 20s/1-3 Warp) and its own real random-title
- * naming (one of the original's own 15 Lovecraftian names, matching the original's base {@code
- * entity.EldritchWarden.name.custom} format - minus the champion-mod suffix, same as {@link
- * EntityCultistLeader}'s own doc comment explains for the same unported system). Now really
- * {@link IEldritchMob} again too - a real, separate bug found while building the field-frenzy phase below:
+ * naming (one of the original's own 15 Lovecraftian names, matching the original's own base {@code
+ * entity.EldritchWarden.name} format). Real champion-mod name suffix, restored 2026-09-15 via
+ * {@link #onChampionRolled} - see {@link EntityCultistLeader}'s own doc comment for why this needed its own
+ * hook rather than the generic champion naming, and for the real {@code %d}/{@code String} format-string bug
+ * the true original's own {@code entity.EldritchWarden.name.custom} ("%s the %d") shares with the Praetor's,
+ * fixed the same way here. Now really {@link IEldritchMob} again too - a real, separate bug found while
+ * building the field-frenzy phase below:
  * this port's class had silently dropped that interface (the true original's own class declaration carries
  * it), which meant other Eldritch mobs' own real {@code isAlliedTo} checks never actually recognized the
  * Warden as one of their own.
@@ -75,8 +78,7 @@ import thaumcraft.common.entities.projectile.EntityEldritchOrb;
  *
  * <p>Real, still-documented cuts: no arm-lift swing animation (tied to the not-yet-ported mesh - see
  * {@link thaumcraft.client.render.ModelEldritchPlaceholder}'s own doc comment). No sonic-scream client FX
- * broadcast ({@code PacketFXSonic}, unported {@code FXDispatcher}). No champion-mod name suffix (unported
- * champion system, same as {@code EntityCultistLeader}).
+ * broadcast ({@code PacketFXSonic}, unported {@code FXDispatcher}).
  */
 public class EntityEldritchWarden extends EntityThaumcraftBoss implements RangedAttackMob, IEldritchMob {
 
@@ -120,6 +122,11 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 
 	private void setTitle(int title) {
 		entityData.set(DATA_TITLE, (byte) title);
+	}
+
+	@Override
+	public void onChampionRolled(Component modName) {
+		setCustomName(Component.translatable("entity.thaumcraft.eldritch_warden.name.custom", getTitle(), modName));
 	}
 
 	@Override

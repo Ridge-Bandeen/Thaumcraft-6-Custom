@@ -45,9 +45,16 @@ import thaumcraft.common.entities.projectile.EntityGolemOrb;
  * thaumcraft.common.entities.monster.cult.EntityCultistCleric}'s own doc comment explains.
  *
  * Real random-title naming (one of the original's own 15 names, formatted as "Praetor &lt;name&gt;" -
- * matches the original's own base {@code entity.CultistLeader.name.custom} format string, minus the
- * champion-mod suffix - see this doc comment's own note on that below). Always-worn Crimson Praetor
- * equipment plus a real
+ * matches the original's own base {@code entity.CultistLeader.name} format string). Real champion-mod name
+ * suffix, restored 2026-09-15 via {@link #onChampionRolled}: reformats to "Praetor &lt;name&gt; the
+ * &lt;modifier&gt;", matching the true original's own {@code entity.CultistLeader.name.custom} format string
+ * ("Praetor %s the %d") - except the true original's own format string has a real bug, a {@code %d}
+ * conversion applied to {@code ChampionModifier#getModNameLocalized}'s own {@code String} return value, which
+ * would throw {@code IllegalFormatConversionException} every time a champion Praetor's name was actually
+ * generated (confirmed by reading the true original directly, not guessed); this port fixes it to {@code %s},
+ * matching the original's own clear intent rather than its own literal broken code, same "cosmetic/logic bug
+ * gets fixed, not reproduced" precedent the repair-ingredient/levitator-cost sweep fixes already used. Always-
+ * worn Crimson Praetor equipment plus a real
  * difficulty-gated weapon choice (Void Sword on Easy, Crimson Blade otherwise - matching the original
  * exactly). Real "supports its own cult" mechanic: buffs nearby real {@link EntityCultist}s with
  * Regeneration every 20 ticks, a real, portable version of the original's own {@code updateAITasks} loop
@@ -56,10 +63,9 @@ import thaumcraft.common.entities.projectile.EntityGolemOrb;
  * EntityGolemOrb} blast, matching the original's own {@code attackEntityWithRangedAttack} exactly (including
  * its {@code d2 + 2.0} upward aim offset). Real guaranteed Primordial Pearl + rare loot bag death drop.
  *
- * Real, documented cuts: no champion-mod name suffix (the original's own {@code generateName} appended a
- * champion-modifier title when the champion system flagged this boss as one - that system isn't ported).
- * No random enchantment on the starting weapon (same rationale as {@code EntityCultistKnight}'s own rare-
- * weapon drop). {@link ItemsTC#lootBagRare} stands in for the original's single metadata-variant {@code
+ * Real, documented cuts: no random enchantment on the starting weapon (same rationale as
+ * {@code EntityCultistKnight}'s own rare-weapon drop). {@link ItemsTC#lootBagRare} stands in for the
+ * original's single metadata-variant {@code
  * ItemsTC.lootBag} (meta 2) - this port's own loot bag item was split into three separate tier items
  * instead of one item with variants.
  */
@@ -111,6 +117,12 @@ public class EntityCultistLeader extends EntityThaumcraftBoss implements RangedA
 	@Override
 	public boolean isAlliedTo(Entity other) {
 		return other instanceof EntityCultist || super.isAlliedTo(other);
+	}
+
+	@Override
+	public void onChampionRolled(net.minecraft.network.chat.Component modName) {
+		setCustomName(net.minecraft.network.chat.Component.translatable(
+				"entity.thaumcraft.cultist_leader.name.custom", getTitle(), modName));
 	}
 
 	@Override

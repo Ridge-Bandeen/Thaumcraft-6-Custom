@@ -30,12 +30,23 @@ import thaumcraft.api.entities.IEldritchMob;
  * comes free from vanilla's own {@link net.minecraft.world.entity.Mob#restrictTo} (see {@code
  * EntityCultist}'s own doc comment for why the original needed to hand-roll this and this port doesn't).
  *
+ * Real champion-mod tie-in, restored 2026-09-15 now that {@code registerChampionAttribute} makes bosses
+ * eligible: {@link #onChampionRolled} is called by {@link thaumcraft.common.lib.utils.ChampionUtils#makeChampion}
+ * instead of the generic mob treatment (flat health/damage modifiers, a heal, a name overwrite) every other
+ * real hostile creature gets - matches the true original's own {@code EntityUtils#makeChampion}'s
+ * {@code instanceof EntityThaumcraftBoss} branch, which skipped all of that for bosses and called their own
+ * {@code generateName()} instead (the original's real reason: a boss's own title/name is worth more than the
+ * generic "&lt;Modifier&gt; &lt;Entity&gt;" naming, so only the champion mod's own one-time stat buffs and
+ * per-event effects still apply - see {@code ChampionModifier}'s own doc comment for the type split). Default
+ * no-op (this base boss has no title-based name of its own to re-derive); override to fold the rolled
+ * champion mod's name into a real title-based display name, the way {@link EntityCultistLeader}/
+ * {@link EntityEldritchWarden}/{@link EntityEldritchGolem} each do.
+ *
  * Real, documented cuts vs the original: no multiplayer target-scaling (the original's own {@code
  * updateAITasks} tracked per-attacker aggro in a hashmap and buffed max health/attack damage based on how
  * many distinct players were fighting it, via {@code EntityUtils.HPBUFF}/{@code DMGBUFF} - that whole
  * mechanic lives in the original's own {@code EntityUtils.java}, a large, still-unported utility class with
- * real Baubles and champion-system dependencies of its own; porting it just for this one mechanic isn't
- * proportionate yet). No champion-system tie-ins ({@code ThaumcraftApiHelper.CHAMPION_MOD}, unported). No
+ * real Baubles dependencies of its own; porting it just for this one mechanic isn't proportionate yet). No
  * special floating-item drop visual ({@code EntityUtils#entityDropSpecialItem}, same unported dependency -
  * {@link EntityCultistLeader}'s own primordial pearl drop uses a plain {@link #spawnAtLocation} instead).
  */
@@ -82,6 +93,11 @@ public class EntityThaumcraftBoss extends Monster {
 
 	protected void setSpawnTimer(int ticks) {
 		spawnTimer = ticks;
+	}
+
+	/** See this class's own doc comment for why bosses get this real hook instead of the generic mob
+	 * champion treatment. */
+	public void onChampionRolled(Component modName) {
 	}
 
 	@Override
