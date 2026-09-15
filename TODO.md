@@ -45,14 +45,20 @@ for what else that sweep turned up and what's still unscoped.)*
   plant/ambient blocks. Earlier session notes already confirmed
   `world/plants/` as worldgen-only and out of near-term scope; these are
   likely the same bucket. Low priority.
-- **`tubeOneway`** — a **known, already-diagnosed blocker**, not a fresh
-  gap: needs the same unported per-face wand raytracing that already
-  blocked the Levitator/Redstone Relay (and shaped `TileTube`'s own
-  "all 6 sides always open" simplification). Its sibling `tubeBuffer` is
-  closed (see "Recently closed" below) - it didn't need per-face toggling
-  for its own real distinguishing feature (multi-aspect storage), but
-  one-way tubes are *defined* by a single configurable facing, so this one
-  stays blocked until that raytracing gap is addressed some other way.
+- ~~**`tubeOneway`**~~ — **closed 2026-09-14, and the "known,
+  already-diagnosed blocker" note here was stale.** It claimed Levitator/
+  Redstone Relay were *also* still blocked on the same unported CodeChicken
+  raytracing (`IndexedCuboid6`/`RayTracer`) - direct inspection found both
+  had already shipped, each replacing the original's precise multi-hitbox
+  click UI with a plain `useWithoutItem`-cycles-a-value interaction (see
+  their own doc comments). Only `tubeOneway` itself had never gotten the
+  same treatment. Re-derived the original's real `facing`-based suction/
+  flow restriction directly from its own source and its own in-game
+  research text ("only accept suction from one direction") rather than
+  guessing, added 2 protected hook points to the shared `TileTube` base
+  (matching the already-established Filter/Restrict extension-point
+  pattern), and gave it the same real click-to-cycle substitute. See
+  commit "Give Tube One-way its real directional suction/flow mechanic".
 - ~~**Player/World/Entity/Chunk/Crafting/Server lifecycle events**~~ —
   **scoped 2026-09-14, and it was a false alarm: this package is already
   done.** The whole-tree sweep flagged it because all 7 original files are
@@ -301,6 +307,15 @@ project memory file; not re-listed here to keep this file scannable.)*
   Thaumonomicon reader's atomic-completion architecture, same as before.
   See commit "Give research its real craft/possession auto-progression
   gates".
+
+- **Tube One-way** (`tubeOneway`) — closed 2026-09-14, the last "Needs
+  further triage" item with a real, well-defined blocker. See the
+  "Needs further triage" section above for the full story - the claimed
+  raytracing blocker was stale (Levitator/Redstone Relay had already
+  solved it with a plain click-to-cycle substitute, just never applied
+  here); real directional suction/flow restriction re-derived from the
+  true original's own source. See commit "Give Tube One-way its real
+  directional suction/flow mechanic".
 
 - **Label dyeing recipe family** — closed 2026-09-14, the last "Confirmed
   real gaps" entry. `ItemLabel`'s own doc comment already flagged this as
