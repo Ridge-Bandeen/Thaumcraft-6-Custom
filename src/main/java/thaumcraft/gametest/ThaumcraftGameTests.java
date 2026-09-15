@@ -9853,6 +9853,33 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for the 2026-09-15 restoration: {@link thaumcraft.common.entities.monster.cult.EntityCultist#isAlliedTo}
+	 * should really recognize the real {@link thaumcraft.common.entities.monster.boss.EntityCultistLeader}
+	 * boss as an ally too, not just other plain {@code EntityCultist} subtypes - matching the true original's
+	 * own {@code isOnSameTeam}. {@code EntityCultistLeader}'s own half of this (recognizing a plain cultist)
+	 * was already real before this fix.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cultistRecognizesTheRealCultistLeaderBossAsAnAlly(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos abs = helper.absolutePos(BlockPos.ZERO);
+
+		thaumcraft.common.entities.monster.cult.EntityCultistKnight knight =
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_KNIGHT.get().create(level);
+		knight.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(knight);
+
+		thaumcraft.common.entities.monster.boss.EntityCultistLeader leader =
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_LEADER.get().create(level);
+		leader.moveTo(abs.getX() + 2.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
+		level.addFreshEntity(leader);
+
+		helper.assertTrue(knight.isAlliedTo(leader), "a real cultist knight should really recognize a real cultist leader as an ally");
+		helper.assertTrue(leader.isAlliedTo(knight), "a real cultist leader should really recognize a real cultist knight as an ally (already real before this fix)");
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void inhabitedZombieSpawnsARealHelmedEldritchCrabInsteadOfDyingNormally(GameTestHelper helper) {
 		BlockPos pos = BlockPos.ZERO;

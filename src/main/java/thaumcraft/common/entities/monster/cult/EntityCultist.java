@@ -8,6 +8,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.level.Level;
+import thaumcraft.common.entities.monster.boss.EntityCultistLeader;
 
 /**
  * Replaces the old (1.12.2) {@code EntityCultist} - the shared base of the Crimson Cult's "regular" ranks
@@ -24,9 +25,9 @@ import net.minecraft.world.level.Level;
  *
  * Real door-breaking pathfinding (matches the original's own constructor-time {@code
  * ((PathNavigateGround) getNavigator()).setBreakDoors(true)}) and real 5% chest/feet/head/legs drop chance.
- * Real ally-check ({@link #isAlliedTo}) between all {@code EntityCultist} subtypes - {@code
- * EntityCultistLeader} isn't ported yet, so that half of the original's own check is a real, documented gap
- * until that class exists.
+ * Real ally-check ({@link #isAlliedTo}) between all {@code EntityCultist} subtypes and the real
+ * {@link EntityCultistLeader} boss - restored 2026-09-15 (the leader arc shipped a while before this fix
+ * caught up to it), matching the true original's own {@code isOnSameTeam} exactly.
  *
  * Real, documented cuts vs the original: no natural-spawn light-level override (this whole session's
  * monster arc has consistently deferred {@code SpawnPlacements} wiring - see {@code EntityEldritchCrab}'s
@@ -61,6 +62,6 @@ public abstract class EntityCultist extends Monster {
 
 	@Override
 	public boolean isAlliedTo(Entity other) {
-		return other instanceof EntityCultist || super.isAlliedTo(other);
+		return other instanceof EntityCultist || other instanceof EntityCultistLeader || super.isAlliedTo(other);
 	}
 }
