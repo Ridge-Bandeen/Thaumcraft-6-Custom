@@ -11674,6 +11674,42 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for the Levitator's real small button-nub click precision, restored via
+	 * {@link thaumcraft.common.lib.utils.CuboidTargeting} (see that block's own doc comment - this also
+	 * restores the real solid collision shape, previously conflated with the click target). Looking
+	 * precisely at the real button (re-derived from the true original's own numbers) should cycle the range;
+	 * looking at the block's own real solid body elsewhere should not.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void levitatorButtonIsPreciselyClickable(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos levPos = new BlockPos(3, 2, 3);
+		helper.setBlock(levPos, BlocksTC.levitator.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.UP));
+		BlockPos levAbs = helper.absolutePos(levPos);
+		ServerPlayer player = spawnCasterAt(helper, levAbs.above(2));
+		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+				Vec3.atCenterOf(levAbs), net.minecraft.core.Direction.UP, levAbs, false);
+		thaumcraft.common.tiles.devices.TileLevitator tile = helper.getBlockEntity(levPos);
+		int costBefore = tile.getCost();
+
+		// Facing UP, the real button sits low (0.0625-0.125 in Y) near the block's own real center - looking
+		// at the real solid body off to one side (offset in X, not just Y, so the ray's own full length -
+		// not just the look-at point itself - never crosses the button's real footprint) should never
+		// trigger it.
+		player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES,
+				new Vec3(levAbs.getX() + 0.95, levAbs.getY() + 0.5, levAbs.getZ() + 0.5));
+		helper.getBlockState(levPos).useWithoutItem(level, player, hit);
+		helper.assertTrue(tile.getCost() == costBefore, "looking at the real solid body away from the button should never cycle the real range");
+
+		player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES,
+				new Vec3(levAbs.getX() + 0.5, levAbs.getY() + 0.09, levAbs.getZ() + 0.5));
+		helper.getBlockState(levPos).useWithoutItem(level, player, hit);
+		helper.assertTrue(tile.getCost() != costBefore, "looking precisely at the real button should really cycle the range, cost stayed " + costBefore);
+		helper.succeed();
+	}
+
 	/** Names the real Redstone Relay crafting recipe and confirms it's actually registered. */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void redstoneRelayRecipeRegistered(GameTestHelper helper) {
@@ -11712,29 +11748,48 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
-	 * Real coverage for the Redstone Relay's real click-to-cycle interaction (the original's own 2-sub-
-	 * hitbox raytraced dials, simplified this pass to plain-click/shift-click - see that block's own doc
-	 * comment). Right-click should cycle OUT; shift-right-click should cycle IN; both wrap from 15 back to 1.
+	 * Real coverage for the Redstone Relay's real 2-dial click precision, restored via
+	 * {@link thaumcraft.common.lib.utils.CuboidTargeting} (see that block's own doc comment for the full
+	 * story - this replaces an earlier "one dial, shift-click for the other" placeholder). Looking precisely
+	 * at the real OUT-side dial should cycle OUT; the real IN-side dial should cycle IN; looking at neither
+	 * (dead center) should do nothing at all.
 	 */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
-	public static void redstoneRelayClickCyclesOutAndShiftClickCyclesIn(GameTestHelper helper) {
+	public static void redstoneRelayDialsAreIndependentlyClickable(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 		BlockPos pos = new BlockPos(3, 2, 3);
-		helper.setBlock(pos, BlocksTC.redstoneRelay.get());
+		net.minecraft.core.Direction facing = net.minecraft.core.Direction.NORTH;
+		helper.setBlock(pos, BlocksTC.redstoneRelay.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.DiodeBlock.FACING, facing));
 		BlockPos abs = helper.absolutePos(pos);
 		ServerPlayer player = spawnCasterAt(helper, abs.above(2));
 
 		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
-				net.minecraft.world.phys.Vec3.atCenterOf(abs), net.minecraft.core.Direction.UP, abs, false);
+				Vec3.atCenterOf(abs), net.minecraft.core.Direction.UP, abs, false);
 
+		// Dead center hits neither dial - should be a real no-op.
+		player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, Vec3.atCenterOf(abs));
+		helper.getBlockState(pos).useWithoutItem(level, player, hit);
+		helper.assertTrue(helper.getBlockState(pos).getValue(thaumcraft.common.blocks.devices.BlockRedstoneRelay.OUT) == 15,
+				"looking dead center (neither dial) should never cycle OUT");
+		helper.assertTrue(helper.getBlockState(pos).getValue(thaumcraft.common.blocks.devices.BlockRedstoneRelay.IN) == 1,
+				"looking dead center (neither dial) should never cycle IN either");
+
+		Vec3 outDial = new Vec3(abs.getX() + 0.75, abs.getY() + 0.125, abs.getZ() + 0.625);
+		player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, outDial);
 		helper.getBlockState(pos).useWithoutItem(level, player, hit);
 		helper.assertTrue(helper.getBlockState(pos).getValue(thaumcraft.common.blocks.devices.BlockRedstoneRelay.OUT) == 1,
-				"a plain right-click should really cycle OUT from its real default of 15 to 1");
+				"looking precisely at the real OUT dial should cycle OUT from its real default of 15 to 1");
+		helper.assertTrue(helper.getBlockState(pos).getValue(thaumcraft.common.blocks.devices.BlockRedstoneRelay.IN) == 1,
+				"cycling OUT should never touch IN");
 
-		player.setShiftKeyDown(true);
+		Vec3 inDial = new Vec3(abs.getX() + 0.25, abs.getY() + 0.125, abs.getZ() + 0.625);
+		player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES, inDial);
 		helper.getBlockState(pos).useWithoutItem(level, player, hit);
 		helper.assertTrue(helper.getBlockState(pos).getValue(thaumcraft.common.blocks.devices.BlockRedstoneRelay.IN) == 2,
-				"a real shift-right-click should really cycle IN from its real default of 1 to 2");
+				"looking precisely at the real IN dial should cycle IN from its real default of 1 to 2");
+		helper.assertTrue(helper.getBlockState(pos).getValue(thaumcraft.common.blocks.devices.BlockRedstoneRelay.OUT) == 1,
+				"cycling IN should never touch OUT");
 		helper.succeed();
 	}
 

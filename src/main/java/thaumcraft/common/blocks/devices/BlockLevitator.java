@@ -1,5 +1,7 @@
 package thaumcraft.common.blocks.devices;
 
+import java.util.List;
+
 import javax.annotation.Nullable;
 
 import com.mojang.serialization.MapCodec;
@@ -20,10 +22,12 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import thaumcraft.common.lib.utils.CuboidTargeting;
 import thaumcraft.common.registry.ThaumcraftBlockEntities;
 import thaumcraft.common.tiles.devices.TileLevitator;
 
@@ -32,23 +36,42 @@ import thaumcraft.common.tiles.devices.TileLevitator;
  * entities along its facing (see {@link TileLevitator}'s own doc comment for the real push/range mechanic).
  * Same {@code FACING}-from-clicked-face placement convention as {@link BlockArcaneEar}.
  *
- * Real, deliberate simplification: the original used a CodeChickenLib multi-hitbox raytracer so only
- * clicking a small raised "key" nub on one face would cycle the range, leaving the rest of the block's real
- * interaction (none, in the original) untouched - that whole precise-sub-hitbox-click system doesn't exist
- * in modern MC and isn't worth rebuilding for this one interaction. Right-clicking anywhere on the block now
- * cycles the range instead - same real function, a plain interaction like every other device this port has
- * shipped.
+ * <p>Real, deliberate re-derivation, not a simplification: the original's own real solid shape (a near-full
+ * block, inset by 0.125 only on whichever face it points through - the "wind tunnel opening") and its real
+ * small clickable button nub (on the opposite, "control panel" side) are two genuinely different shapes in
+ * the true original, kept separate here too - {@link #getShape} is the real solid one (re-derived directly
+ * from the original's own {@code getBoundingBox}, one inset face per real facing), while the button click is
+ * its own small hitbox, tested independently via {@link CuboidTargeting} inside {@link #useWithoutItem} - the
+ * modern, no-third-party-library replacement for the original's CodeChicken raytracer (see that class's own
+ * doc comment). An earlier pass here had collapsed both into one made-up narrow-footprint shape that matched
+ * neither the real collision box nor the real button position - this restores both for real.
  */
 public class BlockLevitator extends Block implements EntityBlock {
 
 	public static final MapCodec<BlockLevitator> CODEC = simpleCodec(BlockLevitator::new);
 
-	private static final VoxelShape SHAPE_DOWN = Shapes.box(0.375, 0.0, 0.375, 0.625, 0.9375, 0.625);
-	private static final VoxelShape SHAPE_UP = Shapes.box(0.375, 0.0625, 0.375, 0.625, 1.0, 0.625);
-	private static final VoxelShape SHAPE_NORTH = Shapes.box(0.375, 0.375, 0.0, 0.625, 0.625, 0.9375);
-	private static final VoxelShape SHAPE_SOUTH = Shapes.box(0.375, 0.375, 0.0625, 0.625, 0.625, 1.0);
-	private static final VoxelShape SHAPE_WEST = Shapes.box(0.0, 0.375, 0.375, 0.9375, 0.625, 0.625);
-	private static final VoxelShape SHAPE_EAST = Shapes.box(0.0625, 0.375, 0.375, 1.0, 0.625, 0.625);
+	private static final float INSET = 0.125f;
+	private static final VoxelShape SHAPE_DOWN = Shapes.box(0, 0, 0, 1, 1 - INSET, 1);
+	private static final VoxelShape SHAPE_UP = Shapes.box(0, INSET, 0, 1, 1, 1);
+	private static final VoxelShape SHAPE_NORTH = Shapes.box(0, 0, 0, 1, 1, 1 - INSET);
+	private static final VoxelShape SHAPE_SOUTH = Shapes.box(0, 0, INSET, 1, 1, 1);
+	private static final VoxelShape SHAPE_WEST = Shapes.box(0, 0, 0, 1 - INSET, 1, 1);
+	private static final VoxelShape SHAPE_EAST = Shapes.box(INSET, 0, 0, 1, 1, 1);
+
+	/** The real small clickable button nub, one per real facing - re-derived verbatim from the true
+	 * original's own {@code TileLevitator#getCuboidByFacing} numbers, on the opposite ("control panel") side
+	 * from the wind-tunnel opening. */
+	private static AABB buttonBox(BlockPos pos, Direction facing) {
+		AABB local = switch (facing) {
+			case DOWN -> new AABB(0.375, 0.875, 0.375, 0.625, 0.9375, 0.625);
+			case EAST -> new AABB(0.0625, 0.375, 0.375, 0.125, 0.625, 0.625);
+			case WEST -> new AABB(0.875, 0.375, 0.375, 0.9375, 0.625, 0.625);
+			case SOUTH -> new AABB(0.375, 0.375, 0.0625, 0.625, 0.625, 0.125);
+			case NORTH -> new AABB(0.375, 0.375, 0.875, 0.625, 0.625, 0.9375);
+			default -> new AABB(0.375, 0.0625, 0.375, 0.625, 0.125, 0.625); // UP
+		};
+		return local.move(pos);
+	}
 
 	public BlockLevitator(BlockBehaviour.Properties properties) {
 		super(properties);
@@ -87,6 +110,9 @@ public class BlockLevitator extends Block implements EntityBlock {
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
 		if (level.isClientSide) return InteractionResult.SUCCESS;
+		Boolean hitButton = CuboidTargeting.pick(player, List.of(
+				new CuboidTargeting.Candidate<>(Boolean.TRUE, buttonBox(pos, state.getValue(BlockStateProperties.FACING)))));
+		if (hitButton == null) return InteractionResult.PASS;
 		if (level.getBlockEntity(pos) instanceof TileLevitator tile) {
 			tile.increaseRange(player);
 		}
