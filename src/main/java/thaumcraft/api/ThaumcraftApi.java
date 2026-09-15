@@ -1,5 +1,10 @@
 package thaumcraft.api;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import thaumcraft.api.internal.DummyInternalMethodHandler;
 import thaumcraft.api.internal.IInternalMethodHandler;
 
@@ -11,13 +16,18 @@ import thaumcraft.api.internal.IInternalMethodHandler;
  * finally lets {@code AuraHelper} (and, eventually, addon/legacy code depending on this API) actually work
  * instead of being a permanent stub.
  *
- * Everything else in the original - {@code registerResearchLocation}, the whole family of
+ * Most of the rest of the original - {@code registerResearchLocation}, the whole family of
  * {@code addArcaneCraftingRecipe}/{@code addCrucibleRecipe}/{@code addInfusionCraftingRecipe}/
  * {@code addSmeltingBonus} static registration methods, scannable-thing registration, etc. - is
  * superseded entirely by this port's modern data-driven systems (JSON recipes under
  * {@code data/thaumcraft/recipe}, {@code DeferredRegister}-based item/block/entity registries) and isn't
  * called by anything this port's already-ported code needs. Not worth reviving a static registration API
  * nothing in this codebase would ever call. Revisit only if a genuine addon-compatibility need comes up.
+ *
+ * {@link #addWarpToItem}/{@link #getWarp} are the real exception, and a good illustration of why that last
+ * sentence is worth taking seriously: they look like more superseded static registration, but the value
+ * they carry is read at <i>craft time</i>, not load time, so no data-driven system replaces them. They back
+ * the real warp-on-craft penalty - see {@link thaumcraft.common.lib.events.WarpEvents}.
  */
 public class ThaumcraftApi {
 
@@ -26,4 +36,32 @@ public class ThaumcraftApi {
 	 * default - see {@link thaumcraft.common.ThaumcraftInternalMethodHandler}.
 	 */
 	public static IInternalMethodHandler internalMethods = new DummyInternalMethodHandler();
+
+	/**
+	 * Registers a real permanent-warp cost for crafting this item, exactly as the original's own
+	 * {@code addWarpToItem} did - the one piece of the original's static registration API that turned out to
+	 * still be load-bearing rather than superseded by this port's data-driven systems, because the value it
+	 * registers is read at craft time rather than at load time.
+	 *
+	 * <p>Two real, deliberate differences from the original. First, the key: the original keyed its map by
+	 * {@code Arrays.asList(item, itemDamage)} because 1.12.2 items carried metadata variants. Modern items
+	 * don't - this port split every variant into its own real item - so the key is just the {@link Item}.
+	 * Second, where the map lives: the original kept it in {@code CommonInternals}, which is still an
+	 * unported 1.12.2 file (its {@code warpMap} field is dead here, never read or written). Reviving that
+	 * whole file for one field would drag in {@code AspectList}, {@code IThaumcraftRecipe},
+	 * {@code SmeltBonus} and the rest of its unported baggage, so the map lives here beside its only two
+	 * real accessors instead.
+	 */
+	public static void addWarpToItem(ItemStack craftresult, int amount) {
+		if (craftresult == null || craftresult.isEmpty()) return;
+		WARP_MAP.put(craftresult.getItem(), amount);
+	}
+
+	/** The real permanent warp crafting this stack costs, or 0 if it costs none. */
+	public static int getWarp(ItemStack in) {
+		if (in == null || in.isEmpty()) return 0;
+		return WARP_MAP.getOrDefault(in.getItem(), 0);
+	}
+
+	private static final Map<Item, Integer> WARP_MAP = new HashMap<>();
 }

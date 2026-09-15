@@ -17,6 +17,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import thaumcraft.Thaumcraft;
 import thaumcraft.api.ThaumcraftApi;
@@ -277,5 +278,34 @@ public class WarpEvents {
 	private static int getWarp(ItemStack stack, Player player) {
 		if (stack.isEmpty() || !(stack.getItem() instanceof IWarpingGear gear)) return 0;
 		return gear.getWarp(stack, player);
+	}
+
+	/**
+	 * The real warp-on-craft penalty, the last live mechanic out of the old (1.12.2) {@code CraftingEvents}
+	 * (its research-hash half is now {@link ResearchCraftingEvents}). Crafting an item registered via
+	 * {@link ThaumcraftApi#addWarpToItem} costs that much real permanent warp, gated on the real
+	 * {@code wussMode} config exactly as the original gated it.
+	 *
+	 * <p>Worth recording how this got here, because an earlier pass in this port concluded the opposite and
+	 * was wrong: the note then was that warp-on-craft must be a decompilation artifact, since the penalty
+	 * reads {@code ThaumcraftApi.getWarp(ItemStack)} and nothing ever writes the {@code TC.WARP} NBT tag.
+	 * Reading the original directly disproved it - {@code getWarp} never looked at {@code TC.WARP} at all.
+	 * It reads {@link thaumcraft.api.internal.CommonInternals#warpMap}, a static item→warp registry, and
+	 * {@code TC.WARP} is an entirely separate mechanism (worn-gear warp, written by the original's own
+	 * {@code InfusionEnchantmentRecipe}). Two different systems that happen to both be called "warp".
+	 *
+	 * <p>The mechanic is real but deliberately sparse: shipped Thaumcraft 6 calls {@code addWarpToItem}
+	 * exactly once, for the Brain in a Jar at 1 warp (its own {@code ConfigResearch} line 282). That single
+	 * registration lives in {@code Thaumcraft}'s setup here. It is also distinct from the warp a research
+	 * <i>entry</i> carries, which is a separate real path through {@code ResearchStage#getWarp}.
+	 */
+	@SubscribeEvent
+	public static void onItemCrafted(PlayerEvent.ItemCraftedEvent event) {
+		Player player = event.getEntity();
+		if (player == null || player.level().isClientSide || ThaumcraftConfig.WUSS_MODE.get()) return;
+		int warp = ThaumcraftApi.getWarp(event.getCrafting());
+		if (warp > 0) {
+			ThaumcraftApi.internalMethods.addWarpToPlayer(player, warp, EnumWarpType.NORMAL);
+		}
 	}
 }

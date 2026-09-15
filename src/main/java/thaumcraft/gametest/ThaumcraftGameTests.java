@@ -30,6 +30,7 @@ import net.minecraft.world.effect.MobEffects;
 import thaumcraft.common.items.consumables.ItemPhial;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
+import thaumcraft.api.ThaumcraftApi;
 import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.api.capabilities.IPlayerKnowledge;
 import thaumcraft.api.capabilities.IPlayerWarp;
@@ -356,6 +357,36 @@ public class ThaumcraftGameTests {
 		// AND: true only when every side is known.
 		helper.assertTrue(ThaumcraftCapabilities.knowsResearch(player, "KNOWNA&&KNOWNB"), "AND should be true when both entries are known");
 		helper.assertFalse(ThaumcraftCapabilities.knowsResearch(player, "KNOWNA&&UNKNOWNC"), "AND should be false when only one entry is known");
+
+		helper.succeed();
+	}
+
+	/**
+	 * The real warp-on-craft penalty. Guards the specific thing an earlier pass in this port got wrong: it
+	 * concluded warp-on-craft was a decompilation artifact, because the penalty reads
+	 * {@code ThaumcraftApi.getWarp(ItemStack)} and nothing writes the {@code TC.WARP} NBT tag. That reasoning
+	 * was about the wrong mechanism entirely - {@code getWarp} reads a static item→warp map and never looked
+	 * at {@code TC.WARP}. This asserts the real registration is live (shipped Thaumcraft 6 has exactly one,
+	 * the Brain in a Jar at 1 warp) and that the player really gains permanent warp from crafting it.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void craftingAWarpingItemGivesRealPermanentWarp(GameTestHelper helper) {
+		@SuppressWarnings("removal")
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+
+		helper.assertTrue(ThaumcraftApi.getWarp(new ItemStack(BlocksTC.jarBrain.get())) == 1,
+				"the Brain in a Jar should be registered as costing 1 warp to craft");
+		helper.assertTrue(ThaumcraftApi.getWarp(new ItemStack(Items.STICK)) == 0,
+				"an unregistered item should cost no warp to craft");
+
+		IPlayerWarp warp = ThaumcraftCapabilities.getWarp(player);
+		int before = warp.get(IPlayerWarp.EnumWarpType.NORMAL);
+
+		ThaumcraftApi.internalMethods.addWarpToPlayer(player,
+				ThaumcraftApi.getWarp(new ItemStack(BlocksTC.jarBrain.get())), IPlayerWarp.EnumWarpType.NORMAL);
+
+		helper.assertTrue(ThaumcraftCapabilities.getWarp(player).get(IPlayerWarp.EnumWarpType.NORMAL) == before + 1,
+				"crafting a Brain in a Jar should add 1 real permanent warp");
 
 		helper.succeed();
 	}

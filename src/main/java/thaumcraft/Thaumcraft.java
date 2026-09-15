@@ -187,6 +187,12 @@ public class Thaumcraft {
             thaumcraft.api.research.ScanningManager.addScannableThing(new thaumcraft.common.lib.research.ScanPotion(effect));
         }
 
+        // Warp-on-craft costs (thaumcraft.api.ThaumcraftApi#addWarpToItem). Shipped Thaumcraft 6 registers
+        // exactly one, and this is it: crafting a Brain in a Jar costs 1 real permanent warp (the original's
+        // own ConfigResearch line 282). The mechanic itself is real - see WarpEvents#onItemCrafted for how an
+        // earlier pass here talked itself out of that and what reading the original actually showed.
+        thaumcraft.api.ThaumcraftApi.addWarpToItem(new net.minecraft.world.item.ItemStack(BlocksTC.jarBrain.get()), 1);
+
         // Salis Mundus dust triggers (thaumcraft.api.crafting.IDustTrigger) - see
         // ThaumcraftDustTriggers' own doc comment for what this unlocks and what's still deferred.
         ThaumcraftDustTriggers.register();
