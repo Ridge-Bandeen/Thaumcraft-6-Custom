@@ -10118,6 +10118,158 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/**
+	 * Real coverage for {@link thaumcraft.common.blocks.world.taint.TaintHelper#spreadFibres}'s own real
+	 * leaf-touch branch, restored 2026-09-15 - a real chance to sprout {@code taint_feature} facing away
+	 * from a real touching {@code taint_log} instead of a plain fibre.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void spreadFibresLeafTouchBranchSproutsARealTaintFeatureNearARealTaintLog(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos seedPos = helper.absolutePos(new BlockPos(4, 3, 4));
+		// A real 5x5x5 volume of taint_log with the inner 3x3x3 (every position spreadFibres could ever
+		// randomly pick around seedPos) carved out to real leaves - guarantees every real reachable position
+		// has a real taint_log touching at least one face, regardless of which random offset gets picked.
+		for (int dx = -2; dx <= 2; dx++) {
+			for (int dy = -2; dy <= 2; dy++) {
+				for (int dz = -2; dz <= 2; dz++) {
+					BlockPos p = seedPos.offset(dx, dy, dz);
+					boolean inner = Math.abs(dx) <= 1 && Math.abs(dy) <= 1 && Math.abs(dz) <= 1;
+					level.setBlockAndUpdate(p, inner ? net.minecraft.world.level.block.Blocks.OAK_LEAVES.defaultBlockState()
+							: BlocksTC.taintLog.get().defaultBlockState());
+				}
+			}
+		}
+		thaumcraft.common.blocks.world.taint.TaintHelper.addTaintSeed(level, seedPos);
+
+		boolean sproutedFeature = false;
+		for (int i = 0; i < 400 && !sproutedFeature; i++) {
+			thaumcraft.common.blocks.world.taint.TaintHelper.spreadFibres(level, seedPos, true);
+			for (int dx = -1; dx <= 1 && !sproutedFeature; dx++) {
+				for (int dy = -1; dy <= 1 && !sproutedFeature; dy++) {
+					for (int dz = -1; dz <= 1; dz++) {
+						if (level.getBlockState(seedPos.offset(dx, dy, dz)).getBlock() instanceof thaumcraft.common.blocks.world.taint.BlockTaintFeature) {
+							sproutedFeature = true;
+							break;
+						}
+					}
+				}
+			}
+		}
+		thaumcraft.common.blocks.world.taint.TaintHelper.removeTaintSeed(level, seedPos);
+		helper.assertTrue(sproutedFeature, "spreading fibres into real leaves next to a real taint_log should really eventually sprout a real taint_feature");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.blocks.world.taint.TaintHelper#spreadFibres}'s own real
+	 * hemmed-in-taint conversion branch, restored 2026-09-15 - a real nearby log/rock surface, once really
+	 * hemmed in by taint, converts into the matching real taint-terrain block.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void spreadFibresHemmedInTaintBranchConvertsRealLogAndRockSurfaces(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+
+		// spreadFibres never picks its own call position as a candidate target (t.equals(pos) returns early),
+		// so the log/stone itself has to be a real reachable NEIGHBOR of the call position, not the call
+		// position itself - callPos (a real taintFibre) sits right next to the log, both inside a wider real
+		// taintFibre shell so isHemmedByTaint sees a real net-positive taint count either way.
+		BlockPos logSeedPos = helper.absolutePos(new BlockPos(4, 3, 4));
+		BlockPos logCallPos = logSeedPos.above();
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dy = -1; dy <= 2; dy++) {
+				for (int dz = -1; dz <= 1; dz++) {
+					level.setBlockAndUpdate(logSeedPos.offset(dx, dy, dz), BlocksTC.taintFibre.get().defaultBlockState());
+				}
+			}
+		}
+		level.setBlockAndUpdate(logSeedPos, net.minecraft.world.level.block.Blocks.OAK_LOG.defaultBlockState());
+		thaumcraft.common.blocks.world.taint.TaintHelper.addTaintSeed(level, logCallPos);
+		boolean becameTaintLog = false;
+		for (int i = 0; i < 300 && !becameTaintLog; i++) {
+			thaumcraft.common.blocks.world.taint.TaintHelper.spreadFibres(level, logCallPos, true);
+			becameTaintLog = level.getBlockState(logSeedPos).is(BlocksTC.taintLog.get());
+		}
+		thaumcraft.common.blocks.world.taint.TaintHelper.removeTaintSeed(level, logCallPos);
+		helper.assertTrue(becameTaintLog, "a real oak log fully hemmed in by real taint fibre should really eventually convert into a real taint_log");
+
+		BlockPos rockSeedPos = helper.absolutePos(new BlockPos(4, 3, 10));
+		BlockPos rockCallPos = rockSeedPos.above();
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dy = -1; dy <= 2; dy++) {
+				for (int dz = -1; dz <= 1; dz++) {
+					level.setBlockAndUpdate(rockSeedPos.offset(dx, dy, dz), BlocksTC.taintFibre.get().defaultBlockState());
+				}
+			}
+		}
+		level.setBlockAndUpdate(rockSeedPos, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+		thaumcraft.common.blocks.world.taint.TaintHelper.addTaintSeed(level, rockCallPos);
+		boolean becameTaintRock = false;
+		for (int i = 0; i < 300 && !becameTaintRock; i++) {
+			thaumcraft.common.blocks.world.taint.TaintHelper.spreadFibres(level, rockCallPos, true);
+			becameTaintRock = level.getBlockState(rockSeedPos).is(BlocksTC.taintRock.get());
+		}
+		thaumcraft.common.blocks.world.taint.TaintHelper.removeTaintSeed(level, rockCallPos);
+		helper.assertTrue(becameTaintRock, "real stone fully hemmed in by real taint fibre should really eventually convert into real taint_rock");
+		helper.succeed();
+	}
+
+	/**
+	 * Real coverage for {@link thaumcraft.common.blocks.world.taint.TaintHelper#spreadFibres}'s own real
+	 * taint-seed-edge spawn branch, restored 2026-09-15 - an existing real taint_soil/taint_rock patch at
+	 * a real seed's own spread-radius fringe has a real chance to sprout a whole new real
+	 * {@link thaumcraft.common.entities.monster.tainted.EntityTaintSeed}.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void spreadFibresTaintSeedEdgeBranchSproutsARealNewSeed(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		// EntityTaintSeed#canSpawnHere refuses to spawn on real Peaceful difficulty - matching an
+		// established precedent elsewhere in this file for the same real reason.
+		level.getServer().setDifficulty(net.minecraft.world.Difficulty.HARD, true);
+		BlockPos soilPos = helper.absolutePos(new BlockPos(4, 3, 4));
+		// spreadFibres never picks its own call position as a candidate target (t.equals(pos) returns
+		// early), so soilPos itself has to be a real reachable NEIGHBOR of the call position, not the call
+		// position itself. Real open air on every side at spawn height, not just directly above - the real
+		// seed's own real 1.5-wide hitbox (see EntityTaintSeed's own doc comment) needs real room to spawn
+		// without clipping a real solid neighbor.
+		BlockPos callPos = soilPos.north();
+		level.setBlockAndUpdate(soilPos, BlocksTC.taintSoil.get().defaultBlockState());
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				level.setBlockAndUpdate(soilPos.offset(dx, 1, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			}
+		}
+
+		// A real fringe seed position - within the real spread area, but past 80% of it, matching
+		// isAtTaintSeedEdge's own real real definition (see that method's own doc comment).
+		int fringeDistance = (int) (thaumcraft.common.blocks.world.taint.TaintHelper.spreadArea() * 0.9);
+		BlockPos fringeSeedPos = soilPos.offset(fringeDistance, 0, 0);
+		thaumcraft.common.blocks.world.taint.TaintHelper.addTaintSeed(level, fringeSeedPos);
+		helper.assertTrue(thaumcraft.common.blocks.world.taint.TaintHelper.isAtTaintSeedEdge(level, soilPos),
+				"the real soil position should really be at the real tracked seed's own fringe");
+
+		boolean sproutedSeed = false;
+		int before = level.getEntitiesOfClass(thaumcraft.common.entities.monster.tainted.EntityTaintSeed.class, new AABB(soilPos).inflate(3)).size();
+		for (int i = 0; i < 1500 && !sproutedSeed; i++) {
+			// Real flux is a live, wall-clock-paced background simulation in this project (see AuraHandler's
+			// own doc comment) - re-applying it fresh every attempt, not just once before the loop, avoids
+			// racing against its own real decay/diffusion draining it out from under a long real test loop.
+			thaumcraft.common.world.aura.AuraHandler.addFlux(level, soilPos, 20.0f);
+			// soilPos.above() is ALSO one of callPos's own real reachable random targets, and real eligible
+			// for the plain-fibre branch (it's air, adjacent to real solid soilPos below) - once an earlier
+			// real attempt happens to grow a fibre there, the seed-edge branch's own real "air above" check
+			// can never succeed again for the rest of this loop. Reset it back to real air every attempt,
+			// same "refresh the volatile precondition every attempt" fix as the flux re-application above.
+			level.setBlockAndUpdate(soilPos.above(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			thaumcraft.common.blocks.world.taint.TaintHelper.spreadFibres(level, callPos, true);
+			int now = level.getEntitiesOfClass(thaumcraft.common.entities.monster.tainted.EntityTaintSeed.class, new AABB(soilPos).inflate(3)).size();
+			sproutedSeed = now > before;
+		}
+		thaumcraft.common.blocks.world.taint.TaintHelper.removeTaintSeed(level, fringeSeedPos);
+		helper.assertTrue(sproutedSeed, "a real taint_soil patch at a real seed's own fringe with enough real flux should really eventually sprout a real new taint seed");
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void taintRockSoilCrustGeyserDieSpreadFallAndPollute(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();

@@ -67,6 +67,16 @@ public class EntityTaintSeed extends Monster implements ITaintedMob {
 		super(type, level);
 	}
 
+	/** Real hitbox, restored 2026-09-15 (a real, separate gap found while restoring
+	 * {@link TaintHelper#spreadFibres}'s own real seed-edge spawn branch) - the true original's own real
+	 * {@code setSize(1.5f, 1.25f)} was never carried over, leaving this on vanilla {@link Monster}'s own
+	 * real default dimensions (narrower but noticeably taller) instead. {@code Pose} is final here on
+	 * purpose - the true original never varied its own size by pose either. */
+	@Override
+	public net.minecraft.world.entity.EntityDimensions getDefaultDimensions(net.minecraft.world.entity.Pose pose) {
+		return net.minecraft.world.entity.EntityDimensions.scalable(1.5f, 1.25f);
+	}
+
 	public static AttributeSupplier.Builder createAttributes() {
 		return Monster.createMonsterAttributes()
 				.add(Attributes.MAX_HEALTH, 75.0)

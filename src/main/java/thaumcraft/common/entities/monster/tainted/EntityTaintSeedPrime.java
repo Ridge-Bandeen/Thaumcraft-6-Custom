@@ -17,6 +17,14 @@ public class EntityTaintSeedPrime extends EntityTaintSeed {
 		super(type, level);
 	}
 
+	/** Real, own hitbox (bigger than the base {@link EntityTaintSeed}'s own real 1.5x1.25) - the true
+	 * original's own real {@code setSize(2.0f, 2.0f)}, restored 2026-09-15 alongside the base class's own
+	 * same real gap (see that class's own doc comment). */
+	@Override
+	public net.minecraft.world.entity.EntityDimensions getDefaultDimensions(net.minecraft.world.entity.Pose pose) {
+		return net.minecraft.world.entity.EntityDimensions.scalable(2.0f, 2.0f);
+	}
+
 	public static AttributeSupplier.Builder createAttributes() {
 		return EntityTaintSeed.createAttributes()
 				.add(Attributes.MAX_HEALTH, 150.0)

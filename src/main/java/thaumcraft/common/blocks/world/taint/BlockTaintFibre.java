@@ -209,6 +209,28 @@ public class BlockTaintFibre extends Block implements ITaintBlock {
 		return true;
 	}
 
+	/** Real port of the true original's own {@code isHemmedByTaint} - a weaker "surrounded enough" check than
+	 * {@link #isOnlyAdjacentToTaint} above (that one requires EVERY neighbor to be taint or air; this one
+	 * just needs real taint neighbors to outnumber real open/non-solid ones). Real, from-scratch use of
+	 * {@link ITaintBlock} as the modern equivalent of the original's own {@code Material == MATERIAL_TAINT}
+	 * check - every real taint block implements it. Used by {@link TaintHelper#spreadFibres}'s own real
+	 * hemmed-in-taint conversion branch (rock/soil/crust/log). */
+	public static boolean isHemmedByTaint(LevelReader level, BlockPos pos) {
+		int c = 0;
+		for (Direction dir : Direction.values()) {
+			BlockPos n = pos.relative(dir);
+			BlockState state = level.getBlockState(n);
+			if (state.getBlock() instanceof ITaintBlock) {
+				c++;
+			} else if (state.isAir()) {
+				c--;
+			} else if (state.getFluidState().isEmpty() && !state.isFaceSturdy(level, n, dir.getOpposite())) {
+				c--;
+			}
+		}
+		return c > 0;
+	}
+
 	@Override
 	public void stepOn(Level level, BlockPos pos, BlockState state, Entity entity) {
 		if (!level.isClientSide && !entity.getType().is(EntityTypeTags.UNDEAD) && entity instanceof net.minecraft.world.entity.LivingEntity living
