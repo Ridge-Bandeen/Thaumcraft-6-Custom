@@ -46,15 +46,17 @@ sweep turned up and what's still unscoped.)*
   standalone placer outside client-rendering setup (`ProxyBlock.java`);
   genuinely tangled with the already-known-blocked finite-fluid/Taint
   world-spread subsystem, not a separate gap.
-- **`grassAmbient`, `shimmerleaf`, `vishroom`** — confirmed 2026-09-14
-  (see "World generation" below): these 3 are placed exclusively by the
-  true original's own `BiomeGenMagicalForest#decorate` override, not the
-  general world generator - genuinely inseparable from the not-yet-scoped
-  "build new custom biomes" arc, not a standalone plant-scatter task the
-  way `cinderpearl` (now closed, see "Recently closed") was. `bloom`
-  turned out not to be a real standalone block at all - only shader/model
-  texture assets exist for it in the true original, most likely used as a
-  decoration on the (also not-yet-ported) big magic tree feature.
+- ~~**`grassAmbient`, `shimmerleaf`, `vishroom`**~~ — closed 2026-09-14.
+  Confirmed placed exclusively by the true original's own
+  `BiomeGenMagicalForest#decorate` override, genuinely inseparable from
+  the custom-biomes arc rather than a standalone plant-scatter task - so
+  it landed as part of "World generation, part 2" (see "Recently closed"
+  below) once the custom-biomes question itself got resolved.
+  `grassAmbient` didn't need its own block (see
+  `BlockPlantShimmerleaf`'s own doc comment). `bloom` turned out not to be
+  a real standalone block at all - only shader/model texture assets exist
+  for it in the true original, most likely a decoration on the (still
+  not-ported) big magic tree feature.
 - **Mound generation** (`WorldGenMound`, part of `ThaumcraftWorldGenerator`) —
   confirmed real 2026-09-14 but turned out to be a ~2500-line hand-placed
   block schematic in the true original's own decompiled source, not a
@@ -350,14 +352,53 @@ project memory file; not re-listed here to keep this file scannable.)*
   primal crystal clusters their real natural worldgen", "Give cinderpearl
   real worldgen and restore the cultist portal spawn". Deliberately
   deferred, not closed: mound generation (a ~2500-line hand-placed
-  schematic, real but low value for the effort) and the 3 plants tied
-  exclusively to the not-yet-built custom biomes (`grassAmbient`/
-  `shimmerleaf`/`vishroom`) - see "Needs further triage" above for both.
-  **The one remaining real question**: whether/how far to go building the
-  true original's own 3 custom overworld biomes (Eerie, Magical Forest,
-  Eldritch) - a genuinely different, much larger undertaking in modern
-  Minecraft's noise-based biome system than anything else in this list,
-  not yet scoped.
+  schematic, real but low value for the effort - still open, see "Needs
+  further triage" above). The 3 plants tied to Magical Forest and the
+  custom-biomes question itself both got picked up the same day - see
+  "World generation, part 2" below.
+
+- **World generation, part 2 - the 3 custom biomes** — closed 2026-09-14,
+  same session as part 1. Real end-to-end: `thaumcraft.common.world.biomes.ThaumcraftBiomes`
+  registers Eerie/Magical Forest/Eldritch as real biome JSON (climate,
+  colors, mob spawns, vegetation - re-derived directly from the true
+  original's own `BiomeGenEerie`/`BiomeGenMagicalForest`/`BiomeGenEldritch`,
+  none of which were ever really about custom terrain shape - see that
+  class's own doc comment for the full story), plus the 2 real plants
+  exclusive to Magical Forest (`BlockPlantShimmerleaf`/`BlockPlantVishroom`;
+  `grassAmbient` deliberately isn't a distinct block - its only real
+  distinguishing behavior was a client-only particle effect).
+
+  The real hard part, investigated with the user directly before writing
+  any code: modern Minecraft's overworld biome placement
+  (`multi_noise_biome_source_parameter_list`) has no plain-datapack
+  extension point at all (verified directly against the real codec, not
+  assumed) - the only real path is reimplementing vanilla's own internal
+  `OverworldBiomeBuilder` (confirmed by reading Biomes O' Plenty's real
+  source: ~870 lines, and non-cooperative with other biome mods - first-
+  registered wins, full stop). Took a real dependency instead: Biolith
+  (TerraformersMC), a small library built for exactly this, with a real
+  additive datapack placement API, bundled invisibly via NeoForge's own
+  `jarJar` mechanism - **this project's first-ever external dependency**,
+  a real, deliberate, discussed precedent, not a casual addition.
+
+  Real bugs the verification loop itself caught: biome JSON's own real
+  `carvers` field is a map, not an array (`{}` not `[]` - a naive read of
+  the schema gets this wrong); 2 real mob-category mismatches NeoForge
+  warns about at startup (Bat is really `AMBIENT` not `CREATURE`; Pech is
+  really `CREATURE` not `MONSTER` - this port's own already-established
+  modern categorization, not the original's coarser 1.12.2 list
+  membership); 6 Thaumcraft mobs had never been given a real
+  `RegisterSpawnPlacementsEvent` registration at all (a real, separate,
+  pre-existing gap this session's own spawn lists happened to surface,
+  now fixed). Real, confirmed-by-direct-attempt limitation: `runGameTestServer`
+  never exposes a real configured `MultiNoiseBiomeSource`, even via the
+  overworld's own freshly-fetched registry entry - real terrain placement
+  needs a real `runClient` exploration pass, tracked in the project's own
+  new [[thaumcraft-worldgen-manual-verification]] memory file.
+
+  See commits "Add Biolith and the 2 real Magical-Forest-only plants" and
+  "Ship the real Eerie/Magical Forest/Eldritch biomes and their real
+  overworld placement".
 
 - **`required_craft`/`required_item` research auto-progression** — closed
   2026-09-14. `ThaumcraftResearchLoader` deliberately skipped parsing both
