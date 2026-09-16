@@ -111,13 +111,30 @@ deferred until now. Real findings from that audit, triaged:
       ever previously self-documented as gaps, only found by cross-referencing
       the true original directly. Needs a human `runClient` visual check - see
       the UI visual-parity checklist memory's own new section.
-    - **`FXBolt`** - still queued next. Backs `EntityWisp`'s zap and
-      `FocusMediumBolt`'s cast trail. Harder than `FXArc`: the true original's
-      own renderer calls into a bundled third-party immediate-mode-GL "tube
-      extrusion" library (`com.sasmaster.glelwjgl`) with no modern equivalent,
-      so a faithful version needs an original ring-extrusion tube mesh written
-      from scratch (real new code, not a translation - still fully achievable
-      via `VertexConsumer`, just more work).
+    - ~~**`FXBolt`**~~ — closed 2026-09-15. Real modern `Particle` subclass
+      restored (`thaumcraft.client.fx.beams.FXBolt`) - checked for an easier
+      path than a true tube mesh first (per the user's own "check the easy
+      way before the hard way" instruction) and found real precedent:
+      Electroblob's Wizardry's own `ParticleLightning` (a well-regarded
+      modded-Minecraft lightning-spell VFX reference) renders its own bolts as
+      layered flat "sheared box" strips, not true cylinders, since a thin
+      additively-blended bolt doesn't read as flat at normal viewing
+      distances. Reused `FXArc`'s own real cross-billboard quad-ribbon
+      technique instead, called twice (full width, then 1/3 width,
+      additively overlapping for a brighter core - matches the true
+      original's own real "2 nested cones" structure), with the real jitter
+      recomputed fresh every render call (growing amplitude, matching the
+      true original's own real animated "intensifying crackle" look) rather
+      than fixed at spawn like `FXArc`. Wired to `EntityWisp`'s zap (a real
+      `PacketFXWispZap` restored, replacing this port's own earlier
+      documented `PacketFXSlash` reuse - not worth a second packet class
+      while there was no real bolt renderer to show, worth it now) and
+      `FocusMediumBolt`'s cast trail (a real `PacketFXZap` restored, plus its
+      own `execute()` fully implemented for the first time - was a bare
+      `return true;` stub before). Also picked up 2 more real, previously
+      undocumented sound gaps in the same pass: `EntityWisp`'s own
+      `zap`/`wisplive`/`wispdead` (the doc comment's "whole unregistered
+      subsystem" claim was stale, left over from before the Sounds chunk).
     - Remaining true-original FX classes (`FXBoreSparkle`/`FXBoreParticles`/
       `FXBoreStream`/`FXFocusEffect`/`FXGeneric` and the rest of
       `particles`/`other`) not yet scoped in detail - `FXGeneric` in
