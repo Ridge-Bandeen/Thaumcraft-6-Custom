@@ -42,6 +42,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
+import thaumcraft.Thaumcraft;
 import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.api.items.ItemsTC;
 import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
@@ -78,6 +79,11 @@ import thaumcraft.common.world.aura.AuraHandler;
  * {@link Containers#dropItemStack} at the bore's own position when no adjacent inventory takes it (or none
  * exists) - a real, minor simplification of the original's own directional "eject toward the open face with
  * outward velocity" flourish.
+ *
+ * <p>Real digging particle burst restored 2026-09-15 ({@link #sendDigFx}, see {@code
+ * ClientFxHandlers#handleBoreDig}'s own doc comment) - was never actually self-documented as a gap before,
+ * only found by cross-checking the true original directly. Distinct from the real mining-beam mesh VFX
+ * below (still not ported).
  *
  * <p>Real, documented cuts: no dedicated GUI - the original's own version only ever held one real pickaxe
  * slot, and a right-click (holding a real pickaxe, or empty-handed to retrieve one) now swaps it directly via
@@ -255,6 +261,7 @@ public class EntityArcaneBore extends EntityOwnedConstruct {
 			findNextBlockToDig();
 			if (digTarget != null) {
 				level().broadcastEntityEvent(this, (byte) 16);
+				sendDigFx(digTarget);
 			} else {
 				level().broadcastEntityEvent(this, (byte) 17);
 				getLookControl().setLookAt(getX() + getFacing().getStepX() * 2, getY() + getFacing().getStepY() * 2 + getEyeHeight(),
@@ -271,6 +278,20 @@ public class EntityArcaneBore extends EntityOwnedConstruct {
 			clientDigging = false;
 		} else {
 			super.handleEntityEvent(id);
+		}
+	}
+
+	/** Real {@code PacketFXBoreDig} broadcast, restored 2026-09-15 - see that class's own doc comment. This
+	 * purely cosmetic packet failing to send (e.g. a GameTest mock player, no real client connection) never
+	 * takes the real digging logic down with it. */
+	private void sendDigFx(BlockPos target) {
+		if (!(level() instanceof ServerLevel serverLevel)) return;
+		try {
+			net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(serverLevel, null,
+					target.getX(), target.getY(), target.getZ(), 32.0,
+					thaumcraft.common.lib.network.fx.PacketFXBoreDig.of(target, this, digDelayMax));
+		} catch (Exception e) {
+			Thaumcraft.LOGGER.debug("Arcane Bore dig FX packet failed to send (no real client connection?)", e);
 		}
 	}
 

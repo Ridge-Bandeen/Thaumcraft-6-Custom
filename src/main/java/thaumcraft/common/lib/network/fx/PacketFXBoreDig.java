@@ -1,87 +1,47 @@
 package thaumcraft.common.lib.network.fx;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.client.Minecraft;
-import net.minecraft.entity.Entity;
-import net.minecraft.init.Blocks;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
-import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.client.fx.FXDispatcher;
-import thaumcraft.common.lib.events.ServerEvents;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import thaumcraft.Thaumcraft;
 
-public class PacketFXBoreDig implements IMessage, IMessageHandler<PacketFXBoreDig, IMessage>
-{
-    private int x;
-    private int y;
-    private int z;
-    private int bore;
-    private int delay;
-    
-    public PacketFXBoreDig() {
-    }
-    
-    public PacketFXBoreDig(BlockPos pos, Entity bore, int delay) {
-        x = pos.getX();
-        y = pos.getY();
-        z = pos.getZ();
-        this.bore = bore.getEntityId();
-        this.delay = delay;
-    }
-    
-    public void toBytes(ByteBuf buffer) {
-        buffer.writeInt(x);
-        buffer.writeInt(y);
-        buffer.writeInt(z);
-        buffer.writeInt(bore);
-        buffer.writeInt(delay);
-    }
-    
-    public void fromBytes(ByteBuf buffer) {
-        x = buffer.readInt();
-        y = buffer.readInt();
-        z = buffer.readInt();
-        bore = buffer.readInt();
-        delay = buffer.readInt();
-    }
-    
-    public IMessage onMessage(PacketFXBoreDig message, MessageContext ctx) {
-        Minecraft.getMinecraft().addScheduledTask(new Runnable() {
-            @Override
-            public void run() {
-                processMessage(message);
-            }
-        });
-        return null;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    void processMessage(PacketFXBoreDig message) {
-        try {
-            World world = Minecraft.getMinecraft().world;
-            BlockPos pos = new BlockPos(message.x, message.y, message.z);
-            Entity entity = world.getEntityByID(message.bore);
-            if (entity == null) {
-                return;
-            }
-            IBlockState ts = world.getBlockState(pos);
-            if (ts.getBlock() == Blocks.AIR) {
-                return;
-            }
-            for (int a = 0; a < message.delay; ++a) {
-                ServerEvents.addRunnableClient(world, new Runnable() {
-                    @Override
-                    public void run() {
-                        FXDispatcher.INSTANCE.boreDigFx(pos.getX(), pos.getY(), pos.getZ(), entity, ts, ts.getBlock().getMetaFromState(ts) >> 12 & 0xFF, message.delay);
-                    }
-                }, a);
-            }
-        }
-        catch (Exception ex) {}
-    }
+/**
+ * Replaces the old (1.12.2) {@code PacketFXBoreDig} - a client-bound "spawn digging FX at this block, homing
+ * toward this entity" notification, restored 2026-09-15 for {@link
+ * thaumcraft.common.entities.construct.EntityArcaneBore}'s real digging (see {@code
+ * ClientFxHandlers#handleBoreDig} for the actual visual: real {@link
+ * thaumcraft.client.fx.particles.FXBoreSparkle}/{@link thaumcraft.client.fx.particles.FXBoreParticles}
+ * bursts, staggered over {@link #delay} real ticks via {@code ClientFxHandlers#addDelayed}).
+ *
+ * Carries the bore's own entity id (not a snapshotted position) so the spawned particles can home toward
+ * wherever it's actually moved to by the time each staggered burst fires, matching the true original's own
+ * real shape (and {@link PacketFXSlash}/{@link PacketFXWispZap}'s own already-established convention).
+ * Drops the true original's own real block-metadata bitfield param entirely - that was only ever consumed by
+ * {@code FXBoreParticles}' second, item-icon-based constructor, which isn't ported (see that class's own doc
+ * comment); the real block-based constructor this port uses instead reads the block state directly off the
+ * real client world at the given position, no metadata needed.
+ */
+public record PacketFXBoreDig(BlockPos pos, int boreId, int delay) implements CustomPacketPayload {
+
+	public static final Type<PacketFXBoreDig> TYPE =
+			new Type<>(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "fx_bore_dig"));
+
+	public static final StreamCodec<RegistryFriendlyByteBuf, PacketFXBoreDig> STREAM_CODEC = StreamCodec.composite(
+			BlockPos.STREAM_CODEC, PacketFXBoreDig::pos,
+			ByteBufCodecs.VAR_INT, PacketFXBoreDig::boreId,
+			ByteBufCodecs.VAR_INT, PacketFXBoreDig::delay,
+			PacketFXBoreDig::new);
+
+	public static PacketFXBoreDig of(BlockPos pos, Entity bore, int delay) {
+		return new PacketFXBoreDig(pos, bore.getId(), delay);
+	}
+
+	@Override
+	public Type<? extends CustomPacketPayload> type() {
+		return TYPE;
+	}
 }

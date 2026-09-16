@@ -28,9 +28,12 @@ import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.client.fx.beams.FXArc;
 import thaumcraft.client.fx.beams.FXBolt;
+import thaumcraft.client.fx.particles.FXBoreParticles;
+import thaumcraft.client.fx.particles.FXBoreSparkle;
 import thaumcraft.common.entities.monster.EntityWisp;
 import thaumcraft.common.lib.network.fx.PacketFXBlockArc;
 import thaumcraft.common.lib.network.fx.PacketFXBlockBamf;
+import thaumcraft.common.lib.network.fx.PacketFXBoreDig;
 import thaumcraft.common.lib.network.fx.PacketFXScanSource;
 import thaumcraft.common.lib.network.fx.PacketFXSlash;
 import thaumcraft.common.lib.network.fx.PacketFXWispZap;
@@ -157,6 +160,45 @@ public final class ClientFxHandlers {
 		}
 		mc.particleEngine.add(new FXBolt(level, source.getX(), source.getY(), source.getZ(),
 				target.getX(), target.getY(), target.getZ(), r, g, b, 0.6f));
+	}
+
+	/** Real {@link FXBoreSparkle}/{@link FXBoreParticles} digging burst for {@link
+	 * thaumcraft.common.entities.construct.EntityArcaneBore}, restored 2026-09-15 - see {@link
+	 * PacketFXBoreDig}'s own doc comment. Matches the true original's own real {@code boreDigFx} exactly:
+	 * 50 real particles total, spread evenly across the real {@code delay} ticks between digs (a real 1-in-4
+	 * chance per particle of a {@link FXBoreSparkle}, otherwise a real {@link FXBoreParticles} chunk of the
+	 * actual block being mined), each homing toward the bore itself. */
+	public static void handleBoreDig(PacketFXBoreDig payload) {
+		Minecraft mc = Minecraft.getInstance();
+		ClientLevel level = mc.level;
+		if (level == null) {
+			return;
+		}
+		Entity bore = resolveEntity(mc, level, payload.boreId());
+		if (bore == null) {
+			return;
+		}
+		BlockPos pos = payload.pos();
+		var state = level.getBlockState(pos);
+		if (state.isAir()) {
+			return;
+		}
+		int delay = Math.max(1, payload.delay());
+		int perTick = Math.max(1, 50 / delay);
+		for (int tick = 0; tick < delay; tick++) {
+			for (int i = 0; i < perTick; i++) {
+				double px = pos.getX() + level.random.nextFloat();
+				double py = pos.getY() + level.random.nextFloat();
+				double pz = pos.getZ() + level.random.nextFloat();
+				if (level.random.nextInt(4) == 0) {
+					addDelayed(new FXBoreSparkle(level, px, py, pz, bore), tick);
+				} else {
+					FXBoreParticles fx = new FXBoreParticles(level, px, py, pz, bore.getX(), bore.getY(), bore.getZ(), state);
+					fx.setTarget(bore);
+					addDelayed(fx, tick);
+				}
+			}
+		}
 	}
 
 	/** Real {@link FXBolt} spawn for {@link thaumcraft.common.items.casters.foci.FocusMediumBolt}'s cast
