@@ -188,17 +188,55 @@ deferred until now. Real findings from that audit, triaged:
         already-ported `FocusEffect` (~15-20 real subclasses), not building
         one shared class - a real, bigger, more diffuse piece of work, tracked
         separately rather than folded into this chunk.
+    - ~~**`FXSwarm`**~~ — closed 2026-09-16. `EntityTaintSwarm`'s own real
+      "buzzing insect cloud" visual - genuinely undocumented before (this
+      entity is otherwise invisible/hitbox-only, so the true original's own
+      visible swarm IS entirely these particles - `RenderFocusProjectile`,
+      its current placeholder renderer, draws nothing). No packet needed at
+      all - the true original kept its own `ArrayList<FXSwarm>` directly on
+      the entity (safe in 1.12.2's looser common/client split); this port
+      keeps the same list in `ClientFxHandlers` instead, keyed by entity id,
+      since a modern common-side entity class can't carry a client-only field
+      type. Real steering-toward-target flight (clamped yaw/pitch turn-rate,
+      not a simple homing vector like `FXBoreSparkle`), real 50-tick death
+      fade, real shared 3-buzz sound cooldown, all faithfully reproduced. Also
+      restored the entity's own real `swarm`/`swarmattack` sounds (were
+      vanilla bee-sound stand-ins).
+      - **`FXSonic` scoped, deferred** (`EntityEldritchWarden`/
+        `EntityEldritchGuardian`'s own real "sonic scream" broadcast): unlike
+        every other FX class ported so far, the true original's own real
+        renderer loads and draws an actual `.obj` 3D mesh (`hemis.obj`, a
+        rippling-dome shockwave shape, animated across 15 real
+        `ripple<N>.png` frames) via Thaumcraft's own bespoke model loader -
+        not a particle billboard trick at all. Both the mesh and its
+        textures already sit unused in this port's resource tree (same
+        "assets ready" shape everything else has had), and NeoForge ships
+        its own real built-in OBJ model loader (`neoforge:obj`) that's the
+        likely real "easy way" here - but integrating a baked OBJ model's
+        quads into a `Particle#render()` call is genuinely new rendering-
+        pipeline work, not just another particle class. Filed under Custom
+        Mob Models/Renderers below instead of this Particle FX arc.
     - Remaining true-original FX classes (`FXBlockRunes`/`FXBreakingFade`/
       `FXDigging`/`FXFireMote`/`FXPlane`/`FXSlimyBubble`/`FXSmokeSpiral`/
-      `FXSwarm`/`FXSwarmRunes`/`FXVent`/`FXVent2`/`FXVisSparkle`/`FXWispEG`/
+      `FXSwarmRunes`/`FXVent`/`FXVent2`/`FXVisSparkle`/`FXWispEG`/
       `FXGenericGui`/`FXGenericP2E`/`FXGenericP2P`, plus `FXEssentiaStream`
       which does have a real call site - `RenderEventHandler`'s own tube-
       network essentia-flow visualization, a bigger separate system) not yet
-      scoped in detail. Per-effect `FocusEffect#renderParticleFX` restoration
-      (see `FXFocusEffect` above) also still queued.
+      scoped in detail - none of these had any real, currently-compiled call
+      site found during this pass's scoping search, so likely low-value until
+      whatever gameplay feature they'd back gets built first. Per-effect
+      `FocusEffect#renderParticleFX` restoration (see `FXFocusEffect` above)
+      also still queued.
   - **Custom mob models/renderers** (`client/renderers/*`, `client/lib/obj`)
     - still queued, not yet scoped in detail; likely the largest remaining
-    piece of this whole layer.
+    piece of this whole layer. `FXSonic` (the Eldritch Warden/Guardian's own
+    real sonic-scream shockwave, see the Particle FX section above) belongs
+    here too, not in Particle FX proper - real `.obj` mesh rendering
+    (`hemis.obj` + 15 `ripple<N>.png` frames, both already present unused),
+    likely via NeoForge's own built-in `neoforge:obj` model loader rather
+    than a hand-rolled parser, but integrating a baked model into a
+    `Particle#render()` call is genuinely new pipeline work worth its own
+    real scoping pass, not a quick add-on to an existing particle class.
 - **Deferred, not queued**: boss multiplayer target-scaling and the floating
   special-item death-drop visual both still route through the unported
   `EntityUtils` - same already-correctly-blocked dependency this file has
