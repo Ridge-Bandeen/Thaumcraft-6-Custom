@@ -64,8 +64,29 @@ deferred until now. Real findings from that audit, triaged:
   for the true original's own persistent charge-gradient blockstate search
   (same real reachability result, no player-visible difference). Committed
   `0ad4d7a`.
-- **Real gaps, still queued**: the whole client-only layer (see its own
-  entry below - tracked separately given the real scale difference).
+- **Client-only layer** (custom mob renderers/models, particle FX, custom
+  sounds) - tracked separately given the real scale difference (~120 files):
+  - ~~**Custom sounds**~~ — closed 2026-09-15, in two commits. First, `1575529`
+    registered all 65 real `SoundEvent`s (`ThaumcraftSounds`, replacing the
+    stale `SoundsTC`) plus 4 real `SoundType`s (`GORE`/`CRYSTAL`/`JAR`/`URN`,
+    built via NeoForge's `DeferredSoundType` since a `SoundType` needs its
+    `SoundEvent`s before `SOUND_EVENT`'s own `RegisterEvent` fires) - also
+    fixed a real pre-existing `sounds.json` typo (`runicshieldecharge` →
+    `runicshieldcharge`). Then `de14106` rewired every real call site that had
+    been standing in with a vanilla sound (19 direct `playSound`/
+    `getAmbientSound`-family call sites across blocks/entities/items/tiles/
+    menus, plus the 4 `SoundType`s onto their real block registrations in
+    `BlocksTC`), each cross-checked against the true original's own
+    `SoundsTC.*` assignment. Found 2 real, previously undocumented gaps along
+    the way: `BlockJar`'s fill/lock/label actions were on generic vanilla
+    bottle/tripwire sounds instead of the original's own jar/key cues
+    (including a real dual-sound dump case), and `TileFocalManipulator`'s
+    fail/finish/start cues were on the wrong vanilla substitutes entirely.
+  - **Particle FX** (`FXDispatcher`/`client/fx/*`) - still queued, not yet
+    scoped in detail.
+  - **Custom mob models/renderers** (`client/renderers/*`, `client/lib/obj`)
+    - still queued, not yet scoped in detail; likely the largest remaining
+    piece of this whole layer.
 - **Deferred, not queued**: boss multiplayer target-scaling and the floating
   special-item death-drop visual both still route through the unported
   `EntityUtils` - same already-correctly-blocked dependency this file has
