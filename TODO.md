@@ -163,9 +163,39 @@ deferred until now. Real findings from that audit, triaged:
         distance-staggered "sonar ping" delay) and `FXArc`'s own trailing
         ember spawn at every jittered waypoint (both previously documented,
         deliberate simplifications, now closed).
-    - Remaining true-original FX classes (`FXBoreSparkle`/`FXBoreParticles`/
-      `FXBoreStream`/`FXFocusEffect` and the rest of `particles`/`other`) not
-      yet scoped in detail.
+    - ~~**`FXBoreSparkle`/`FXBoreParticles`**~~ — closed 2026-09-16, the
+      Arcane Bore's real digging particle burst (was never self-documented as
+      a gap before, only found by cross-checking the true original directly).
+      `FXBoreSparkle` extends `SingleQuadParticle` (same "easy way" as
+      `FXGeneric` - a single flat quad, only the grid UV needed overriding),
+      a small homing spark on the shared `particles.png` sheet. `FXBoreParticles`
+      extends vanilla's own real `TerrainParticle` directly - it already does
+      everything the true original's own version hand-rolled (real per-block
+      particle-icon lookup, tinting, UV jitter), so only the real homing
+      motion (identical formula between the two classes, matching the true
+      original's own real code duplication) needed a real override. Wired via
+      a real modernized `PacketFXBoreDig` (entity-id-resolved, matching
+      `PacketFXSlash`'s established convention) and the new `addDelayed`
+      queue for the real 50-particles-over-N-ticks stagger.
+      - **`FXBeamBore`'s own sibling, `FXBoreStream`, confirmed dead code**
+        while scoping this: `boreTrailFx` (its only real dispatch method) has
+        zero real call sites anywhere in the true original, same "declared,
+        never called" pattern as `FXBeamWand`/`FXBeamBore` - won't be ported.
+      - `FXFocusEffect` turned out not to be a real class at all - the true
+        original's own `PacketFXFocusEffect` calls each individual real
+        `FocusEffect` subclass's own `renderParticleFX` override directly, so
+        "restoring" it really means wiring real particle rendering into every
+        already-ported `FocusEffect` (~15-20 real subclasses), not building
+        one shared class - a real, bigger, more diffuse piece of work, tracked
+        separately rather than folded into this chunk.
+    - Remaining true-original FX classes (`FXBlockRunes`/`FXBreakingFade`/
+      `FXDigging`/`FXFireMote`/`FXPlane`/`FXSlimyBubble`/`FXSmokeSpiral`/
+      `FXSwarm`/`FXSwarmRunes`/`FXVent`/`FXVent2`/`FXVisSparkle`/`FXWispEG`/
+      `FXGenericGui`/`FXGenericP2E`/`FXGenericP2P`, plus `FXEssentiaStream`
+      which does have a real call site - `RenderEventHandler`'s own tube-
+      network essentia-flow visualization, a bigger separate system) not yet
+      scoped in detail. Per-effect `FocusEffect#renderParticleFX` restoration
+      (see `FXFocusEffect` above) also still queued.
   - **Custom mob models/renderers** (`client/renderers/*`, `client/lib/obj`)
     - still queued, not yet scoped in detail; likely the largest remaining
     piece of this whole layer.
