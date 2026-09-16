@@ -82,8 +82,49 @@ deferred until now. Real findings from that audit, triaged:
     bottle/tripwire sounds instead of the original's own jar/key cues
     (including a real dual-sound dump case), and `TileFocalManipulator`'s
     fail/finish/start cues were on the wrong vanilla substitutes entirely.
-  - **Particle FX** (`FXDispatcher`/`client/fx/*`) - still queued, not yet
-    scoped in detail.
+  - **Particle FX** (`FXDispatcher`/`client/fx/*`) - in progress. Scoping found
+    this codebase already has real, mostly-unused scaffolding: a
+    `common/lib/network/fx` packet package (16 `PacketFX*` classes, only 3
+    wired up before this chunk) + `client/fx/ClientFxHandlers` (client-side
+    receiver, plain-vanilla-particle placeholders). Real approach: extend that
+    pattern with real custom `Particle` subclasses (confirmed via the pinned
+    1.21.1 decompiled sources, not version-skewed docs: `Particle#render` is
+    abstract, fully custom multi-quad geometry is natively supported, no
+    `RenderLevelStageEvent`/vanilla-`ParticleType` registry needed for these
+    server-triggered cosmetic broadcasts).
+    - **Beams family sanity-checked first**: `FXBeamWand`/`FXBeamBore` are
+      confirmed dead code in the true original itself (zero real call sites
+      anywhere, including via the Arcane Bore - which really uses
+      `FXBoreSparkle`/`FXBoreParticles`/`FXBoreStream` instead - and every
+      real wand focus medium, which only Touch/`FXFocusEffect` and
+      Bolt/`FXBolt` actually dispatch anything for) - won't be ported.
+    - ~~**`FXArc`**~~ — closed 2026-09-15. Real modern `Particle` subclass
+      restored (`thaumcraft.client.fx.beams.FXArc`, a per-segment quad-ribbon
+      reformulation of the original's own raw-GL double-plane cross-billboard,
+      additively blended, bound directly to the real `beamh.png` texture via a
+      dedicated custom `ParticleRenderType`). Wired to 4 real trigger points:
+      `EntityEldritchGolem`'s headless-phase arc-lightning decoration
+      (client-only, no packet), `EntityCultistPortalGreater`'s stage-0 pulse,
+      `EntityEldritchWarden`'s field-frenzy ring pulse, `TileInfusionMatrix`'s
+      instability-event zap/eject feedback (packet-driven via the newly
+      modernized `PacketFXBlockArc`) - none of these 3 packet call sites were
+      ever previously self-documented as gaps, only found by cross-referencing
+      the true original directly. Needs a human `runClient` visual check - see
+      the UI visual-parity checklist memory's own new section.
+    - **`FXBolt`** - still queued next. Backs `EntityWisp`'s zap and
+      `FocusMediumBolt`'s cast trail. Harder than `FXArc`: the true original's
+      own renderer calls into a bundled third-party immediate-mode-GL "tube
+      extrusion" library (`com.sasmaster.glelwjgl`) with no modern equivalent,
+      so a faithful version needs an original ring-extrusion tube mesh written
+      from scratch (real new code, not a translation - still fully achievable
+      via `VertexConsumer`, just more work).
+    - Remaining true-original FX classes (`FXBoreSparkle`/`FXBoreParticles`/
+      `FXBoreStream`/`FXFocusEffect`/`FXGeneric` and the rest of
+      `particles`/`other`) not yet scoped in detail - `FXGeneric` in
+      particular is a shared "generic configurable particle" system reused by
+      dozens of true-original effects (including `FXArc`'s own dropped ember
+      trail - see that section above), worth its own dedicated look given how
+      much leverage restoring it once would give.
   - **Custom mob models/renderers** (`client/renderers/*`, `client/lib/obj`)
     - still queued, not yet scoped in detail; likely the largest remaining
     piece of this whole layer.
