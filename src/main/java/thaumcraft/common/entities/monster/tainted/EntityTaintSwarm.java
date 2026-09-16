@@ -7,7 +7,6 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -47,15 +46,17 @@ import thaumcraft.common.items.resources.ItemCrystalEssence;
  * target's own pre-hit velocity afterward (no real knockback), matching the original's own manual
  * motion-preservation.
  *
- * Real, documented cuts: no client-side particle-swarm FX (the original's own {@code FXDispatcher}/{@code
- * FXSwarm} pair, this port's established "no client FX" simplification throughout); no full-bright
- * self-illumination ({@code getBrightnessForRender}/{@code getBrightness} have no modern per-entity
- * equivalent - lighting is purely block-based now, same real gap every other exotic mob this session
- * carries); the original's own "mark the victim as recently-hit" call (an obscure cross-system hook into a
- * DIFFERENT entity's own future death-loot bonus, not this swarm's own behavior) is dropped; custom {@code
- * SoundsTC} audio (swarm/swarmattack) isn't registered in this port, stands in with vanilla bee sounds (a
- * real buzzing-cloud-flavored match, not an arbitrary choice) rather than standing up sound registration for
- * one mob.
+ * Real client-side "buzzing insect cloud" particle-swarm FX restored 2026-09-16 ({@link #maintainSwarmFx},
+ * see {@link thaumcraft.client.fx.particles.FXSwarm}'s own doc comment) - was a plain, undocumented gap
+ * before (this entity is otherwise invisible/hitbox-only; the true original's own visible "swarm" is
+ * entirely these particles). Real custom {@code swarm}/{@code swarmattack} sounds restored alongside it
+ * (were vanilla bee-sound stand-ins).
+ *
+ * Real, documented cuts: no full-bright self-illumination ({@code getBrightnessForRender}/{@code
+ * getBrightness} have no modern per-entity equivalent - lighting is purely block-based now, same real gap
+ * every other exotic mob this session carries); the original's own "mark the victim as recently-hit" call
+ * (an obscure cross-system hook into a DIFFERENT entity's own future death-loot bonus, not this swarm's own
+ * behavior) is dropped.
  */
 public class EntityTaintSwarm extends FlyingMob implements ITaintedMob {
 
@@ -145,6 +146,7 @@ public class EntityTaintSwarm extends FlyingMob implements ITaintedMob {
 		super.aiStep();
 		setDeltaMovement(getDeltaMovement().multiply(1.0, 0.6, 1.0));
 		if (level().isClientSide) {
+			maintainSwarmFx();
 			return;
 		}
 
@@ -185,6 +187,17 @@ public class EntityTaintSwarm extends FlyingMob implements ITaintedMob {
 		}
 	}
 
+	/** Real client-only "buzzing insect cloud" visual, restored 2026-09-16 - no packet needed at all, the
+	 * whole thing is derived purely from this entity's own already-synced position/alive state, matching the
+	 * true original's own real client-only field shape exactly (it kept its own {@code ArrayList<FXSwarm>}
+	 * directly on the entity, safe in 1.12.2's looser common/client split; this port keeps that same list in
+	 * {@code ClientFxHandlers} instead, keyed by entity id, since a modern common-side entity class can't
+	 * carry a client-only field type at all). See {@code ClientFxHandlers#maintainSwarm} for the real
+	 * maintenance loop (up to 30 particles, matching the true original exactly). */
+	private void maintainSwarmFx() {
+		thaumcraft.client.fx.ClientFxHandlers.maintainSwarm(this);
+	}
+
 	/** {@code (dx, dy, dz, horizontalPull, verticalPull, horizontalSmoothing, verticalSmoothing)} - the
 	 * original's own distinct horizontal-vs-vertical spring rates, kept real rather than flattened to one
 	 * shared rate. */
@@ -218,22 +231,22 @@ public class EntityTaintSwarm extends FlyingMob implements ITaintedMob {
 			target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 0));
 		}
 		target.setDeltaMovement(preHitMotion);
-		playSound(SoundEvents.BEE_STING, 0.3f, 0.9f + random.nextFloat() * 0.2f);
+		playSound(thaumcraft.common.registry.ThaumcraftSounds.SWARMATTACK.get(), 0.3f, 0.9f + random.nextFloat() * 0.2f);
 	}
 
 	@Override
 	protected SoundEvent getAmbientSound() {
-		return SoundEvents.BEE_LOOP;
+		return thaumcraft.common.registry.ThaumcraftSounds.SWARM.get();
 	}
 
 	@Override
 	protected SoundEvent getHurtSound(DamageSource damageSource) {
-		return SoundEvents.BEE_STING;
+		return thaumcraft.common.registry.ThaumcraftSounds.SWARMATTACK.get();
 	}
 
 	@Override
 	protected SoundEvent getDeathSound() {
-		return SoundEvents.BEE_STING;
+		return thaumcraft.common.registry.ThaumcraftSounds.SWARMATTACK.get();
 	}
 
 	@Override

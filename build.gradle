@@ -401,6 +401,7 @@ sourceSets {
             include 'thaumcraft/client/fx/particles/FXBoreSparkle.java'
             include 'thaumcraft/client/fx/particles/FXBoreParticles.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXBoreDig.java'
+            include 'thaumcraft/client/fx/particles/FXSwarm.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'
             include 'thaumcraft/api/internal/IInternalMethodHandler.java'

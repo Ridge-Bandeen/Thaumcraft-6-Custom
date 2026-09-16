@@ -78,18 +78,59 @@ public final class ClientFxHandlers {
 
 	@SubscribeEvent
 	static void onClientTick(ClientTickEvent.Post event) {
-		if (DELAYED.isEmpty()) {
+		if (!DELAYED.isEmpty()) {
+			var particleEngine = Minecraft.getInstance().particleEngine;
+			DELAYED.removeIf(dp -> {
+				if (dp.ticksRemaining() <= 1) {
+					particleEngine.add(dp.particle());
+					return true;
+				}
+				return false;
+			});
+			DELAYED.replaceAll(dp -> new DelayedParticle(dp.particle(), dp.ticksRemaining() - 1));
+		}
+		if (!SWARMS.isEmpty()) {
+			SWARMS.values().removeIf(list -> {
+				list.removeIf(fx -> !fx.isAlive());
+				return list.isEmpty();
+			});
+		}
+	}
+
+	private static final java.util.Map<Integer, List<thaumcraft.client.fx.particles.FXSwarm>> SWARMS = new java.util.HashMap<>();
+
+	/** Real "up to 30 buzzing particles" maintenance loop for {@link
+	 * thaumcraft.common.entities.monster.tainted.EntityTaintSwarm} - see that entity's own doc comment. Real,
+	 * faithful reproduction of the true original's own real per-tick shape: prune the first dead/removed
+	 * particle found (matches the true original's own real single-removal-per-tick quirk, not a full sweep),
+	 * then top up by one if still under the real cap. Only ever called while the owning entity is still
+	 * really ticking - once it's removed, {@link #onClientTick} itself sweeps the now-orphaned entry once its
+	 * own particles have all finished their real fade-out (see that method's own doc comment), since a
+	 * removed entity's own {@code aiStep} obviously never calls this again to clean up after itself. */
+	public static void maintainSwarm(Entity target) {
+		Minecraft mc = Minecraft.getInstance();
+		ClientLevel level = mc.level;
+		if (level == null) {
 			return;
 		}
-		var particleEngine = Minecraft.getInstance().particleEngine;
-		DELAYED.removeIf(dp -> {
-			if (dp.ticksRemaining() <= 1) {
-				particleEngine.add(dp.particle());
-				return true;
+		List<thaumcraft.client.fx.particles.FXSwarm> list = SWARMS.computeIfAbsent(target.getId(), id -> new ArrayList<>());
+		for (int i = 0; i < list.size(); i++) {
+			if (!list.get(i).isAlive()) {
+				list.remove(i);
+				break;
 			}
-			return false;
-		});
-		DELAYED.replaceAll(dp -> new DelayedParticle(dp.particle(), dp.ticksRemaining() - 1));
+		}
+		if (list.size() < 30) {
+			double x = target.getX() + (level.random.nextFloat() - level.random.nextFloat()) * 2.0f;
+			double y = target.getY() + (level.random.nextFloat() - level.random.nextFloat()) * 2.0f;
+			double z = target.getZ() + (level.random.nextFloat() - level.random.nextFloat()) * 2.0f;
+			float r = 0.8f + level.random.nextFloat() * 0.2f;
+			float g = level.random.nextFloat() * 0.4f;
+			float b = 1.0f - level.random.nextFloat() * 0.2f;
+			thaumcraft.client.fx.particles.FXSwarm fx = new thaumcraft.client.fx.particles.FXSwarm(level, x, y, z, target, r, g, b, 0.22f, 15.0f, 0.08f);
+			list.add(fx);
+			mc.particleEngine.add(fx);
+		}
 	}
 
 	private ClientFxHandlers() {
