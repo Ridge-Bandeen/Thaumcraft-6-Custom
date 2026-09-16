@@ -65,6 +65,7 @@ public class FocusEffectEarth extends FocusEffect {
 	public boolean execute(HitResult target, Trajectory trajectory, float finalPower, int num) {
 		Level level = getPackage().world;
 		if (level == null) return false;
+		FocusFxHelper.sendPartImpact(level, target.getLocation(), getKey());
 
 		if (target instanceof EntityHitResult entityHit) {
 			float damage = getDamageForDisplay(finalPower);
@@ -88,9 +89,21 @@ public class FocusEffectEarth extends FocusEffect {
 		return new NodeSetting[] { new NodeSetting("power", "focus.common.power", new NodeSetting.NodeSettingIntRange(1, 5)) };
 	}
 
+	/** See {@link thaumcraft.client.fx.ClientFxHandlers#spawnGeneric}'s own doc comment for why this builds a
+	 * plain {@link FocusGenericFx} rather than an {@code FXGeneric} directly. */
 	@Override
 	public void renderParticleFX(Level world, double posX, double posY, double posZ, double motionX, double motionY, double motionZ) {
-		// no-op for now - depends on the not-yet-ported client particle dispatcher (FXDispatcher)
+		FocusGenericFx cfg = new FocusGenericFx();
+		cfg.grav = 0.4f;
+		cfg.layer = 1;
+		cfg.age = 20 + world.random.nextInt(10);
+		cfg.alpha = new float[] { 1.0f, 0.0f };
+		cfg.partStart = 75 + world.random.nextInt(4);
+		cfg.slowDown = 0.9;
+		cfg.rot = (float) world.random.nextGaussian();
+		float s = (float) (1.0 + world.random.nextGaussian() * 0.2);
+		cfg.scale = new float[] { s, s / 2.0f };
+		thaumcraft.client.fx.ClientFxHandlers.spawnGeneric(world, posX, posY, posZ, motionX, motionY, motionZ, cfg);
 	}
 
 	@Override

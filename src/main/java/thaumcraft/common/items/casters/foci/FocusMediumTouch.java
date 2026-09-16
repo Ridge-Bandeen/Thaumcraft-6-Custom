@@ -20,10 +20,10 @@ import thaumcraft.api.casters.Trajectory;
 
 /**
  * Replaces the old (1.12.2) {@code FocusMediumTouch}. The original's raytrace went through a custom
- * {@code EntityUtils.getPointedEntityRay} helper (not ported) and broadcast a network FX packet on
- * execute() (also not ported - see the port-tracking memory notes on the wand/focus system). This does the
- * same raytrace with vanilla's own {@link ProjectileUtil#getEntityHitResult} / {@link Level#clip}, and
- * drops the FX broadcast entirely.
+ * {@code EntityUtils.getPointedEntityRay} helper (not ported) - this does the same raytrace with vanilla's
+ * own {@link ProjectileUtil#getEntityHitResult} / {@link Level#clip} instead. The original's own real network
+ * FX broadcast on {@link #execute} (rendering every real effect in the cast package at once) is restored
+ * 2026-09-16 - see that method's own doc comment.
  */
 public class FocusMediumTouch extends FocusMedium {
 
@@ -105,8 +105,29 @@ public class FocusMediumTouch extends FocusMedium {
 		return blockHit.getType() != HitResult.Type.MISS ? blockHit : null;
 	}
 
+	/** Real {@code PacketFXFocusEffect} broadcast, restored 2026-09-16 - see that class's own doc comment.
+	 * Renders every real effect currently in the cast package at once, matching the true original's own real
+	 * shape exactly (distinct from each individual effect's own {@code PacketFXFocusPartImpact} self-trigger
+	 * on its own real hit - see {@code FocusFxHelper}'s own doc comment). */
 	@Override
 	public boolean execute(Trajectory trajectory) {
+		thaumcraft.api.casters.FocusEffect[] effects = getPackage().getFocusEffects();
+		if (effects != null && effects.length > 0 && getPackage().world instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+			java.util.List<String> keys = new java.util.ArrayList<>(effects.length);
+			for (thaumcraft.api.casters.FocusEffect effect : effects) {
+				keys.add(effect.getKey());
+			}
+			try {
+				net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(serverLevel, null,
+						trajectory.source.x, trajectory.source.y, trajectory.source.z, 64.0,
+						new thaumcraft.common.lib.network.fx.PacketFXFocusEffect(
+								new org.joml.Vector3f((float) trajectory.source.x, (float) trajectory.source.y, (float) trajectory.source.z),
+								new org.joml.Vector3f((float) (trajectory.direction.x / 2.0), (float) (trajectory.direction.y / 2.0), (float) (trajectory.direction.z / 2.0)),
+								keys));
+			} catch (Exception e) {
+				thaumcraft.Thaumcraft.LOGGER.debug("Focus effect FX packet failed to send (no real client connection?)", e);
+			}
+		}
 		return true;
 	}
 }

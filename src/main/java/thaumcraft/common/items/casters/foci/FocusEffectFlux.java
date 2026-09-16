@@ -53,6 +53,7 @@ public class FocusEffectFlux extends FocusEffect {
 	public boolean execute(HitResult target, Trajectory trajectory, float finalPower, int num) {
 		Level level = getPackage().world;
 		if (level == null) return false;
+		FocusFxHelper.sendPartImpact(level, target.getLocation(), getKey());
 
 		if (!(target instanceof EntityHitResult entityHit)) return false;
 
@@ -67,9 +68,27 @@ public class FocusEffectFlux extends FocusEffect {
 		return new NodeSetting[] { new NodeSetting("power", "focus.common.power", new NodeSetting.NodeSettingIntRange(1, 5)) };
 	}
 
+	/** See {@link thaumcraft.client.fx.ClientFxHandlers#spawnGeneric}'s own doc comment for why this builds a
+	 * plain {@link FocusGenericFx} rather than an {@code FXGeneric} directly. */
 	@Override
 	public void renderParticleFX(Level world, double posX, double posY, double posZ, double motionX, double motionY, double motionZ) {
-		// no-op for now - depends on the not-yet-ported client particle dispatcher (FXDispatcher)
+		FocusGenericFx cfg = new FocusGenericFx();
+		cfg.age = (int) (15.0f + 10.0f * world.random.nextFloat());
+		cfg.redStart = cfg.redEnd = 0.25f + world.random.nextFloat() * 0.25f;
+		cfg.greenStart = cfg.greenEnd = 0.0f;
+		cfg.blueStart = cfg.blueEnd = 0.25f + world.random.nextFloat() * 0.25f;
+		cfg.alpha = new float[] { 0.0f, 1.0f, 1.0f, 0.0f };
+		cfg.partStart = 128;
+		cfg.partNum = 14;
+		cfg.scale = new float[] { 2.0f + world.random.nextFloat(), 0.25f + world.random.nextFloat() * 0.25f };
+		cfg.loop = true;
+		cfg.slowDown = 0.9;
+		cfg.grav = (float) (world.random.nextGaussian() * 0.1);
+		cfg.randomX = cfg.randomY = cfg.randomZ = 0.0125f;
+		cfg.rot = (float) world.random.nextGaussian();
+		cfg.delay = world.random.nextInt(4);
+		thaumcraft.client.fx.ClientFxHandlers.spawnGeneric(world, posX, posY, posZ,
+				motionX + world.random.nextGaussian() * 0.01, motionY + world.random.nextGaussian() * 0.01, motionZ + world.random.nextGaussian() * 0.01, cfg);
 	}
 
 	@Override

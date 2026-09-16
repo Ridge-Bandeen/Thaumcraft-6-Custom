@@ -64,6 +64,7 @@ public class FocusEffectCurse extends FocusEffect {
 	public boolean execute(HitResult target, Trajectory trajectory, float finalPower, int num) {
 		Level level = getPackage().world;
 		if (level == null) return false;
+		sendBamfFx(level, target.getLocation());
 
 		if (target instanceof BlockHitResult blockHit) {
 			float radius = Math.min(8.0f, 1.5f * getSettingValue("power") * finalPower);
@@ -125,9 +126,39 @@ public class FocusEffectCurse extends FocusEffect {
 		};
 	}
 
+	/** Real {@code PacketFXBlockBamf} "curse flash" restored 2026-09-16, matching the true original's own
+	 * real unconditional-at-cast send exactly (colour {@code 6946821}, sound+flair both on) - reuses the
+	 * packet/renderer {@code EntityFluxRift}'s own collapse effect already established. */
+	private void sendBamfFx(Level level, Vec3 pos) {
+		if (!(level instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
+		try {
+			net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(serverLevel, null, pos.x, pos.y, pos.z, 64.0,
+					new thaumcraft.common.lib.network.fx.PacketFXBlockBamf(pos.x, pos.y, pos.z, 6946821, true, true));
+		} catch (Exception e) {
+			thaumcraft.Thaumcraft.LOGGER.debug("Curse focus bamf FX packet failed to send (no real client connection?)", e);
+		}
+	}
+
+	/** See {@link thaumcraft.client.fx.ClientFxHandlers#spawnGeneric}'s own doc comment for why this builds a
+	 * plain {@link FocusGenericFx} rather than an {@code FXGeneric} directly. */
 	@Override
 	public void renderParticleFX(Level world, double posX, double posY, double posZ, double motionX, double motionY, double motionZ) {
-		// no-op for now - depends on the not-yet-ported client particle dispatcher (FXDispatcher)
+		FocusGenericFx cfg = new FocusGenericFx();
+		cfg.age = 8;
+		cfg.redStart = cfg.redEnd = 0.41f + world.random.nextFloat() * 0.2f;
+		cfg.greenStart = cfg.greenEnd = 0.0f;
+		cfg.blueStart = cfg.blueEnd = 0.019f + world.random.nextFloat() * 0.2f;
+		cfg.alpha = new float[] { 0.0f, world.random.nextFloat(), world.random.nextFloat(), world.random.nextFloat(), 0.0f };
+		cfg.grid = 16;
+		cfg.partStart = 72 + world.random.nextInt(4);
+		cfg.scale = new float[] { 2.0f + world.random.nextFloat() * 4.0f };
+		cfg.loop = false;
+		cfg.slowDown = 0.9;
+		cfg.grav = 0.0f;
+		cfg.rotstart = world.random.nextFloat();
+		cfg.rot = 0.0f;
+		cfg.delay = world.random.nextInt(4);
+		thaumcraft.client.fx.ClientFxHandlers.spawnGeneric(world, posX, posY, posZ, motionX, motionY, motionZ, cfg);
 	}
 
 	@Override

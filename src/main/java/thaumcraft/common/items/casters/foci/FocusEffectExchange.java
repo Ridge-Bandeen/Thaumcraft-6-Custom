@@ -93,10 +93,26 @@ public class FocusEffectExchange extends FocusEffect implements IFocusBlockPicke
 				new NodeSetting("silk", "focus.common.silk", new NodeSetting.NodeSettingIntList(silk, silkDesc)) };
 	}
 
+	/** See {@link thaumcraft.client.fx.ClientFxHandlers#spawnGeneric}'s own doc comment for why this builds a
+	 * plain {@link FocusGenericFx} rather than an {@code FXGeneric} directly. */
 	@Override
 	public void renderParticleFX(Level world, double posX, double posY, double posZ, double motionX, double motionY, double motionZ) {
-		// no-op for now - depends on the not-yet-ported client particle dispatcher (FXDispatcher), same
-		// boundary every other focus effect in this port has already accepted.
+		FocusGenericFx cfg = new FocusGenericFx();
+		cfg.age = 9;
+		float rgb = 0.25f + world.random.nextFloat() * 0.25f;
+		float rgb2 = 0.25f + world.random.nextFloat() * 0.25f;
+		float rgb3 = 0.25f + world.random.nextFloat() * 0.25f;
+		cfg.redStart = cfg.redEnd = rgb;
+		cfg.greenStart = cfg.greenEnd = rgb2;
+		cfg.blueStart = cfg.blueEnd = rgb3;
+		cfg.alpha = new float[] { 0.0f, 0.6f, 0.6f, 0.0f };
+		cfg.partStart = 448;
+		cfg.partNum = 9;
+		cfg.scale = new float[] { 0.5f, 0.25f };
+		cfg.grav = (float) (world.random.nextGaussian() * 0.01);
+		cfg.randomX = cfg.randomY = cfg.randomZ = 0.0025f;
+		thaumcraft.client.fx.ClientFxHandlers.spawnGeneric(world, posX, posY, posZ,
+				motionX + world.random.nextGaussian() * 0.01, motionY + world.random.nextGaussian() * 0.01, motionZ + world.random.nextGaussian() * 0.01, cfg);
 	}
 
 	@Override

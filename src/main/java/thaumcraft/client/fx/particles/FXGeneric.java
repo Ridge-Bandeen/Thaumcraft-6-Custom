@@ -112,6 +112,11 @@ public class FXGeneric extends SingleQuadParticle {
 		this.yd = yd;
 		this.zd = zd;
 		this.baseQuadSize = this.quadSize;
+		// Matches real vanilla 1.12.2 Particle's own real default particleGravity (1.0) - modern Particle's
+		// own gravity field defaults to 0.0 with no explicit initializer, which would silently leave any
+		// real effect that never calls setGravity (e.g. FocusEffectBreak/FocusEffectRift) with no fall at
+		// all instead of the true original's own real subtle drift.
+		this.gravity = 1.0f;
 	}
 
 	public FXGeneric(ClientLevel level, double x, double y, double z) {

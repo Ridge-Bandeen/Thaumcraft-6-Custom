@@ -60,6 +60,7 @@ public class FocusEffectBreak extends FocusEffect {
 
 		Level level = getPackage().world;
 		BlockPos pos = blockHit.getBlockPos();
+		FocusFxHelper.sendPartImpact(level, net.minecraft.world.phys.Vec3.atCenterOf(pos), getKey());
 		BlockState state = level.getBlockState(pos);
 		float hardness = state.getDestroySpeed(level, pos);
 		if (hardness < 0) return false;
@@ -87,9 +88,18 @@ public class FocusEffectBreak extends FocusEffect {
 		};
 	}
 
+	/** See {@link thaumcraft.client.fx.ClientFxHandlers#spawnGeneric}'s own doc comment for why this builds a
+	 * plain {@link FocusGenericFx} rather than an {@code FXGeneric} directly. */
 	@Override
 	public void renderParticleFX(Level world, double posX, double posY, double posZ, double motionX, double motionY, double motionZ) {
-		// no-op for now - depends on the not-yet-ported client particle dispatcher (FXDispatcher)
+		FocusGenericFx cfg = new FocusGenericFx();
+		cfg.age = 6 + world.random.nextInt(6);
+		int q = world.random.nextInt(4);
+		cfg.partStart = 704 + q * 3;
+		cfg.partNum = 3;
+		cfg.slowDown = 0.8;
+		cfg.scale = new float[] { (float) (1.7 + world.random.nextGaussian() * 0.3) };
+		thaumcraft.client.fx.ClientFxHandlers.spawnGeneric(world, posX, posY, posZ, motionX, motionY, motionZ, cfg);
 	}
 
 	@Override

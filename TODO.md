@@ -239,9 +239,46 @@ deferred until now. Real findings from that audit, triaged:
       network essentia-flow visualization, a bigger separate system) not yet
       scoped in detail - none of these had any real, currently-compiled call
       site found during this pass's scoping search, so likely low-value until
-      whatever gameplay feature they'd back gets built first. Per-effect
-      `FocusEffect#renderParticleFX` restoration (see `FXFocusEffect` above)
-      also still queued.
+      whatever gameplay feature they'd back gets built first.
+    - ~~**`FocusEffect#renderParticleFX` restoration**~~ — closed 2026-09-16.
+      All 10 real `FocusEffect` subclasses with a real particle FX
+      (`Air`/`Break`/`Curse`/`Earth`/`Exchange`/`Fire`/`Flux`/`Frost`/`Heal`/
+      `Rift`) now render their true original's own real `FXGeneric`-configured
+      burst (colors, alpha/scale keyframes, particle-grid indices, gravity,
+      slowdown, random-movement jitter, rotation - each matched to that
+      effect's own real pre-port config exactly), plus 7 of them
+      (`Air`/`Break`/`Earth`/`Fire`/`Flux`/`Frost`/`Heal`) self-trigger a real
+      `PacketFXFocusPartImpact` from their own `execute()` via the new shared
+      `FocusFxHelper`, and `FocusMediumTouch#execute` now broadcasts a real
+      `PacketFXFocusEffect` rendering every real effect in the cast package at
+      once - both matching the true original's own real dual-broadcast shape.
+      `FXGeneric`'s own gravity default was also fixed in passing (see below).
+      - **Real dedicated-server crash found and fixed while verifying this
+        chunk**: the first cut declared each `renderParticleFX` override
+        directly inside its own common-side `FocusEffectXxx` class,
+        constructing `FXGeneric`/casting to `ClientLevel` right there. That
+        class is loaded and bytecode-verified on BOTH sides (its `execute()`
+        half is real server-invoked gameplay code) - the JVM's own verifier
+        resolves every locally-referenced type in a method's body at
+        class-verification time, even for a method that's never actually
+        invoked there, so the moment any `FocusEffectXxx` class got touched on
+        a dedicated server, NeoForge's own dist-check threw `"Attempted to
+        load class net/minecraft/client/particle/Particle for invalid dist
+        DEDICATED_SERVER"` - 29 real GameTests failed on this. Fixed by adding
+        a plain, common-safe `FocusGenericFx` config carrier (primitives/
+        arrays only, no client type anywhere) and a single new
+        `ClientFxHandlers#spawnGeneric(Level,...,FocusGenericFx)` that does
+        the actual `FXGeneric` construction - every real `renderParticleFX`
+        body now only ever builds a config object and hands it off, matching
+        the same "common code only calls a client-only class from a method
+        whose own signature carries no client type" boundary `spawnGolemArc`
+        already established, just generalized. A real, previously-undocumented
+        lesson for the rest of this port: a client-only reference is only
+        safe inside a method that's *itself* declared on a client-only-scoped
+        class (like `ClientFxHandlers`, `@EventBusSubscriber(...,
+        value=Dist.CLIENT)`) - declaring it directly on a common class that
+        also carries real server-invoked gameplay methods crashes even if
+        that specific method is never called server-side.
   - **Custom mob models/renderers** (`client/renderers/*`, `client/lib/obj`)
     - still queued, not yet scoped in detail; likely the largest remaining
     piece of this whole layer. `FXSonic` (the Eldritch Warden/Guardian's own

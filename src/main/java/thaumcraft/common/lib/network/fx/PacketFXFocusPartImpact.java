@@ -1,78 +1,42 @@
 package thaumcraft.common.lib.network.fx;
-import io.netty.buffer.ByteBuf;
-import java.util.Random;
-import net.minecraft.client.Minecraft;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.common.network.ByteBufUtils;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
-import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.api.casters.FocusEffect;
-import thaumcraft.api.casters.FocusEngine;
-import thaumcraft.api.casters.IFocusElement;
 
+import java.util.List;
 
-public class PacketFXFocusPartImpact implements IMessage, IMessageHandler<PacketFXFocusPartImpact, IMessage>
-{
-    double x;
-    double y;
-    double z;
-    String parts;
-    
-    public PacketFXFocusPartImpact() {
-    }
-    
-    public PacketFXFocusPartImpact(double x, double y, double z, String[] parts) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        this.parts = "";
-        for (int a = 0; a < parts.length; ++a) {
-            if (a > 0) {
-                this.parts += "%";
-            }
-            this.parts += parts[a];
-        }
-    }
-    
-    public void toBytes(ByteBuf buffer) {
-        buffer.writeFloat((float) x);
-        buffer.writeFloat((float) y);
-        buffer.writeFloat((float) z);
-        ByteBufUtils.writeUTF8String(buffer, parts);
-    }
-    
-    public void fromBytes(ByteBuf buffer) {
-        x = buffer.readFloat();
-        y = buffer.readFloat();
-        z = buffer.readFloat();
-        parts = ByteBufUtils.readUTF8String(buffer);
-    }
-    
-    public IMessage onMessage(PacketFXFocusPartImpact message, MessageContext ctx) {
-        Minecraft.getMinecraft().addScheduledTask(new Runnable() {
-            @Override
-            public void run() {
-                processMessage(message);
-            }
-        });
-        return null;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    void processMessage(PacketFXFocusPartImpact message) {
-        String[] partKeys = message.parts.split("%");
-        int amt = Math.max(1, 15 / partKeys.length);
-        Random r = Minecraft.getMinecraft().world.rand;
-        for (String k : partKeys) {
-            IFocusElement part = FocusEngine.getElement(k);
-            if (part != null && part instanceof FocusEffect) {
-                for (int a = 0; a < amt; ++a) {
-                    ((FocusEffect)part).renderParticleFX(Minecraft.getMinecraft().world, message.x, message.y, message.z, r.nextGaussian() * 0.15, r.nextGaussian() * 0.15, r.nextGaussian() * 0.15);
-                }
-            }
-        }
-    }
+import org.joml.Vector3f;
+
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import thaumcraft.Thaumcraft;
+
+/**
+ * Replaces the old (1.12.2) {@code PacketFXFocusPartImpact} - a client-bound "this one real focus effect
+ * just hit something" broadcast, restored 2026-09-16, sent directly by each real single-target-damage
+ * {@link thaumcraft.api.casters.FocusEffect} subclass's own {@code execute()} (Air/Break/Earth/Fire/Flux/
+ * Frost/Heal - see {@code ClientFxHandlers#handleFocusPartImpact}), distinct from {@link PacketFXFocusEffect}
+ * (which renders every real effect in the whole cast package at once, sent once per medium-level cast by
+ * {@link thaumcraft.common.items.casters.foci.FocusMediumTouch} itself). Real, faithfully-reproduced true
+ * original quirk: real random motion jitter is generated fresh client-side on receipt (scale 0.15), not
+ * carried in the payload - matches the true original's own real shape exactly.
+ *
+ * <p>Real, documented cut: the true original's own sibling {@code PacketFXFocusPartImpactBurst} (same real
+ * shape, wider 0.4 motion jitter) is confirmed dead code - zero real call sites anywhere in the true
+ * original itself - so it isn't ported.
+ */
+public record PacketFXFocusPartImpact(Vector3f pos, List<String> parts) implements CustomPacketPayload {
+
+	public static final Type<PacketFXFocusPartImpact> TYPE =
+			new Type<>(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "fx_focus_part_impact"));
+
+	public static final StreamCodec<RegistryFriendlyByteBuf, PacketFXFocusPartImpact> STREAM_CODEC = StreamCodec.composite(
+			ByteBufCodecs.VECTOR3F, PacketFXFocusPartImpact::pos,
+			ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), PacketFXFocusPartImpact::parts,
+			PacketFXFocusPartImpact::new);
+
+	@Override
+	public Type<? extends CustomPacketPayload> type() {
+		return TYPE;
+	}
 }

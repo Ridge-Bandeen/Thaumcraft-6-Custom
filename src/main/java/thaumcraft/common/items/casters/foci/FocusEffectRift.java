@@ -105,10 +105,21 @@ public class FocusEffectRift extends FocusEffect {
 		};
 	}
 
+	/** See {@link thaumcraft.client.fx.ClientFxHandlers#spawnGeneric}'s own doc comment for why this builds a
+	 * plain {@link FocusGenericFx} rather than an {@code FXGeneric} directly. */
 	@Override
 	public void renderParticleFX(Level world, double posX, double posY, double posZ, double motionX, double motionY, double motionZ) {
-		// no-op for now - depends on the not-yet-ported client particle dispatcher (FXDispatcher), matching
-		// every other focus effect ported so far.
+		FocusGenericFx cfg = new FocusGenericFx();
+		cfg.age = 16 + world.random.nextInt(16);
+		cfg.partStart = 384 + world.random.nextInt(16);
+		cfg.slowDown = 0.75;
+		cfg.alpha = new float[] { 1.0f, 0.0f };
+		cfg.scale = new float[] { (float) (0.7 + world.random.nextGaussian() * 0.3) };
+		cfg.redStart = cfg.redEnd = 0.25f;
+		cfg.greenStart = cfg.greenEnd = 0.25f;
+		cfg.blueStart = cfg.blueEnd = 1.0f;
+		cfg.randomX = cfg.randomY = cfg.randomZ = 0.01f;
+		thaumcraft.client.fx.ClientFxHandlers.spawnGeneric(world, posX, posY, posZ, motionX, motionY, motionZ, cfg);
 	}
 
 	@Override

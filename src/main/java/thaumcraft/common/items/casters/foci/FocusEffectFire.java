@@ -18,9 +18,9 @@ import thaumcraft.api.casters.NodeSetting;
 import thaumcraft.api.casters.Trajectory;
 
 /**
- * Replaces the old (1.12.2) {@code FocusEffectFire}. Drops the network FX packet broadcast (see
- * {@link FocusMediumTouch}) and the client-only particle rendering (renderParticleFX is now a no-op) - the
- * gameplay effect (damage + ignite, or placing fire on a clicked block) is unchanged.
+ * Replaces the old (1.12.2) {@code FocusEffectFire}. Real {@code PacketFXFocusPartImpact}
+ * broadcast + {@link #renderParticleFX} restored 2026-09-16 (see {@link FocusFxHelper}'s own doc comment) -
+ * the gameplay effect (damage + ignite, or placing fire on a clicked block) was always unchanged.
  */
 public class FocusEffectFire extends FocusEffect {
 
@@ -53,6 +53,7 @@ public class FocusEffectFire extends FocusEffect {
 	public boolean execute(HitResult target, Trajectory trajectory, float finalPower, int num) {
 		Level level = getPackage().world;
 		if (level == null) return false;
+		FocusFxHelper.sendPartImpact(level, target.getLocation(), getKey());
 
 		if (target instanceof BlockHitResult blockHit) {
 			if (getSettingValue("duration") <= 0) return false;
@@ -88,9 +89,21 @@ public class FocusEffectFire extends FocusEffect {
 		};
 	}
 
+	/** Real modern equivalent of the true original's own {@code GenPart}-configured {@code
+	 * drawGenericParticles} call. Builds a plain, common-safe {@link FocusGenericFx} and hands the real
+	 * construction off to {@link thaumcraft.client.fx.ClientFxHandlers#spawnGeneric} - see that method's own
+	 * doc comment for why this indirection is required (not just style) after a real dedicated-server crash. */
 	@Override
 	public void renderParticleFX(Level world, double posX, double posY, double posZ, double motionX, double motionY, double motionZ) {
-		// no-op for now - depends on the not-yet-ported client particle dispatcher (FXDispatcher)
+		FocusGenericFx cfg = new FocusGenericFx();
+		cfg.grav = -0.2f;
+		cfg.age = 10;
+		cfg.alpha = new float[] { 0.7f };
+		cfg.partStart = 640;
+		cfg.partNum = 10;
+		cfg.slowDown = 0.75;
+		cfg.scale = new float[] { (float) (1.5 + world.random.nextGaussian() * 0.2) };
+		thaumcraft.client.fx.ClientFxHandlers.spawnGeneric(world, posX, posY, posZ, motionX, motionY, motionZ, cfg);
 	}
 
 	@Override

@@ -402,6 +402,10 @@ sourceSets {
             include 'thaumcraft/client/fx/particles/FXBoreParticles.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXBoreDig.java'
             include 'thaumcraft/client/fx/particles/FXSwarm.java'
+            include 'thaumcraft/common/lib/network/fx/PacketFXFocusEffect.java'
+            include 'thaumcraft/common/lib/network/fx/PacketFXFocusPartImpact.java'
+            include 'thaumcraft/common/items/casters/foci/FocusFxHelper.java'
+            include 'thaumcraft/common/items/casters/foci/FocusGenericFx.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'
             include 'thaumcraft/api/internal/IInternalMethodHandler.java'

@@ -136,6 +136,41 @@ public final class ClientFxHandlers {
 	private ClientFxHandlers() {
 	}
 
+	/** Real {@link thaumcraft.client.fx.particles.FXGeneric} construction for every real {@code
+	 * FocusEffectXxx#renderParticleFX} override, moved here 2026-09-16 after a real, previously-unseen crash:
+	 * having a common-side {@code FocusEffect} subclass (loaded/bytecode-verified on BOTH sides, since its
+	 * gameplay half runs server-side too) directly reference {@code FXGeneric}/{@code ClientLevel} inside its
+	 * own {@code renderParticleFX} body made the JVM's own verifier resolve those real {@code
+	 * @OnlyIn(Dist.CLIENT)} types the moment ANY method on that class got touched - NeoForge's own dist-check
+	 * then threw {@code "Attempted to load class ... for invalid dist DEDICATED_SERVER"} even though {@code
+	 * renderParticleFX} itself is only ever really invoked client-side (29 real GameTests failed on this
+	 * before the fix). Every real {@code FocusEffectXxx#renderParticleFX} body now only ever builds a plain,
+	 * common-safe {@link thaumcraft.common.items.casters.foci.FocusGenericFx} (primitives/arrays only, no
+	 * client type anywhere) and hands it here - matching the same real "common code only ever calls a
+	 * client-only class from a method whose own signature carries no client type" boundary {@link
+	 * #spawnGolemArc} already established, just generalized to cover every {@code FXGeneric}-shaped effect at
+	 * once instead of one dedicated method per caller. */
+	public static void spawnGeneric(net.minecraft.world.level.Level level, double x, double y, double z,
+			double mx, double my, double mz, thaumcraft.common.items.casters.foci.FocusGenericFx cfg) {
+		if (!(level instanceof ClientLevel clientLevel)) {
+			return;
+		}
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, mx, my, mz);
+		fb.setMaxAge(cfg.age);
+		fb.setGridSize(cfg.grid);
+		fb.setRBGColorF(cfg.redStart, cfg.greenStart, cfg.blueStart, cfg.redEnd, cfg.greenEnd, cfg.blueEnd);
+		fb.setAlphaF(cfg.alpha);
+		fb.setParticles(cfg.partStart, cfg.partNum, cfg.partInc);
+		fb.setScale(cfg.scale);
+		fb.setLoop(cfg.loop);
+		fb.setLayer(cfg.layer);
+		fb.setSlowDown(cfg.slowDown);
+		fb.setGravity(cfg.grav);
+		fb.setRandomMovementScale(cfg.randomX, cfg.randomY, cfg.randomZ);
+		fb.setRotationSpeed(cfg.rotstart, cfg.rot);
+		addDelayed(fb, cfg.delay);
+	}
+
 	/** {@link thaumcraft.common.lib.enchantment.EnumInfusionEnchantment#ARCING}'s cleave hit - the original drew a textured slash quad between
 	 * the two entities ({@code FXDispatcher.drawSlash}); this spawns a small burst of vanilla's own sweep-attack
 	 * particle at the target instead, the same particle a vanilla sword sweep itself uses. */
@@ -237,6 +272,53 @@ public final class ClientFxHandlers {
 					FXBoreParticles fx = new FXBoreParticles(level, px, py, pz, bore.getX(), bore.getY(), bore.getZ(), state);
 					fx.setTarget(bore);
 					addDelayed(fx, tick);
+				}
+			}
+		}
+	}
+
+	/** Real "render every real effect in the cast package" dispatch for {@link
+	 * thaumcraft.common.items.casters.foci.FocusMediumTouch}'s own cast-impact, restored 2026-09-16 - see
+	 * {@link thaumcraft.common.lib.network.fx.PacketFXFocusEffect}'s own doc comment. Matches the true
+	 * original's own real {@code amt = max(1, 10/partKeys.length)} spread and real per-particle gaussian
+	 * motion jitter exactly. */
+	public static void handleFocusEffect(thaumcraft.common.lib.network.fx.PacketFXFocusEffect payload) {
+		Minecraft mc = Minecraft.getInstance();
+		ClientLevel level = mc.level;
+		if (level == null) {
+			return;
+		}
+		List<String> keys = payload.parts();
+		int amt = Math.max(1, 10 / keys.size());
+		for (String key : keys) {
+			if (thaumcraft.api.casters.FocusEngine.getElement(key) instanceof thaumcraft.api.casters.FocusEffect effect) {
+				for (int i = 0; i < amt; i++) {
+					effect.renderParticleFX(level, payload.pos().x(), payload.pos().y(), payload.pos().z(),
+							payload.motion().x() + level.random.nextGaussian() / 20.0,
+							payload.motion().y() + level.random.nextGaussian() / 20.0,
+							payload.motion().z() + level.random.nextGaussian() / 20.0);
+				}
+			}
+		}
+	}
+
+	/** Real "this one real effect just hit something" dispatch, restored 2026-09-16 - see {@link
+	 * thaumcraft.common.lib.network.fx.PacketFXFocusPartImpact}'s own doc comment. Matches the true
+	 * original's own real {@code amt = max(1, 15/partKeys.length)} spread and real fresh-on-receipt gaussian
+	 * motion (scale 0.15) exactly. */
+	public static void handleFocusPartImpact(thaumcraft.common.lib.network.fx.PacketFXFocusPartImpact payload) {
+		Minecraft mc = Minecraft.getInstance();
+		ClientLevel level = mc.level;
+		if (level == null) {
+			return;
+		}
+		List<String> keys = payload.parts();
+		int amt = Math.max(1, 15 / keys.size());
+		for (String key : keys) {
+			if (thaumcraft.api.casters.FocusEngine.getElement(key) instanceof thaumcraft.api.casters.FocusEffect effect) {
+				for (int i = 0; i < amt; i++) {
+					effect.renderParticleFX(level, payload.pos().x(), payload.pos().y(), payload.pos().z(),
+							level.random.nextGaussian() * 0.15, level.random.nextGaussian() * 0.15, level.random.nextGaussian() * 0.15);
 				}
 			}
 		}
