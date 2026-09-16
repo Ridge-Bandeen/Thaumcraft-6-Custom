@@ -14,6 +14,21 @@ index.
 
 ## Confirmed real gaps (actionable)
 
+~~**Real crash-risk bug fixed 2026-09-16**: `EntityTaintacleGiant` (the Taint
+faction's own boss, real/complete/`/summon`-reachable) had zero entity
+renderer registered at all~~ - found while scoping the Custom Mob
+Models/Renderers layer (cross-checked every real registered `EntityType`
+against `ThaumcraftClient`'s own `registerEntityRenderer` calls, one at a
+time, rather than assuming the list was complete). Not just cosmetic - the
+first time any client ever saw or summoned one, NeoForge would have thrown a
+real "no renderer registered for this entity type" error. Fixed by reusing
+`RenderTaintacle` (the class already extends `EntityTaintacle`, so it's real,
+type-compatible) with the true original's own real bigger shadow/chain-length
+values (`1.0f, 14`, vs `TAINTACLE`'s `0.6f, 10`). Worth periodically re-running
+this same registered-type-vs-registered-renderer cross-check as new entities
+get added, since nothing else currently catches this class of gap
+automatically (GameTest never spawns a real client to hit it).
+
 **Full parity audit, 2026-09-15 evening**: user asked for 3 point-form lists
 (this port's features / true original's features via code+wiki / the player-
 facing diff between them), then to fix every real difference found except
