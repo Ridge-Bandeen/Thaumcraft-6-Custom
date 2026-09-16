@@ -172,6 +172,12 @@ public class ThaumcraftClient {
         // shadow size/chain length, matching the original's own real per-registration shape).
         event.registerEntityRenderer(ThaumcraftEntities.TAINTACLE.get(), context -> new thaumcraft.client.render.RenderTaintacle(context, 0.6f, 10));
         event.registerEntityRenderer(ThaumcraftEntities.TAINTACLE_SMALL.get(), context -> new thaumcraft.client.render.RenderTaintacle(context, 0.2f, 6));
+        // A real, previously-missing registration, found 2026-09-16 while scoping the client renderer layer -
+        // EntityTaintacleGiant (the Taint faction's own boss) extends EntityTaintacle already, so it's real,
+        // type-compatible with the same RenderTaintacle used above, just with the true original's own real
+        // bigger shadow/chain-length values; without this, spawning one would have thrown a real
+        // "no renderer registered" error the first time a client ever saw one.
+        event.registerEntityRenderer(ThaumcraftEntities.TAINTACLE_GIANT.get(), context -> new thaumcraft.client.render.RenderTaintacle(context, 1.0f, 14));
         event.registerEntityRenderer(ThaumcraftEntities.TAINT_SEED.get(), context -> new thaumcraft.client.render.RenderTaintSeed(context, 0.4f));
         event.registerEntityRenderer(ThaumcraftEntities.TAINT_SEED_PRIME.get(), context -> new thaumcraft.client.render.RenderTaintSeed(context, 0.6f));
         // No visible model - see RenderFocusProjectile's own doc comment (shared with FOCUS_PROJECTILE/FOCUS_MINE).

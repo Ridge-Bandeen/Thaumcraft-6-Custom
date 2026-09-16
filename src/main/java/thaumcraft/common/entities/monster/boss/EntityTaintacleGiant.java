@@ -47,7 +47,12 @@ import thaumcraft.common.lib.utils.ChampionUtils;
  * summon it yet (the true original's own real placement was worldgen-only, tied to the still-blocked
  * Taint-corruption world-spread subsystem - see the port-tracking memory) - real, complete, tested code,
  * reachable via {@code /summon} today, matching the same "ship it real even though nothing spawns it yet"
- * precedent this port has used repeatedly.
+ * precedent this port has used repeatedly. Had a real, previously-undiscovered gap on the client side until
+ * 2026-09-16: no entity renderer was ever registered for this type at all (only {@code TAINTACLE}/{@code
+ * TAINTACLE_SMALL} were, despite this class already being a real {@link EntityTaintacle} subclass, fully
+ * renderer-compatible) - a real client crash risk the very first time any player summoned or saw one, not
+ * just a cosmetic gap. Fixed in {@code ThaumcraftClient} (reuses {@code RenderTaintacle} with the true
+ * original's own real bigger shadow/chain-length values).
  *
  * Real champion-mod tie-in, restored 2026-09-15: {@link #finalizeSpawn} calls {@link ChampionUtils#makeChampion}
  * unconditionally (plus a real {@link #setPersistenceRequired}), matching the true original's own {@code
