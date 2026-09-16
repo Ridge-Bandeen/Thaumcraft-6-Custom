@@ -394,6 +394,9 @@ sourceSets {
             include 'thaumcraft/common/entities/EntityFollowingItem.java'
             include 'thaumcraft/client/fx/beams/FXArc.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXBlockArc.java'
+            include 'thaumcraft/client/fx/beams/FXBolt.java'
+            include 'thaumcraft/common/lib/network/fx/PacketFXWispZap.java'
+            include 'thaumcraft/common/lib/network/fx/PacketFXZap.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'
             include 'thaumcraft/api/internal/IInternalMethodHandler.java'

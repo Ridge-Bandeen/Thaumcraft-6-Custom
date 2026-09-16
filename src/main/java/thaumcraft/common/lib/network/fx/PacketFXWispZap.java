@@ -1,65 +1,39 @@
 package thaumcraft.common.lib.network.fx;
-import io.netty.buffer.ByteBuf;
-import java.awt.Color;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.WorldClient;
-import net.minecraft.entity.Entity;
-import net.minecraftforge.fml.client.FMLClientHandler;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
-import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.api.aspects.Aspect;
-import thaumcraft.client.fx.FXDispatcher;
-import thaumcraft.common.entities.monster.EntityWisp;
 
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import thaumcraft.Thaumcraft;
 
-public class PacketFXWispZap implements IMessage, IMessageHandler<PacketFXWispZap, IMessage>
-{
-    private int source;
-    private int target;
-    
-    public PacketFXWispZap() {
-    }
-    
-    public PacketFXWispZap(int source, int target) {
-        this.source = source;
-        this.target = target;
-    }
-    
-    public void toBytes(ByteBuf buffer) {
-        buffer.writeInt(source);
-        buffer.writeInt(target);
-    }
-    
-    public void fromBytes(ByteBuf buffer) {
-        source = buffer.readInt();
-        target = buffer.readInt();
-    }
-    
-    public IMessage onMessage(PacketFXWispZap message, MessageContext ctx) {
-        Minecraft mc = FMLClientHandler.instance().getClient();
-        WorldClient world = mc.world;
-        Entity var2 = getEntityByID(message.source, mc, world);
-        Entity var3 = getEntityByID(message.target, mc, world);
-        if (var2 != null && var3 != null) {
-            float r = 1.0f;
-            float g = 1.0f;
-            float b = 1.0f;
-            if (var2 instanceof EntityWisp) {
-                Color c = new Color(Aspect.getAspect(((EntityWisp)var2).getType()).getColor());
-                r = c.getRed() / 255.0f;
-                g = c.getGreen() / 255.0f;
-                b = c.getBlue() / 255.0f;
-            }
-            FXDispatcher.INSTANCE.arcBolt(var2.posX, var2.posY, var2.posZ, var3.posX, var3.posY, var3.posZ, r, g, b, 0.6f);
-        }
-        return null;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    private Entity getEntityByID(int par1, Minecraft mc, WorldClient world) {
-        return (par1 == mc.player.getEntityId()) ? mc.player : world.getEntityByID(par1);
-    }
+/**
+ * Replaces the old (1.12.2) {@code PacketFXWispZap} - a client-bound arc-lightning zap between {@link
+ * thaumcraft.common.entities.monster.EntityWisp} and its current target, restored 2026-09-15 now that
+ * {@link thaumcraft.client.fx.beams.FXBolt} is real (this port had previously reused the more generic
+ * {@link PacketFXSlash}/{@code ClientFxHandlers#handleSlash} pair as a documented stand-in - see
+ * {@code EntityWisp}'s own doc comment history - since standing up a whole second packet class wasn't worth
+ * it while there was no real bolt renderer to show anyway).
+ *
+ * Carries entity ids (not positions), same real convention {@link PacketFXSlash} already established -
+ * resolved back to live entities client-side so the effect stays anchored to wherever they've actually moved
+ * to by the time the packet arrives, matching the true original's own real shape exactly. The wisp's own
+ * real per-aspect colour (read off the source entity client-side, matching the true original's own real
+ * {@code Aspect.getAspect(wisp.getType()).getColor()} lookup) is resolved in {@link
+ * thaumcraft.client.fx.ClientFxHandlers#handleWispZap}, not carried in this payload.
+ */
+public record PacketFXWispZap(int source, int target) implements CustomPacketPayload {
+
+	public static final Type<PacketFXWispZap> TYPE =
+			new Type<>(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "fx_wisp_zap"));
+
+	public static final StreamCodec<RegistryFriendlyByteBuf, PacketFXWispZap> STREAM_CODEC = StreamCodec.composite(
+			ByteBufCodecs.VAR_INT, PacketFXWispZap::source,
+			ByteBufCodecs.VAR_INT, PacketFXWispZap::target,
+			PacketFXWispZap::new);
+
+	@Override
+	public Type<? extends CustomPacketPayload> type() {
+		return TYPE;
+	}
 }

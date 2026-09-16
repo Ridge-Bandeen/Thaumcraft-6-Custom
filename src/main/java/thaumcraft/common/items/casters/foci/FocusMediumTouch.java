@@ -79,7 +79,9 @@ public class FocusMediumTouch extends FocusMedium {
 		return out.toArray(new HitResult[0]);
 	}
 
-	private HitResult trace(Trajectory source) {
+	/** Package-visible (not {@code private}) specifically so {@link FocusMediumBolt} can reuse the same real
+	 * raytrace instead of duplicating it - see that class's own {@code execute} doc comment. */
+	protected HitResult trace(Trajectory source) {
 		Level level = getPackage().world;
 		Entity caster = getPackage().getCaster();
 		if (level == null || caster == null) return null;

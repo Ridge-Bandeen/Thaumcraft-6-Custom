@@ -31,7 +31,6 @@ import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.items.ItemGenericEssentiaContainer;
 import thaumcraft.api.items.ItemsTC;
-import thaumcraft.common.lib.network.fx.PacketFXSlash;
 
 /**
  * Replaces the old (1.12.2) {@code EntityWisp} - a small flying elemental, the most common
@@ -47,10 +46,11 @@ import thaumcraft.common.lib.network.fx.PacketFXSlash;
  * the whole unconverted {@code ThaumcraftApiHelper} for one method) - see {@link #dropCustomDeathLoot}.
  *
  * Combat is a short-range "zap": once a target is in sight for 20 ticks, it deals 3-4 damage (a straight
- * translation of the original's per-target motion-based damage roll) and reuses the already-shipped
- * {@link PacketFXSlash}/{@code ClientFxHandlers#handleSlash} pair for the visual cue instead of porting a
- * near-duplicate {@code PacketFXWispZap} - both are just "flash something at the target entity", the
- * original's own colour-by-aspect touch isn't worth a second packet class for.
+ * translation of the original's per-target motion-based damage roll) and sends the real {@code
+ * PacketFXWispZap}/{@link thaumcraft.client.fx.beams.FXBolt} pair for the visual cue, restored 2026-09-15
+ * (see {@code PacketFXWispZap}'s own doc comment) - this port had previously reused the more generic {@code
+ * PacketFXSlash}/{@code ClientFxHandlers#handleSlash} pair as a documented stand-in while there was no real
+ * bolt renderer to show, including the real per-aspect colour the true original's own zap always had.
  *
  * Real, documented cuts: no dedicated {@code RenderWisp} (this port hasn't needed a custom
  * {@code EntityRenderer} anywhere yet - {@code EntityGrapple}/{@code EntityFollowingItem} ship the same
@@ -58,9 +58,9 @@ import thaumcraft.common.lib.network.fx.PacketFXSlash;
  * unconverted {@code FXDispatcher}); and real natural world-spawning (the original's own spawn list only
  * ever added it to the Nether biome dictionary plus two custom Thaumcraft biomes, neither of which exist in
  * this port) - {@link #canSpawnHere} still does the original's real darkness/density validity check, ready
- * for {@code EntityFluxRift}'s own direct-spawn call, just never registered as a natural spawn. Custom
- * {@code SoundsTC} audio (zap/wisplive/wispdead) is a whole unregistered subsystem of its own in this port -
- * stands in with plain vanilla sounds instead rather than standing up sound registration for one mob.
+ * for {@code EntityFluxRift}'s own direct-spawn call, just never registered as a natural spawn. Real custom
+ * {@code zap}/{@code wisplive}/{@code wispdead} sounds restored 2026-09-15 (were vanilla stand-ins) - see
+ * {@link thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment.
  */
 public class EntityWisp extends FlyingMob implements Enemy {
 
@@ -171,7 +171,7 @@ public class EntityWisp extends FlyingMob implements Enemy {
 			if (hasLineOfSight(currentTarget)) {
 				attackCounter++;
 				if (attackCounter == 20) {
-					playSound(SoundEvents.AMETHYST_BLOCK_CHIME, 1.0f, 1.1f);
+					playSound(thaumcraft.common.registry.ThaumcraftSounds.ZAP.get(), 1.0f, 1.1f);
 					sendZapFx(currentTarget);
 					float damage = (float) getAttributeValue(Attributes.ATTACK_DAMAGE);
 					if (Math.abs(currentTarget.getDeltaMovement().x) > 0.1 || Math.abs(currentTarget.getDeltaMovement().y) > 0.1
@@ -212,7 +212,7 @@ public class EntityWisp extends FlyingMob implements Enemy {
 	private void sendZapFx(LivingEntity target) {
 		try {
 			PacketDistributor.sendToPlayersNear((ServerLevel) level(), null,
-					getX(), getY(), getZ(), 32.0, new PacketFXSlash(getId(), target.getId()));
+					getX(), getY(), getZ(), 32.0, new thaumcraft.common.lib.network.fx.PacketFXWispZap(getId(), target.getId()));
 		} catch (Exception e) {
 			Thaumcraft.LOGGER.debug("Wisp zap FX packet failed to send (no real client connection?)", e);
 		}
@@ -220,7 +220,7 @@ public class EntityWisp extends FlyingMob implements Enemy {
 
 	@Override
 	protected SoundEvent getAmbientSound() {
-		return SoundEvents.SOUL_ESCAPE.value();
+		return thaumcraft.common.registry.ThaumcraftSounds.WISPLIVE.get();
 	}
 
 	@Override
@@ -230,7 +230,7 @@ public class EntityWisp extends FlyingMob implements Enemy {
 
 	@Override
 	protected SoundEvent getDeathSound() {
-		return SoundEvents.SOUL_ESCAPE.value();
+		return thaumcraft.common.registry.ThaumcraftSounds.WISPDEAD.get();
 	}
 
 	@Override

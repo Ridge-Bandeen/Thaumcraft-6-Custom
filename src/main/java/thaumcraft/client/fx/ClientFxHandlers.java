@@ -17,12 +17,17 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.common.Tags;
+import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.client.fx.beams.FXArc;
+import thaumcraft.client.fx.beams.FXBolt;
+import thaumcraft.common.entities.monster.EntityWisp;
 import thaumcraft.common.lib.network.fx.PacketFXBlockArc;
 import thaumcraft.common.lib.network.fx.PacketFXBlockBamf;
 import thaumcraft.common.lib.network.fx.PacketFXScanSource;
 import thaumcraft.common.lib.network.fx.PacketFXSlash;
+import thaumcraft.common.lib.network.fx.PacketFXWispZap;
+import thaumcraft.common.lib.network.fx.PacketFXZap;
 
 /**
  * Client-side handlers for {@code thaumcraft.common.lib.network.fx}'s payloads - referenced only by method
@@ -77,6 +82,49 @@ public final class ClientFxHandlers {
 		}
 		mc.particleEngine.add(new FXArc(level, payload.source().x(), payload.source().y(), payload.source().z(),
 				payload.target().x(), payload.target().y(), payload.target().z(), payload.red(), payload.green(), payload.blue(), 0.5f));
+	}
+
+	/** Real {@link FXBolt} spawn for {@link EntityWisp}'s zap attack, restored 2026-09-15 (see {@link
+	 * PacketFXWispZap}'s own doc comment for why this replaces the earlier {@link #handleSlash} reuse).
+	 * Resolves both entities fresh client-side (matches {@link #handleSlash}'s own established pattern) and
+	 * reads the wisp's own real per-aspect colour directly off it, matching the true original's own real
+	 * {@code Aspect.getAspect(wisp.getType()).getColor()} lookup exactly. */
+	public static void handleWispZap(PacketFXWispZap payload) {
+		Minecraft mc = Minecraft.getInstance();
+		ClientLevel level = mc.level;
+		if (level == null) {
+			return;
+		}
+		Entity source = resolveEntity(mc, level, payload.source());
+		Entity target = resolveEntity(mc, level, payload.target());
+		if (source == null || target == null) {
+			return;
+		}
+		float r = 1.0f, g = 1.0f, b = 1.0f;
+		if (source instanceof EntityWisp wisp) {
+			Aspect aspect = Aspect.getAspect(wisp.getWispType());
+			if (aspect != null) {
+				int color = aspect.getColor();
+				r = ((color >> 16) & 0xFF) / 255.0f;
+				g = ((color >> 8) & 0xFF) / 255.0f;
+				b = (color & 0xFF) / 255.0f;
+			}
+		}
+		mc.particleEngine.add(new FXBolt(level, source.getX(), source.getY(), source.getZ(),
+				target.getX(), target.getY(), target.getZ(), r, g, b, 0.6f));
+	}
+
+	/** Real {@link FXBolt} spawn for {@link thaumcraft.common.items.casters.foci.FocusMediumBolt}'s cast
+	 * trail - see {@link PacketFXZap}'s own doc comment. */
+	public static void handleZap(PacketFXZap payload) {
+		Minecraft mc = Minecraft.getInstance();
+		ClientLevel level = mc.level;
+		if (level == null) {
+			return;
+		}
+		mc.particleEngine.add(new FXBolt(level, payload.source().x(), payload.source().y(), payload.source().z(),
+				payload.target().x(), payload.target().y(), payload.target().z(),
+				payload.red(), payload.green(), payload.blue(), payload.width()));
 	}
 
 	/** Real, purely client-local {@link FXArc} spawn for {@link thaumcraft.common.entities.monster.boss.EntityEldritchGolem}'s

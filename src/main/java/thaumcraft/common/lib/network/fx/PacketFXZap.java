@@ -1,54 +1,54 @@
 package thaumcraft.common.lib.network.fx;
-import io.netty.buffer.ByteBuf;
-import java.awt.Color;
-import net.minecraft.util.math.Vec3d;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
-import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.client.fx.FXDispatcher;
 
+import org.joml.Vector3f;
 
-public class PacketFXZap implements IMessage, IMessageHandler<PacketFXZap, IMessage>
-{
-    private Vec3d source;
-    private Vec3d target;
-    private int color;
-    private float width;
-    
-    public PacketFXZap() {
-    }
-    
-    public PacketFXZap(Vec3d source, Vec3d target, int color, float width) {
-        this.source = source;
-        this.target = target;
-        this.color = color;
-        this.width = width;
-    }
-    
-    public void toBytes(ByteBuf buffer) {
-        buffer.writeDouble(source.x);
-        buffer.writeDouble(source.y);
-        buffer.writeDouble(source.z);
-        buffer.writeDouble(target.x);
-        buffer.writeDouble(target.y);
-        buffer.writeDouble(target.z);
-        buffer.writeInt(color);
-        buffer.writeFloat(width);
-    }
-    
-    public void fromBytes(ByteBuf buffer) {
-        source = new Vec3d(buffer.readDouble(), buffer.readDouble(), buffer.readDouble());
-        target = new Vec3d(buffer.readDouble(), buffer.readDouble(), buffer.readDouble());
-        color = buffer.readInt();
-        width = buffer.readFloat();
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public IMessage onMessage(PacketFXZap message, MessageContext ctx) {
-        Color c = new Color(message.color);
-        FXDispatcher.INSTANCE.arcBolt(message.source.x, message.source.y, message.source.z, message.target.x, message.target.y, message.target.z, c.getRed() / 255.0f, c.getGreen() / 255.0f, c.getBlue() / 255.0f, message.width);
-        return null;
-    }
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.phys.Vec3;
+import thaumcraft.Thaumcraft;
+
+/**
+ * Replaces the old (1.12.2) {@code PacketFXZap} - a client-bound arc-lightning zap between two real world
+ * points with an explicit colour/width, restored 2026-09-15 alongside {@link thaumcraft.client.fx.beams.FXBolt}.
+ * Real caller: {@link thaumcraft.common.items.casters.foci.FocusMediumBolt}'s own cast-trail broadcast (the
+ * Bolt wand focus). Positions are plain snapshotted {@link Vector3f}s (matching the true original's own real
+ * shape - unlike {@link PacketFXWispZap}, this one never needs to resolve a live entity, both endpoints are
+ * always plain world points already at cast time).
+ */
+public record PacketFXZap(Vector3f source, Vector3f target, int color, float width) implements CustomPacketPayload {
+
+	public static final Type<PacketFXZap> TYPE =
+			new Type<>(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "fx_zap"));
+
+	public static final StreamCodec<RegistryFriendlyByteBuf, PacketFXZap> STREAM_CODEC = StreamCodec.composite(
+			ByteBufCodecs.VECTOR3F, PacketFXZap::source,
+			ByteBufCodecs.VECTOR3F, PacketFXZap::target,
+			ByteBufCodecs.VAR_INT, PacketFXZap::color,
+			ByteBufCodecs.FLOAT, PacketFXZap::width,
+			PacketFXZap::new);
+
+	public static PacketFXZap of(Vec3 source, Vec3 target, int color, float width) {
+		return new PacketFXZap(new Vector3f((float) source.x, (float) source.y, (float) source.z),
+				new Vector3f((float) target.x, (float) target.y, (float) target.z), color, width);
+	}
+
+	public float red() {
+		return ((color >> 16) & 0xFF) / 255.0f;
+	}
+
+	public float green() {
+		return ((color >> 8) & 0xFF) / 255.0f;
+	}
+
+	public float blue() {
+		return (color & 0xFF) / 255.0f;
+	}
+
+	@Override
+	public Type<? extends CustomPacketPayload> type() {
+		return TYPE;
+	}
 }
