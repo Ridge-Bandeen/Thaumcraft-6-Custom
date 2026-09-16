@@ -40,10 +40,9 @@ import thaumcraft.common.registry.ThaumcraftEntities;
  *
  * Real, documented cuts: no {@code getCanSpawnHere} "don't spawn near another inhabited zombie" restriction
  * - this whole monster arc has consistently deferred all natural-spawn ({@code SpawnPlacements}) wiring, so
- * there's no spawn-time hook for this check to run from yet either. Sound substitution, same real reason
- * {@code EntityEldritchCrab} already documents: the original's own bundled {@code SoundsTC.crabtalk} isn't
- * registered in this port yet, stands in with a vanilla spider sound (this zombie's real "inhabited by
- * something crab-shaped" identity, not an arbitrary choice).
+ * there's no spawn-time hook for this check to run from yet either. Real custom {@code crabtalk} sound
+ * restored 2026-09-15 (was a vanilla spider-sound stand-in), same bundled sound {@link EntityEldritchCrab}
+ * itself uses - see {@link thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment.
  */
 public class EntityInhabitedZombie extends Zombie implements IEldritchMob {
 
@@ -94,7 +93,7 @@ public class EntityInhabitedZombie extends Zombie implements IEldritchMob {
 
 	@Override
 	protected SoundEvent getAmbientSound() {
-		return SoundEvents.SPIDER_AMBIENT;
+		return thaumcraft.common.registry.ThaumcraftSounds.CRABTALK.get();
 	}
 
 	@Override

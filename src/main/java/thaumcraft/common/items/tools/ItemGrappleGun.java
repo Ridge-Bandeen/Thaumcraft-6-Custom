@@ -1,6 +1,5 @@
 package thaumcraft.common.items.tools;
 
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -13,6 +12,7 @@ import net.minecraft.world.level.Level;
 import thaumcraft.api.items.IRechargable;
 import thaumcraft.api.items.RechargeHelper;
 import thaumcraft.common.entities.projectile.EntityGrapple;
+import thaumcraft.common.registry.ThaumcraftSounds;
 
 /**
  * Replaces the old (1.12.2) {@code ItemGrappleGun} - a rechargable (100 max charge, same
@@ -22,8 +22,8 @@ import thaumcraft.common.entities.projectile.EntityGrapple;
  * override (a bow-like drawn/undrawn appearance) is wired in {@code ThaumcraftClient} against
  * {@link EntityGrapple#hasActive} directly, needing no stored per-stack state.
  *
- * The original's own {@code SoundsTC.ice} fire sound isn't ported (a custom sound); substituted with vanilla's
- * {@link SoundEvents#TRIDENT_THROW}, a real "launch a mechanical projectile" sound.
+ * Real custom {@code ice} fire sound restored 2026-09-15 (was a vanilla {@code TRIDENT_THROW} stand-in) -
+ * see {@link ThaumcraftSounds}'s own doc comment.
  */
 public class ItemGrappleGun extends Item implements IRechargable {
 
@@ -44,7 +44,7 @@ public class ItemGrappleGun extends Item implements IRechargable {
 	@Override
 	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
 		ItemStack stack = player.getItemInHand(hand);
-		level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.TRIDENT_THROW,
+		level.playSound(null, player.getX(), player.getY(), player.getZ(), ThaumcraftSounds.ICE.get(),
 				SoundSource.PLAYERS, 3.0f, 0.8f + level.getRandom().nextFloat() * 0.1f);
 
 		if (!level.isClientSide && RechargeHelper.getCharge(stack) > 0) {

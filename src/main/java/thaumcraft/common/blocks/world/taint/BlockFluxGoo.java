@@ -65,9 +65,10 @@ import thaumcraft.common.registry.ThaumcraftMobEffects;
  * class behavior there isn't available to reference, so goo simply can't flow into/through them (treated the
  * same as any other solid, non-taking neighbor); the original's own milk-cures-this exemption for the
  * VIS_EXHAUST debuff has no modern hook at all (modern milk clears every active effect unconditionally, no
- * per-effect curative-item list exists any more). Custom {@code SoundsTC.GORE} sound type isn't registered
- * in this port, stands in with real vanilla {@code SoundType.SLIME_BLOCK} (a real gooey-liquid match, same
- * real reasoning {@code BlockTaintFibre} already used it for).
+ * per-effect curative-item list exists any more). Real custom {@code GORE} sound type restored 2026-09-15 -
+ * see {@link thaumcraft.api.blocks.BlocksTC#fluxGoo}'s own registration and {@link
+ * thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment (was a vanilla {@code SoundType.SLIME_BLOCK}
+ * stand-in until then).
  */
 public class BlockFluxGoo extends Block {
 

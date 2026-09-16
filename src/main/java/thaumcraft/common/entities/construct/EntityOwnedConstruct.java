@@ -4,7 +4,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -15,6 +14,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.NameTagItem;
 import net.minecraft.world.level.Level;
+import thaumcraft.common.registry.ThaumcraftSounds;
 
 /**
  * Replaces the old (1.12.2) {@code EntityOwnedConstruct} - the shared base for the turret/bore family. The
@@ -32,9 +32,8 @@ import net.minecraft.world.level.Level;
  * exactly), real never-despawns persistence, real "clear my attack target if it's now an ally" per-tick
  * check, and the real "you don't own this" interaction message for non-owners.
  *
- * Real, documented vanilla sound substitution: the original's own custom {@code SoundsTC.clack}/{@code
- * SoundsTC.tool} aren't registered in this port, stand in with real vanilla iron golem sounds (a real
- * metallic-construct-flavored match, not an arbitrary choice).
+ * Real custom {@code clack}/{@code tool} sounds restored 2026-09-15 (were vanilla iron-golem stand-ins) -
+ * see {@link ThaumcraftSounds}'s own doc comment.
  */
 public class EntityOwnedConstruct extends TamableAnimal {
 
@@ -61,17 +60,17 @@ public class EntityOwnedConstruct extends TamableAnimal {
 
 	@Override
 	protected SoundEvent getAmbientSound() {
-		return SoundEvents.IRON_GOLEM_STEP;
+		return ThaumcraftSounds.CLACK.get();
 	}
 
 	@Override
 	protected SoundEvent getHurtSound(DamageSource damageSource) {
-		return SoundEvents.IRON_GOLEM_HURT;
+		return ThaumcraftSounds.CLACK.get();
 	}
 
 	@Override
 	protected SoundEvent getDeathSound() {
-		return SoundEvents.IRON_GOLEM_DEATH;
+		return ThaumcraftSounds.TOOL.get();
 	}
 
 	@Override

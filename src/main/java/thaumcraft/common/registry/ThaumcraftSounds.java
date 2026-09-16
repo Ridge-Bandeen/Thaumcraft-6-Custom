@@ -3,6 +3,8 @@ package thaumcraft.common.registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.level.block.SoundType;
+import net.neoforged.neoforge.common.util.DeferredSoundType;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import thaumcraft.Thaumcraft;
@@ -17,10 +19,17 @@ import thaumcraft.Thaumcraft;
  * {@code runicshieldecharge} key didn't match the real {@code runicshieldcharge} id every other real
  * source, including the {@code .ogg} filename itself, actually used).
  *
- * <p>{@link net.minecraft.world.level.block.SoundType}s the true original built from 4 of these
- * ({@code GORE}/{@code CRYSTAL}/{@code JAR}/{@code URN}) are not ported here - each real consumer wires
- * its own {@code SoundType} substitute already (see e.g. {@code BlockTaintFibre}'s own doc comment),
- * this class only needed to carry the raw {@link SoundEvent}s themselves.
+ * <p>Also carries the 4 real {@link SoundType}s the true original's own {@code SoundsTC.registerSoundTypes()}
+ * built from these raw sounds ({@code GORE}/{@code CRYSTAL}/{@code JAR}/{@code URN}), each real consumer's
+ * block registration in {@code BlocksTC} wires one of these in place of its old vanilla stand-in (see e.g.
+ * {@code BlockFluxGoo}'s own doc comment). Built via NeoForge's own {@link DeferredSoundType}, not the
+ * plain {@link SoundType} constructor directly - a real {@code SoundType} needs its {@link SoundEvent}s at
+ * {@code Block} construction time, which happens before {@code SOUND_EVENT}'s own {@code RegisterEvent}
+ * fires, so eagerly calling {@code .get()} on a {@link DeferredHolder} that early would throw;
+ * {@code DeferredSoundType} defers each sound lookup to first real use instead. Named {@code GORE_TYPE}/
+ * {@code CRYSTAL_TYPE}/{@code JAR_TYPE} (not bare {@code GORE}/{@code CRYSTAL}/{@code JAR}) to avoid
+ * colliding with this class's own raw {@link SoundEvent} fields of the same name; {@code URN} has no
+ * raw-sound namesake ({@code URNBREAK} is the raw sound) so it keeps the true original's own bare name.
  */
 public final class ThaumcraftSounds {
 
@@ -91,6 +100,15 @@ public final class ThaumcraftSounds {
 	public static final DeferredHolder<SoundEvent, SoundEvent> EVILPORTAL = SOUNDS.register("evilportal", () -> SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "evilportal")));
 	public static final DeferredHolder<SoundEvent, SoundEvent> GRIND = SOUNDS.register("grind", () -> SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "grind")));
 	public static final DeferredHolder<SoundEvent, SoundEvent> DUST = SOUNDS.register("dust", () -> SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "dust")));
+
+	/** Matches the true original's own {@code new SoundType(0.5f, 1.0f, gore, gore, gore, gore, gore)}. */
+	public static final SoundType GORE_TYPE = new DeferredSoundType(0.5f, 1.0f, GORE, GORE, GORE, GORE, GORE);
+	/** Matches the true original's own {@code new SoundType(0.5f, 1.0f, crystal, crystal, crystal, crystal, crystal)}. */
+	public static final SoundType CRYSTAL_TYPE = new DeferredSoundType(0.5f, 1.0f, CRYSTAL, CRYSTAL, CRYSTAL, CRYSTAL, CRYSTAL);
+	/** Matches the true original's own {@code new SoundType(0.5f, 1.0f, jar, jar, jar, jar, jar)}. */
+	public static final SoundType JAR_TYPE = new DeferredSoundType(0.5f, 1.0f, JAR, JAR, JAR, JAR, JAR);
+	/** Matches the true original's own {@code new SoundType(0.5f, 1.5f, urnbreak, urnbreak, urnbreak, urnbreak, urnbreak)}. */
+	public static final SoundType URN = new DeferredSoundType(0.5f, 1.5f, URNBREAK, URNBREAK, URNBREAK, URNBREAK, URNBREAK);
 
 	private ThaumcraftSounds() {
 	}

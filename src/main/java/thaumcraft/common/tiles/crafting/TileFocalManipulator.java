@@ -10,7 +10,6 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -34,6 +33,7 @@ import thaumcraft.api.items.ThaumcraftDataComponents;
 import thaumcraft.common.container.FocalManipulatorMenu;
 import thaumcraft.common.items.casters.ItemFocus;
 import thaumcraft.common.registry.ThaumcraftBlockEntities;
+import thaumcraft.common.registry.ThaumcraftSounds;
 import thaumcraft.common.world.aura.AuraHandler;
 
 /**
@@ -50,9 +50,8 @@ import thaumcraft.common.world.aura.AuraHandler;
  *
  * Simplified vs the original: no {@code doGuiReset}/{@code receiveClientEvent} GUI-sync plumbing (no GUI
  * yet); no client-side particle FX while charging (the unconverted {@code FXDispatcher}, same cut every
- * other device this session made); {@code SoundsTC.wandfail}/{@code wand}/{@code craftstart} (a whole
- * unregistered custom-sound subsystem, confirmed again this session by {@code EntityWisp}/
- * {@code EntityFluxRift}) stand in with plain vanilla sounds instead. The original's
+ * other device this session made). Real custom {@code wandfail}/{@code wand}/{@code craftstart} sounds
+ * restored 2026-09-15 (were vanilla stand-ins) - see {@link ThaumcraftSounds}'s own doc comment. The original's
  * {@code InventoryUtils}/{@code ThaumcraftApiHelper} crystal-cost helpers aren't ported (still 1.12.2) -
  * {@link #hasCrystals}/{@link #consumeCrystals} below do the same "does the player carry N crystals of
  * aspect X" check directly against vanilla's own {@link net.minecraft.world.entity.player.Inventory#clearOrCountMatchingItems}.
@@ -151,7 +150,7 @@ public class TileFocalManipulator extends BlockEntity implements MenuProvider {
 		ItemStack focus = tile.getFocus();
 		if (focus.isEmpty() || !(focus.getItem() instanceof ItemFocus)) {
 			tile.vis = 0.0f;
-			level.playSound(null, pos, SoundEvents.VILLAGER_NO, SoundSource.BLOCKS, 0.33f, 1.0f);
+			level.playSound(null, pos, ThaumcraftSounds.WANDFAIL.get(), SoundSource.BLOCKS, 0.33f, 1.0f);
 			return;
 		}
 		float amt = tile.spendAura(level, Math.min(20.0f, tile.vis));
@@ -214,7 +213,7 @@ public class TileFocalManipulator extends BlockEntity implements MenuProvider {
 		if (core == null) {
 			return;
 		}
-		level.playSound(null, pos, SoundEvents.PLAYER_LEVELUP, SoundSource.BLOCKS, 1.0f, 1.0f);
+		level.playSound(null, pos, ThaumcraftSounds.WAND.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
 		focus.set(ThaumcraftDataComponents.ASSEMBLED_FOCUS.get(), new ThaumcraftDataComponents.AssembledFocus(core));
 		if (!focusName.isEmpty()) {
 			focus.set(DataComponents.CUSTOM_NAME, Component.literal(focusName));
@@ -278,7 +277,7 @@ public class TileFocalManipulator extends BlockEntity implements MenuProvider {
 		setChanged();
 		Level level = getLevel();
 		if (level != null) {
-			level.playSound(null, getBlockPos(), SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 1.0f, 1.0f);
+			level.playSound(null, getBlockPos(), ThaumcraftSounds.CRAFTSTART.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
 		}
 		return true;
 	}

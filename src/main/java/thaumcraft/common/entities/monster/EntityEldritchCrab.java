@@ -27,6 +27,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import thaumcraft.api.entities.IEldritchMob;
+import thaumcraft.common.registry.ThaumcraftSounds;
 
 /**
  * Replaces the old (1.12.2) {@code EntityEldritchCrab} - a real {@link Monster} subclass (the original was
@@ -145,7 +146,7 @@ public class EntityEldritchCrab extends Monster implements IEldritchMob {
 	@Override
 	public boolean doHurtTarget(Entity target) {
 		if (super.doHurtTarget(target)) {
-			playSound(SoundEvents.SPIDER_HURT, 1.0f, 0.9f + random.nextFloat() * 0.2f);
+			playSound(ThaumcraftSounds.CRABCLAW.get(), 1.0f, 0.9f + random.nextFloat() * 0.2f);
 			return true;
 		}
 		return false;
@@ -158,17 +159,18 @@ public class EntityEldritchCrab extends Monster implements IEldritchMob {
 		}
 	}
 
-	/** Real, documented substitution: the original's own custom {@code SoundsTC.crabtalk}/{@code crabdeath}/
-	 * {@code crabclaw} sounds aren't registered in this port yet - stands in with vanilla spider sounds
-	 * (a real arthropod-flavored match) rather than standing up custom sound registration for one mob. */
+	/** Real custom {@code crabtalk}/{@code crabdeath}/{@code crabclaw} sounds restored 2026-09-15 (were
+	 * vanilla spider-sound stand-ins) - see {@link ThaumcraftSounds}'s own doc comment. Hurt sound keeps
+	 * vanilla {@code GENERIC_HURT} - the true original itself used {@code SoundEvents.ENTITY_GENERIC_HURT}
+	 * here, not a custom sound. */
 	@Override
 	protected SoundEvent getAmbientSound() {
-		return SoundEvents.SPIDER_AMBIENT;
+		return ThaumcraftSounds.CRABTALK.get();
 	}
 
 	@Override
 	protected SoundEvent getDeathSound() {
-		return SoundEvents.SPIDER_DEATH;
+		return ThaumcraftSounds.CRABDEATH.get();
 	}
 
 	@Override

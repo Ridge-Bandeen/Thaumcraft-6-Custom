@@ -407,21 +407,25 @@ public final class BlocksTC {
 
 	/** The first real {@link thaumcraft.api.aspects.IAspectSource}/{@link thaumcraft.api.aspects.IEssentiaTransport}
 	 * device this port has built - see {@link thaumcraft.common.tiles.essentia.TileJarFillable}'s own doc
-	 * comment for why no physical tube network was needed to make it functional. */
+	 * comment for why no physical tube network was needed to make it functional. Real custom {@code JAR}
+	 * {@link SoundType} restored 2026-09-15 (was a vanilla {@code GLASS} stand-in) - see {@link
+	 * thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockJar> jarNormal = BLOCKS.registerBlock("jar_normal",
 			thaumcraft.common.blocks.essentia.BlockJar::new,
-			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY).strength(0.3f).sound(SoundType.GLASS).noOcclusion());
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY).strength(0.3f).sound(thaumcraft.common.registry.ThaumcraftSounds.JAR_TYPE).noOcclusion());
 
-	/** See {@link thaumcraft.common.blocks.essentia.BlockJarVoid}'s own doc comment. */
+	/** See {@link thaumcraft.common.blocks.essentia.BlockJarVoid}'s own doc comment. Real custom {@code JAR}
+	 * {@link SoundType} restored 2026-09-15 (was a vanilla {@code GLASS} stand-in). */
 	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockJarVoid> jarVoid = BLOCKS.registerBlock("jar_void",
 			thaumcraft.common.blocks.essentia.BlockJarVoid::new,
-			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY).strength(0.3f).sound(SoundType.GLASS).noOcclusion());
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY).strength(0.3f).sound(thaumcraft.common.registry.ThaumcraftSounds.JAR_TYPE).noOcclusion());
 
 	/** See {@link thaumcraft.common.blocks.essentia.BlockJarBrain}'s own doc comment - the "Brain in a Jar",
-	 * a portable XP battery. */
+	 * a portable XP battery. Real custom {@code JAR} {@link SoundType} restored 2026-09-15 (was a vanilla
+	 * {@code GLASS} stand-in). */
 	public static final DeferredBlock<thaumcraft.common.blocks.essentia.BlockJarBrain> jarBrain = BLOCKS.registerBlock("jar_brain",
 			thaumcraft.common.blocks.essentia.BlockJarBrain::new,
-			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY).strength(0.3f).sound(SoundType.GLASS).noOcclusion());
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY).strength(0.3f).sound(thaumcraft.common.registry.ThaumcraftSounds.JAR_TYPE).noOcclusion());
 
 	/** First real consumer of the {@code IEssentiaTransport} draw mechanic {@link #jarNormal} proved out -
 	 * see {@link thaumcraft.common.tiles.devices.TileLampGrowth}'s own doc comment. */
@@ -648,10 +652,12 @@ public final class BlocksTC {
 	}
 
 	/** Mainly useful as the Crucible catalyst for Sanity Soap - see
-	 * {@link thaumcraft.common.blocks.misc.BlockFlesh}'s own doc comment. */
+	 * {@link thaumcraft.common.blocks.misc.BlockFlesh}'s own doc comment. Real custom {@code GORE}
+	 * {@link SoundType} restored 2026-09-15 (was a vanilla {@code SLIME_BLOCK} stand-in) - see {@link
+	 * thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockFlesh> fleshBlock = BLOCKS.registerBlock("flesh_block",
 			thaumcraft.common.blocks.misc.BlockFlesh::new,
-			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(0.25f, 2.0f).sound(SoundType.SLIME_BLOCK));
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(0.25f, 2.0f).sound(thaumcraft.common.registry.ThaumcraftSounds.GORE_TYPE));
 
 	/** Widens an Arcane Workbench's vis draw to a 3x3 chunk block - see
 	 * {@link thaumcraft.common.blocks.crafting.BlockArcaneWorkbenchCharger}'s own doc comment. */
@@ -717,20 +723,22 @@ public final class BlocksTC {
 
 	/** Stone-material sibling of {@link #lootCrateCommon} - the true original's own dungeon urn decoration,
 	 * sharing the same {@link thaumcraft.common.blocks.misc.BlockLoot} class and loot-table-based drop
-	 * mechanic. The true original gave urns a genuinely smaller hitbox and a distinct "urnbreak" sound from
-	 * the wooden crates; this port keeps the one shared crate-shaped VoxelShape (a documented simplification -
-	 * see BlockLoot's own doc comment) but does use a real, thematically-matching vanilla break sound. */
+	 * mechanic. The true original gave urns a genuinely smaller hitbox (a documented simplification - see
+	 * BlockLoot's own doc comment - this port keeps the one shared crate-shaped VoxelShape) but its real
+	 * distinct "urnbreak" sound is restored as of 2026-09-15 via the now-registered {@code URN} {@link
+	 * SoundType} (was a vanilla {@code DECORATED_POT} stand-in) - see {@link
+	 * thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockLoot> lootUrnCommon = BLOCKS.registerBlock("loot_urn_common",
 			thaumcraft.common.blocks.misc.BlockLoot::new,
-			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(0.15f, 0.0f).sound(SoundType.DECORATED_POT).noOcclusion());
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(0.15f, 0.0f).sound(thaumcraft.common.registry.ThaumcraftSounds.URN).noOcclusion());
 
 	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockLoot> lootUrnUncommon = BLOCKS.registerBlock("loot_urn_uncommon",
 			thaumcraft.common.blocks.misc.BlockLoot::new,
-			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(0.15f, 0.0f).sound(SoundType.DECORATED_POT).noOcclusion());
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(0.15f, 0.0f).sound(thaumcraft.common.registry.ThaumcraftSounds.URN).noOcclusion());
 
 	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockLoot> lootUrnRare = BLOCKS.registerBlock("loot_urn_rare",
 			thaumcraft.common.blocks.misc.BlockLoot::new,
-			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(0.15f, 0.0f).sound(SoundType.DECORATED_POT).noOcclusion());
+			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(0.15f, 0.0f).sound(thaumcraft.common.registry.ThaumcraftSounds.URN).noOcclusion());
 
 	/** See {@link thaumcraft.common.blocks.crafting.BlockInfusionMatrix}'s own doc comment for what's
 	 * simplified about this device this pass. */
@@ -845,10 +853,11 @@ public final class BlocksTC {
 			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(1.0f, 10.0f).sound(SoundType.METAL).noOcclusion());
 
 	/** See {@link thaumcraft.common.blocks.devices.BlockMirror}'s own doc comment - the item-transport Node
-	 * Transducer. */
+	 * Transducer. Real custom {@code JAR} {@link SoundType} restored 2026-09-15 (was a vanilla {@code GLASS}
+	 * stand-in) - see {@link thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockMirror> mirror = BLOCKS.registerBlock("mirror",
 			thaumcraft.common.blocks.devices.BlockMirror::new,
-			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(0.1f).sound(SoundType.GLASS).noOcclusion());
+			BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(0.1f).sound(thaumcraft.common.registry.ThaumcraftSounds.JAR_TYPE).noOcclusion());
 
 	/** See {@link thaumcraft.common.blocks.devices.BlockMirrorEssentia}'s own doc comment - the
 	 * essentia-transport Node Transducer, {@link #mirror}'s sibling. */
@@ -860,31 +869,35 @@ public final class BlocksTC {
 	 * of the taint-terrain arc. {@code randomTicks()} matches the original's own {@code setTickRandomly(true)};
 	 * {@code lightLevel(BlockTaintFibre::lightLevel)} is the real modern replacement for the original's own
 	 * per-instance {@code getLightValue} override (no such override point exists any more - only this
-	 * builder-time function). */
+	 * builder-time function). Real custom {@code GORE} {@link SoundType} restored 2026-09-15 (was a vanilla
+	 * {@code SLIME_BLOCK} stand-in) - see {@link thaumcraft.common.registry.ThaumcraftSounds}'s own doc
+	 * comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.world.taint.BlockTaintFibre> taintFibre = BLOCKS.registerBlock("taint_fibre",
 			thaumcraft.common.blocks.world.taint.BlockTaintFibre::new,
-			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(1.0f).sound(SoundType.SLIME_BLOCK)
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(1.0f).sound(thaumcraft.common.registry.ThaumcraftSounds.GORE_TYPE)
 					.noOcclusion().randomTicks()
 					.lightLevel(thaumcraft.common.blocks.world.taint.BlockTaintFibre::lightLevel));
 
 	/** See {@link thaumcraft.common.blocks.world.taint.BlockTaint}'s own doc comment - one shared class
 	 * backing all four registered variants below, matching the original's own single-class-many-
-	 * registrations shape. */
+	 * registrations shape. Real custom {@code GORE} {@link SoundType} restored 2026-09-15 across all 4
+	 * variants (was a vanilla {@code STONE} stand-in) - see {@link
+	 * thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.world.taint.BlockTaint> taintRock = BLOCKS.registerBlock("taint_rock",
 			props -> new thaumcraft.common.blocks.world.taint.BlockTaint(props, thaumcraft.common.blocks.world.taint.BlockTaint.Variant.ROCK),
-			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(SoundType.STONE).randomTicks());
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(thaumcraft.common.registry.ThaumcraftSounds.GORE_TYPE).randomTicks());
 
 	public static final DeferredBlock<thaumcraft.common.blocks.world.taint.BlockTaint> taintSoil = BLOCKS.registerBlock("taint_soil",
 			props -> new thaumcraft.common.blocks.world.taint.BlockTaint(props, thaumcraft.common.blocks.world.taint.BlockTaint.Variant.SOIL),
-			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(SoundType.STONE).randomTicks());
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(thaumcraft.common.registry.ThaumcraftSounds.GORE_TYPE).randomTicks());
 
 	public static final DeferredBlock<thaumcraft.common.blocks.world.taint.BlockTaint> taintCrust = BLOCKS.registerBlock("taint_crust",
 			props -> new thaumcraft.common.blocks.world.taint.BlockTaint(props, thaumcraft.common.blocks.world.taint.BlockTaint.Variant.CRUST),
-			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(SoundType.STONE).randomTicks());
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(thaumcraft.common.registry.ThaumcraftSounds.GORE_TYPE).randomTicks());
 
 	public static final DeferredBlock<thaumcraft.common.blocks.world.taint.BlockTaint> taintGeyser = BLOCKS.registerBlock("taint_geyser",
 			props -> new thaumcraft.common.blocks.world.taint.BlockTaint(props, thaumcraft.common.blocks.world.taint.BlockTaint.Variant.GEYSER),
-			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(SoundType.STONE).randomTicks());
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(10.0f, 100.0f).sound(thaumcraft.common.registry.ThaumcraftSounds.GORE_TYPE).randomTicks());
 
 	/** Real re-skinned copy of vanilla's own {@link net.minecraft.world.level.block.PoweredRailBlock}
 	 * (constructed the exact same real way vanilla's own {@code Blocks.ACTIVATOR_RAIL} is, {@code
@@ -910,10 +923,12 @@ public final class BlocksTC {
 	 * FluidType}. {@code .noCollission()} matches the original's own {@code isSideSolid} always returning
 	 * false; {@code .liquid()} matches its real vanilla {@code Material}-equivalent classification;
 	 * {@code .noLootTable()} matches the original never overriding any drop behavior (fluids don't drop
-	 * themselves when "mined"). */
+	 * themselves when "mined"). Real custom {@code GORE} {@link SoundType} restored 2026-09-15 (was a
+	 * vanilla {@code SLIME_BLOCK} stand-in) - see {@link thaumcraft.common.registry.ThaumcraftSounds}'s
+	 * own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.world.taint.BlockFluxGoo> fluxGoo = BLOCKS.registerBlock("flux_goo",
 			thaumcraft.common.blocks.world.taint.BlockFluxGoo::new,
-			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).sound(SoundType.SLIME_BLOCK)
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).sound(thaumcraft.common.registry.ThaumcraftSounds.GORE_TYPE)
 					.noCollission().liquid().noLootTable().noOcclusion()
 					.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
 
@@ -962,17 +977,19 @@ public final class BlocksTC {
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(0.1f).sound(SoundType.WOOL)
 					.noOcclusion().randomTicks().lightLevel(state -> 9));
 
-	/** Real vanilla-substitute sound type ({@code SoundType.WART_BLOCK}, fleshy) - this port hasn't ported
-	 * the original's own custom "gore" {@code SoundEvent} catalog yet. */
+	/** Real custom {@code GORE} {@link SoundType} restored 2026-09-15 (was a vanilla {@code WART_BLOCK}
+	 * stand-in) - see {@link thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.world.taint.BlockTaintLog> taintLog = BLOCKS.registerBlock("taint_log",
 			thaumcraft.common.blocks.world.taint.BlockTaintLog::new,
-			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(3.0f, 100.0f).sound(SoundType.WART_BLOCK).randomTicks());
+			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(3.0f, 100.0f).sound(thaumcraft.common.registry.ThaumcraftSounds.GORE_TYPE).randomTicks());
 
 	/** Real self-spreading crystal-cluster formations, one real registration per real {@link
 	 * thaumcraft.api.aspects.Aspect} - see {@link thaumcraft.common.blocks.world.ore.BlockCrystal}'s own doc
 	 * comment. Registry names match the original's own internal aspect tag naming (e.g. {@code crystal_aer}
 	 * for Air), not the English aspect names, matching the original's own real asset naming this port's own
-	 * still-present {@code crystal_*.json} blockstate/item-model files already use. */
+	 * still-present {@code crystal_*.json} blockstate/item-model files already use. Real custom {@code
+	 * CRYSTAL} {@link SoundType} restored 2026-09-15 (was a vanilla {@code AMETHYST_CLUSTER} stand-in) - see
+	 * {@link thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment. */
 	public static final Map<thaumcraft.api.aspects.Aspect, DeferredBlock<thaumcraft.common.blocks.world.ore.BlockCrystal>> crystals = new java.util.LinkedHashMap<>();
 	static {
 		registerCrystal("crystal_aer", thaumcraft.api.aspects.Aspect.AIR);
@@ -987,7 +1004,7 @@ public final class BlocksTC {
 	private static void registerCrystal(String id, thaumcraft.api.aspects.Aspect aspect) {
 		DeferredBlock<thaumcraft.common.blocks.world.ore.BlockCrystal> block = BLOCKS.registerBlock(id,
 				props -> new thaumcraft.common.blocks.world.ore.BlockCrystal(props, aspect),
-				BlockBehaviour.Properties.of().mapColor(MapColor.NONE).strength(0.25f).sound(SoundType.AMETHYST_CLUSTER)
+				BlockBehaviour.Properties.of().mapColor(MapColor.NONE).strength(0.25f).sound(thaumcraft.common.registry.ThaumcraftSounds.CRYSTAL_TYPE)
 						.noOcclusion().noCollission().randomTicks().lightLevel(state -> 1));
 		crystals.put(aspect, block);
 	}

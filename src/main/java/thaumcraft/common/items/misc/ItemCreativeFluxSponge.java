@@ -4,7 +4,6 @@ import java.util.List;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -18,6 +17,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import thaumcraft.api.aura.AuraHelper;
 import thaumcraft.common.entities.EntityFluxRift;
+import thaumcraft.common.registry.ThaumcraftSounds;
 
 /**
  * Replaces the old (1.12.2) {@code ItemCreativeFluxSponge} - a real, creative-only debug/utility item, a
@@ -28,10 +28,8 @@ import thaumcraft.common.entities.EntityFluxRift;
  * of 500) centered on the player; sneak-right-clicking also removes every real {@link EntityFluxRift} within
  * 32 blocks.
  *
- * <p>Real modern substitution: {@code SoundsTC.craftstart} (the original's own real activation sound) isn't
- * registered in this port yet (see {@code EntityCultistPortalLesser}'s own doc comment for the same real
- * gap) - a real, thematically-fitting vanilla substitute ({@code SoundEvents.EVOKER_CAST_SPELL}) is used
- * instead.
+ * <p>Real custom {@code craftstart} activation sound restored 2026-09-15 (was a vanilla {@code
+ * EVOKER_CAST_SPELL} stand-in) - see {@link ThaumcraftSounds}'s own doc comment.
  */
 public class ItemCreativeFluxSponge extends Item {
 
@@ -53,7 +51,7 @@ public class ItemCreativeFluxSponge extends Item {
 		ItemStack stack = player.getItemInHand(hand);
 		if (level.isClientSide) {
 			player.swing(hand);
-			level.playSound(player, player.getX(), player.getY(), player.getZ(), SoundEvents.EVOKER_CAST_SPELL, SoundSource.PLAYERS, 0.15f, 1.0f);
+			level.playSound(player, player.getX(), player.getY(), player.getZ(), ThaumcraftSounds.CRAFTSTART.get(), SoundSource.PLAYERS, 0.15f, 1.0f);
 			return InteractionResultHolder.success(stack);
 		}
 

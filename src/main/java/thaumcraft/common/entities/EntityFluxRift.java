@@ -12,7 +12,6 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -88,8 +87,8 @@ import thaumcraft.common.world.aura.AuraHandler;
  * <li>No client-side tendril particle trail ({@code FXDispatcher.drawCurlyWisp}, driven by the unconverted
  * client FX dispatcher) - the same "no custom renderer/particle pipeline" boundary this whole port has
  * kept since Cinderpearl's own client FX.</li>
- * <li>{@code SoundsTC.evilportal} (a whole unregistered custom-sound subsystem, confirmed again this
- * session by {@code EntityWisp}) stands in with a plain vanilla sound instead.</li>
+ * <li>Real custom {@code evilportal} sound restored 2026-09-15 (was a vanilla {@code PORTAL_AMBIENT}
+ * stand-in) - see {@link thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment.</li>
  * </ul>
  */
 public class EntityFluxRift extends Entity {
@@ -300,7 +299,7 @@ public class EntityFluxRift extends Entity {
 			}
 		}
 		if (isAlive() && tickCount % 300 == 0) {
-			playSound(SoundEvents.PORTAL_AMBIENT, 0.15f + (float) (random.nextGaussian() * 0.066), 0.75f + (float) (random.nextGaussian() * 0.1));
+			playSound(thaumcraft.common.registry.ThaumcraftSounds.EVILPORTAL.get(), 0.15f + (float) (random.nextGaussian() * 0.066), 0.75f + (float) (random.nextGaussian() * 0.1));
 		}
 	}
 

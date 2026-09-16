@@ -33,6 +33,7 @@ import thaumcraft.common.blocks.world.taint.TaintHelper;
 import thaumcraft.common.items.resources.ItemCrystalEssence;
 import thaumcraft.common.registry.ThaumcraftEntities;
 import thaumcraft.common.registry.ThaumcraftMobEffects;
+import thaumcraft.common.registry.ThaumcraftSounds;
 import thaumcraft.common.world.aura.AuraHandler;
 
 /**
@@ -57,8 +58,9 @@ import thaumcraft.common.world.aura.AuraHandler;
  * {@link EntityTaintacle#spawnTentacles} (identical logic, duplicated the same way in the true original) now
  * that the real {@code thaumcraft:eldritch} biome exists - see that method's own doc comment for the full
  * real story. {@link #getArea} defaults to 1 real chunk-ish unit, matching the original exactly ({@link
- * EntityTaintSeedPrime} doubles it). Custom {@code SoundsTC.tentacle} audio substitution, same real vanilla
- * Warden tendril-click stand-in {@code EntityTaintacle} already established.
+ * EntityTaintSeedPrime} doubles it). Real custom {@code tentacle} sound restored 2026-09-15 (was a vanilla
+ * Warden tendril-click stand-in), same bundled sound {@link EntityTaintacle} itself uses - see {@link
+ * ThaumcraftSounds}'s own doc comment.
  */
 public class EntityTaintSeed extends Monster implements ITaintedMob {
 
@@ -186,7 +188,7 @@ public class EntityTaintSeed extends Monster implements ITaintedMob {
 		taintlet.moveTo(entity.getX() + random.nextFloat() - random.nextFloat(), entity.getY(),
 				entity.getZ() + random.nextFloat() - random.nextFloat(), 0.0f, 0.0f);
 		serverLevel.addFreshEntity(taintlet);
-		playSound(SoundEvents.WARDEN_TENDRIL_CLICKS, getSoundVolume(), getVoicePitch());
+		playSound(ThaumcraftSounds.TENTACLE.get(), getSoundVolume(), getVoicePitch());
 		if (inEldritchBiome && level().getBlockState(pos).isAir() && EntityTaintacle.isAdjacentToSolidBlock(level(), pos)) {
 			level().setBlock(pos, thaumcraft.api.blocks.BlocksTC.taintFibre.get().defaultBlockState(), 3);
 		}
@@ -204,7 +206,7 @@ public class EntityTaintSeed extends Monster implements ITaintedMob {
 	@Override
 	public boolean doHurtTarget(Entity target) {
 		if (super.doHurtTarget(target)) {
-			playSound(SoundEvents.WARDEN_TENDRIL_CLICKS, getSoundVolume(), getVoicePitch());
+			playSound(ThaumcraftSounds.TENTACLE.get(), getSoundVolume(), getVoicePitch());
 			return true;
 		}
 		return false;
@@ -227,12 +229,12 @@ public class EntityTaintSeed extends Monster implements ITaintedMob {
 
 	@Override
 	protected SoundEvent getHurtSound(DamageSource damageSource) {
-		return SoundEvents.WARDEN_TENDRIL_CLICKS;
+		return ThaumcraftSounds.TENTACLE.get();
 	}
 
 	@Override
 	protected SoundEvent getDeathSound() {
-		return SoundEvents.WARDEN_TENDRIL_CLICKS;
+		return ThaumcraftSounds.TENTACLE.get();
 	}
 
 	@Override

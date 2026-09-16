@@ -4,7 +4,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -16,6 +15,7 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import thaumcraft.common.registry.ThaumcraftSounds;
 
 /**
  * Replaces the old (1.12.2) {@code EntityCultistPortalLesser} - an immobile "monolith" that periodically
@@ -36,11 +36,10 @@ import net.minecraft.world.phys.Vec3;
  * Real, documented cuts: no "always full-bright" self-illumination - the original's own {@code
  * getBrightnessForRender}/{@code getBrightness} overrides don't have a real modern equivalent (entities
  * don't carry their own light-emission override point any more; lighting is purely block-based now), a
- * real, minor cosmetic loss. Vanilla sound substitutions throughout (the original's own bundled {@code
- * SoundsTC.craftstart}/{@code monolith}/{@code zap}/{@code shock} aren't registered in this port yet, same
- * real reason {@code EntityEldritchCrab}/{@code EntityInhabitedZombie} already document). The original's
- * own {@code getTiming()} method is dead code in the original too (declared, never called anywhere in that
- * same file) - not ported.
+ * real, minor cosmetic loss. Real custom {@code craftstart}/{@code wandfail}/{@code monolith}/{@code zap}/
+ * {@code shock} sounds restored 2026-09-15 (were vanilla stand-ins) - see {@link ThaumcraftSounds}'s own
+ * doc comment. The original's own {@code getTiming()} method is dead code in the original too (declared,
+ * never called anywhere in that same file) - not ported.
  */
 public class EntityCultistPortalLesser extends Monster {
 
@@ -119,7 +118,7 @@ public class EntityCultistPortalLesser extends Monster {
 		if (!isActive()) {
 			if (tickCount % 10 == 0 && level().getNearestPlayer(this, 32.0) != null) {
 				setActive(true);
-				playSound(SoundEvents.BEACON_ACTIVATE, 1.0f, 1.0f);
+				playSound(ThaumcraftSounds.CRAFTSTART.get(), 1.0f, 1.0f);
 			}
 		}
 		else if (stageCounter-- <= 0) {
@@ -148,14 +147,14 @@ public class EntityCultistPortalLesser extends Monster {
 		cultist.finalizeSpawn(serverLevel, level().getCurrentDifficultyAt(cultist.blockPosition()),
 				net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, null);
 		serverLevel.addFreshEntity(cultist);
-		cultist.playSound(SoundEvents.EVOKER_CAST_SPELL, 1.0f, 1.0f);
+		cultist.playSound(ThaumcraftSounds.WANDFAIL.get(), 1.0f, 1.0f);
 		hurt(damageSources().magic(), 5 + random.nextInt(5));
 	}
 
 	@Override
 	public void playerTouch(Player player) {
 		if (distanceToSqr(player) < 3.0 && player.hurt(damageSources().indirectMagic(this, this), 4.0f)) {
-			playSound(SoundEvents.LIGHTNING_BOLT_THUNDER, 1.0f, (random.nextFloat() - random.nextFloat()) * 0.1f + 1.0f);
+			playSound(ThaumcraftSounds.ZAP.get(), 1.0f, (random.nextFloat() - random.nextFloat()) * 0.1f + 1.0f);
 		}
 	}
 
@@ -169,16 +168,16 @@ public class EntityCultistPortalLesser extends Monster {
 
 	@Override
 	protected SoundEvent getAmbientSound() {
-		return SoundEvents.BEACON_AMBIENT;
+		return ThaumcraftSounds.MONOLITH.get();
 	}
 
 	@Override
 	protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
-		return SoundEvents.LIGHTNING_BOLT_THUNDER;
+		return ThaumcraftSounds.ZAP.get();
 	}
 
 	@Override
 	protected SoundEvent getDeathSound() {
-		return SoundEvents.LIGHTNING_BOLT_IMPACT;
+		return ThaumcraftSounds.SHOCK.get();
 	}
 }

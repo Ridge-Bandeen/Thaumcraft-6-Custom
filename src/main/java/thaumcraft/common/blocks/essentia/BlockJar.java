@@ -30,6 +30,7 @@ import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.aspects.IEssentiaContainerItem;
 import thaumcraft.api.blocks.ILabelable;
 import thaumcraft.common.registry.ThaumcraftBlockEntities;
+import thaumcraft.common.registry.ThaumcraftSounds;
 import thaumcraft.common.tiles.essentia.TileJarFillable;
 
 /**
@@ -49,6 +50,11 @@ import thaumcraft.common.tiles.essentia.TileJarFillable;
  *
  * Right-clicking with a jar brace ({@code ItemsTC.jarBrace}) locks the jar out of pull-based scans via
  * {@link TileJarFillable#applyBrace} - see that method's own doc comment for the real mechanic.
+ *
+ * Real custom {@code jar}/{@code key} sound events restored 2026-09-15 (were vanilla {@code BOTTLE_FILL}/
+ * {@code TRIPWIRE_CLICK_ON} stand-ins) - see {@link ThaumcraftSounds}'s own doc comment. The empty-hand
+ * dump still also plays a real vanilla {@code BOTTLE_FILL}, matching the true original's own dual-sound
+ * dump cue exactly ({@code SoundsTC.jar} + {@code ITEM_BOTTLE_FILL} together).
  */
 public class BlockJar extends Block implements EntityBlock, ILabelable {
 
@@ -77,7 +83,8 @@ public class BlockJar extends Block implements EntityBlock, ILabelable {
 
 		if (player.isShiftKeyDown() && stack.isEmpty()) {
 			tile.emptyIntoAura(level, pos);
-			level.playSound(null, pos, SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 0.4f, 1.0f);
+			level.playSound(null, pos, ThaumcraftSounds.JAR.get(), SoundSource.BLOCKS, 0.4f, 1.0f);
+			level.playSound(null, pos, SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 0.5f, 1.0f + (level.random.nextFloat() - level.random.nextFloat()) * 0.3f);
 			return ItemInteractionResult.SUCCESS;
 		}
 
@@ -85,7 +92,7 @@ public class BlockJar extends Block implements EntityBlock, ILabelable {
 			if (!player.getAbilities().instabuild) {
 				stack.shrink(1);
 			}
-			level.playSound(null, pos, SoundEvents.TRIPWIRE_CLICK_ON, SoundSource.BLOCKS, 1.0f, 1.0f);
+			level.playSound(null, pos, ThaumcraftSounds.KEY.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
 			return ItemInteractionResult.SUCCESS;
 		}
 
@@ -101,7 +108,7 @@ public class BlockJar extends Block implements EntityBlock, ILabelable {
 						if (!player.getAbilities().instabuild) {
 							stack.shrink(1);
 						}
-						level.playSound(null, pos, SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 0.4f, 1.0f);
+						level.playSound(null, pos, ThaumcraftSounds.JAR.get(), SoundSource.BLOCKS, 0.2f, 1.0f);
 						return ItemInteractionResult.SUCCESS;
 					}
 				}
@@ -125,7 +132,7 @@ public class BlockJar extends Block implements EntityBlock, ILabelable {
 			}
 		}
 		if (!tile.applyLabel(labelAspect)) return false;
-		player.level().playSound(null, pos, SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 0.4f, 1.0f);
+		player.level().playSound(null, pos, ThaumcraftSounds.JAR.get(), SoundSource.BLOCKS, 0.4f, 1.0f);
 		return true;
 	}
 

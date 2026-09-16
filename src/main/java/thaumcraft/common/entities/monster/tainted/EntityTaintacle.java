@@ -28,6 +28,7 @@ import thaumcraft.api.entities.ITaintedMob;
 import thaumcraft.api.items.ItemsTC;
 import thaumcraft.common.blocks.world.taint.ITaintBlock;
 import thaumcraft.common.items.resources.ItemCrystalEssence;
+import thaumcraft.common.registry.ThaumcraftSounds;
 
 /**
  * Replaces the old (1.12.2) {@code EntityTaintacle} - a real, stationary {@link Monster} rooted to taint
@@ -52,10 +53,10 @@ import thaumcraft.common.items.resources.ItemCrystalEssence;
  * real "no renderer yet" gap {@code FIRE_BAT}/{@code SPELL_BAT} already carry). The original's own {@code
  * faceEntity}/{@code updateRotation} pair is real, harmless dead code in the original itself (a 2-argument
  * override that doesn't actually match vanilla 1.12's real 3-argument {@code EntityLiving#faceEntity}, so
- * nothing ever called it) - not reproduced. Custom {@code SoundsTC.tentacle} audio isn't registered in this
- * port, stands in with the real vanilla Warden's tendril-click sound (a real writhing-tentacle-flavored
- * match, not an arbitrary choice) for hurt/death/attack; the original's own ambient sound ({@code
- * BLOCK_CHORUS_FLOWER_DEATH}) was already a real vanilla choice, kept unchanged.
+ * nothing ever called it) - not reproduced. Real custom {@code tentacle} sound restored 2026-09-15 for
+ * hurt/death/attack (was a vanilla Warden tendril-click stand-in) - see {@link ThaumcraftSounds}'s own doc
+ * comment; the original's own ambient sound ({@code BLOCK_CHORUS_FLOWER_DEATH}) was already a real vanilla
+ * choice, kept unchanged.
  */
 public class EntityTaintacle extends Monster implements ITaintedMob {
 
@@ -138,7 +139,7 @@ public class EntityTaintacle extends Monster implements ITaintedMob {
 		taintlet.moveTo(entity.getX() + random.nextFloat() - random.nextFloat(), entity.getY(),
 				entity.getZ() + random.nextFloat() - random.nextFloat(), 0.0f, 0.0f);
 		serverLevel.addFreshEntity(taintlet);
-		playSound(SoundEvents.WARDEN_TENDRIL_CLICKS, getSoundVolume(), getVoicePitch());
+		playSound(ThaumcraftSounds.TENTACLE.get(), getSoundVolume(), getVoicePitch());
 		if (inEldritchBiome && level().getBlockState(pos).isAir() && isAdjacentToSolidBlock(level(), pos)) {
 			level().setBlock(pos, thaumcraft.api.blocks.BlocksTC.taintFibre.get().defaultBlockState(), 3);
 		}
@@ -158,7 +159,7 @@ public class EntityTaintacle extends Monster implements ITaintedMob {
 	@Override
 	public boolean doHurtTarget(Entity target) {
 		if (super.doHurtTarget(target)) {
-			playSound(SoundEvents.WARDEN_TENDRIL_CLICKS, getSoundVolume(), getVoicePitch());
+			playSound(ThaumcraftSounds.TENTACLE.get(), getSoundVolume(), getVoicePitch());
 			return true;
 		}
 		return false;
@@ -181,12 +182,12 @@ public class EntityTaintacle extends Monster implements ITaintedMob {
 
 	@Override
 	protected SoundEvent getHurtSound(DamageSource damageSource) {
-		return SoundEvents.WARDEN_TENDRIL_CLICKS;
+		return ThaumcraftSounds.TENTACLE.get();
 	}
 
 	@Override
 	protected SoundEvent getDeathSound() {
-		return SoundEvents.WARDEN_TENDRIL_CLICKS;
+		return ThaumcraftSounds.TENTACLE.get();
 	}
 
 	@Override

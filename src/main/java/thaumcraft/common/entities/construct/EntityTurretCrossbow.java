@@ -58,9 +58,9 @@ import thaumcraft.api.items.ItemsTC;
  * single ammo slot, and real auto-reload from a dispenser already covers the same real need without one;
  * sneaking to pick the turret back up still works. No looting-level scaling on death drops (the original's
  * own manual {@code treasure*0.15f} bonus needed a real looting-level lookup this port doesn't have a
- * ready modern helper for) - flat base chances only, a real, minor simplification. Custom {@code
- * SoundsTC.ticks}/{@code SoundsTC.zap} audio isn't registered in this port, stands in with real vanilla
- * sounds instead.
+ * ready modern helper for) - flat base chances only, a real, minor simplification. Real custom {@code
+ * ticks}/{@code zap} sounds restored 2026-09-15 (were vanilla stand-ins) - see {@link
+ * thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment.
  */
 public class EntityTurretCrossbow extends EntityOwnedConstruct implements RangedAttackMob {
 
@@ -150,7 +150,7 @@ public class EntityTurretCrossbow extends EntityOwnedConstruct implements Ranged
 				ItemStack stack = dispenser.getItem(slot);
 				if (!stack.isEmpty() && stack.getItem() instanceof ArrowItem) {
 					setItemInHand(InteractionHand.MAIN_HAND, dispenser.removeItem(slot, stack.getCount()));
-					playSound(SoundEvents.NOTE_BLOCK_HAT.value(), 1.0f, 1.0f);
+					playSound(thaumcraft.common.registry.ThaumcraftSounds.TICKS.get(), 1.0f, 1.0f);
 					level().broadcastEntityEvent(this, (byte) 17);
 					break;
 				}
@@ -179,7 +179,7 @@ public class EntityTurretCrossbow extends EntityOwnedConstruct implements Ranged
 	@Override
 	public InteractionResult mobInteract(Player player, InteractionHand hand) {
 		if (!level().isClientSide && isOwnedBy(player) && isAlive() && player.isShiftKeyDown()) {
-			playSound(SoundEvents.AMETHYST_BLOCK_CHIME, 1.0f, 1.0f);
+			playSound(thaumcraft.common.registry.ThaumcraftSounds.ZAP.get(), 1.0f, 1.0f);
 			dropAmmo();
 			spawnAtLocation(new ItemStack(ItemsTC.turretPlacerBasic.get()), 0.5f);
 			discard();

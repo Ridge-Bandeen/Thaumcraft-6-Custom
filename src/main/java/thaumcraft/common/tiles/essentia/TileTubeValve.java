@@ -8,15 +8,16 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.common.registry.ThaumcraftBlockEntities;
+import thaumcraft.common.registry.ThaumcraftSounds;
 
 import javax.annotation.Nullable;
 
 /**
  * Replaces the old (1.12.2) {@code TileTubeValve} - a {@link TileTube} that redstone-gates its own flow: an
  * incoming redstone signal (indirect, same real {@code isBlockIndirectlyGettingPowered} check the original
- * used) shuts it, losing the signal reopens it, each transition playing a real vanilla trapdoor open/close
- * cue (a plain stand-in for the original's own custom {@code SoundsTC.squeek}, matching this port's "no
- * client FX dispatcher" precedent everywhere else - a real sound cue, not a silent state change).
+ * used) shuts it, losing the signal reopens it, each transition playing the real custom {@code squeek} cue
+ * restored 2026-09-15 (was a vanilla trapdoor open/close stand-in) - see {@link ThaumcraftSounds}'s own doc
+ * comment; the true original uses the same {@code squeek} sound for both transitions, at 0.7f volume.
  *
  * <b>Real, disclosed simplification, not a new one</b> - same "no per-face open/close toggling" gap
  * {@link TileTube}'s own doc comment already flagged for the whole tube family (blocked on the never-ported
@@ -47,12 +48,12 @@ public class TileTubeValve extends TileTube {
 				boolean poweredNow = level.hasNeighborSignal(pos);
 				if (tile.wasPoweredLastTick && !poweredNow && !tile.allowFlow) {
 					tile.allowFlow = true;
-					level.playSound(null, pos, net.minecraft.sounds.SoundEvents.WOODEN_TRAPDOOR_OPEN, SoundSource.BLOCKS, 0.4f, 0.9f + level.getRandom().nextFloat() * 0.2f);
+					level.playSound(null, pos, ThaumcraftSounds.SQUEEK.get(), SoundSource.BLOCKS, 0.7f, 0.9f + level.getRandom().nextFloat() * 0.2f);
 					tile.setChanged();
 				}
 				if (!tile.wasPoweredLastTick && poweredNow && tile.allowFlow) {
 					tile.allowFlow = false;
-					level.playSound(null, pos, net.minecraft.sounds.SoundEvents.WOODEN_TRAPDOOR_CLOSE, SoundSource.BLOCKS, 0.4f, 0.9f + level.getRandom().nextFloat() * 0.2f);
+					level.playSound(null, pos, ThaumcraftSounds.SQUEEK.get(), SoundSource.BLOCKS, 0.7f, 0.9f + level.getRandom().nextFloat() * 0.2f);
 					tile.setChanged();
 				}
 				tile.wasPoweredLastTick = poweredNow;

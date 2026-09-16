@@ -11,6 +11,7 @@ import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.casters.FocusEffect;
 import thaumcraft.api.casters.NodeSetting;
 import thaumcraft.api.casters.Trajectory;
+import thaumcraft.common.registry.ThaumcraftSounds;
 
 /**
  * Replaces the old (1.12.2) {@code FocusEffectAir}. Damage plus knockback, unlike the other plain-damage
@@ -18,8 +19,8 @@ import thaumcraft.api.casters.Trajectory;
  * double)} is {@link LivingEntity#knockback(double, double, double)} now (no attacker parameter; strength
  * and direction ratios only).
  *
- * {@code SoundsTC.wind} (the original's cast sound) isn't ported - substituted
- * {@link SoundEvents#PHANTOM_FLAP}, a real vanilla sound in the same "wind/flight" register.
+ * Real custom {@code wind} cast sound restored 2026-09-15 (was a vanilla {@code PHANTOM_FLAP} stand-in) -
+ * see {@link ThaumcraftSounds}'s own doc comment.
  */
 public class FocusEffectAir extends FocusEffect {
 
@@ -84,6 +85,6 @@ public class FocusEffectAir extends FocusEffect {
 
 	@Override
 	public void onCast(Entity caster) {
-		caster.level().playSound(null, caster.blockPosition().above(), SoundEvents.PHANTOM_FLAP, SoundSource.PLAYERS, 0.125f, 2.0f);
+		caster.level().playSound(null, caster.blockPosition().above(), ThaumcraftSounds.WIND.get(), SoundSource.PLAYERS, 0.125f, 2.0f);
 	}
 }

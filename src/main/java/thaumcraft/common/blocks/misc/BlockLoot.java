@@ -16,10 +16,11 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * uncommon/rare}) placed by {@code EntityCultistPortalGreater} during its staged encounter, plus the
  * material-{@code ROCK} sibling {@code loot_urn_common/uncommon/rare} dungeon-decoration variant (plain
  * placeable/breakable worldgen dressing, not tied to any encounter). The true original gave the urn variant
- * its own smaller {@code getBoundingBox} and a distinct "urnbreak" {@code SoundType} from the wooden
- * crates; this port shares one {@code VoxelShape} (matching the crate's own real box exactly) across both,
- * a real, minor, documented simplification, while still giving urns a real, thematically-matching vanilla
- * sound ({@code SoundType.DECORATED_POT}) via each urn block's own registration in {@code BlocksTC}.
+ * its own smaller {@code getBoundingBox}; this port shares one {@code VoxelShape} (matching the crate's own
+ * real box exactly) across both, a real, minor, documented simplification. The urn variant's real "urnbreak"
+ * {@code SoundType} ({@code URN}) is restored as of 2026-09-15 via each urn block's own registration in
+ * {@code BlocksTC} (was a vanilla {@code DECORATED_POT} stand-in) - see {@link
+ * thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment.
  *
  * The original's own drops came from {@code Utils.generateLoot} - a hand-written weighted-tier gear
  * generator (leather-through-diamond armor progression, random enchantments, plus a fallback

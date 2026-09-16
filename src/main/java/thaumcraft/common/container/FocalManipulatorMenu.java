@@ -7,12 +7,12 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
 import thaumcraft.common.registry.ThaumcraftMenus;
+import thaumcraft.common.registry.ThaumcraftSounds;
 import thaumcraft.common.tiles.crafting.TileFocalManipulator;
 
 /**
@@ -83,9 +83,11 @@ public class FocalManipulatorMenu extends AbstractContainerMenu {
 	}
 
 	/** Button id 0 = "start craft" - replaces the original's own {@code enchantItem} hook. Only meaningful
-	 * server-side (the client instance has no real {@link #tile}); a failed attempt plays the same
-	 * vanilla-substitute "no" sound {@code TileFocalManipulator#tick} already uses for the equivalent
-	 * failure case, matching the original's own {@code SoundsTC.craftfail} cue. */
+	 * server-side (the client instance has no real {@link #tile}); a failed attempt plays the real custom
+	 * {@code craftfail} cue (restored 2026-09-15, was a vanilla {@code VILLAGER_NO} stand-in - see {@link
+	 * ThaumcraftSounds}'s own doc comment), matching the true original's own {@code SoundsTC.craftfail}
+	 * exactly - distinct from {@code TileFocalManipulator#tick}'s own {@code wandfail} cue for the separate
+	 * mid-charge abort case. */
 	@Override
 	public boolean clickMenuButton(Player player, int id) {
 		if (id == 0 && tile != null) {
@@ -93,7 +95,7 @@ public class FocalManipulatorMenu extends AbstractContainerMenu {
 			if (!started) {
 				Level level = tile.getLevel();
 				if (level != null) {
-					level.playSound(null, tile.getBlockPos(), SoundEvents.VILLAGER_NO, SoundSource.BLOCKS, 0.33f, 1.0f);
+					level.playSound(null, tile.getBlockPos(), ThaumcraftSounds.CRAFTFAIL.get(), SoundSource.BLOCKS, 0.33f, 1.0f);
 				}
 			}
 			return started;
