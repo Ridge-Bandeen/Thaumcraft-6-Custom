@@ -53,9 +53,9 @@ import thaumcraft.common.tiles.misc.TileBanner;
  * Real, documented cuts: no "always full-bright" self-illumination and no renderer (same real reasons
  * {@link thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser}'s own doc comment already
  * explains - entities don't carry a light-emission override point any more, and the original's own version
- * is a fully custom raw-immediate-mode-GL billboard). No custom FX packet broadcast on stage-progress events
- * (the original's own {@code PacketFXBlockArc}/client "pulse" signal, tied to that same unported renderer).
- * Vanilla sound substitutions throughout.
+ * is a fully custom raw-immediate-mode-GL billboard). Real {@code PacketFXBlockArc} stage-progress "pulse"
+ * signal restored 2026-09-15 (see {@link #sendArcPulse}) alongside its real {@code wandfail} sound (was a
+ * vanilla {@code EVOKER_CAST_SPELL} stand-in).
  */
 public class EntityCultistPortalGreater extends Monster {
 
@@ -211,7 +211,8 @@ public class EntityCultistPortalGreater extends Monster {
 				};
 				banner.setBannerFacing(face);
 			}
-			playSound(SoundEvents.EVOKER_CAST_SPELL, 1.0f, 1.0f);
+			sendArcPulse(bp);
+			playSound(thaumcraft.common.registry.ThaumcraftSounds.WANDFAIL.get(), 1.0f, 1.0f);
 		}
 	}
 
@@ -225,7 +226,23 @@ public class EntityCultistPortalGreater extends Monster {
 		float rr = random.nextFloat();
 		var crate = rr < 0.05f ? BlocksTC.lootCrateRare.get() : rr < 0.2f ? BlocksTC.lootCrateUncommon.get() : BlocksTC.lootCrateCommon.get();
 		level().setBlockAndUpdate(bp, crate.defaultBlockState());
-		playSound(SoundEvents.EVOKER_CAST_SPELL, 1.0f, 1.0f);
+		sendArcPulse(bp);
+		playSound(thaumcraft.common.registry.ThaumcraftSounds.WANDFAIL.get(), 1.0f, 1.0f);
+	}
+
+	/** Real client "pulse" signal from a real stage-0 setup block to this portal's own centre, restored
+	 * 2026-09-15 - matches the true original's own real {@code PacketFXBlockArc} call at both real call
+	 * sites exactly (same reddish colour roll, same real 32-block broadcast radius). This purely cosmetic
+	 * packet failing to send (e.g. a GameTest mock player, no real client connection) never takes the real
+	 * setup event down with it. */
+	private void sendArcPulse(BlockPos from) {
+		if (!(level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
+		try {
+			net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(serverLevel, null, getX(), getY(), getZ(), 32.0,
+					thaumcraft.common.lib.network.fx.PacketFXBlockArc.of(from, this, 0.5f + random.nextFloat() * 0.2f, 0.0f, 0.0f));
+		} catch (Exception e) {
+			thaumcraft.Thaumcraft.LOGGER.debug("Cultist portal arc FX packet failed to send (no real client connection?)", e);
+		}
 	}
 
 	private void spawnMinion() {

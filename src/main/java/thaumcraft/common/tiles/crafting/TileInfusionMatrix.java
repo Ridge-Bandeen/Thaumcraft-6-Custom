@@ -383,8 +383,22 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		return new AABB(worldPosition).inflate(10.0);
 	}
 
+	/** Real {@code PacketFXBlockArc} feedback restored 2026-09-15 (see {@link thaumcraft.client.fx.beams.FXArc}'s
+	 * own doc comment) - was never self-documented as a gap anywhere in this class before, only found by
+	 * cross-checking the true original directly. */
 	private void inEvZap(Level level, RandomSource rand, boolean all) {
+		net.minecraft.server.level.ServerLevel serverLevel = level instanceof net.minecraft.server.level.ServerLevel sl ? sl : null;
 		for (net.minecraft.world.entity.LivingEntity target : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, nearbyBox())) {
+			if (serverLevel != null) {
+				try {
+					net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(serverLevel, null,
+							worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(), 32.0,
+							thaumcraft.common.lib.network.fx.PacketFXBlockArc.of(worldPosition, target,
+									0.3f - rand.nextFloat() * 0.1f, 0.0f, 0.3f - rand.nextFloat() * 0.1f));
+				} catch (Exception e) {
+					thaumcraft.Thaumcraft.LOGGER.debug("Infusion Matrix zap FX packet failed to send (no real client connection?)", e);
+				}
+			}
 			target.hurt(level.damageSources().magic(), 4 + rand.nextInt(4));
 			if (!all) break;
 		}
@@ -413,15 +427,19 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 	 * additionally place a real {@link thaumcraft.api.blocks.BlocksTC#fluxGoo} above the pedestal; types 2/4
 	 * additionally pollute the real local aura; type 5 additionally sets off a real explosion at the
 	 * pedestal itself (independent of the plain matrix-centered explosion
-	 * {@link #triggerInstabilityEvent}'s own default case already covers). */
+	 * {@link #triggerInstabilityEvent}'s own default case already covers). Real {@code PacketFXBlockArc}
+	 * feedback restored 2026-09-15 - see {@link #sendArcPulse}. */
 	private void inEvEjectItem(Level level, RandomSource rand, int type) {
 		if (pedestals.isEmpty()) return;
+		if (!(level instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
 		for (int tries = 0; tries < 25; tries++) {
 			BlockPos pp = pedestals.get(rand.nextInt(pedestals.size()));
 			if (level.getBlockEntity(pp) instanceof TilePedestal ped && !ped.getItem().isEmpty()) {
 				BlockPos stabPos = ped.findInstabilityMitigator();
 				if (stabPos != null && level.getBlockEntity(stabPos) instanceof thaumcraft.common.tiles.devices.TileStabilizer stabilizer
 						&& stabilizer.mitigate(5 + rand.nextInt(6))) {
+					sendArcPulse(serverLevel, worldPosition, pp.above(), pp, rand);
+					sendArcPulse(serverLevel, pp.above(), stabPos, stabPos, rand);
 					return;
 				}
 
@@ -438,8 +456,25 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 				} else if (type == 5) {
 					level.explode(null, pp.getX() + 0.5, pp.getY() + 0.5, pp.getZ() + 0.5, 1.0f, false, Level.ExplosionInteraction.BLOCK);
 				}
+				sendArcPulse(serverLevel, worldPosition, pp.above(), pp, rand);
 				return;
 			}
+		}
+	}
+
+	/** Real {@code PacketFXBlockArc} feedback shared by {@link #inEvEjectItem}'s own 2 real call sites
+	 * (a plain single pulse for the normal eject outcomes, 2 chained pulses - matrix to pedestal, pedestal to
+	 * stabilizer - for the real stabilizer-redirect case) - restored 2026-09-15, see
+	 * {@link thaumcraft.client.fx.beams.FXArc}'s own doc comment. Never self-documented as a gap here before,
+	 * only found by cross-checking the true original directly. */
+	private void sendArcPulse(net.minecraft.server.level.ServerLevel serverLevel, BlockPos from, BlockPos to, BlockPos broadcastCenter, RandomSource rand) {
+		try {
+			net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(serverLevel, null,
+					broadcastCenter.getX(), broadcastCenter.getY(), broadcastCenter.getZ(), 32.0,
+					thaumcraft.common.lib.network.fx.PacketFXBlockArc.of(from, to,
+							0.3f - rand.nextFloat() * 0.1f, 0.0f, 0.3f - rand.nextFloat() * 0.1f));
+		} catch (Exception e) {
+			thaumcraft.Thaumcraft.LOGGER.debug("Infusion Matrix eject arc FX packet failed to send (no real client connection?)", e);
 		}
 	}
 

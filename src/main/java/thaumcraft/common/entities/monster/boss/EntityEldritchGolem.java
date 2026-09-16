@@ -53,9 +53,9 @@ import thaumcraft.common.entities.projectile.EntityGolemOrb;
  * {@link EntityCultistLeader}/{@link EntityEldritchWarden}), and no format-type bug either (a single
  * {@code %s} against the real {@code String} mod name lines up correctly, unlike the other two).
  *
- * Real, documented cuts: no arc-lightning "search for a ground target" client FX (the original's own {@code
- * handleStatusUpdate} case 19 / {@code onUpdate} - purely decorative, tied to the unported {@code
- * FXDispatcher}; the actual attack it decorated, the {@link EntityGolemOrb} shot, is kept in full). No
+ * Real arc-lightning "search for a ground target" client FX, restored 2026-09-15 (the original's own {@code
+ * handleStatusUpdate} case 19 / {@code onUpdate}, purely decorative) - see {@link #handleEntityEvent}/{@link
+ * #aiStep} and {@link thaumcraft.client.fx.beams.FXArc}'s own doc comment for the real modern rendering. No
  * "destroys the block it's standing on" griefing mechanic (a minor, real-risk-to-player-builds behavior, not
  * central to the fight). No headless-vs-normal visual distinction (tied to the not-yet-ported mesh - see
  * {@link thaumcraft.client.render.ModelEldritchPlaceholder}'s own doc comment). No arm-lift swing animation
@@ -68,6 +68,14 @@ public class EntityEldritchGolem extends EntityThaumcraftBoss implements RangedA
 
 	private int hurtTimer;
 	private int beamCharge;
+
+	/** Real, purely decorative, client-only arc-lightning "search for a ground target" state - restored
+	 * 2026-09-15. See the class doc comment and {@link #handleEntityEvent}/{@link #aiStep} for the full real
+	 * mechanic. No NBT/sync needed - {@code ax}/{@code ay}/{@code az} are picked randomly client-side off a
+	 * real {@code byte 19} broadcast, never server-authoritative, matching the true original's own real
+	 * {@code handleStatusUpdate} shape exactly. */
+	private int arcing;
+	private double ax, ay, az;
 
 	public EntityEldritchGolem(EntityType<? extends EntityEldritchGolem> type, Level level) {
 		super(type, level);
@@ -159,9 +167,60 @@ public class EntityEldritchGolem extends EntityThaumcraftBoss implements RangedA
 		if (hurtTimer > 0) {
 			hurtTimer--;
 		}
-		if (!level().isClientSide && isHeadless() && beamCharge < 150) {
-			beamCharge++;
+		if (!level().isClientSide) {
+			if (isHeadless() && beamCharge < 150) {
+				beamCharge++;
+				level().broadcastEntityEvent(this, (byte) 19);
+			}
+		} else if (arcing > 0) {
+			thaumcraft.client.fx.ClientFxHandlers.spawnGolemArc(this, ax, ay, az, arcing);
+			arcing--;
 		}
+	}
+
+	/** Real client-side interpreter of the {@code byte 19} broadcast {@link #aiStep} fires every tick while
+	 * charging - see the class doc comment. Matches the true original's own {@code handleStatusUpdate} case
+	 * 19, including a real bug faithfully reproduced (same precedent {@code FocusEffectExchange}'s own
+	 * operator-precedence bug already established - keep real original behavior, don't silently improve it):
+	 * the original's own downward search loop constructs {@code bp} once, then never reassigns it inside the
+	 * loop body despite decrementing its own counter, so the loop's own "probe up to 5 blocks downward for
+	 * solid ground" never actually re-checks a lower block at all - it only ever tests the single position at
+	 * the golem's own exact standing height. In practice this only picks a real target when a nearby random
+	 * point (2-4 blocks out) happens to have solid ground with open air above it AT the golem's own foot
+	 * height (a real ledge/step, not flat ground it's standing in the middle of) - a real, if narrow,
+	 * occasional flourish rather than a guaranteed one, matching the true original's own real rarity. */
+	@Override
+	public void handleEntityEvent(byte id) {
+		if (id == 19) {
+			if (arcing == 0) {
+				float radius = 2.0f + random.nextFloat() * 2.0f;
+				double radians = Math.toRadians(random.nextInt(360));
+				double deltaX = radius * Math.cos(radians);
+				double deltaZ = radius * Math.sin(radians);
+				int bx = net.minecraft.util.Mth.floor(getX() + deltaX);
+				int by = net.minecraft.util.Mth.floor(getY());
+				int bz = net.minecraft.util.Mth.floor(getZ() + deltaZ);
+				net.minecraft.core.BlockPos bp = new net.minecraft.core.BlockPos(bx, by, bz);
+				for (int c = 0; c < 5 && level().isEmptyBlock(bp); c++, by--) {
+					// Faithfully empty - see this method's own doc comment for why bp is never reassigned here.
+				}
+				if (level().isEmptyBlock(bp.above()) && !level().isEmptyBlock(bp)) {
+					ax = bx;
+					ay = by;
+					az = bz;
+					arcing = 8 + random.nextInt(5);
+					playSound(thaumcraft.common.registry.ThaumcraftSounds.JACOBS.get(), 0.8f, 1.0f + (random.nextFloat() - random.nextFloat()) * 0.05f);
+				}
+			}
+		} else {
+			super.handleEntityEvent(id);
+		}
+	}
+
+	/** Test-only accessor, not part of the true original's own API - lets GameTest assert the real
+	 * client-side arc-search outcome directly instead of only indirectly (e.g. via the sound it plays). */
+	public int getArcingForTesting() {
+		return arcing;
 	}
 
 	@Override

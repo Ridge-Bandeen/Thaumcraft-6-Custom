@@ -392,6 +392,8 @@ sourceSets {
             include 'thaumcraft/common/lib/network/ServerFocalManipulatorHandlers.java'
             include 'thaumcraft/client/fx/ClientFxHandlers.java'
             include 'thaumcraft/common/entities/EntityFollowingItem.java'
+            include 'thaumcraft/client/fx/beams/FXArc.java'
+            include 'thaumcraft/common/lib/network/fx/PacketFXBlockArc.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'
             include 'thaumcraft/api/internal/IInternalMethodHandler.java'

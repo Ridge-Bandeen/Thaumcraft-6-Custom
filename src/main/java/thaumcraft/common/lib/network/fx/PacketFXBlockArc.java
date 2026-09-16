@@ -1,78 +1,79 @@
 package thaumcraft.common.lib.network.fx;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
-import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import thaumcraft.client.fx.FXDispatcher;
 
+import org.joml.Vector3f;
 
-public class PacketFXBlockArc implements IMessage, IMessageHandler<PacketFXBlockArc, IMessage>
-{
-    private int x;
-    private int y;
-    private int z;
-    private float tx;
-    private float ty;
-    private float tz;
-    private float r;
-    private float g;
-    private float b;
-    
-    public PacketFXBlockArc() {
-    }
-    
-    public PacketFXBlockArc(BlockPos pos, Entity source, float r, float g, float b) {
-        x = pos.getX();
-        y = pos.getY();
-        z = pos.getZ();
-        tx = (float)source.posX;
-        ty = (float)(source.getEntityBoundingBox().minY + source.height / 2.0f);
-        tz = (float)source.posZ;
-        this.r = r;
-        this.g = g;
-        this.b = b;
-    }
-    
-    public PacketFXBlockArc(BlockPos pos, BlockPos pos2, float r, float g, float b) {
-        x = pos.getX();
-        y = pos.getY();
-        z = pos.getZ();
-        tx = pos2.getX() + 0.5f;
-        ty = pos2.getY() + 0.5f;
-        tz = pos2.getZ() + 0.5f;
-        this.r = r;
-        this.g = g;
-        this.b = b;
-    }
-    
-    public void toBytes(ByteBuf buffer) {
-        buffer.writeInt(x);
-        buffer.writeInt(y);
-        buffer.writeInt(z);
-        buffer.writeFloat(tx);
-        buffer.writeFloat(ty);
-        buffer.writeFloat(tz);
-        buffer.writeFloat(r);
-        buffer.writeFloat(g);
-        buffer.writeFloat(b);
-    }
-    
-    public void fromBytes(ByteBuf buffer) {
-        x = buffer.readInt();
-        y = buffer.readInt();
-        z = buffer.readInt();
-        tx = buffer.readFloat();
-        ty = buffer.readFloat();
-        tz = buffer.readFloat();
-        r = buffer.readFloat();
-        g = buffer.readFloat();
-        b = buffer.readFloat();
-    }
-    
-    public IMessage onMessage(PacketFXBlockArc message, MessageContext ctx) {
-        FXDispatcher.INSTANCE.arcLightning(message.tx, message.ty, message.tz, message.x + 0.5, message.y + 0.5, message.z + 0.5, message.r, message.g, message.b, 0.5f);
-        return null;
-    }
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import thaumcraft.Thaumcraft;
+
+/**
+ * Replaces the old (1.12.2) {@code PacketFXBlockArc} - a client-bound arc-lightning flash between two real
+ * points, restored 2026-09-15 alongside {@link thaumcraft.client.fx.beams.FXArc} (see that class's own doc
+ * comment for the real modern rendering). Both endpoints are plain snapshotted positions (matching the
+ * original's own real shape exactly) - never a live entity reference, so no id-resolution/despawn race is
+ * possible client-side. Packs colour into a single RGB {@code int} (same convention
+ * {@link PacketFXBlockBamf} already established) since {@link StreamCodec#composite} only supports up to 6
+ * real fields and this needs source + target + colour - 9 raw floats would have blown that limit.
+ *
+ * <p>The two real convenience factories below match the original's own two real constructors (entity-
+ * anchored source, matching {@link thaumcraft.common.entities.monster.boss.EntityCultistPortalGreater}/
+ * {@link thaumcraft.common.entities.monster.boss.EntityEldritchWarden}'s own real call sites; block-anchored
+ * source/target, matching {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix}'s own real instability-
+ * event redirect feedback) - see {@code Thaumcraft#registerPayloads} for registration and
+ * {@link thaumcraft.client.fx.ClientFxHandlers#handleBlockArc} for the actual visual.
+ */
+public record PacketFXBlockArc(Vector3f source, Vector3f target, int color) implements CustomPacketPayload {
+
+	public static final Type<PacketFXBlockArc> TYPE =
+			new Type<>(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "fx_block_arc"));
+
+	public static final StreamCodec<RegistryFriendlyByteBuf, PacketFXBlockArc> STREAM_CODEC = StreamCodec.composite(
+			ByteBufCodecs.VECTOR3F, PacketFXBlockArc::source,
+			ByteBufCodecs.VECTOR3F, PacketFXBlockArc::target,
+			ByteBufCodecs.VAR_INT, PacketFXBlockArc::color,
+			PacketFXBlockArc::new);
+
+	/** Matches the true original's own {@code PacketFXBlockArc(BlockPos pos, Entity source, r, g, b)} -
+	 * arcs from {@code pos + 0.5} to the source entity's own real centre. */
+	public static PacketFXBlockArc of(BlockPos pos, Entity source, float r, float g, float b) {
+		return new PacketFXBlockArc(
+				new Vector3f(pos.getX() + 0.5f, pos.getY() + 0.5f, pos.getZ() + 0.5f),
+				new Vector3f((float) source.getX(), (float) (source.getBoundingBox().minY + source.getBbHeight() / 2.0f), (float) source.getZ()),
+				packColor(r, g, b));
+	}
+
+	/** Matches the true original's own {@code PacketFXBlockArc(BlockPos pos, BlockPos pos2, r, g, b)} -
+	 * arcs between the real centres of two blocks. */
+	public static PacketFXBlockArc of(BlockPos pos, BlockPos pos2, float r, float g, float b) {
+		return new PacketFXBlockArc(
+				new Vector3f(pos.getX() + 0.5f, pos.getY() + 0.5f, pos.getZ() + 0.5f),
+				new Vector3f(pos2.getX() + 0.5f, pos2.getY() + 0.5f, pos2.getZ() + 0.5f),
+				packColor(r, g, b));
+	}
+
+	private static int packColor(float r, float g, float b) {
+		return ((int) (r * 255.0f) << 16) | ((int) (g * 255.0f) << 8) | (int) (b * 255.0f);
+	}
+
+	public float red() {
+		return ((color >> 16) & 0xFF) / 255.0f;
+	}
+
+	public float green() {
+		return ((color >> 8) & 0xFF) / 255.0f;
+	}
+
+	public float blue() {
+		return (color & 0xFF) / 255.0f;
+	}
+
+	@Override
+	public Type<? extends CustomPacketPayload> type() {
+		return TYPE;
+	}
 }

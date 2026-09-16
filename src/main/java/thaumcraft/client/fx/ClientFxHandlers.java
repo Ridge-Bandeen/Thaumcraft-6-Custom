@@ -18,6 +18,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.common.Tags;
 import thaumcraft.api.blocks.BlocksTC;
+import thaumcraft.client.fx.beams.FXArc;
+import thaumcraft.common.lib.network.fx.PacketFXBlockArc;
 import thaumcraft.common.lib.network.fx.PacketFXBlockBamf;
 import thaumcraft.common.lib.network.fx.PacketFXScanSource;
 import thaumcraft.common.lib.network.fx.PacketFXSlash;
@@ -29,9 +31,11 @@ import thaumcraft.common.lib.network.fx.PacketFXSlash;
  * ever invoked on the receiving (client) side - registering it is a common concern (both sides need the
  * payload's codec to en/decode it), actually running it isn't. See that method's own doc comment.
  *
- * Every effect here is built from plain vanilla particles/sounds, not the original's custom
- * {@code FXDispatcher}/{@code ParticleEngine} renderer pipeline - the same boundary this whole port has kept
- * since Cinderpearl's own client FX, now extended to cover networked effects too.
+ * Most effects here are still built from plain vanilla particles/sounds, not the original's custom
+ * {@code FXDispatcher}/{@code ParticleEngine} renderer pipeline - the same boundary this whole port kept
+ * since Cinderpearl's own client FX, now extended to cover networked effects too. {@link #handleBlockArc} is
+ * the first real exception, restored 2026-09-15 - see {@link thaumcraft.client.fx.beams.FXArc}'s own doc
+ * comment for the real modern rendering.
  */
 public final class ClientFxHandlers {
 
@@ -61,6 +65,37 @@ public final class ClientFxHandlers {
 
 	private static Entity resolveEntity(Minecraft mc, ClientLevel level, int entityId) {
 		return mc.player != null && mc.player.getId() == entityId ? mc.player : level.getEntity(entityId);
+	}
+
+	/** Real {@link FXArc} spawn - see that class's own doc comment for the real modern rendering this
+	 * replaces the vanilla-particle-placeholder pattern with. */
+	public static void handleBlockArc(PacketFXBlockArc payload) {
+		Minecraft mc = Minecraft.getInstance();
+		ClientLevel level = mc.level;
+		if (level == null) {
+			return;
+		}
+		mc.particleEngine.add(new FXArc(level, payload.source().x(), payload.source().y(), payload.source().z(),
+				payload.target().x(), payload.target().y(), payload.target().z(), payload.red(), payload.green(), payload.blue(), 0.5f));
+	}
+
+	/** Real, purely client-local {@link FXArc} spawn for {@link thaumcraft.common.entities.monster.boss.EntityEldritchGolem}'s
+	 * own headless-phase arc-lightning decoration - called directly from that entity's own common-code
+	 * {@code aiStep} (safe: only ever reached inside its own {@code level().isClientSide} branch, so this
+	 * class never actually loads on a dedicated server - same real safety property {@code Thaumcraft
+	 * #registerPayloads}'s own doc comment already establishes for every other real use of this class from
+	 * common code). No packet needed at all - matches the true original's own real client-only
+	 * {@code onUpdate}/{@code handleStatusUpdate} shape exactly, since the target position is picked
+	 * client-locally, never server-authoritative. */
+	public static void spawnGolemArc(net.minecraft.world.entity.LivingEntity golem, double tx, double ty, double tz, int arcing) {
+		Minecraft mc = Minecraft.getInstance();
+		ClientLevel level = mc.level;
+		if (level == null) {
+			return;
+		}
+		mc.particleEngine.add(new FXArc(level, golem.getX(), golem.getY() + golem.getBbHeight() / 2.0, golem.getZ(),
+				tx + 0.5, ty + 1.0, tz + 0.5,
+				0.65f + level.random.nextFloat() * 0.1f, 1.0f, 1.0f, 1.0f - arcing / 10.0f));
 	}
 
 	/** {@link thaumcraft.common.entities.EntityFluxRift}'s collapse "poof" - the original drew a custom

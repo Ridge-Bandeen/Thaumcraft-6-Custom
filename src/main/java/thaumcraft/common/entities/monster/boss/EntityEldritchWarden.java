@@ -66,7 +66,11 @@ import thaumcraft.common.entities.projectile.EntityEldritchOrb;
  * 250-400-tick backup removal (see {@link thaumcraft.common.blocks.misc.BlockEffectSap}'s own doc comment
  * for why that's a real belt-and-suspenders on top of the block's own random-tick self-destruct). Separately,
  * every tick regardless of frenzy state, the Warden seeds real sap at up to 4 positions right around its own
- * feet - the original's own real constant "the ground near me is dangerous" tell.
+ * feet - the original's own real constant "the ground near me is dangerous" tell. Each frenzy-ring placement
+ * also has a real 30% chance of a real {@code PacketFXBlockArc} pulse from the new sap block back to the
+ * Warden itself, restored 2026-09-15 alongside its real {@code zap} sound (was a vanilla
+ * {@code WARDEN_SONIC_BOOM} stand-in) - this specific gap was never actually self-documented anywhere in
+ * this class before, only found by cross-checking the true original directly.
  *
  * <p>Real, documented simplifications on this restored phase (none drop real player-visible content): the
  * original's own {@code updateAITasks} froze the goal selector entirely during frenzy (an implementation
@@ -229,9 +233,18 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 			if (level.getBlockState(bp).isAir() && level.getBlockState(bp.below()).isFaceSturdy(level, bp.below(), Direction.UP)) {
 				level.setBlockAndUpdate(bp, BlocksTC.effectSap.get().defaultBlockState());
 				level.scheduleTick(bp, BlocksTC.effectSap.get(), 250 + random.nextInt(150));
+				if (random.nextFloat() < 0.3f) {
+					try {
+						net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(level, null, getX(), getY(), getZ(), 32.0,
+								thaumcraft.common.lib.network.fx.PacketFXBlockArc.of(bp, this,
+										0.5f + random.nextFloat() * 0.2f, 0.0f, 0.5f + random.nextFloat() * 0.2f));
+					} catch (Exception e) {
+						thaumcraft.Thaumcraft.LOGGER.debug("Warden arc FX packet failed to send (no real client connection?)", e);
+					}
+				}
 			}
 		}
-		playSound(SoundEvents.WARDEN_SONIC_BOOM, 1.0f, 0.9f + random.nextFloat() * 0.1f);
+		playSound(thaumcraft.common.registry.ThaumcraftSounds.ZAP.get(), 1.0f, 0.9f + random.nextFloat() * 0.1f);
 	}
 
 	/** Real teleport to a random safe spot near the Warden's own real restricted home (set at spawn), matching
