@@ -135,13 +135,37 @@ deferred until now. Real findings from that audit, triaged:
       undocumented sound gaps in the same pass: `EntityWisp`'s own
       `zap`/`wisplive`/`wispdead` (the doc comment's "whole unregistered
       subsystem" claim was stale, left over from before the Sounds chunk).
+    - ~~**`FXGeneric`**~~ — closed 2026-09-15, its own dedicated chunk given
+      how many other effects depend on it. Real modern `SingleQuadParticle`
+      subclass restored (`thaumcraft.client.fx.particles.FXGeneric`) - reused
+      vanilla's own real camera-facing billboard rendering rather than
+      reimplementing it (every real `FXGeneric` particle is a single flat
+      quad, unlike `FXArc`/`FXBolt`'s own multi-segment ribbons), only
+      overriding the real grid-frame UV lookup and quad size. Binds the true
+      original's own real shared particle sheet directly (`particles.png`, a
+      1024x1024 grid already sitting unused in the resource tree - same
+      "assets ready, only Java missing" shape `Sounds`/the beam textures had).
+      Ported the real fluent-setter API closely (`setMaxAge`/`setParticles`/
+      `setScale`/`setAlphaF`/`setRBGColorF`/`setLoop`/`setGravity`/
+      `setSlowDown`/`setRandomMovementScale`/`setRotationSpeed`/`setWind`
+      /etc. - even the real moon-phase-driven pseudo-wind direction formula),
+      keyframed alpha/scale interpolation over the real particle lifetime, and
+      a real minimal delayed-spawn queue (`ClientFxHandlers#addDelayed`,
+      replacing the true original's own `ParticleEngine.addEffectWithDelay`).
+      Real, documented simplification: the true original's own "angled" fixed-
+      orientation mode (`setAngles`, ground-decal-style particles) isn't
+      supported yet - needs a full `render()` override bypassing
+      `SingleQuadParticle`'s own camera-facing math, deferred until a real
+      effect that actually needs it gets restored.
+      - Wired to 2 real trigger points immediately: `ToolEvents`' ore-scan
+        reveal (`ClientFxHandlers#handleScanSource`/`markGroup`, now a real
+        looping glow marker instead of vanilla dust, including the real
+        distance-staggered "sonar ping" delay) and `FXArc`'s own trailing
+        ember spawn at every jittered waypoint (both previously documented,
+        deliberate simplifications, now closed).
     - Remaining true-original FX classes (`FXBoreSparkle`/`FXBoreParticles`/
-      `FXBoreStream`/`FXFocusEffect`/`FXGeneric` and the rest of
-      `particles`/`other`) not yet scoped in detail - `FXGeneric` in
-      particular is a shared "generic configurable particle" system reused by
-      dozens of true-original effects (including `FXArc`'s own dropped ember
-      trail - see that section above), worth its own dedicated look given how
-      much leverage restoring it once would give.
+      `FXBoreStream`/`FXFocusEffect` and the rest of `particles`/`other`) not
+      yet scoped in detail.
   - **Custom mob models/renderers** (`client/renderers/*`, `client/lib/obj`)
     - still queued, not yet scoped in detail; likely the largest remaining
     piece of this whole layer.
