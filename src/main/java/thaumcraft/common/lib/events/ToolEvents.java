@@ -100,9 +100,10 @@ import thaumcraft.common.lib.network.fx.PacketFXSlash;
  * targeted {@code PacketFXScanSource} to the scanning player on a sneak right-click, matching the original's
  * own server-side behaviour exactly. The actual scan (reading nearby block state, grouping connected ore
  * blocks, colouring each group) happens entirely client-side in
- * {@link thaumcraft.client.fx.ClientFxHandlers#handleScanSource} - a vanilla colored-dust particle burst per
- * group replaces the original's custom {@code FXGeneric} billboard particle, and every group reveals at once
- * instead of the original's distance-staggered "sonar ping" timing (a real, documented simplification).</li>
+ * {@link thaumcraft.client.fx.ClientFxHandlers#handleScanSource} - a real {@code FXGeneric} marker per group,
+ * restored 2026-09-15 (matches the true original's own real config exactly - see that method's own doc
+ * comment), still with one real, documented simplification: every group reveals at once instead of the
+ * original's distance-staggered "sonar ping" timing.</li>
  * <li>{@link EnumInfusionEnchantment#BURROWING} - auto-tunnels toward the furthest still-standing block of
  * the same type connected to the one just mined ({@link #findFurthestMatchingBlock}), a plain bounded
  * breadth-first search replacing the original's own recursive "restart the whole cube scan from the new best

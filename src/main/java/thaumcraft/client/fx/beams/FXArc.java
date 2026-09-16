@@ -21,6 +21,7 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import thaumcraft.Thaumcraft;
@@ -42,11 +43,11 @@ import thaumcraft.Thaumcraft;
  * stitched sprite" choice), via a dedicated {@link #RENDER_TYPE} rather than one of vanilla's built-in ones,
  * since none of those bind an arbitrary non-atlas texture.
  *
- * Real, documented simplification: the true original also spawned a trailing {@code FXGeneric} ember at
- * every jittered waypoint - dropped for this pass. {@code FXGeneric} is a real, much larger "generic
- * configurable particle" system reused by dozens of other true-original effects, not exclusive to this one -
- * queued as its own future chunk rather than built piecemeal here. The ribbon itself, this effect's own real
- * primary silhouette, is faithfully kept; only the extra ember dressing around it is missing this pass.
+ * Real trailing {@link thaumcraft.client.fx.particles.FXGeneric} ember spawned at every jittered waypoint,
+ * restored 2026-09-15 now that {@code FXGeneric} itself is real - matches the true original's own real
+ * per-waypoint spawn exactly (a real 30-49-tick looping ember sprite, colour-boosted 3x from the arc's own
+ * colour and fading toward a random one, real random gravity/scale/motion-jitter, revealed via a real
+ * {@link thaumcraft.client.fx.ClientFxHandlers#addDelayed} 2-4 tick stagger).
  */
 public class FXArc extends Particle {
 
@@ -103,9 +104,34 @@ public class FXArc extends Particle {
 					(random.nextDouble() - random.nextDouble()) * noise,
 					(random.nextDouble() - random.nextDouble()) * noise);
 			points.add(new Vec3(x + current.x, y + current.y, z + current.z));
+			spawnEmber(level, x + current.x, y + current.y, z + current.z, red, green, blue);
 			velocity = velocity.subtract(0.0, gravity / 1.9, 0.0);
 		}
 		points.add(new Vec3(tx, ty, tz));
+	}
+
+	/** Real trailing ember at one real jittered waypoint - see the class doc comment. */
+	private void spawnEmber(ClientLevel level, double ex, double ey, double ez, float red, float green, float blue) {
+		thaumcraft.client.fx.particles.FXGeneric fb = new thaumcraft.client.fx.particles.FXGeneric(level, ex, ey, ez, 0.0, 0.0, 0.0);
+		int age = 30 + random.nextInt(20);
+		fb.setMaxAge(age);
+		fb.setRBGColorF(Mth.clamp(red * 3.0f, 0.0f, 1.0f), Mth.clamp(green * 3.0f, 0.0f, 1.0f), Mth.clamp(blue * 3.0f, 0.0f, 1.0f),
+				random.nextFloat(), random.nextFloat(), random.nextFloat());
+		float[] alphas = new float[6 + random.nextInt(Math.max(1, age / 3))];
+		for (int a = 1; a < alphas.length - 1; a++) {
+			alphas[a] = random.nextFloat();
+		}
+		alphas[0] = 1.0f;
+		fb.setAlphaF(alphas);
+		boolean sparkle = random.nextFloat() < 0.2f;
+		fb.setParticles(sparkle ? 320 : 512, 16, 1);
+		fb.setLoop(true);
+		fb.setGravity(sparkle ? 0.0f : 0.125f);
+		fb.setScale(0.5f, 0.125f);
+		fb.setLayer(0);
+		fb.setSlowDown(0.995);
+		fb.setRandomMovementScale(0.0025f, 0.001f, 0.0025f);
+		thaumcraft.client.fx.ClientFxHandlers.addDelayed(fb, 2 + random.nextInt(3));
 	}
 
 	/** Faithful reproduction of the true original's own {@code Utils#calculateVelocity} - fits a real
@@ -140,7 +166,7 @@ public class FXArc extends Particle {
 	@Override
 	public void render(VertexConsumer buffer, Camera camera, float partialTicks) {
 		Vec3 camPos = camera.getPosition();
-		float renderAlpha = net.minecraft.util.Mth.clamp(1.0f - (age + partialTicks) / lifetime, 0.0f, 1.0f);
+		float renderAlpha = Mth.clamp(1.0f - (age + partialTicks) / lifetime, 0.0f, 1.0f);
 		int light = LightTexture.FULL_BRIGHT;
 
 		for (int c = 0; c < points.size() - 1; c++) {

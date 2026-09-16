@@ -397,6 +397,7 @@ sourceSets {
             include 'thaumcraft/client/fx/beams/FXBolt.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXWispZap.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXZap.java'
+            include 'thaumcraft/client/fx/particles/FXGeneric.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'
             include 'thaumcraft/api/internal/IInternalMethodHandler.java'
