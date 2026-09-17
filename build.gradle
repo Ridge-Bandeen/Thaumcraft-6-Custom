@@ -425,6 +425,7 @@ sourceSets {
             include 'thaumcraft/client/fx/particles/FXVent.java'
             include 'thaumcraft/client/fx/particles/FXVent2.java'
             include 'thaumcraft/client/render/TileMirrorRenderer.java'
+            include 'thaumcraft/client/render/TileBellowsRenderer.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'
             include 'thaumcraft/api/internal/IInternalMethodHandler.java'

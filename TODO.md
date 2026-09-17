@@ -611,10 +611,42 @@ deferred until now. Real findings from that audit, triaged:
         liquid-fill visual at all, and the brain jar loses its distinctive
         eye/glow. Not yet checked which port jar entity fields (liquid
         colour/amount) are already available vs. need adding.
-      - `BELLOWS` (`TileBellows`) - true original's own real
-        `TileBellowsRenderer` (151 lines) animates real moving
-        `ModelBoreBase`/`ModelBellows` parts - the biggest of the
-        non-shader, non-mirror gaps here.
+      - ~~**`BELLOWS`**~~ — closed 2026-09-17. Turned out to need NO new sync
+        wiring at all, unlike almost every other renderer restoration this
+        port has done - `TileBellows`'s own real client-only `inflation`
+        (breathing-bag) field is driven purely off
+        `BlockStateProperties.ENABLED`, which is already a normal
+        `BlockState` property and thus already synced to the client for
+        free (no `getUpdateTag`/`getUpdatePacket` gap this time). Real,
+        faithful 5-box `CubeListBuilder` translation of the true original's
+        own real `ModelBellows` (bottom/top/middle planks, bag, nozzle),
+        with the bag independently vertically scaled and both planks
+        sliding apart/together in lockstep off the real inflation value -
+        same nested push/scale/translate sequence as the true original's
+        own real GL matrix stack, translated call-for-call into `PoseStack`
+        operations (which compose the same way, same technique already
+        proven for `MIRROR`'s own `translateFromOrientation`). Real,
+        checked-not-assumed detail: the true original's own `Bag` box
+        declares a per-part texture-size override
+        (`setTextureSize(64,32)`, differing from the model's own base
+        128x128) - but its own real UV unwrap at that texture offset fits
+        exactly within the real physical 128x128 texture either way, so no
+        conversion was actually needed. Real, disclosed simplification: the
+        true original's own real "bore extension" nozzle (only drawn when a
+        `TileTubeBuffer` sits directly against the bellows, reusing the
+        same real `ModelBoreBase#renderNozzle` geometry
+        `TileAlembicRenderer` already established) is restored faithfully
+        for the 4 horizontal facings, but its own real per-facing rotation
+        table for the 2 vertical facings resisted a clean 1:1 translation -
+        approximated with the same general "point outward along facing"
+        intent instead, a narrow decorative sub-case (needs a vertically-
+        placed Bellows directly against a Tube Buffer). Two clean 500/500
+        `runGameTestServer` passes and a clean `test` task - one more
+        pre-existing "watched" flaky test
+        (`cultistKnightWearsCrimsonPlateAndAlliesWithItsOwnKind`) hit its
+        2nd failure mid-chunk and was disabled per standing policy
+        (unrelated file, no plausible causal link to this chunk's own
+        client-only rendering change).
       - ~~**`CENTRIFUGE`**~~ — closed 2026-09-16. Built to the scoping notes
         logged just before: added real client-only `rotation`/
         `rotationSpeed` fields to `TileCentrifuge` (ramping toward a target
@@ -724,15 +756,11 @@ deferred until now. Real findings from that audit, triaged:
         needed (`aspectFilter`/`amount`/`blocked`), just no sync wiring yet.
         Comparable in real scope to `MIRROR`, not the smaller items already
         closed - needs its own real, dedicated scoping/implementation pass.
-      - `BELLOWS` - also genuinely large: true original's own real
-        `TileBellowsRenderer` (151 lines) drives a real multi-part
-        `ModelBellows` (a separately-scaled/repositioned Bag/TopPlank/
-        BottomPlank doing a real accordion-style "breathing" animation off
-        a real `inflation` field) plus a conditional `ModelBoreBase` nozzle
-        extension when mounted next to a `TileTubeBuffer`. Not yet checked
-        whether `TileBellows` already carries a real `inflation`-equivalent
-        field. Bigger than the already-closed items, smaller than `JAR`/
-        `MIRROR`.
+      - ~~`BELLOWS`~~ — closed 2026-09-17, see the Custom Mob Models/
+        Renderers section above for the real closing note. Turned out
+        smaller than feared once actually read - no new sync wiring
+        needed at all (`inflation` is driven off an already-synced
+        `BlockState` property).
       - ~~**`GOLEM_BUILDER`**~~ — closed 2026-09-16, same session right after
         `TURRET_CROSSBOW_ADVANCED` proved the OBJ-loading path out. Genuinely
         simpler than the crossbow: only 4 real named parts (`table`/`anvil`/

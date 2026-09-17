@@ -235,6 +235,8 @@ public class ThaumcraftClient {
         // TileMirrorRenderer's own doc comment.
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.MIRROR.get(), thaumcraft.client.render.TileMirrorRenderer::new);
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.MIRROR_ESSENTIA.get(), thaumcraft.client.render.TileMirrorRenderer::new);
+        // Real breathing-bag animation restored 2026-09-17 - see TileBellowsRenderer's own doc comment.
+        event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.BELLOWS.get(), thaumcraft.client.render.TileBellowsRenderer::new);
     }
 
     /** One real "additional" model per {@link GolemMaterial} (the trunk/limbs silhouette every golem has),
