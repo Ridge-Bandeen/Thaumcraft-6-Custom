@@ -157,11 +157,9 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.SPELL_BAT.get(), thaumcraft.client.render.RenderSpellBat::new);
         // Real geometry now - see RenderEldritchCrab's own doc comment.
         event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_CRAB.get(), thaumcraft.client.render.RenderEldritchCrab::new);
-        // Still a real, confirmed gap, not a permanent cut (corrected 2026-09-16 - this comment previously
-        // claimed otherwise). Both original portal renderers extend Render directly and hand-draw a real
-        // animated Tessellator billboard portal-disc effect, no 3D model at all - same real "billboard off the
-        // shared/a dedicated texture" family WISP was in, likely portable via the same FXWispGlow-style
-        // tracking-particle approach. Not yet restored - see the Custom Mob Models/Renderers TODO entry.
+        // Real animated portal-disc glow restored 2026-09-16 - see FXCultistPortalLesser's own doc comment.
+        // Same "the real visual is entirely client-local tracking particles, not this EntityRenderer" shape
+        // WISP/GOLEM_ORB/ELDRITCH_ORB above already established - this placeholder is still correct.
         event.registerEntityRenderer(ThaumcraftEntities.CULTIST_PORTAL_LESSER.get(), RenderFocusProjectile::new);
         event.registerEntityRenderer(ThaumcraftEntities.CULTIST_PORTAL_GREATER.get(), RenderFocusProjectile::new);
         event.registerEntityRenderer(ThaumcraftEntities.GOLEM.get(), RenderThaumcraftGolem::new);

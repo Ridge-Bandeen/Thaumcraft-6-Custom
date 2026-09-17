@@ -401,30 +401,38 @@ deferred until now. Real findings from that audit, triaged:
           long tail of "player left the game" shutdown noise - redirect to a
           real file and `grep` for `required tests` rather than trusting a
           short tail when a run's outcome is ambiguous.
-      - **Real, confirmed gaps, not yet restored** (same
+      - ~~**`CULTIST_PORTAL_LESSER`/`CULTIST_PORTAL_GREATER`**~~ — closed
+        2026-09-16, same session right after `ELDRITCH_ORB`. Built to the
+        detailed scoping notes logged just before: added the real
+        `activeCounter` (Lesser only - Greater's own real animation drives
+        off plain `tickCount` instead, since it has no activation gate to
+        count ticks-since) and `pulse` fields to both entity classes, both
+        deliberately plain (not synced) - both sides independently increment
+        `activeCounter` once the already-synced `isActive()` goes true, and
+        `pulse` is set via a real vanilla entity-event broadcast (`byte 16`,
+        matching the true original's own real `setEntityState`/
+        `handleStatusUpdate` pair, the same established pattern
+        `EntityArcaneBore`'s own dig FX already uses) fired at the real same
+        3 trigger points the true original had (Greater: banner placement,
+        loot-crate placement, every stage escalation; Lesser: minion spawn
+        only), then decremented independently on both sides every tick.
+        Restored via `FXCultistPortalLesser`/`FXCultistPortalGreater`, 2 real
+        custom-`render()` particles (not `SingleQuadParticle` - genuinely
+        non-uniform scale, X/Z by one real multiplier, Y by a real different
+        one, matching the true original's own real per-axis `scale`/
+        `scaley` split) sharing one real billboard-quad-drawing helper
+        (`FXCultistPortalLesser#renderQuad`, package-visible specifically for
+        this reuse - only the surrounding animation formula differs between
+        the two real portal variants). Real wall-clock-based 16-frame
+        flicker (`System.nanoTime()/50_000_000L % 16`, matching the true
+        original's own real non-tick-based cadence exactly, not a
+        simplification). Two clean 503/503 `runGameTestServer` passes and a
+        clean `test` task.
+      - **Real, confirmed gap, not yet restored** (same
         `RenderFocusProjectile`-placeholder-hiding-a-real-visual pattern as
-        `WISP`/`FOCUS_MINE`/`GOLEM_ORB`/`ELDRITCH_ORB` above, found via the
-        same direct true-original cross-check):
-        - `CULTIST_PORTAL_LESSER`/`CULTIST_PORTAL_GREATER`
-          (`EntityCultistPortalLesser`/`EntityCultistPortalGreater`) - true
-          original's own real `RenderCultistPortalLesser`/
-          `RenderCultistPortalGreater` both draw a real animated billboard
-          portal-disc effect off a dedicated `cultist_portal.png` texture (a
-          real 16-frame strip), non-uniformly scaled (X/Y scale differ,
-          `SingleQuadParticle`'s own single `quadSize` won't cover this
-          directly - needs a real custom `render()` override like
-          `ELDRITCH_ORB` above, not a plain `FXWispGlow`-style reuse).
-          Genuinely bigger than the other 2 orbs/`WISP` for a second real
-          reason, checked directly against this port's own current entity
-          code (not assumed): the true original's own real animation math
-          reads `activeCounter` (real ticks-since-activation, drives scale/
-          bob) and `pulse` (a real decaying "just spawned a minion" flash),
-          neither of which exist on this port's `EntityCultistPortalLesser`/
-          `EntityCultistPortalGreater` yet (only `isActive()`/a differently-
-          shaped `stageCounter` do) - restoring this real visual means adding
-          2 small real fields to both entity classes first, not just writing
-          a renderer. `hurtTime` doesn't need adding - it's a real vanilla
-          `LivingEntity` field already available for free.
+        `WISP`/`FOCUS_MINE`/`GOLEM_ORB`/`ELDRITCH_ORB`/`CULTIST_PORTAL_LESSER`
+        /`CULTIST_PORTAL_GREATER` above, found via the same direct
+        true-original cross-check):
         - `TURRET_CROSSBOW_ADVANCED` (`EntityTurretCrossbow`, the advanced
           variant) - true original's own real `RenderTurretCrossbowAdvanced`
           loads and draws a real `.obj` mesh via the true original's own

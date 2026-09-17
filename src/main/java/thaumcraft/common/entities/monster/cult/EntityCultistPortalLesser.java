@@ -40,6 +40,11 @@ import thaumcraft.common.registry.ThaumcraftSounds;
  * {@code shock} sounds restored 2026-09-15 (were vanilla stand-ins) - see {@link ThaumcraftSounds}'s own
  * doc comment. The original's own {@code getTiming()} method is dead code in the original too (declared,
  * never called anywhere in that same file) - not ported.
+ *
+ * Real visible model restored 2026-09-16, alongside 2 real fields the true original's own renderer needed
+ * that this port hadn't carried yet - see {@link thaumcraft.client.fx.particles.FXCultistPortalLesser}'s own
+ * doc comment for the visual, and {@link #activeCounter}/{@link #pulse} below for why they're plain (not
+ * synced) fields incremented independently on both sides.
  */
 public class EntityCultistPortalLesser extends Monster {
 
@@ -47,6 +52,20 @@ public class EntityCultistPortalLesser extends Monster {
 			SynchedEntityData.defineId(EntityCultistPortalLesser.class, EntityDataSerializers.BOOLEAN);
 
 	private int stageCounter = 100;
+
+	/** Real ticks-since-activation counter, matching the true original's own real public field exactly -
+	 * deliberately NOT a synced field (the original's own version wasn't either): both sides independently
+	 * increment their own copy once {@link #isActive()} (which IS synced) goes true, so they naturally stay
+	 * in step without needing the counter's own value pushed over the network every tick. Drives the real
+	 * portal-disc scale/alpha "breathing" animation. */
+	public int activeCounter;
+
+	/** Real decaying "just spawned a minion" flash counter, matching the true original's own real public
+	 * field. Set to 10 via a real vanilla entity-event broadcast ({@link #handleEntityEvent}) the instant a
+	 * minion spawns (matching the true original's own real {@code world.setEntityState(this, (byte)16)} +
+	 * {@code handleStatusUpdate} pair), then ticks down independently on both sides - same real "don't sync
+	 * the value itself, sync the trigger" shape {@link #activeCounter} uses. */
+	public int pulse;
 
 	public EntityCultistPortalLesser(EntityType<? extends EntityCultistPortalLesser> type, Level level) {
 		super(type, level);
@@ -112,7 +131,14 @@ public class EntityCultistPortalLesser extends Monster {
 	public void aiStep() {
 		// No super.aiStep() call - matches the original's own empty onLivingUpdate() override exactly (no
 		// vanilla AI/goal-selector ticking for an immobile monolith).
+		if (isActive()) {
+			activeCounter++;
+		}
+		if (pulse > 0) {
+			pulse--;
+		}
 		if (level().isClientSide) {
+			thaumcraft.client.fx.ClientFxHandlers.maintainCultistPortalLesser(this);
 			return;
 		}
 		if (!isActive()) {
@@ -149,6 +175,18 @@ public class EntityCultistPortalLesser extends Monster {
 		serverLevel.addFreshEntity(cultist);
 		cultist.playSound(ThaumcraftSounds.WANDFAIL.get(), 1.0f, 1.0f);
 		hurt(damageSources().magic(), 5 + random.nextInt(5));
+		level().broadcastEntityEvent(this, (byte) 16);
+	}
+
+	/** Real modern equivalent of the true original's own real {@code handleStatusUpdate} - {@code (byte) 16}
+	 * matches that exact real event id. */
+	@Override
+	public void handleEntityEvent(byte id) {
+		if (id == 16) {
+			pulse = 10;
+		} else {
+			super.handleEntityEvent(id);
+		}
 	}
 
 	@Override

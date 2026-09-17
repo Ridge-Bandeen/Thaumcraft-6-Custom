@@ -50,18 +50,31 @@ import thaumcraft.common.tiles.misc.TileBanner;
  * while below stage 12, matching the original's own {@code stage < 12} gate. Real touch damage (8, doubled
  * from the lesser portal's 4), real potion immunity, real death explosion (radius 2.0, no block/mob damage).
  *
- * Real, documented cuts: no "always full-bright" self-illumination and no renderer (same real reasons
- * {@link thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser}'s own doc comment already
- * explains - entities don't carry a light-emission override point any more, and the original's own version
- * is a fully custom raw-immediate-mode-GL billboard). Real {@code PacketFXBlockArc} stage-progress "pulse"
- * signal restored 2026-09-15 (see {@link #sendArcPulse}) alongside its real {@code wandfail} sound (was a
- * vanilla {@code EVOKER_CAST_SPELL} stand-in).
+ * Real, documented cut: no "always full-bright" self-illumination (same real reason {@link
+ * thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser}'s own doc comment already explains -
+ * entities don't carry a light-emission override point any more). Real {@code PacketFXBlockArc} stage-progress
+ * "pulse" signal restored 2026-09-15 (see {@link #sendArcPulse}) alongside its real {@code wandfail} sound
+ * (was a vanilla {@code EVOKER_CAST_SPELL} stand-in) - a different real mechanism from {@link #pulse} below
+ * (a lightning-arc visual from a placed banner/crate back to this portal, vs. this portal's own internal
+ * "just spawned a minion" flash counter - unrelated despite the shared name).
+ *
+ * Real visible model restored 2026-09-16 - see {@link thaumcraft.client.fx.particles.FXCultistPortalGreater}'s
+ * own doc comment. Unlike the Lesser portal, no real {@code activeCounter} equivalent is needed - the true
+ * original's own real renderer for this boss variant drives its animation off plain {@code ticksExisted}
+ * directly (this entity is always "active" from spawn, no activation gate), which {@link #tickCount} already
+ * provides for free.
  */
 public class EntityCultistPortalGreater extends Monster {
 
 	private final ServerBossEvent bossEvent;
 	private int stage;
 	private int stageCounter = 200;
+
+	/** Real decaying "just spawned a minion" flash counter - see {@link
+	 * thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser#pulse}'s own doc comment for the real
+	 * shape (plain, not synced; set via a real vanilla entity-event broadcast, ticks down independently on
+	 * both sides). */
+	public int pulse;
 
 	public EntityCultistPortalGreater(EntityType<? extends EntityCultistPortalGreater> type, Level level) {
 		super(type, level);
@@ -155,7 +168,11 @@ public class EntityCultistPortalGreater extends Monster {
 	@Override
 	public void aiStep() {
 		// No super.aiStep() call - see the class doc comment / EntityCultistPortalLesser's own.
+		if (pulse > 0) {
+			pulse--;
+		}
 		if (level().isClientSide) {
+			thaumcraft.client.fx.ClientFxHandlers.maintainCultistPortalGreater(this);
 			return;
 		}
 		bossEvent.setProgress(getHealth() / getMaxHealth());
@@ -170,6 +187,7 @@ public class EntityCultistPortalGreater extends Monster {
 			}
 		}
 		else if (level().getNearestPlayer(this, 48.0) != null) {
+			level().broadcastEntityEvent(this, (byte) 16);
 			switch (stage) {
 				case 0, 1, 2, 3, 4 -> {
 					stageCounter = 15 + random.nextInt(Math.max(1, 10 - stage)) - stage;
@@ -197,6 +215,7 @@ public class EntityCultistPortalGreater extends Monster {
 	}
 
 	private void placeBanners() {
+		level().broadcastEntityEvent(this, (byte) 16);
 		Direction[] dirs = { Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST };
 		for (Direction dir : dirs) {
 			BlockPos bp = blockPosition().offset(-dir.getStepX() * 6, 0, dir.getStepZ() * 6);
@@ -223,6 +242,7 @@ public class EntityCultistPortalGreater extends Monster {
 		if (a == pos.getX() || b == pos.getZ()) return;
 		BlockPos bp = new BlockPos(a, pos.getY(), b);
 		if (!level().isEmptyBlock(bp)) return;
+		level().broadcastEntityEvent(this, (byte) 16);
 		float rr = random.nextFloat();
 		var crate = rr < 0.05f ? BlocksTC.lootCrateRare.get() : rr < 0.2f ? BlocksTC.lootCrateUncommon.get() : BlocksTC.lootCrateCommon.get();
 		level().setBlockAndUpdate(bp, crate.defaultBlockState());
@@ -283,6 +303,17 @@ public class EntityCultistPortalGreater extends Monster {
 			serverLevel.explode(this, getX(), getY(), getZ(), 2.0f, Level.ExplosionInteraction.NONE);
 		}
 		super.die(source);
+	}
+
+	/** Real modern equivalent of the true original's own real {@code handleStatusUpdate} - {@code (byte) 16}
+	 * matches that exact real event id, same shape {@code EntityCultistPortalLesser}'s own override uses. */
+	@Override
+	public void handleEntityEvent(byte id) {
+		if (id == 16) {
+			pulse = 10;
+		} else {
+			super.handleEntityEvent(id);
+		}
 	}
 
 	@Override

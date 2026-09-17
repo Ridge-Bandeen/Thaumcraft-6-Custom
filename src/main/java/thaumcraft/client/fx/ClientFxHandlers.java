@@ -210,6 +210,41 @@ public final class ClientFxHandlers {
 		mc.particleEngine.add(new thaumcraft.client.fx.particles.FXEldritchOrbGlow(level, orb));
 	}
 
+	private static final Set<Integer> CULTIST_PORTALS = new HashSet<>();
+
+	/** Real {@link thaumcraft.client.fx.particles.FXCultistPortalLesser} spawn for {@link
+	 * thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser} - see that particle's own doc
+	 * comment. Fire-and-forget, one real time per real portal id, same shape as {@link #maintainWisp}. Shares
+	 * {@link #CULTIST_PORTALS} with {@link #maintainCultistPortalGreater} since entity ids are unique across
+	 * every real entity type, not just within one. */
+	public static void maintainCultistPortalLesser(thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser portal) {
+		if (!CULTIST_PORTALS.add(portal.getId())) {
+			return;
+		}
+		Minecraft mc = Minecraft.getInstance();
+		ClientLevel level = mc.level;
+		if (level == null) {
+			CULTIST_PORTALS.remove(portal.getId());
+			return;
+		}
+		mc.particleEngine.add(new thaumcraft.client.fx.particles.FXCultistPortalLesser(level, portal));
+	}
+
+	/** Real {@link thaumcraft.client.fx.particles.FXCultistPortalGreater} spawn for {@link
+	 * thaumcraft.common.entities.monster.boss.EntityCultistPortalGreater} - see {@link #maintainCultistPortalLesser}. */
+	public static void maintainCultistPortalGreater(thaumcraft.common.entities.monster.boss.EntityCultistPortalGreater portal) {
+		if (!CULTIST_PORTALS.add(portal.getId())) {
+			return;
+		}
+		Minecraft mc = Minecraft.getInstance();
+		ClientLevel level = mc.level;
+		if (level == null) {
+			CULTIST_PORTALS.remove(portal.getId());
+			return;
+		}
+		mc.particleEngine.add(new thaumcraft.client.fx.particles.FXCultistPortalGreater(level, portal));
+	}
+
 	private ClientFxHandlers() {
 	}
 

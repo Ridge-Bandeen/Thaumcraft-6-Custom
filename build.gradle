@@ -411,6 +411,8 @@ sourceSets {
             include 'thaumcraft/client/fx/particles/FXGolemOrb.java'
             include 'thaumcraft/client/fx/particles/FXEldritchOrbSpikes.java'
             include 'thaumcraft/client/fx/particles/FXEldritchOrbGlow.java'
+            include 'thaumcraft/client/fx/particles/FXCultistPortalLesser.java'
+            include 'thaumcraft/client/fx/particles/FXCultistPortalGreater.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'
             include 'thaumcraft/api/internal/IInternalMethodHandler.java'
