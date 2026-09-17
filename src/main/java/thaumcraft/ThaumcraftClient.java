@@ -222,6 +222,8 @@ public class ThaumcraftClient {
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.HUNGRY_CHEST.get(), thaumcraft.client.render.TileHungryChestRenderer::new);
         // Real spinning-axle animation restored 2026-09-16 - see TileCentrifugeRenderer's own doc comment.
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.CENTRIFUGE.get(), thaumcraft.client.render.TileCentrifugeRenderer::new);
+        // Real mode indicator + spinning crank gears restored 2026-09-16 - see TilePatternCrafterRenderer's own doc comment.
+        event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.PATTERN_CRAFTER.get(), thaumcraft.client.render.TilePatternCrafterRenderer::new);
     }
 
     /** One real "additional" model per {@link GolemMaterial} (the trunk/limbs silhouette every golem has),

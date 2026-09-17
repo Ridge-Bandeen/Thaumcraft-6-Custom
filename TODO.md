@@ -676,19 +676,43 @@ deferred until now. Real findings from that audit, triaged:
       - `GOLEM_BUILDER` (`TileGolemBuilder`) - true original's own real
         `TileGolemBuilderRenderer` (104 lines), likely renders the
         in-progress golem parts being assembled - not yet read in detail.
-      - `PATTERN_CRAFTER` (`TilePatternCrafter`) - true original's own real
-        `TilePatternCrafterRenderer` (79 lines), a real `ModelBoreBase`-based
-        moving part - likely reuses geometry/animation technique already
-        proven via `ModelArcaneBore`'s own real port this session.
-    - Real prioritization note for whoever picks this up next: `CENTRIFUGE`
-      and `PATTERN_CRAFTER` look like the most tractable non-shader,
-      non-`MIRROR` starting points (small, no new sync infra known to be
-      needed yet, likely reuse already-proven geometry/animation
-      techniques) - `TUBE_ONEWAY`/`TUBE_VALVE`/`TUBE_BUFFER` are also
-      tractable but need the real sync-wiring prerequisite above first;
-      `MIRROR` needs its own dedicated scoping pass before touching; `HOLE`/
-      `VOID_SIPHON` should be bundled with `FLUX_RIFT`'s own real
-      shader-pipeline work, not attempted separately.
+      - ~~**`PATTERN_CRAFTER`**~~ — closed 2026-09-16. Turned out NOT to be
+        `ModelBoreBase`-driven after actually reading the true original's
+        real `renderTileEntityAt` in full - that `model` field is
+        real-but-unused dead weight in this specific method (a copy-paste
+        leftover, never called). The real visual is a facing-oriented
+        mode-indicator quad (a real 10-frame strip on
+        `pattern_crafter_modes.png`, one frame per real crafting pattern)
+        plus 2 real counter-rotating brass-gear quads, driven by a real,
+        previously-dropped client-only crank animation (`rot`/`rp`/
+        `rotTicks` - a real vanilla block-event-triggered "burst then decay"
+        spin, matching the true original's own exact formula including a
+        real `clack` sound cue) - restored alongside real
+        `getUpdateTag`/`getUpdatePacket` sync wiring this tile never had
+        either (`type` wasn't visible to the client before). New
+        `TilePatternCrafterRenderer` draws both real elements as plain flat
+        quads. Real, disclosed simplification: the true original's own real
+        gear icons used a genuinely different technique
+        (`UtilsFX.renderTextureIn3D`, a real per-pixel-column-extruded mesh
+        giving visible 3D bevelled thickness) with no precedent anywhere
+        else in this port and no real behavioural/legibility cost to
+        dropping just the bevel - flat quads instead, same real "keep the
+        animation, simplify the pure decoration" call already made for
+        `ELDRITCH_ORB`'s disabled face-culling. Exact sub-pixel icon
+        placement is a reasonable approximation of the true original's own
+        real nested transform stack, not a verified match - flagged in the
+        UI visual-parity checklist for a human `runClient` check. Two clean
+        503/503 `runGameTestServer` passes and a clean `test` task.
+    - Real prioritization note for whoever picks this up next:
+      `TUBE_ONEWAY`/`TUBE_VALVE`/`TUBE_BUFFER` are the most tractable
+      remaining non-shader, non-`MIRROR` items (small, same real
+      "add a client-only animated field + sync wiring, reuse `CubeListBuilder`
+      geometry" shape `CENTRIFUGE`/`PATTERN_CRAFTER` both just proved out
+      twice); `MIRROR` needs its own dedicated scoping pass before touching
+      (still genuinely unread, 628 lines); `HOLE`/`VOID_SIPHON` should be
+      bundled with `FLUX_RIFT`'s own real shader-pipeline work, not
+      attempted separately; the 3 essentia jars and `BELLOWS`/
+      `GOLEM_BUILDER` remain unscoped in detail.
 - **Deferred, not queued**: boss multiplayer target-scaling and the floating
   special-item death-drop visual both still route through the unported
   `EntityUtils` - same already-correctly-blocked dependency this file has

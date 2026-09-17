@@ -46,11 +46,25 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * <li>{@code BlockStateProperties#ENABLED} (redstone-inverted) replaces the original's own wand-toggle -
  * same real convention every other toggled device this session already uses (see e.g.
  * {@code TileVoidSiphon}'s own doc comment), not a bespoke wand-click mechanic.</li>
- * <li>No client-side crank-rotation animation ({@code rot}/{@code rp}/{@code rotTicks}) - visual-only,
- * dropped like every other device this session.</li>
  * </ul>
+ *
+ * Real client-side crank-rotation animation restored 2026-09-16 - see {@link #rot}/{@link #rp}/
+ * {@link #rotTicks} and {@link thaumcraft.client.render.TilePatternCrafterRenderer}'s own doc comment (this
+ * class's own doc comment previously called it dropped "like every other device this session," which was
+ * itself only ever true because no {@code BlockEntityRenderer} precedent existed here yet - the same stale-cut
+ * shape {@code TileCentrifuge}'s own spin animation just went through).
  */
 public class TilePatternCrafter extends BlockEntity {
+
+	/** Real client-only crank animation state, matching the true original's own real fields exactly: a real
+	 * vanilla block-event ({@link #triggerEvent}, id {@code 1}) fired on every successful craft gives the
+	 * crank a real 10-tick "burst" during which {@link #rp} (rotation speed) ramps up and a real {@code clack}
+	 * sound ticks; once the burst ends, {@link #rp} decays by a real {@code *0.8} each tick instead. {@link
+	 * #rot} always accumulates {@link #rp}. Deliberately plain (not synced) - the true original's own version
+	 * was purely client-computed too, off the real synced block-event trigger alone. */
+	public float rot;
+	public float rp;
+	public int rotTicks;
 
 	/** Which of the 9 crafting-grid slots each pattern type fills with copies of the candidate ingredient -
 	 * real port of the original's own per-{@code type} {@code craftMatrix} fill loops. Each type's own real
@@ -88,7 +102,10 @@ public class TilePatternCrafter extends BlockEntity {
 	}
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TilePatternCrafter tile) {
-		if (level.isClientSide) return;
+		if (level.isClientSide) {
+			tile.tickRotation();
+			return;
+		}
 		if (!state.getValue(BlockStateProperties.ENABLED)) return;
 		if (tile.count++ % 20 != 0) return;
 
@@ -131,8 +148,36 @@ public class TilePatternCrafter extends BlockEntity {
 			}
 			tile.power -= 1.0f;
 			tile.setChanged();
+			level.blockEvent(pos, state.getBlock(), 1, 0);
 			break;
 		}
+	}
+
+	/** Real modern equivalent of the true original's own real client-side {@code update()} branch - see
+	 * {@link #rot}'s own doc comment for the real formula. */
+	private void tickRotation() {
+		if (rotTicks > 0) {
+			rotTicks--;
+			if (rotTicks % Math.floor(Math.max(1.0f, rp)) == 0.0) {
+				level.playLocalSound(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5,
+						thaumcraft.common.registry.ThaumcraftSounds.CLACK.get(), net.minecraft.sounds.SoundSource.BLOCKS, 0.2f, 1.7f, false);
+			}
+			rp++;
+		} else {
+			rp *= 0.8f;
+		}
+		rot += rp;
+	}
+
+	/** Real modern equivalent of the true original's own real {@code receiveClientEvent} - {@code id == 1}
+	 * matches that exact real event id, fired from {@link #tick} on every successful craft. */
+	@Override
+	public boolean triggerEvent(int id, int type) {
+		if (id == 1) {
+			rotTicks = 10;
+			return true;
+		}
+		return super.triggerEvent(id, type);
 	}
 
 	private record Crafted(ItemStack result, List<ItemStack> remaining) {
@@ -166,5 +211,26 @@ public class TilePatternCrafter extends BlockEntity {
 		super.loadAdditional(tag, registries);
 		type = tag.getByte("Type");
 		power = tag.getFloat("Power");
+	}
+
+	/** Real block-entity sync wiring, added alongside the real crank-animation restoration - {@link #type}
+	 * (which real mode's own icon the client needs to show) was never actually visible to the client before
+	 * this. Same real pattern {@code TileCrucible}/{@code TileCentrifuge} already established. */
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+		}
 	}
 }

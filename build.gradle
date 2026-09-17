@@ -414,6 +414,7 @@ sourceSets {
             include 'thaumcraft/client/fx/particles/FXCultistPortalLesser.java'
             include 'thaumcraft/client/fx/particles/FXCultistPortalGreater.java'
             include 'thaumcraft/client/render/TileCentrifugeRenderer.java'
+            include 'thaumcraft/client/render/TilePatternCrafterRenderer.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'
             include 'thaumcraft/api/internal/IInternalMethodHandler.java'
