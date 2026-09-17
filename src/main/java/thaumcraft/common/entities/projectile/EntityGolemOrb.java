@@ -29,13 +29,16 @@ import thaumcraft.common.registry.ThaumcraftEntities;
  * matching the original exactly). Real "reflect it back" mechanic via {@link #hurt} - a player who hits the
  * orb redirects it along their own look vector, exactly like the original.
  *
- * Real, documented cuts vs the original: no client spawn-data sync for {@code target}/{@code red} (this
- * project's established "no client FX" simplification, same as every other focus/projectile entity here -
- * the homing math and damage calc are server-only anyway) and no impact/travel particle effects (tied to
- * the unported {@code FXDispatcher}). Uses {@link thaumcraft.client.render.RenderFocusProjectile} (no
- * visible model) for the same reason.
+ * Real, documented cut vs the original: no client spawn-data sync for {@code target} (the homing math itself
+ * is server-only, so the client never needs to know it) and no impact/travel particle trail effects (tied to
+ * the unported {@code FXDispatcher}). {@code red} (which picks the real orb colour variant) IS now synced -
+ * restored 2026-09-16 alongside the real {@link thaumcraft.client.fx.particles.FXGolemOrb} visual, since the
+ * client genuinely needs it to pick the right real UV region on the shared particle sheet.
  */
 public class EntityGolemOrb extends ThrowableProjectile {
+
+	private static final net.minecraft.network.syncher.EntityDataAccessor<Boolean> DATA_RED =
+			SynchedEntityData.defineId(EntityGolemOrb.class, net.minecraft.network.syncher.EntityDataSerializers.BOOLEAN);
 
 	private LivingEntity target;
 	public boolean red;
@@ -49,11 +52,21 @@ public class EntityGolemOrb extends ThrowableProjectile {
 		setOwner(thrower);
 		this.target = target;
 		this.red = red;
+		setRed(red);
 	}
 
 	@Override
 	protected void defineSynchedData(SynchedEntityData.Builder builder) {
-		// no per-entity synced state - see the class doc comment.
+		builder.define(DATA_RED, false);
+	}
+
+	public void setRed(boolean value) {
+		this.red = value;
+		entityData.set(DATA_RED, value);
+	}
+
+	public boolean isRed() {
+		return entityData.get(DATA_RED);
 	}
 
 	@Override
@@ -64,6 +77,9 @@ public class EntityGolemOrb extends ThrowableProjectile {
 	@Override
 	public void tick() {
 		super.tick();
+		if (level().isClientSide) {
+			thaumcraft.client.fx.ClientFxHandlers.maintainGolemOrb(this, isRed());
+		}
 		if (tickCount > (red ? 240 : 160)) {
 			discard();
 			return;

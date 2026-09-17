@@ -330,27 +330,61 @@ deferred until now. Real findings from that audit, triaged:
         count real ticks since spawn, so this is a faithful, not simplified,
         substitution). Two clean 504/504 `runGameTestServer` passes and a
         clean `test` task.
+      - ~~**`GOLEM_ORB`**~~ — closed 2026-09-16. Turned out simpler than
+        expected once actually read: unlike `ELDRITCH_ORB` below, the true
+        original's own real `RenderElectricOrb` is just a SINGLE real
+        billboarded quad (not procedural spike geometry) off the shared
+        `particles.png` sheet - a real pulsing "bob" scale
+        (`sin(ticksExisted/5)*0.2+0.2`, faithfully reproduced), a real
+        6-frame flicker, and a real 2-variant UV row picked by the orb's own
+        real `red` flag. Restored via a new `FXGolemOrb`, same real
+        `SingleQuadParticle`-tracking-particle shape `FXWispGlow` already
+        established (one quad this time, not three). Real fixed-point
+        discovery along the way: `red` existed as a real field on
+        `EntityGolemOrb` already but was never synced to the client (`
+        defineSynchedData` was empty, a real, deliberate-at-the-time "no
+        client FX" cut this same doc comment used to claim) - now a real
+        synced boolean, since the client genuinely needs it to pick the
+        right UV variant. Two clean 504/504 `runGameTestServer` passes and a
+        clean `test` task.
       - **Real, confirmed gaps, not yet restored** (same
         `RenderFocusProjectile`-placeholder-hiding-a-real-visual pattern as
-        `WISP`/`FOCUS_MINE` above, found via the same direct true-original
-        cross-check):
-        - `ELDRITCH_ORB` (`EntityEldritchOrb`) / `GOLEM_ORB`
-          (`EntityGolemOrb`) - true original's own real `RenderEldritchOrb`/
-          `RenderElectricOrb` both hand-draw a real procedural
-          tessellator-built sphere/spark shape off the shared particle
-          texture, not empty placeholders. Same "billboard/tessellator quad
-          off the shared sheet" family as `WISP` - likely portable the same
-          way (a dedicated tracking-particle class per orb, reusing
-          `SingleQuadParticle`/`FXWispGlow`'s own established pattern),
-          though each has its own distinct real procedural geometry (not a
-          flat quad) worth checking closely before assuming a straight
-          reuse.
+        `WISP`/`FOCUS_MINE`/`GOLEM_ORB` above, found via the same direct
+        true-original cross-check):
+        - `ELDRITCH_ORB` (`EntityEldritchOrb`) - genuinely harder than
+          `GOLEM_ORB` turned out to be: the true original's own real
+          `RenderEldritchOrb` hand-draws a real procedural geometry, not a
+          flat quad - 12 randomly-rotated (reseeded to a fixed `187L` each
+          frame, so the shape itself is stable/non-flickering despite the
+          per-frame re-randomization) untextured triangle-fan spikes
+          radiating from the origin, vertex-coloured white-to-grey, spinning
+          with `ticksExisted`, PLUS a second real billboarded glow quad on
+          top (same family as `GOLEM_ORB`, off `particles.png`). Needs a
+          real `Particle#render(VertexConsumer,Camera,float)` override
+          building the spike geometry directly (matching `FXArc`'s own real
+          custom-geometry precedent), not just `SingleQuadParticle`'s
+          single-quad shape - a real, separate, bigger chunk than the other
+          orb.
         - `CULTIST_PORTAL_LESSER`/`CULTIST_PORTAL_GREATER`
           (`EntityCultistPortalLesser`/`EntityCultistPortalGreater`) - true
           original's own real `RenderCultistPortalLesser`/
           `RenderCultistPortalGreater` both draw a real animated billboard
-          portal-disc effect off `UtilsFX.renderFacingQuad`/a tessellator,
-          same family again, not empty placeholders.
+          portal-disc effect off a dedicated `cultist_portal.png` texture (a
+          real 16-frame strip), non-uniformly scaled (X/Y scale differ,
+          `SingleQuadParticle`'s own single `quadSize` won't cover this
+          directly - needs a real custom `render()` override like
+          `ELDRITCH_ORB` above, not a plain `FXWispGlow`-style reuse).
+          Genuinely bigger than the other 2 orbs/`WISP` for a second real
+          reason, checked directly against this port's own current entity
+          code (not assumed): the true original's own real animation math
+          reads `activeCounter` (real ticks-since-activation, drives scale/
+          bob) and `pulse` (a real decaying "just spawned a minion" flash),
+          neither of which exist on this port's `EntityCultistPortalLesser`/
+          `EntityCultistPortalGreater` yet (only `isActive()`/a differently-
+          shaped `stageCounter` do) - restoring this real visual means adding
+          2 small real fields to both entity classes first, not just writing
+          a renderer. `hurtTime` doesn't need adding - it's a real vanilla
+          `LivingEntity` field already available for free.
         - `TURRET_CROSSBOW_ADVANCED` (`EntityTurretCrossbow`, the advanced
           variant) - true original's own real `RenderTurretCrossbowAdvanced`
           loads and draws a real `.obj` mesh via the true original's own

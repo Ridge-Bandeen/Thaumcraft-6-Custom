@@ -191,11 +191,8 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.TAINTACLE_GIANT.get(), context -> new thaumcraft.client.render.RenderTaintacle(context, 1.0f, 14));
         event.registerEntityRenderer(ThaumcraftEntities.TAINT_SEED.get(), context -> new thaumcraft.client.render.RenderTaintSeed(context, 0.4f));
         event.registerEntityRenderer(ThaumcraftEntities.TAINT_SEED_PRIME.get(), context -> new thaumcraft.client.render.RenderTaintSeed(context, 0.6f));
-        // Still a real, confirmed gap (not the same permanent "no client FX" case FOCUS_PROJECTILE/FOCUS_CLOUD
-        // above genuinely are) - the true original's own real RenderElectricOrb hand-draws a real procedural
-        // tessellator spark shape here, not an empty placeholder. Found 2026-09-16 during the same
-        // RenderFocusProjectile-placeholder cross-check that fixed FOCUS_MINE/WISP; not yet restored - see the
-        // Custom Mob Models/Renderers TODO entry.
+        // Real billboarded glow quad restored 2026-09-16 - see FXGolemOrb's own doc comment. Turned out
+        // simpler than ELDRITCH_ORB below (a single tracking quad, not real procedural spike geometry).
         event.registerEntityRenderer(ThaumcraftEntities.GOLEM_ORB.get(), RenderFocusProjectile::new);
         // Real geometry now - see ModelCrossbow/RenderTurretCrossbow's own doc comments.
         event.registerEntityRenderer(ThaumcraftEntities.TURRET_CROSSBOW.get(), thaumcraft.client.render.RenderTurretCrossbow::new);

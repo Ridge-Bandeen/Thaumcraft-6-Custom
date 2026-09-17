@@ -170,6 +170,24 @@ public final class ClientFxHandlers {
 		mc.particleEngine.add(new thaumcraft.client.fx.particles.FXWispGlow(level, wisp, nodes, 32, 800, 0.75f, ar, ag, ab, 0.5f));
 	}
 
+	private static final Set<Integer> GOLEM_ORBS = new HashSet<>();
+
+	/** Real {@link thaumcraft.client.fx.particles.FXGolemOrb} spawn for {@link
+	 * thaumcraft.common.entities.projectile.EntityGolemOrb} - see that particle's own doc comment.
+	 * Fire-and-forget, one real time per real orb id, same shape as {@link #maintainWisp}. */
+	public static void maintainGolemOrb(Entity orb, boolean red) {
+		if (!GOLEM_ORBS.add(orb.getId())) {
+			return;
+		}
+		Minecraft mc = Minecraft.getInstance();
+		ClientLevel level = mc.level;
+		if (level == null) {
+			GOLEM_ORBS.remove(orb.getId());
+			return;
+		}
+		mc.particleEngine.add(new thaumcraft.client.fx.particles.FXGolemOrb(level, orb, red));
+	}
+
 	private ClientFxHandlers() {
 	}
 
