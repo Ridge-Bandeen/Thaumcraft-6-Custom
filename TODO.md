@@ -282,16 +282,37 @@ deferred until now. Real findings from that audit, triaged:
       `FXGenericP2P`, plus `FXEssentiaStream` which does have a real call
       site - `RenderEventHandler`'s own tube-network essentia-flow
       visualization, a bigger separate system) not yet scoped in detail -
-      **correction 2026-09-16: `FXVent`/`FXVent2` were wrongly included in
-      this "confirmed zero call site" bucket** - a real call site exists
-      after all, found while restoring `GOLEM_BUILDER`'s own renderer: the
-      true original's own `TileGolemBuilder#update` calls `FXDispatcher
-      .drawVentParticles` (real steam-vent bursts) at the press-ram's own
-      60%/90%+ thresholds, deliberately not restored in that same chunk (see
-      its own closed TODO entry above) - a real, small, self-contained
-      follow-up chunk whenever picked up, not zero-value after all. The rest
-      of this list had no real, currently-compiled call site found during
-      this pass's scoping search, so likely low-value until
+      ~~**`FXVent`/`FXVent2`**~~ — closed 2026-09-16 (had been wrongly filed
+      as "confirmed zero call site" - a real call site existed after all,
+      found while restoring `GOLEM_BUILDER`'s own renderer). Both real,
+      faithful `SingleQuadParticle`-based billboard puffs off the shared
+      `particles.png` sheet, matching the true original's own real
+      grow-then-fade shape exactly (spawns small, grows toward a real
+      target scale, fading out as it approaches it - opaque when
+      fresh/small, transparent as it finishes "dissipating"). Checked
+      real differences between the two classes directly rather than
+      assumed identical: `FXVent2` has real per-particle random gravity
+      (up or down) and real per-channel colour jitter `FXVent` doesn't,
+      plus a slightly faster real growth rate. Wired to BOTH of the true
+      original's own 2 real call sites, found via a direct `git grep`
+      rather than assumed single-purpose: `TileGolemBuilder#tickPress`'s
+      own real 60%/90%+ press-ram thresholds (`FXVent`, the follow-up
+      already flagged) AND `TilePotionSprayer`'s own real post-spray vent
+      cue (`FXVent2`, a genuinely separate real device not previously on
+      this chunk's radar at all) - added a real client-only `venting`
+      countdown plus a real vanilla entity-event trigger (id `0`, packing
+      the sprayed potion's own real colour into the event's own generic
+      second int parameter) to `TilePotionSprayer`, which had no such
+      mechanism at all before. Both particle spawns routed through a new
+      `ClientFxHandlers#spawnVentBurst`/`spawnVentBurst2` pair rather than
+      referencing the client-only particle classes directly from the 2
+      common-side tiles' own method bodies - the same real dist-crash
+      class this port already hit once for `FocusEffect#renderParticleFX`,
+      deliberately avoided here from the start rather than found the hard
+      way again. Two clean 503/503 `runGameTestServer` passes and a clean
+      `test` task.
+    - The rest of this list had no real, currently-compiled call site
+      found during this pass's scoping search, so likely low-value until
       whatever gameplay feature they'd back gets built first.
     - ~~**`FocusEffect#renderParticleFX` restoration**~~ — closed 2026-09-16.
       All 10 real `FocusEffect` subclasses with a real particle FX

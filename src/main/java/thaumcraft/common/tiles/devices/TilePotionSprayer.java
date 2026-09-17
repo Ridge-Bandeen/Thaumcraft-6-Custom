@@ -51,9 +51,12 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  *
  * Also simplified: no GUI - right-click inserts/removes the potion directly, the same no-menu convention
  * {@link thaumcraft.common.blocks.devices.BlockRechargePedestal} already established (no ported single-slot
- * container/menu base to reuse yet, so building one bespoke for a single device isn't worth it). No client
- * particle/sound venting FX ({@code FXDispatcher}) - visual-only, dropped like every other device this
- * session.
+ * container/menu base to reuse yet, so building one bespoke for a single device isn't worth it).
+ *
+ * <p>Real client-side spray-vent particle burst restored 2026-09-16 - see {@link #venting}'s own doc comment
+ * (this class's own doc comment previously called it dropped "visual-only... like every other device this
+ * session," which was itself only ever true because this specific FX class - {@code FXVent2} - had no real
+ * proven client-particle precedent to reuse yet).
  */
 public class TilePotionSprayer extends BlockEntity implements IEssentiaTransport {
 
@@ -77,6 +80,13 @@ public class TilePotionSprayer extends BlockEntity implements IEssentiaTransport
 	private int counter;
 	private boolean activated;
 	private Aspect currentSuction;
+
+	/** Real client-only spray-vent countdown, matching the true original's own real field exactly -
+	 * deliberately plain (not synced): set to {@code 15} by a real vanilla entity-event broadcast ({@link
+	 * #triggerEvent}, id {@code 0}, fired by {@link #spray} on every real successful spray), then ticked down
+	 * independently on the client. */
+	private int venting;
+	private int ventColor = 0xAAAAAA;
 
 	public TilePotionSprayer(BlockPos pos, BlockState state) {
 		super(ThaumcraftBlockEntities.POTION_SPRAYER.get(), pos, state);
@@ -118,7 +128,10 @@ public class TilePotionSprayer extends BlockEntity implements IEssentiaTransport
 	}
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TilePotionSprayer tile) {
-		if (level.isClientSide) return;
+		if (level.isClientSide) {
+			tile.tickVenting(level, pos, state.getValue(BlockStateProperties.HORIZONTAL_FACING));
+			return;
+		}
 		tile.counter++;
 		Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
 
@@ -174,6 +187,44 @@ public class TilePotionSprayer extends BlockEntity implements IEssentiaTransport
 		}
 		level.playSound(null, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.25f,
 				2.6f + (level.random.nextFloat() - level.random.nextFloat()) * 0.8f);
+		level.blockEvent(pos, getBlockState().getBlock(), 0, contents != null ? contents.getColor() : 0xAAAAAA);
+	}
+
+	/** Real modern equivalent of the true original's own real client-side {@code onUpdate} venting branch -
+	 * see {@link #venting}'s own doc comment for the real trigger. Real, checked-not-assumed exact formula
+	 * (half as many particles as {@link #venting} itself, matching the true original's own real {@code
+	 * venting / 2} loop bound exactly), each real particle offset/aimed along the sprayer's own real facing. */
+	private void tickVenting(Level level, BlockPos pos, Direction facing) {
+		if (venting <= 0) {
+			return;
+		}
+		venting--;
+		var random = level.getRandom();
+		for (int i = 0; i < venting / 2; i++) {
+			float fx = 0.1f - random.nextFloat() * 0.2f;
+			float fy = 0.1f - random.nextFloat() * 0.2f;
+			float fz = 0.1f - random.nextFloat() * 0.2f;
+			float mx = (float) (random.nextGaussian() * 0.06) + facing.getStepX() * 0.25f;
+			float my = (float) (random.nextGaussian() * 0.06) + facing.getStepY() * 0.25f;
+			float mz = (float) (random.nextGaussian() * 0.06) + facing.getStepZ() * 0.25f;
+			thaumcraft.client.fx.ClientFxHandlers.spawnVentBurst2(level,
+					pos.getX() + 0.5 + fx + facing.getStepX() / 2.0, pos.getY() + 0.5 + fy + facing.getStepY() / 2.0, pos.getZ() + 0.5 + fz + facing.getStepZ() / 2.0,
+					mx, my, mz, ventColor, 4.0f);
+		}
+	}
+
+	/** Real modern equivalent of the true original's own real {@code receiveClientEvent} - {@code id == 0}
+	 * matches that exact real event id; {@code type} (the event's own generic second int parameter) carries
+	 * the real sprayed potion's own colour across to the client, since {@link #venting}'s own real particle
+	 * burst needs it and this tile has no other real per-particle colour state to read at render time. */
+	@Override
+	public boolean triggerEvent(int id, int type) {
+		if (id == 0) {
+			venting = 15;
+			ventColor = type;
+			return true;
+		}
+		return super.triggerEvent(id, type);
 	}
 
 	private void fill(Level level, BlockPos pos, Direction facing) {

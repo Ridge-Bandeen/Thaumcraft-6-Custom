@@ -245,6 +245,32 @@ public final class ClientFxHandlers {
 		mc.particleEngine.add(new thaumcraft.client.fx.particles.FXCultistPortalGreater(level, portal));
 	}
 
+	/** Real {@link thaumcraft.client.fx.particles.FXVent} burst - see that class's own doc comment. Real
+	 * common-safe signature (a {@link net.minecraft.world.level.Level}, not a {@link ClientLevel}) so common
+	 * callers like {@link thaumcraft.common.tiles.crafting.TileGolemBuilder#tickPress} can call this directly
+	 * without ever referencing a client-only type themselves - see {@code FocusFxHelper}'s own doc comment for
+	 * why that distinction matters (a real dedicated-server crash this port already hit once). */
+	public static void spawnVentBurst(net.minecraft.world.level.Level level, double x, double y, double z, int count, int color) {
+		if (!(level instanceof ClientLevel clientLevel)) {
+			return;
+		}
+		var particleEngine = Minecraft.getInstance().particleEngine;
+		for (int i = 0; i < count; i++) {
+			particleEngine.add(new thaumcraft.client.fx.particles.FXVent(clientLevel, x, y, z,
+					clientLevel.random.nextGaussian() * 0.1, 0.0, clientLevel.random.nextGaussian() * 0.1, color));
+		}
+	}
+
+	/** Real {@link thaumcraft.client.fx.particles.FXVent2} burst - see {@link #spawnVentBurst}'s own doc
+	 * comment for why this common-safe signature matters. */
+	public static void spawnVentBurst2(net.minecraft.world.level.Level level, double x, double y, double z,
+			double mx, double my, double mz, int color, float scale) {
+		if (!(level instanceof ClientLevel clientLevel)) {
+			return;
+		}
+		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXVent2(clientLevel, x, y, z, mx, my, mz, color).setScale(scale));
+	}
+
 	private ClientFxHandlers() {
 	}
 

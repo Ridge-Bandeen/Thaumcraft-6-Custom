@@ -159,26 +159,33 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 		level.playSound(null, pos, SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 1.0f, 1.2f);
 	}
 
+	/** Real vent-steam colour, matching the true original's own real hardcoded {@code 11184810} (0xAAAAAA,
+	 * a real light-grey steam tint) at every one of its own real call sites. */
+	private static final int VENT_COLOR = 0xAAAAAA;
+
 	/** Real modern equivalent of the true original's own real client-side {@code update()} branch - see
-	 * {@link #press}'s own doc comment for the real formula. Real, disclosed cut: the true original's own real
-	 * vent-steam particle bursts at the 60%/90%+ thresholds ({@code FXDispatcher#drawVentParticles}) aren't
-	 * restored here - a real, genuine call site for the still-unported {@code FXVent}/{@code FXVent2} classes
-	 * (previously, incorrectly, filed as confirmed-zero-call-site in the Particle FX scoping notes - corrected
-	 * in TODO.md), left for a future chunk rather than pulled into this one. The real lava-extinguish sound
-	 * cues at those same thresholds ARE kept, since they need no new particle infrastructure. */
+	 * {@link #press}'s own doc comment for the real formula, and {@link
+	 * thaumcraft.client.fx.ClientFxHandlers#spawnVentBurst}'s own doc comment for why the real particle spawn
+	 * is routed through that class rather than referencing {@link thaumcraft.client.fx.particles.FXVent}
+	 * directly from this common-side method. */
 	private void tickPress(Level level, BlockPos pos) {
 		if (press < 90 && cost > 0 && golem > 0L) {
 			press += 6;
 			if (press >= 60) {
 				level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
 						SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.66f, 1.0f + level.getRandom().nextFloat() * 0.1f, false);
+				thaumcraft.client.fx.ClientFxHandlers.spawnVentBurst(level, pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5, 16, VENT_COLOR);
 			}
 		}
 		if (press >= 90 && level.getRandom().nextInt(8) == 0) {
+			thaumcraft.client.fx.ClientFxHandlers.spawnVentBurst(level, pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5, 1, VENT_COLOR);
 			level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
 					SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.1f, 1.0f + level.getRandom().nextFloat() * 0.1f, false);
 		}
 		if (press > 0 && (cost <= 0 || golem == -1L)) {
+			if (press >= 90) {
+				thaumcraft.client.fx.ClientFxHandlers.spawnVentBurst(level, pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5, 10, VENT_COLOR);
+			}
 			press -= 3;
 		}
 	}

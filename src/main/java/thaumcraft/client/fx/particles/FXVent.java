@@ -1,119 +1,159 @@
 package thaumcraft.client.fx.particles;
-import java.awt.Color;
-import net.minecraft.client.particle.Particle;
-import net.minecraft.client.renderer.BufferBuilder;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.client.FMLClientHandler;
-import org.lwjgl.opengl.GL11;
 
+import javax.annotation.Nullable;
 
-public class FXVent extends Particle
-{
-    float psm;
-    
-    public FXVent(World par1World, double par2, double par4, double par6, double par8, double par10, double par12, int color) {
-        super(par1World, par2, par4, par6, par8, par10, par12);
-        psm = 1.0f;
-        setSize(0.02f, 0.02f);
-        particleScale = rand.nextFloat() * 0.1f + 0.05f;
-        motionX = par8;
-        motionY = par10;
-        motionZ = par12;
-        Color c = new Color(color);
-        particleRed = c.getRed() / 255.0f;
-        particleBlue = c.getBlue() / 255.0f;
-        particleGreen = c.getGreen() / 255.0f;
-        setHeading(motionX, motionY, motionZ, 0.125f, 5.0f);
-        Entity renderentity = FMLClientHandler.instance().getClient().getRenderViewEntity();
-        int visibleDistance = 50;
-        if (!FMLClientHandler.instance().getClient().gameSettings.fancyGraphics) {
-            visibleDistance = 25;
-        }
-        if (renderentity.getDistance(posX, posY, posZ) > visibleDistance) {
-            particleMaxAge = 0;
-        }
-        prevPosX = posX;
-        prevPosY = posY;
-        prevPosZ = posZ;
-    }
-    
-    public void setScale(float f) {
-        particleScale *= f;
-        psm *= f;
-    }
-    
-    public void setHeading(double par1, double par3, double par5, float par7, float par8) {
-        float f2 = MathHelper.sqrt(par1 * par1 + par3 * par3 + par5 * par5);
-        par1 /= f2;
-        par3 /= f2;
-        par5 /= f2;
-        par1 += rand.nextGaussian() * (rand.nextBoolean() ? -1 : 1) * 0.007499999832361937 * par8;
-        par3 += rand.nextGaussian() * (rand.nextBoolean() ? -1 : 1) * 0.007499999832361937 * par8;
-        par5 += rand.nextGaussian() * (rand.nextBoolean() ? -1 : 1) * 0.007499999832361937 * par8;
-        par1 *= par7;
-        par3 *= par7;
-        par5 *= par7;
-        motionX = par1;
-        motionY = par3;
-        motionZ = par5;
-    }
-    
-    public void onUpdate() {
-        prevPosX = posX;
-        prevPosY = posY;
-        prevPosZ = posZ;
-        ++particleAge;
-        if (particleScale >= psm) {
-            setExpired();
-        }
-        motionY += 0.0025;
-        move(motionX, motionY, motionZ);
-        motionX *= 0.8500000190734863;
-        motionY *= 0.8500000190734863;
-        motionZ *= 0.8500000190734863;
-        if (particleScale < psm) {
-            particleScale *= (float)1.15;
-        }
-        if (particleScale > psm) {
-            particleScale = psm;
-        }
-        if (onGround) {
-            motionX *= 0.699999988079071;
-            motionZ *= 0.699999988079071;
-        }
-    }
-    
-    public void setRGB(float r, float g, float b) {
-        particleRed = r;
-        particleGreen = g;
-        particleBlue = b;
-    }
-    
-    public void renderParticle(BufferBuilder wr, Entity entity, float f, float f1, float f2, float f3, float f4, float f5) {
-        GL11.glColor4f(1.0f, 1.0f, 1.0f, 0.33f);
-        int part = (int)(1.0f + particleScale / psm * 4.0f);
-        float var8 = part % 16 / 64.0f;
-        float var9 = var8 + 0.015625f;
-        float var10 = part / 64 / 64.0f;
-        float var11 = var10 + 0.015625f;
-        float var12 = 0.3f * particleScale;
-        float var13 = (float)(prevPosX + (posX - prevPosX) * f - FXVent.interpPosX);
-        float var14 = (float)(prevPosY + (posY - prevPosY) * f - FXVent.interpPosY);
-        float var15 = (float)(prevPosZ + (posZ - prevPosZ) * f - FXVent.interpPosZ);
-        float var16 = 1.0f;
-        int i = getBrightnessForRender(f);
-        int j = i >> 16 & 0xFFFF;
-        int k = i & 0xFFFF;
-        float alpha = particleAlpha * ((psm - particleScale) / psm);
-        wr.pos(var13 - f1 * var12 - f4 * var12, var14 - f2 * var12, var15 - f3 * var12 - f5 * var12).tex(var9, var11).color(particleRed * var16, particleGreen * var16, particleBlue * var16, alpha).lightmap(j, k).endVertex();
-        wr.pos(var13 - f1 * var12 + f4 * var12, var14 + f2 * var12, var15 - f3 * var12 + f5 * var12).tex(var9, var10).color(particleRed * var16, particleGreen * var16, particleBlue * var16, alpha).lightmap(j, k).endVertex();
-        wr.pos(var13 + f1 * var12 + f4 * var12, var14 + f2 * var12, var15 + f3 * var12 + f5 * var12).tex(var8, var10).color(particleRed * var16, particleGreen * var16, particleBlue * var16, alpha).lightmap(j, k).endVertex();
-        wr.pos(var13 + f1 * var12 - f4 * var12, var14 - f2 * var12, var15 + f3 * var12 - f5 * var12).tex(var8, var11).color(particleRed * var16, particleGreen * var16, particleBlue * var16, alpha).lightmap(j, k).endVertex();
-    }
-    
-    public int getFXLayer() {
-        return 1;
-    }
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
+
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.particle.SingleQuadParticle;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import thaumcraft.Thaumcraft;
+
+/**
+ * Real modern equivalent of the true original's own {@code FXVent} - a small growing-then-fading steam/vent
+ * puff off the shared {@code particles.png} sheet, restored 2026-09-16 alongside {@link
+ * thaumcraft.common.tiles.crafting.TileGolemBuilder}'s own real press-ram threshold cues (the true original's
+ * own only real call site, found while restoring that device's renderer - see that class's own {@code
+ * tickPress} doc comment).
+ *
+ * <p>Real, faithful port of the true original's own real growth/fade shape: spawns at a small random scale,
+ * grows toward a real target scale (a real {@code setScale} multiplier, defaulting to {@code 1.0}) at a real
+ * {@code *1.15}/tick rate, fading out as it approaches that target (alpha scales with {@code (target-scale)/
+ * target} - opaque when fresh/small, transparent as it finishes growing, a real "dissipating puff" look) -
+ * removed the instant it reaches full scale. Real physics: a fixed small downward drift (gravity {@code
+ * 0.0025}), {@code 0.85} air drag, {@code 0.7} extra ground-friction while resting. Real initial-heading
+ * jitter (normalize + real gaussian spread, matching the true original's own {@code setHeading} exactly).
+ *
+ * <p>Reuses {@link SingleQuadParticle}'s own real camera-facing billboard - a single flat quad, same real
+ * "check the easy way first" shape {@code FXBoreSparkle}/{@code FXSwarm}/{@code FXGolemOrb} already
+ * established - addressing frame {@code 1 + floor(scale/target*4)} (a real 1-4 frame growth-animation) on the
+ * same real {@code gridSize=64} row-0 region the true original's own exact formula used.
+ */
+public class FXVent extends SingleQuadParticle {
+
+	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/misc/particles.png");
+	private static final int GRID = 64;
+	private static final float CELL = 1.0f / GRID;
+
+	public static final ParticleRenderType RENDER_TYPE = new ParticleRenderType() {
+		@Nullable
+		@Override
+		public BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
+			RenderSystem.setShader(GameRenderer::getParticleShader);
+			RenderSystem.setShaderTexture(0, TEXTURE);
+			RenderSystem.enableBlend();
+			RenderSystem.defaultBlendFunc();
+			RenderSystem.depthMask(false);
+			return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+		}
+
+		@Override
+		public String toString() {
+			return "thaumcraft:vent";
+		}
+	};
+
+	private float targetScale = 1.0f;
+
+	public FXVent(ClientLevel level, double x, double y, double z, double mx, double my, double mz, int color) {
+		super(level, x, y, z);
+		this.quadSize = random.nextFloat() * 0.1f + 0.05f;
+		this.rCol = ((color >> 16) & 0xFF) / 255.0f;
+		this.gCol = ((color >> 8) & 0xFF) / 255.0f;
+		this.bCol = (color & 0xFF) / 255.0f;
+		this.alpha = 0.4f;
+		this.hasPhysics = true;
+		setHeading(mx, my, mz, 0.125f, 5.0f);
+	}
+
+	/** @return this particle for real fluent-setter chaining, matching the true original's own real API. */
+	public FXVent setScale(float scale) {
+		this.quadSize *= scale;
+		this.targetScale *= scale;
+		return this;
+	}
+
+	private void setHeading(double mx, double my, double mz, float speed, float jitter) {
+		double len = Math.sqrt(mx * mx + my * my + mz * mz);
+		mx /= len;
+		my /= len;
+		mz /= len;
+		mx += random.nextGaussian() * (random.nextBoolean() ? -1 : 1) * 0.0075 * jitter;
+		my += random.nextGaussian() * (random.nextBoolean() ? -1 : 1) * 0.0075 * jitter;
+		mz += random.nextGaussian() * (random.nextBoolean() ? -1 : 1) * 0.0075 * jitter;
+		xd = mx * speed;
+		yd = my * speed;
+		zd = mz * speed;
+	}
+
+	@Override
+	public void tick() {
+		xo = x;
+		yo = y;
+		zo = z;
+		age++;
+		if (quadSize >= targetScale) {
+			remove();
+			return;
+		}
+		yd += 0.0025;
+		move(xd, yd, zd);
+		xd *= 0.85;
+		yd *= 0.85;
+		zd *= 0.85;
+		if (quadSize < targetScale) {
+			quadSize *= 1.15f;
+		}
+		if (quadSize > targetScale) {
+			quadSize = targetScale;
+		}
+		if (onGround) {
+			xd *= 0.7;
+			zd *= 0.7;
+		}
+		this.alpha = 0.4f * ((targetScale - quadSize) / targetScale);
+	}
+
+	/** Real, faithful split between {@link #quadSize} (a real growth/threshold-tracking value, {@code 0.05}
+	 * to {@link #targetScale}) and the actual real rendered half-width ({@code 0.3 * quadSize}) - matches the
+	 * true original's own real distinct {@code particleScale} vs. render-size ({@code var12 = 0.3f *
+	 * particleScale}) split exactly. */
+	@Override
+	public float getQuadSize(float partialTicks) {
+		return quadSize * 0.3f;
+	}
+
+	@Override
+	protected float getU0() {
+		int part = Mth.clamp(1 + (int) (quadSize / targetScale * 4.0f), 1, 4);
+		return (part % 16) * CELL;
+	}
+
+	@Override
+	protected float getU1() {
+		return getU0() + CELL;
+	}
+
+	@Override
+	protected float getV0() {
+		return 0.0f;
+	}
+
+	@Override
+	protected float getV1() {
+		return CELL;
+	}
+
+	@Override
+	public ParticleRenderType getRenderType() {
+		return RENDER_TYPE;
+	}
 }
