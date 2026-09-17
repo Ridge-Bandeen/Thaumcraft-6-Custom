@@ -135,9 +135,13 @@ public class ThaumcraftClient {
         // No renderer registered at all until now - a real, latent crash risk (any entity type without one
         // throws the first time the client actually tries to render an instance), not just a missing model.
         // The original's own WISP/FLUX_RIFT renderers are both pure billboard/quad or raw-shader client FX
-        // with no real 3D model at all (checked directly, not assumed) - same permanent "no client FX"
-        // territory this port has kept all session, so these two get the same safe no-visible-model
-        // placeholder as FOCUS_PROJECTILE above, not a temporary gap.
+        // with no real 3D model at all (checked directly, not assumed), so neither needs a real
+        // EntityRenderer#render override - this no-visible-model placeholder (same as FOCUS_PROJECTILE above)
+        // stays correct for both. WISP's own real glow quads are restored 2026-09-16, but as real client-local
+        // particles tracking the entity (see FXWispGlow's own doc comment) rather than drawn from here - this
+        // placeholder is still the right renderer registration for it, not a leftover gap. FLUX_RIFT's own
+        // real raw-shader "warp" visual is still a real, deferred gap (see the Custom Mob Models/Renderers
+        // TODO entry - a GLSL shader port, not just another billboard).
         event.registerEntityRenderer(ThaumcraftEntities.WISP.get(), RenderFocusProjectile::new);
         event.registerEntityRenderer(ThaumcraftEntities.FLUX_RIFT.get(), RenderFocusProjectile::new);
         // Real geometry now - see RenderGrapple's own doc comment (the rope/tether visual is dropped, the

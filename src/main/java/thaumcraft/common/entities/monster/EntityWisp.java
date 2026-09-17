@@ -52,9 +52,12 @@ import thaumcraft.api.items.ItemsTC;
  * PacketFXSlash}/{@code ClientFxHandlers#handleSlash} pair as a documented stand-in while there was no real
  * bolt renderer to show, including the real per-aspect colour the true original's own zap always had.
  *
- * Real, documented cuts: no dedicated {@code RenderWisp} (this port hasn't needed a custom
- * {@code EntityRenderer} anywhere yet - {@code EntityGrapple}/{@code EntityFollowingItem} ship the same
- * gap already); the original's client-side ambient/death particle bursts (both drove entirely by the
+ * Real visible glow restored 2026-09-16 - see {@link thaumcraft.client.fx.particles.FXWispGlow}'s own doc
+ * comment (this entity had genuinely no visible model at all before, not a deliberate simplification: the
+ * true original's own real {@code RenderWisp} never drew a skeletal model either, just 3 real billboarded
+ * glow quads every frame).
+ *
+ * Real, documented cuts: the original's client-side death particle burst (drove entirely by the
  * unconverted {@code FXDispatcher}); and real natural world-spawning (the original's own spawn list only
  * ever added it to the Nether biome dictionary plus two custom Thaumcraft biomes, neither of which exist in
  * this port) - {@link #canSpawnHere} still does the original's real darkness/density validity check, ready
@@ -114,6 +117,7 @@ public class EntityWisp extends FlyingMob implements Enemy {
 	public void aiStep() {
 		super.aiStep();
 		if (level().isClientSide) {
+			thaumcraft.client.fx.ClientFxHandlers.maintainWisp(this);
 			return;
 		}
 		ServerLevel level = (ServerLevel) level();

@@ -280,15 +280,110 @@ deferred until now. Real findings from that audit, triaged:
         also carries real server-invoked gameplay methods crashes even if
         that specific method is never called server-side.
   - **Custom mob models/renderers** (`client/renderers/*`, `client/lib/obj`)
-    - still queued, not yet scoped in detail; likely the largest remaining
-    piece of this whole layer. `FXSonic` (the Eldritch Warden/Guardian's own
-    real sonic-scream shockwave, see the Particle FX section above) belongs
-    here too, not in Particle FX proper - real `.obj` mesh rendering
-    (`hemis.obj` + 15 `ripple<N>.png` frames, both already present unused),
-    likely via NeoForge's own built-in `neoforge:obj` model loader rather
-    than a hand-rolled parser, but integrating a baked model into a
-    `Particle#render()` call is genuinely new pipeline work worth its own
-    real scoping pass, not a quick add-on to an existing particle class.
+    - now scoped in detail (2026-09-16), via a real cross-check: every entity
+    type currently registered with the invisible `RenderFocusProjectile`
+    placeholder in `ThaumcraftClient.java` checked directly against the true
+    original's own real renderer for that entity, rather than assuming the
+    placeholder is always the documented "never had a model" case it
+    legitimately is for `FOCUS_PROJECTILE`/`FOCUS_MINE`(?)/`FOCUS_CLOUD`
+    /`GOLEM_ORB`(?)/`ELDRITCH_ORB`(?)/`TURRET_CROSSBOW_ADVANCED`/`WISP`
+    /`FLUX_RIFT`/`CULTIST_PORTAL_LESSER`/`CULTIST_PORTAL_GREATER`. Real
+    findings:
+      - ~~**`WISP`**~~ — closed 2026-09-16. `EntityWisp` had genuinely no
+        visible model at all (not the documented-elsewhere "deliberate no
+        client FX" case its own doc comment incorrectly claimed before this
+        fix) - the true original's own real `RenderWisp` never drew a
+        skeletal model either, just 3 real billboarded glow quads every frame
+        (2 off the shared `particles.png` sheet, one off a second distinct
+        `auranodes.png` sheet tinted by the wisp's own real aspect colour).
+        Rather than hand-rolling a brand-new camera-facing-quad primitive
+        inside a custom `EntityRenderer` (real, new, and unverifiable
+        rendering-pipeline work since GameTest never renders a frame - the
+        "check the easy way first" call here), restored via a new
+        `FXWispGlow` - 3 real client-local particles that snap to the target
+        entity's own position every tick (zero physics), reusing the exact
+        same already-proven `SingleQuadParticle` billboard machinery
+        `FXGeneric`/`FXSwarm` already established, rather than needing a
+        genuinely new `EntityRenderer`-based rendering primitive at all.
+        Spawned once (fire-and-forget) from `EntityWisp#aiStep`'s own
+        client-side branch via `ClientFxHandlers#maintainWisp`; each particle
+        self-removes the instant its target dies (matches the true
+        original's own real "stop drawing the moment health hits 0" - no
+        fade needed). `FOCUS_MINE` and `FOCUS_PROJECTILE` also share the
+        placeholder but were confirmed to be genuinely blank/real placeholder
+        cases in the true original itself (`RenderFocusCloud#renderEntityAt`
+        is a real empty method body; `RenderFocusMine` does have a real
+        model+beam texture though - see below, not yet restored).
+      - **Real, confirmed gaps, not yet restored** (same
+        `RenderFocusProjectile`-placeholder-hiding-a-real-visual pattern as
+        `WISP` above, found via the same direct true-original cross-check):
+        - `FOCUS_MINE` (`EntityFocusMine`) - true original's own real
+          `RenderFocusMine` draws a real `ModelGrappler`-shaped mesh with a
+          pulsing red-tinted beam texture, not just a particle trail. A real
+          `ModelGrappler`-equivalent may already partly exist given
+          `RenderGrapple`/`EntityGrapple` are already real and ported -
+          worth checking for reuse before building fresh.
+        - `ELDRITCH_ORB` (`EntityEldritchOrb`) / `GOLEM_ORB`
+          (`EntityGolemOrb`) - true original's own real `RenderEldritchOrb`/
+          `RenderElectricOrb` both hand-draw a real procedural
+          tessellator-built sphere/spark shape off the shared particle
+          texture, not empty placeholders. Same "billboard/tessellator quad
+          off the shared sheet" family as `WISP` - likely portable the same
+          way (a dedicated tracking-particle class per orb, reusing
+          `SingleQuadParticle`/`FXWispGlow`'s own established pattern),
+          though each has its own distinct real procedural geometry (not a
+          flat quad) worth checking closely before assuming a straight
+          reuse.
+        - `CULTIST_PORTAL_LESSER`/`CULTIST_PORTAL_GREATER`
+          (`EntityCultistPortalLesser`/`EntityCultistPortalGreater`) - true
+          original's own real `RenderCultistPortalLesser`/
+          `RenderCultistPortalGreater` both draw a real animated billboard
+          portal-disc effect off `UtilsFX.renderFacingQuad`/a tessellator,
+          same family again, not empty placeholders.
+        - `TURRET_CROSSBOW_ADVANCED` (`EntityTurretCrossbow`, the advanced
+          variant) - true original's own real `RenderTurretCrossbowAdvanced`
+          loads and draws a real `.obj` mesh via the true original's own
+          bespoke `AdvancedModelLoader`/`IModelCustom` - the SAME real OBJ
+          model-loading infrastructure gap `FXSonic` already identified
+          (NeoForge's own built-in `neoforge:obj` loader is the likely real
+          "easy way" for both once someone builds it) - these two should
+          likely be scoped/built together as one real "OBJ model loading"
+          mini-project rather than separately. The regular (non-advanced)
+          `TURRET_CROSSBOW` already has a real, different, already-ported
+          renderer - only the advanced variant is the gap.
+      - **`FLUX_RIFT` (`EntityFluxRift`) - real, deliberately deferred, not
+        a quick win.** True original's own real `RenderFluxRift` is
+        genuinely different from every other case here: it renders via a
+        real custom GLSL shader (`ARBShaderObjects`/a real shader-callback
+        mechanism feeding the player's own yaw/pitch into the shader for a
+        camera-relative warp/distortion effect on a starfield texture), not
+        a billboard quad or a skeletal model at all. Porting this means real
+        modern shader-pipeline work (NeoForge's own `ShaderInstance`/
+        `PostChain` or similar), a substantially different kind of task from
+        every other item in this section - real, correctly scoped as its own
+        separate future chunk once someone deliberately wants to tackle
+        shader-based effects, not bundled in here.
+    - `FXSonic` (the Eldritch Warden/Guardian's own real sonic-scream
+    shockwave, see the Particle FX section above) belongs here too, not in
+    Particle FX proper - real `.obj` mesh rendering (`hemis.obj` + 15
+    `ripple<N>.png` frames, both already present unused), likely via
+    NeoForge's own built-in `neoforge:obj` model loader rather than a
+    hand-rolled parser (the same real infrastructure `TURRET_CROSSBOW_
+    ADVANCED` above also needs) - integrating a baked model into a
+    `Particle#render()`/`EntityRenderer#render()` call is genuinely new
+    pipeline work worth its own real scoping pass, not a quick add-on to an
+    existing particle class.
+    - The much larger remaining bulk of `client/renderers/*` (custom mob
+    *models* specifically - `ModelEldritchGolem`-style skeletal meshes,
+    armor models, tile-entity renderers) was NOT swept in this pass - this
+    scoping pass only checked entities currently hidden behind the
+    `RenderFocusProjectile` invisible placeholder, which is a real, bounded,
+    high-confidence subset (a wrong/missing renderer is either invisible or
+    a hard crash, both cheap to detect by direct cross-check) but not the
+    entirety of "Custom Mob Models/Renderers" as a whole - a real full sweep
+    of already-registered-but-possibly-simplified renderers (real vs.
+    placeholder model detail/animation fidelity) is still a separate,
+    larger, not-yet-started piece of work.
 - **Deferred, not queued**: boss multiplayer target-scaling and the floating
   special-item death-drop visual both still route through the unported
   `EntityUtils` - same already-correctly-blocked dependency this file has

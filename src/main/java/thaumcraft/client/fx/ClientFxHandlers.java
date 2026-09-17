@@ -13,6 +13,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -131,6 +132,42 @@ public final class ClientFxHandlers {
 			list.add(fx);
 			mc.particleEngine.add(fx);
 		}
+	}
+
+	private static final Set<Integer> WISPS = new HashSet<>();
+
+	/** Real {@link thaumcraft.client.fx.particles.FXWispGlow} spawn for {@link
+	 * thaumcraft.common.entities.monster.EntityWisp} - see that class's own doc comment. Fire-and-forget, one
+	 * real time per real wisp id (guarded by {@link #WISPS}, never cleared - a stale entity id can never be
+	 * reused by a live entity again, so this is safe to leave unbounded for a session's worth of real wisps):
+	 * spawns the 3 real tracking particles once, each of which then self-removes the instant its own target
+	 * dies, matching the true original's own real per-frame "stop drawing the moment health hits 0" behaviour
+	 * with no fade. */
+	public static void maintainWisp(Entity wisp) {
+		if (!WISPS.add(wisp.getId())) {
+			return;
+		}
+		Minecraft mc = Minecraft.getInstance();
+		ClientLevel level = mc.level;
+		if (level == null) {
+			WISPS.remove(wisp.getId());
+			return;
+		}
+		ResourceLocation particles = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/misc/particles.png");
+		ResourceLocation nodes = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/misc/auranodes.png");
+		int color = 0xFFFFFF;
+		if (wisp instanceof EntityWisp entityWisp) {
+			Aspect aspect = Aspect.getAspect(entityWisp.getWispType());
+			if (aspect != null) {
+				color = aspect.getColor();
+			}
+		}
+		float ar = ((color >> 16) & 0xFF) / 255.0f;
+		float ag = ((color >> 8) & 0xFF) / 255.0f;
+		float ab = (color & 0xFF) / 255.0f;
+		mc.particleEngine.add(new thaumcraft.client.fx.particles.FXWispGlow(level, wisp, particles, 64, 512, 0.4f, 1.0f, 1.0f, 1.0f, 1.0f));
+		mc.particleEngine.add(new thaumcraft.client.fx.particles.FXWispGlow(level, wisp, particles, 64, 320, 0.75f, 1.0f, 1.0f, 1.0f, 0.25f));
+		mc.particleEngine.add(new thaumcraft.client.fx.particles.FXWispGlow(level, wisp, nodes, 32, 800, 0.75f, ar, ag, ab, 0.5f));
 	}
 
 	private ClientFxHandlers() {
