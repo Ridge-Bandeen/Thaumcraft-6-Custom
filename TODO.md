@@ -326,13 +326,36 @@ deferred until now. Real findings from that audit, triaged:
         item, not simply unwired. Its own real 6th call site, `splooshFX`,
         stays dead (zero real callers). Two clean 500/500
         `runGameTestServer` passes and a clean `test` task, both passes.
-      - Real remaining scope, not yet built: **`FXGenericGui`** (real,
-        one real call site - `drawSimpleSparkleGui`, a real GUI-space
-        (screen-overlay, not in-world) sparkle animation, likely used by
-        the Thaumonomicon/research GUI - genuinely different rendering
-        pipeline from every other particle this port has built so far
-        (2D screen-space, not a real in-world `Particle`), needs its own
-        real scoping pass before estimating further.
+      - Real remaining scope, not yet built: **`FXGenericGui`** - confirmed
+        2026-09-17 to have 2 real call sites, not 1: `GuiResearchTable`'s
+        own real research-page sparkle trail and `HudHandler`'s own real
+        HUD-overlay sparkle cue - both real 2D screen-space effects (one
+        inside a modal GUI screen, one a persistent HUD overlay), neither
+        remotely close to the in-world `Particle`/`ParticleEngine` system
+        every other real effect this port has built this session uses.
+        Genuinely needs its own real "how does a 2D screen-space particle
+        system work in modern NeoForge" research pass (likely a
+        `GuiGraphics`-based sparkle manager driven by a `RenderGuiEvent` or
+        similar overlay hook) before estimating further - comparable in
+        kind to how `FLUX_RIFT`'s real custom-shader work needed its own
+        dedicated session before building, not a quick follow-on to
+        anything already proven this session.
+      - **`FXEssentiaStream`** - confirmed 2026-09-17 to have 2 real call
+        sites of genuinely different scale: `TileWaterJug`'s own real
+        single water-pour trigger (small, well-scoped on its own) and
+        `RenderEventHandler`'s own real essentia-tube-network flow
+        visualization (a whole separate real client-only subsystem that
+        scans nearby tube connections every frame and draws a flowing
+        stream per active link - genuinely the bigger, primary real use
+        case this particle exists for). The particle's own real tube
+        geometry needs the same real ring-extrusion technique
+        `RenderFluxRift` already proved this session (same real
+        `com.sasmaster.glelwjgl` third-party dependency, confirmed by
+        reading its own real source directly), so that part is now
+        de-risked - but building just the particle for `TileWaterJug`'s
+        own minor use case while leaving the real primary tube-network
+        visualization unaddressed isn't worth doing separately; scope both
+        together as one real future chunk.
       - ~~**`FXFireMote`/`FXVisSparkle`/`FXSmokeSpiral`/`FXSlimyBubble`/
         `FXWispEG`**~~ — closed 2026-09-17, one batch since all 5 are real,
         faithful `SingleQuadParticle`-based billboard quads off the shared
