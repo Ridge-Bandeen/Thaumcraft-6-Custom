@@ -34,13 +34,19 @@ import thaumcraft.common.registry.ThaumcraftEntities;
  * so this is a genuine scope cut rather than a missing-dependency workaround - worth adding properly
  * later rather than half-porting the physics.</li>
  * <li>No client spawn-data sync ({@code IEntityAdditionalSpawnData} in the original) for the carried
- * {@link FocusPackage} - it's only ever read server-side (on impact), and this project's established
- * "no client FX" simplification means there's nothing client-side that would need it anyway.</li>
+ * {@link FocusPackage} - it's only ever read server-side (on impact); the real client-only flight trail
+ * restored below doesn't need it either (see its own note for what that costs).</li>
  * <li>Doesn't survive a chunk save/reload mid-flight - {@code noSave()} on the entity type. A projectile
  * that's actually in flight when a chunk unloads is a rare enough edge case that dropping it entirely
  * (rather than persisting a serialized {@code FocusPackage}, which the original didn't do either) isn't
  * worth the complexity right now.</li>
- * <li>No particle trail or impact FX, same as every other focus in this package.</li>
+ * <li>Real fire-mote flight trail restored 2026-09-17 (was dropped under this port's old blanket "no client
+ * FX" rule) - routed through {@link thaumcraft.client.fx.ClientFxHandlers#spawnFireMote} for the same real
+ * dist-crash-avoidance reason every other client-only trigger in this port uses. Real, disclosed
+ * simplification: the true original's own real trail colour was picked per-tick from whichever focus effect
+ * node the carried {@link FocusPackage} would run next ({@code FocusEngine.getElementColor}) - since {@code
+ * remainingPackage} is (deliberately, see this class's own doc comment above) never synced to the client, a
+ * plain white trail is used instead of one that shifts to match the caster's own chosen effect.</li>
  * </ul>
  */
 public class EntityFocusProjectile extends ThrowableProjectile {
@@ -67,6 +73,16 @@ public class EntityFocusProjectile extends ThrowableProjectile {
 	@Override
 	protected double getDefaultGravity() {
 		return 0.0; // a magic bolt, not a thrown item - flies straight, matching the original's low (not zero) drop
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+		if (level().isClientSide) {
+			thaumcraft.client.fx.ClientFxHandlers.spawnFireMote(level(), getX(), getY() + getBbHeight() / 2.0, getZ(),
+					0.0125 * (random.nextFloat() - 0.5), 0.0125 * (random.nextFloat() - 0.5), 0.0125 * (random.nextFloat() - 0.5),
+					1.0f, 1.0f, 1.0f, 7.0f);
+		}
 	}
 
 	@Override

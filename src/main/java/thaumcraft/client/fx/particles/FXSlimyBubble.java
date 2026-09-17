@@ -1,75 +1,123 @@
 package thaumcraft.client.fx.particles;
-import net.minecraft.client.particle.Particle;
-import net.minecraft.client.renderer.BufferBuilder;
-import net.minecraft.entity.Entity;
-import net.minecraft.world.World;
-import org.lwjgl.opengl.GL11;
 
+import javax.annotation.Nullable;
 
-public class FXSlimyBubble extends Particle
-{
-    int particle;
-    
-    public FXSlimyBubble(World world, double d, double d1, double d2, float f) {
-        super(world, d, d1, d2, 0.0, 0.0, 0.0);
-        particle = 144;
-        particleRed = 1.0f;
-        particleGreen = 1.0f;
-        particleBlue = 1.0f;
-        particleGravity = 0.0f;
-        double motionX = 0.0;
-        motionZ = motionX;
-        motionY = motionX;
-        this.motionX = motionX;
-        particleScale = f;
-        particleMaxAge = 15 + world.rand.nextInt(5);
-        setSize(0.01f, 0.01f);
-    }
-    
-    public void renderParticle(BufferBuilder wr, Entity entity, float f, float f1, float f2, float f3, float f4, float f5) {
-        GL11.glColor4f(1.0f, 1.0f, 1.0f, particleAlpha);
-        float var8 = particle % 16 / 64.0f;
-        float var9 = var8 + 0.015625f;
-        float var10 = particle / 16 / 64.0f;
-        float var11 = var10 + 0.015625f;
-        float var12 = particleScale;
-        float var13 = (float)(prevPosX + (posX - prevPosX) * f - FXSlimyBubble.interpPosX);
-        float var14 = (float)(prevPosY + (posY - prevPosY) * f - FXSlimyBubble.interpPosY);
-        float var15 = (float)(prevPosZ + (posZ - prevPosZ) * f - FXSlimyBubble.interpPosZ);
-        int i = getBrightnessForRender(f);
-        int j = i >> 16 & 0xFFFF;
-        int k = i & 0xFFFF;
-        wr.pos(var13 - f1 * var12 - f4 * var12, var14 - f2 * var12, var15 - f3 * var12 - f5 * var12).tex(var9, var11).color(particleRed, particleGreen, particleBlue, particleAlpha).lightmap(j, k).endVertex();
-        wr.pos(var13 - f1 * var12 + f4 * var12, var14 + f2 * var12, var15 - f3 * var12 + f5 * var12).tex(var9, var10).color(particleRed, particleGreen, particleBlue, particleAlpha).lightmap(j, k).endVertex();
-        wr.pos(var13 + f1 * var12 + f4 * var12, var14 + f2 * var12, var15 + f3 * var12 + f5 * var12).tex(var8, var10).color(particleRed, particleGreen, particleBlue, particleAlpha).lightmap(j, k).endVertex();
-        wr.pos(var13 + f1 * var12 - f4 * var12, var14 - f2 * var12, var15 + f3 * var12 - f5 * var12).tex(var8, var11).color(particleRed, particleGreen, particleBlue, particleAlpha).lightmap(j, k).endVertex();
-    }
-    
-    public int getFXLayer() {
-        return 1;
-    }
-    
-    public void onUpdate() {
-        prevPosX = posX;
-        prevPosY = posY;
-        prevPosZ = posZ;
-        if (particleAge++ >= particleMaxAge) {
-            setExpired();
-        }
-        if (particleAge - 1 < 6) {
-            particle = 144 + particleAge / 2;
-            if (particleAge == 5) {
-                posY += 0.1;
-            }
-        }
-        else if (particleAge < particleMaxAge - 4) {
-            motionY += 0.005;
-            particle = 147 + particleAge % 4 / 2;
-        }
-        else {
-            motionY /= 2.0;
-            particle = 150 - (particleMaxAge - particleAge) / 2;
-        }
-        posY += motionY;
-    }
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
+
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.particle.SingleQuadParticle;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.resources.ResourceLocation;
+import thaumcraft.Thaumcraft;
+
+/**
+ * Real modern equivalent of the true original's own real {@code FXSlimyBubble} - a small rising bubble off
+ * the shared {@code particles.png} sheet, real 3-phase frame animation (a real "forming", "rising", and
+ * "popping" sequence). Restored 2026-09-17. Real call site confirmed via `git grep`: {@link
+ * thaumcraft.common.blocks.misc.BlockFluidDeath}'s own real random ambient surface-bubble tick.
+ *
+ * <p>Real, faithful port of the true original's own exact frame-index/motion state machine: forms over its
+ * first 6 real ticks (frames 144-146, with a real small upward pop at tick 4), rises with real slowly
+ * increasing upward speed for the bulk of its real life (frames 147-150), then decelerates and settles into
+ * its final "popping" frames for its last 4 real ticks. The true original's own real {@code onUpdate} never
+ * calls {@code super.onUpdate()} at all - position only ever changes via its own explicit {@code posY +=
+ * motionY}, matched here directly rather than assumed to inherit standard physics.
+ */
+public class FXSlimyBubble extends SingleQuadParticle {
+
+	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/misc/particles.png");
+	private static final int GRID = 64;
+	private static final float CELL = 1.0f / GRID;
+
+	public static final ParticleRenderType RENDER_TYPE = new ParticleRenderType() {
+		@Nullable
+		@Override
+		public BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
+			RenderSystem.setShader(GameRenderer::getParticleShader);
+			RenderSystem.setShaderTexture(0, TEXTURE);
+			RenderSystem.enableBlend();
+			RenderSystem.defaultBlendFunc();
+			RenderSystem.depthMask(false);
+			return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+		}
+
+		@Override
+		public String toString() {
+			return "thaumcraft:slimy_bubble";
+		}
+	};
+
+	private int frame = 144;
+
+	public FXSlimyBubble(ClientLevel level, double x, double y, double z, float scale) {
+		super(level, x, y, z);
+		this.rCol = 1.0f;
+		this.gCol = 1.0f;
+		this.bCol = 1.0f;
+		this.quadSize = scale;
+		this.lifetime = 15 + random.nextInt(5);
+	}
+
+	@Override
+	public void tick() {
+		xo = x;
+		yo = y;
+		zo = z;
+		boolean expire = age >= lifetime;
+
+		if (age < 6) {
+			frame = 144 + age / 2;
+			if (age == 4) {
+				y += 0.1;
+			}
+		} else if (age < lifetime - 4) {
+			yd += 0.005;
+			frame = 147 + (age % 4) / 2;
+		} else {
+			yd /= 2.0;
+			frame = 150 - (lifetime - age) / 2;
+		}
+		y += yd;
+
+		age++;
+		if (expire) {
+			remove();
+		}
+	}
+
+	@Override
+	public float getQuadSize(float partialTicks) {
+		return quadSize;
+	}
+
+	@Override
+	protected float getU0() {
+		return (frame % 16) * CELL;
+	}
+
+	@Override
+	protected float getU1() {
+		return getU0() + CELL;
+	}
+
+	@Override
+	protected float getV0() {
+		return (frame / 16) * CELL;
+	}
+
+	@Override
+	protected float getV1() {
+		return getV0() + CELL;
+	}
+
+	@Override
+	public ParticleRenderType getRenderType() {
+		return RENDER_TYPE;
+	}
 }

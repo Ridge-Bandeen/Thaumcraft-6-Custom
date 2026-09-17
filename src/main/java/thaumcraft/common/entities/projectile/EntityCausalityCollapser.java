@@ -24,8 +24,12 @@ import thaumcraft.common.registry.ThaumcraftEntities;
  * real strength, same real "causes fire" behavior), then collapses any real {@link EntityFluxRift} within 3
  * blocks (same real range/method the original used).
  *
- * No particle trail (the original's own client-side {@code onUpdate} Alumentum-streak/generic-particle
- * effects) - the usual "no client FX dispatcher" boundary this whole session.
+ * Real fire-mote flight trail restored 2026-09-17 (was dropped under this port's old blanket "no client FX"
+ * rule) - the real {@code drawAlumentum} half of the true original's own client-side trail (same real
+ * particle class as {@link EntityAlumentum}'s own trail, a real warmer red-orange tint instead), routed
+ * through {@link thaumcraft.client.fx.ClientFxHandlers#spawnFireMote} for the same real dist-crash-avoidance
+ * reason. The original's own separate generic-particle half of that same trail isn't restored here - a
+ * smaller, real remaining gap, not re-scoped in this pass.
  */
 public class EntityCausalityCollapser extends ThrowableItemProjectile {
 
@@ -40,6 +44,16 @@ public class EntityCausalityCollapser extends ThrowableItemProjectile {
 	@Override
 	protected Item getDefaultItem() {
 		return ItemsTC.causalityCollapser.get();
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+		if (level().isClientSide) {
+			thaumcraft.client.fx.ClientFxHandlers.spawnFireMote(level(), getX(), getY() + getBbHeight() / 2.0, getZ(),
+					0.0125 * (random.nextFloat() - 0.5), 0.0125 * (random.nextFloat() - 0.5), 0.0125 * (random.nextFloat() - 0.5),
+					0.8f + random.nextFloat() * 0.2f, 0.3f + random.nextFloat() * 0.1f, random.nextFloat() * 0.1f, 4.0f);
+		}
 	}
 
 	@Override

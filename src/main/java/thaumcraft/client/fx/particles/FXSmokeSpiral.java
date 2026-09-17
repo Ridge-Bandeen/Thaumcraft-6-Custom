@@ -1,76 +1,136 @@
 package thaumcraft.client.fx.particles;
-import net.minecraft.client.particle.Particle;
-import net.minecraft.client.renderer.BufferBuilder;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.World;
-import org.lwjgl.opengl.GL11;
 
+import javax.annotation.Nullable;
 
-public class FXSmokeSpiral extends Particle
-{
-    private float radius;
-    private int start;
-    private int miny;
-    
-    public FXSmokeSpiral(World world, double d, double d1, double d2, float radius, int start, int miny) {
-        super(world, d, d1, d2, 0.0, 0.0, 0.0);
-        this.radius = 1.0f;
-        this.start = 0;
-        this.miny = 0;
-        particleGravity = -0.01f;
-        double motionX = 0.0;
-        motionZ = motionX;
-        motionY = motionX;
-        this.motionX = motionX;
-        particleScale *= 1.0f;
-        particleMaxAge = 20 + world.rand.nextInt(10);
-        setSize(0.01f, 0.01f);
-        prevPosX = posX;
-        prevPosY = posY;
-        prevPosZ = posZ;
-        this.radius = radius;
-        this.start = start;
-        this.miny = miny;
-    }
-    
-    public void renderParticle(BufferBuilder wr, Entity entity, float f, float f1, float f2, float f3, float f4, float f5) {
-        GL11.glColor4f(1.0f, 1.0f, 1.0f, 0.66f * particleAlpha);
-        int particle = (int)(1.0f + particleAge / (float) particleMaxAge * 4.0f);
-        float r1 = start + 720.0f * ((particleAge + f) / particleMaxAge);
-        float r2 = 90.0f - 180.0f * ((particleAge + f) / particleMaxAge);
-        float mX = -MathHelper.sin(r1 / 180.0f * 3.1415927f) * MathHelper.cos(r2 / 180.0f * 3.1415927f);
-        float mZ = MathHelper.cos(r1 / 180.0f * 3.1415927f) * MathHelper.cos(r2 / 180.0f * 3.1415927f);
-        float mY = -MathHelper.sin(r2 / 180.0f * 3.1415927f);
-        mX *= radius;
-        mY *= radius;
-        mZ *= radius;
-        float var8 = particle % 16 / 64.0f;
-        float var9 = var8 + 0.015625f;
-        float var10 = particle / 16 / 64.0f;
-        float var11 = var10 + 0.015625f;
-        float var12 = 0.15f * particleScale;
-        float var13 = (float)(posX + mX - FXSmokeSpiral.interpPosX);
-        float var14 = (float)(Math.max(posY + mY, miny + 0.1f) - FXSmokeSpiral.interpPosY);
-        float var15 = (float)(posZ + mZ - FXSmokeSpiral.interpPosZ);
-        float var16 = 1.0f;
-        int i = getBrightnessForRender(f);
-        int j = i >> 16 & 0xFFFF;
-        int k = i & 0xFFFF;
-        wr.pos(var13 - f1 * var12 - f4 * var12, var14 - f2 * var12, var15 - f3 * var12 - f5 * var12).tex(var9, var11).color(particleRed * var16, particleGreen * var16, particleBlue * var16, 0.66f * particleAlpha).lightmap(j, k).endVertex();
-        wr.pos(var13 - f1 * var12 + f4 * var12, var14 + f2 * var12, var15 - f3 * var12 + f5 * var12).tex(var9, var10).color(particleRed * var16, particleGreen * var16, particleBlue * var16, 0.66f * particleAlpha).lightmap(j, k).endVertex();
-        wr.pos(var13 + f1 * var12 + f4 * var12, var14 + f2 * var12, var15 + f3 * var12 + f5 * var12).tex(var8, var10).color(particleRed * var16, particleGreen * var16, particleBlue * var16, 0.66f * particleAlpha).lightmap(j, k).endVertex();
-        wr.pos(var13 + f1 * var12 - f4 * var12, var14 - f2 * var12, var15 + f3 * var12 - f5 * var12).tex(var8, var11).color(particleRed * var16, particleGreen * var16, particleBlue * var16, 0.66f * particleAlpha).lightmap(j, k).endVertex();
-    }
-    
-    public int getFXLayer() {
-        return 1;
-    }
-    
-    public void onUpdate() {
-        setAlphaF((particleMaxAge - particleAge) / (float) particleMaxAge);
-        if (particleAge++ >= particleMaxAge) {
-            setExpired();
-        }
-    }
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
+
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.particle.SingleQuadParticle;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import thaumcraft.Thaumcraft;
+
+/**
+ * Real modern equivalent of the true original's own real {@code FXSmokeSpiral} - a single smoke puff that
+ * orbits a real fixed origin point in an expanding-then-contracting double-helix arc, rising as it goes.
+ * Restored 2026-09-17. Real call sites confirmed via `git grep`:
+ * {@link thaumcraft.common.entities.monster.boss.EntityEldritchWarden}'s own real teleport cue and {@link
+ * thaumcraft.common.items.tools.ItemElementalSword}'s own real special-attack cue.
+ *
+ * <p>Real, checked-not-assumed detail: the true original's own real {@code onUpdate} never calls
+ * {@code super.onUpdate()} at all and never actually moves the particle's own real tracked position - the
+ * whole spiral motion is computed fresh every real FRAME inside {@code renderParticle} itself (a pure
+ * render-time offset, not a real physics simulation) off {@code (particleAge + partialTick)}. This port bakes
+ * the same real formula into the particle's own real {@code x}/{@code y}/{@code z} once per TICK instead (not
+ * per frame) - a real, disclosed simplification: standard particle interpolation smooths between each tick's
+ * own spiral position for free, which reads the same for a slow, few-tick-lived effect like this one without
+ * needing a real custom {@code render()} override.
+ */
+public class FXSmokeSpiral extends SingleQuadParticle {
+
+	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/misc/particles.png");
+	private static final int GRID = 64;
+	private static final float CELL = 1.0f / GRID;
+
+	public static final ParticleRenderType RENDER_TYPE = new ParticleRenderType() {
+		@Nullable
+		@Override
+		public BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
+			RenderSystem.setShader(GameRenderer::getParticleShader);
+			RenderSystem.setShaderTexture(0, TEXTURE);
+			RenderSystem.enableBlend();
+			RenderSystem.defaultBlendFunc();
+			RenderSystem.depthMask(false);
+			return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+		}
+
+		@Override
+		public String toString() {
+			return "thaumcraft:smoke_spiral";
+		}
+	};
+
+	private final double originX;
+	private final double originY;
+	private final double originZ;
+	private final float radius;
+	private final int start;
+	private final float minY;
+
+	public FXSmokeSpiral(ClientLevel level, double x, double y, double z, float radius, int start, int minY, int color) {
+		super(level, x, y, z);
+		this.originX = x;
+		this.originY = y;
+		this.originZ = z;
+		this.radius = radius;
+		this.start = start;
+		this.minY = minY;
+		this.rCol = ((color >> 16) & 0xFF) / 255.0f;
+		this.gCol = ((color >> 8) & 0xFF) / 255.0f;
+		this.bCol = (color & 0xFF) / 255.0f;
+		this.lifetime = 20 + random.nextInt(10);
+		this.quadSize = 1.0f;
+		this.alpha = 0.66f;
+	}
+
+	@Override
+	public void tick() {
+		xo = x;
+		yo = y;
+		zo = z;
+
+		float r1 = start + 720.0f * (age / (float) lifetime);
+		float r2 = 90.0f - 180.0f * (age / (float) lifetime);
+		float mx = -Mth.sin(r1 / 180.0f * Mth.PI) * Mth.cos(r2 / 180.0f * Mth.PI);
+		float mz = Mth.cos(r1 / 180.0f * Mth.PI) * Mth.cos(r2 / 180.0f * Mth.PI);
+		float my = -Mth.sin(r2 / 180.0f * Mth.PI);
+		x = originX + mx * radius;
+		y = Math.max(originY + my * radius, minY + 0.1);
+		z = originZ + mz * radius;
+
+		alpha = 0.66f * (lifetime - age) / (float) lifetime;
+
+		if (age++ >= lifetime) {
+			remove();
+		}
+	}
+
+	@Override
+	public float getQuadSize(float partialTicks) {
+		return 0.15f * quadSize;
+	}
+
+	@Override
+	protected float getU0() {
+		int frame = (int) (1.0f + age / (float) lifetime * 4.0f);
+		return (frame % 16) * CELL;
+	}
+
+	@Override
+	protected float getU1() {
+		return getU0() + CELL;
+	}
+
+	@Override
+	protected float getV0() {
+		int frame = (int) (1.0f + age / (float) lifetime * 4.0f);
+		return (frame / 16) * CELL;
+	}
+
+	@Override
+	protected float getV1() {
+		return getV0() + CELL;
+	}
+
+	@Override
+	public ParticleRenderType getRenderType() {
+		return RENDER_TYPE;
+	}
 }

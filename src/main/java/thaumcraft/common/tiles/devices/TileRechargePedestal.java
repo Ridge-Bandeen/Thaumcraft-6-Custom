@@ -90,7 +90,29 @@ public class TileRechargePedestal extends BlockEntity {
 		ItemStack stack = tile.getItem();
 		if (!stack.isEmpty() && RechargeHelper.rechargeItem(level, stack, pos, null, 5) > 0.0f) {
 			tile.setChanged();
+			var primal = thaumcraft.api.aspects.Aspect.getPrimalAspects();
+			level.blockEvent(pos, state.getBlock(), 5, primal.get(level.random.nextInt(primal.size())).getColor());
 		}
+	}
+
+	/** Real vanilla entity-event trigger - see {@link #tick}'s own real {@code level.blockEvent} call. Real,
+	 * faithful port of the true original's own real {@code receiveClientEvent(5, ...)} recharge sparkle cue
+	 * (a random primal aspect's own colour, not tied to whatever's actually being recharged), routed through
+	 * {@link thaumcraft.client.fx.ClientFxHandlers#spawnVisSparkle} for the same real dist-crash-avoidance
+	 * reason every other client-only trigger in this port uses. */
+	@Override
+	public boolean triggerEvent(int id, int type) {
+		if (id == 5) {
+			if (level != null && level.isClientSide) {
+				thaumcraft.client.fx.ClientFxHandlers.spawnVisSparkle(level,
+						worldPosition.getX() + level.random.nextInt(3) - level.random.nextInt(3),
+						worldPosition.above().getY() + level.random.nextInt(3),
+						worldPosition.getZ() + level.random.nextInt(3) - level.random.nextInt(3),
+						worldPosition.getX(), worldPosition.above().getY(), worldPosition.getZ(), type);
+			}
+			return true;
+		}
+		return super.triggerEvent(id, type);
 	}
 
 	@Override

@@ -20,8 +20,13 @@ import thaumcraft.common.registry.ThaumcraftEntities;
  * Simplified from the original: the explosion uses {@code Level.ExplosionInteraction.MOB} (damages
  * entities and sets fire, doesn't destroy blocks) instead of the original's block-destroying explosion -
  * consistent with this project's general preference for damage-only magic effects over terrain griefing,
- * and it keeps the GameTest coverage predictable (no block-state cleanup to account for). No particle
- * trail/impact FX, same as every other projectile in this project.
+ * and it keeps the GameTest coverage predictable (no block-state cleanup to account for).
+ *
+ * <p>Real fire-mote flight trail restored 2026-09-17 (was dropped under this port's old blanket "no client
+ * FX" rule) - real, faithful port of the true original's own exact per-tick spawn (colour/scale/jitter all
+ * matching), routed through {@link thaumcraft.client.fx.ClientFxHandlers#spawnFireMote} rather than
+ * referencing the client-only {@code FXFireMote} directly from this common-side class, the same real
+ * dist-crash-avoidance boundary this whole port has kept since {@code FocusEffect#renderParticleFX}.
  */
 public class EntityAlumentum extends ThrowableItemProjectile {
 
@@ -36,6 +41,16 @@ public class EntityAlumentum extends ThrowableItemProjectile {
 	@Override
 	protected Item getDefaultItem() {
 		return ItemsTC.alumentum.get();
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+		if (level().isClientSide) {
+			thaumcraft.client.fx.ClientFxHandlers.spawnFireMote(level(), getX(), getY() + getBbHeight() / 2.0, getZ(),
+					0.0125 * (random.nextFloat() - 0.5), 0.0125 * (random.nextFloat() - 0.5), 0.0125 * (random.nextFloat() - 0.5),
+					random.nextFloat() * 0.2f, random.nextFloat() * 0.1f, random.nextFloat() * 0.1f, 4.0f);
+		}
 	}
 
 	@Override

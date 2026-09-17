@@ -1,108 +1,125 @@
 package thaumcraft.client.fx.particles;
-import net.minecraft.client.particle.Particle;
-import net.minecraft.client.renderer.BufferBuilder;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
 
+import javax.annotation.Nullable;
 
-public class FXFireMote extends Particle
-{
-    float baseScale;
-    float baseAlpha;
-    int glowlayer;
-    
-    public FXFireMote(World worldIn, double x, double y, double z, double vx, double vy, double vz, float r, float g, float b, float scale, int layer) {
-        super(worldIn, x, y, z, 0.0, 0.0, 0.0);
-        baseScale = 0.0f;
-        baseAlpha = 1.0f;
-        glowlayer = 0;
-        float colorR = r;
-        float colorG = g;
-        float colorB = b;
-        if (colorR > 1.0) {
-            colorR /= 255.0f;
-        }
-        if (colorG > 1.0) {
-            colorG /= 255.0f;
-        }
-        if (colorB > 1.0) {
-            colorB /= 255.0f;
-        }
-        glowlayer = layer;
-        setRBGColorF(colorR, colorG, colorB);
-        particleMaxAge = 16;
-        particleScale = scale;
-        baseScale = scale;
-        motionX = vx;
-        motionY = vy;
-        motionZ = vz;
-        particleAngle = 6.2831855f;
-        setParticleTextureIndex(7);
-    }
-    
-    public void setParticleTextureIndex(int particleTextureIndex) {
-        particleTextureIndexX = particleTextureIndex % 64;
-        particleTextureIndexY = particleTextureIndex / 64;
-    }
-    
-    public void renderParticle(BufferBuilder worldRendererIn, Entity entityIn, float partialTicks, float rotationX, float rotationZ, float rotationYZ, float rotationXY, float rotationXZ) {
-        float f = particleTextureIndexX / 64.0f;
-        float f2 = f + 0.015625f;
-        float f3 = particleTextureIndexY / 64.0f;
-        float f4 = f3 + 0.015625f;
-        float f5 = 0.1f * particleScale;
-        if (particleTexture != null) {
-            f = particleTexture.getMinU();
-            f2 = particleTexture.getMaxU();
-            f3 = particleTexture.getMinV();
-            f4 = particleTexture.getMaxV();
-        }
-        float f6 = (float)(prevPosX + (posX - prevPosX) * partialTicks - FXFireMote.interpPosX);
-        float f7 = (float)(prevPosY + (posY - prevPosY) * partialTicks - FXFireMote.interpPosY);
-        float f8 = (float)(prevPosZ + (posZ - prevPosZ) * partialTicks - FXFireMote.interpPosZ);
-        int i = getBrightnessForRender(partialTicks);
-        int j = i >> 16 & 0xFFFF;
-        int k = i & 0xFFFF;
-        Vec3d[] avec3d = { new Vec3d(-rotationX * f5 - rotationXY * f5, -rotationZ * f5, -rotationYZ * f5 - rotationXZ * f5), new Vec3d(-rotationX * f5 + rotationXY * f5, rotationZ * f5, -rotationYZ * f5 + rotationXZ * f5), new Vec3d(rotationX * f5 + rotationXY * f5, rotationZ * f5, rotationYZ * f5 + rotationXZ * f5), new Vec3d(rotationX * f5 - rotationXY * f5, -rotationZ * f5, rotationYZ * f5 - rotationXZ * f5) };
-        if (particleAngle != 0.0f) {
-            float f9 = particleAngle + (particleAngle - prevParticleAngle) * partialTicks;
-            float f10 = MathHelper.cos(f9 * 0.5f);
-            float f11 = MathHelper.sin(f9 * 0.5f) * (float)FXFireMote.cameraViewDir.x;
-            float f12 = MathHelper.sin(f9 * 0.5f) * (float)FXFireMote.cameraViewDir.y;
-            float f13 = MathHelper.sin(f9 * 0.5f) * (float)FXFireMote.cameraViewDir.z;
-            Vec3d vec3d = new Vec3d(f11, f12, f13);
-            for (int l = 0; l < 4; ++l) {
-                avec3d[l] = vec3d.scale(2.0 * avec3d[l].dotProduct(vec3d)).add(avec3d[l].scale(f10 * f10 - vec3d.dotProduct(vec3d))).add(vec3d.crossProduct(avec3d[l]).scale(2.0f * f10));
-            }
-        }
-        worldRendererIn.pos(f6 + avec3d[0].x, f7 + avec3d[0].y, f8 + avec3d[0].z).tex(f2, f4).color(particleRed, particleGreen, particleBlue, particleAlpha * baseAlpha).lightmap(j, k).endVertex();
-        worldRendererIn.pos(f6 + avec3d[1].x, f7 + avec3d[1].y, f8 + avec3d[1].z).tex(f2, f3).color(particleRed, particleGreen, particleBlue, particleAlpha * baseAlpha).lightmap(j, k).endVertex();
-        worldRendererIn.pos(f6 + avec3d[2].x, f7 + avec3d[2].y, f8 + avec3d[2].z).tex(f, f3).color(particleRed, particleGreen, particleBlue, particleAlpha * baseAlpha).lightmap(j, k).endVertex();
-        worldRendererIn.pos(f6 + avec3d[3].x, f7 + avec3d[3].y, f8 + avec3d[3].z).tex(f, f4).color(particleRed, particleGreen, particleBlue, particleAlpha * baseAlpha).lightmap(j, k).endVertex();
-    }
-    
-    public int getBrightnessForRender(float pTicks) {
-        return 255;
-    }
-    
-    public int getFXLayer() {
-        return glowlayer;
-    }
-    
-    public void onUpdate() {
-        super.onUpdate();
-        if (world.rand.nextInt(6) == 0) {
-            ++particleAge;
-        }
-        if (particleAge >= particleMaxAge) {
-            setExpired();
-        }
-        float lifespan = particleAge / (float) particleMaxAge;
-        particleScale = baseScale - baseScale * lifespan;
-        baseAlpha = 1.0f - lifespan;
-        prevParticleAngle = particleAngle;
-        ++particleAngle;
-    }
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
+
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.particle.SingleQuadParticle;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.resources.ResourceLocation;
+import thaumcraft.Thaumcraft;
+
+/**
+ * Real modern equivalent of the true original's own real {@code FXFireMote} - a small glowing, shrinking,
+ * fading spark off the shared {@code particles.png} sheet (fixed frame index 7). Restored 2026-09-17, one of
+ * a batch of small real particle classes this port's own scoping notes had flagged as "not yet scoped in
+ * detail" - real call sites confirmed via `git grep` before building: {@link
+ * thaumcraft.common.entities.projectile.EntityFocusProjectile}'s own real Fire/Flame focus trail and {@link
+ * thaumcraft.common.entities.projectile.EntityAlumentum}/{@link
+ * thaumcraft.common.entities.projectile.EntityCausalityCollapser}'s own real flight trail (via a shared
+ * {@code FXDispatcher.drawAlumentum} wrapper - same particle class, different default colour/scale).
+ *
+ * <p>Real, checked-not-assumed detail: the true original's own real constructor sets {@code motionX/Y/Z} but
+ * its own {@code onUpdate} never calls {@code move()} directly - the actual movement comes from vanilla's own
+ * inherited {@code Particle#onUpdate} physics (real drag, real zero gravity - the true original never
+ * overrides {@code particleGravity} for this class), matched here by calling {@link #tick() super.tick()}
+ * first exactly like the original's own {@code super.onUpdate()} call, then layering the real custom
+ * slow-aging/shrink/fade logic on top. Real slow-aging quirk kept: the true original only advances its own
+ * visual age 1-in-6 real ticks (a real "this mote visually lives longer than its own 16-tick counter
+ * suggests" effect) - tracked here via a separate {@link #visualAge} field so the base class's own real
+ * {@code lifetime}/{@code age} bookkeeping (used for the standard tick-and-physics call) doesn't fight it.
+ */
+public class FXFireMote extends SingleQuadParticle {
+
+	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/misc/particles.png");
+	private static final int GRID = 64;
+	private static final float CELL = 1.0f / GRID;
+	private static final int MAX_VISUAL_AGE = 16;
+
+	public static final ParticleRenderType RENDER_TYPE = new ParticleRenderType() {
+		@Nullable
+		@Override
+		public BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
+			RenderSystem.setShader(GameRenderer::getParticleShader);
+			RenderSystem.setShaderTexture(0, TEXTURE);
+			RenderSystem.enableBlend();
+			RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA, com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
+			RenderSystem.depthMask(false);
+			return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+		}
+
+		@Override
+		public String toString() {
+			return "thaumcraft:fire_mote";
+		}
+	};
+
+	private final float baseScale;
+	private int visualAge;
+
+	public FXFireMote(ClientLevel level, double x, double y, double z, double mx, double my, double mz, float r, float g, float b, float scale) {
+		super(level, x, y, z);
+		this.rCol = r;
+		this.gCol = g;
+		this.bCol = b;
+		this.quadSize = scale;
+		this.baseScale = scale;
+		this.xd = mx;
+		this.yd = my;
+		this.zd = mz;
+		this.hasPhysics = true;
+		this.lifetime = Integer.MAX_VALUE;
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+		if (random.nextInt(6) == 0) {
+			visualAge++;
+		}
+		if (visualAge >= MAX_VISUAL_AGE) {
+			remove();
+			return;
+		}
+		float lifespan = visualAge / (float) MAX_VISUAL_AGE;
+		quadSize = baseScale - baseScale * lifespan;
+		alpha = 1.0f - lifespan;
+	}
+
+	@Override
+	public float getQuadSize(float partialTicks) {
+		return quadSize * 0.1f;
+	}
+
+	@Override
+	protected float getU0() {
+		return 7 * CELL;
+	}
+
+	@Override
+	protected float getU1() {
+		return getU0() + CELL;
+	}
+
+	@Override
+	protected float getV0() {
+		return 0.0f;
+	}
+
+	@Override
+	protected float getV1() {
+		return CELL;
+	}
+
+	@Override
+	public ParticleRenderType getRenderType() {
+		return RENDER_TYPE;
+	}
 }

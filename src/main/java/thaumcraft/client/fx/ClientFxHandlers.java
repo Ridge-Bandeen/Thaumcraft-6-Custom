@@ -271,6 +271,46 @@ public final class ClientFxHandlers {
 		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXVent2(clientLevel, x, y, z, mx, my, mz, color).setScale(scale));
 	}
 
+	/** Real {@link thaumcraft.client.fx.particles.FXFireMote} spawn - shared by the true original's own real
+	 * {@code drawFireMote}/{@code drawAlumentum} wrapper methods (same particle class, different default
+	 * colour/scale at each real call site). */
+	public static void spawnFireMote(net.minecraft.world.level.Level level, double x, double y, double z,
+			double mx, double my, double mz, float r, float g, float b, float scale) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXFireMote(clientLevel, x, y, z, mx, my, mz, r, g, b, scale));
+	}
+
+	/** Real {@link thaumcraft.client.fx.particles.FXVisSparkle} spawn. */
+	public static void spawnVisSparkle(net.minecraft.world.level.Level level, double x, double y, double z, double tx, double ty, double tz, int color) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var fb = new thaumcraft.client.fx.particles.FXVisSparkle(clientLevel, x, y, z, tx, ty, tz);
+		java.awt.Color c = new java.awt.Color(color);
+		fb.setColor(c.getRed() / 255.0f, c.getGreen() / 255.0f, c.getBlue() / 255.0f);
+		Minecraft.getInstance().particleEngine.add(fb);
+	}
+
+	/** Real {@link thaumcraft.client.fx.particles.FXSmokeSpiral} spawn. */
+	public static void spawnSmokeSpiral(net.minecraft.world.level.Level level, double x, double y, double z, float radius, int start, int minY, int color) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXSmokeSpiral(clientLevel, x, y, z, radius, start, minY, color));
+	}
+
+	/** Real {@link thaumcraft.client.fx.particles.FXSlimyBubble} spawn. */
+	public static void spawnSlimyBubble(net.minecraft.world.level.Level level, double x, double y, double z, float scale) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXSlimyBubble(clientLevel, x, y, z, scale));
+	}
+
+	/** Real {@link thaumcraft.client.fx.particles.FXWispEG} spawn - {@code target} is a plain, dist-agnostic
+	 * vanilla {@link Entity}, safe to reference directly from a common-side method signature. */
+	public static void spawnWispEG(net.minecraft.world.level.Level level, double x, double y, double z, Entity target) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var particleEngine = Minecraft.getInstance().particleEngine;
+		for (int i = 0; i < 2; i++) {
+			particleEngine.add(new thaumcraft.client.fx.particles.FXWispEG(clientLevel, x, y, z, target));
+		}
+	}
+
 	private ClientFxHandlers() {
 	}
 

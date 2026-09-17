@@ -1,77 +1,116 @@
 package thaumcraft.client.fx.particles;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.particle.Particle;
-import net.minecraft.client.renderer.BufferBuilder;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
-import org.lwjgl.opengl.GL11;
 
+import javax.annotation.Nullable;
 
-public class FXWispEG extends Particle
-{
-    Entity target;
-    double rx;
-    double ry;
-    double rz;
-    public int blendmode;
-    
-    public FXWispEG(World world, double posX, double posY, double posZ, Entity target2) {
-        super(world, posX, posY, posZ, 0.0, 0.0, 0.0);
-        target = null;
-        rx = 0.0;
-        ry = 0.0;
-        rz = 0.0;
-        blendmode = 1;
-        target = target2;
-        motionX = rand.nextGaussian() * 0.03;
-        motionY = -0.05;
-        motionZ = rand.nextGaussian() * 0.03;
-        particleScale *= 0.4f;
-        particleMaxAge = (int)(40.0 / (Math.random() * 0.3 + 0.7));
-        setSize(0.01f, 0.01f);
-        prevPosX = posX;
-        prevPosY = posY;
-        prevPosZ = posZ;
-        blendmode = 771;
-        particleRed = rand.nextFloat() * 0.05f;
-        particleGreen = rand.nextFloat() * 0.05f;
-        particleBlue = rand.nextFloat() * 0.05f;
-    }
-    
-    public void renderParticle(BufferBuilder wr, Entity entity, float f, float f1, float f2, float f3, float f4, float f5) {
-        Entity e = Minecraft.getMinecraft().getRenderViewEntity();
-        float agescale = 1.0f - particleAge / (float) particleMaxAge;
-        float d6 = 1024.0f;
-        double dist = new Vec3d(e.posX, e.posY, e.posZ).squareDistanceTo(new Vec3d(posX, posY, posZ));
-        float base = (float)(1.0 - Math.min(d6, dist) / d6);
-        GL11.glColor4f(1.0f, 1.0f, 1.0f, 0.75f * base);
-        float f6 = 0.5f * particleScale;
-        float f7 = (float)(prevPosX + (posX - prevPosX) * f - FXWispEG.interpPosX);
-        float f8 = (float)(prevPosY + (posY - prevPosY) * f - FXWispEG.interpPosY);
-        float f9 = (float)(prevPosZ + (posZ - prevPosZ) * f - FXWispEG.interpPosZ);
-        float var8 = particleAge % 13 / 64.0f;
-        float var9 = var8 + 0.015625f;
-        float var10 = 0.046875f;
-        float var11 = var10 + 0.015625f;
-        int i = 240;
-        int j = i >> 16 & 0xFFFF;
-        int k = i & 0xFFFF;
-        wr.pos(f7 - f1 * f6 - f4 * f6, f8 - f2 * f6, f9 - f3 * f6 - f5 * f6).tex(var9, var11).color(particleRed, particleGreen, particleBlue, 0.2f * agescale * base).lightmap(j, k).endVertex();
-        wr.pos(f7 - f1 * f6 + f4 * f6, f8 + f2 * f6, f9 - f3 * f6 + f5 * f6).tex(var9, var10).color(particleRed, particleGreen, particleBlue, 0.2f * agescale * base).lightmap(j, k).endVertex();
-        wr.pos(f7 + f1 * f6 + f4 * f6, f8 + f2 * f6, f9 + f3 * f6 + f5 * f6).tex(var8, var10).color(particleRed, particleGreen, particleBlue, 0.2f * agescale * base).lightmap(j, k).endVertex();
-        wr.pos(f7 + f1 * f6 - f4 * f6, f8 - f2 * f6, f9 + f3 * f6 - f5 * f6).tex(var8, var11).color(particleRed, particleGreen, particleBlue, 0.2f * agescale * base).lightmap(j, k).endVertex();
-    }
-    
-    public int getFXLayer() {
-        return (blendmode != 1) ? 1 : 0;
-    }
-    
-    public void onUpdate() {
-        super.onUpdate();
-        if (target != null && !onGround) {
-            posX += target.motionX;
-            posZ += target.motionZ;
-        }
-    }
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
+
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.particle.SingleQuadParticle;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import thaumcraft.Thaumcraft;
+
+/**
+ * Real modern equivalent of the true original's own real {@code FXWispEG} - a faint, dark ambient mote that
+ * drifts down off an Eldritch mob, drafting along with its own owner's real horizontal motion while airborne.
+ * Restored 2026-09-17. Real call sites confirmed via `git grep`: {@link
+ * thaumcraft.common.entities.monster.EntityEldritchGuardian}/{@link
+ * thaumcraft.common.entities.monster.boss.EntityEldritchWarden}'s own real idle ambient trail.
+ *
+ * <p>Real, faithful port of the true original's own exact motion/colour formula: a real small downward drift
+ * plus gaussian horizontal jitter, real very-dark per-instance colour (each channel independently
+ * {@code 0-0.05}), a real 13-frame cycling animation. Real, disclosed simplification: the true original's own
+ * real vertex alpha also fades with the viewer's own camera distance (a real "less visible far away" touch) -
+ * dropped here, fading with age alone, since replicating the distance term would need a real custom
+ * {@code render()} override (see {@code FXSmokeSpiral}'s own doc comment for the same tradeoff) for a minor,
+ * easy-to-miss polish detail on an already very faint, already-fading particle.
+ */
+public class FXWispEG extends SingleQuadParticle {
+
+	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/misc/particles.png");
+	private static final int GRID = 64;
+	private static final float CELL = 1.0f / GRID;
+	private static final int FRAMES = 13;
+	private static final float ROW_V0 = 3 * CELL;
+
+	public static final ParticleRenderType RENDER_TYPE = new ParticleRenderType() {
+		@Nullable
+		@Override
+		public BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
+			RenderSystem.setShader(GameRenderer::getParticleShader);
+			RenderSystem.setShaderTexture(0, TEXTURE);
+			RenderSystem.enableBlend();
+			RenderSystem.defaultBlendFunc();
+			RenderSystem.depthMask(false);
+			return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+		}
+
+		@Override
+		public String toString() {
+			return "thaumcraft:wisp_eg";
+		}
+	};
+
+	private final Entity target;
+
+	public FXWispEG(ClientLevel level, double x, double y, double z, Entity target) {
+		super(level, x, y, z);
+		this.target = target;
+		this.xd = random.nextGaussian() * 0.03;
+		this.yd = -0.05;
+		this.zd = random.nextGaussian() * 0.03;
+		this.quadSize *= 0.4f;
+		this.lifetime = (int) (40.0 / (Math.random() * 0.3 + 0.7));
+		this.rCol = random.nextFloat() * 0.05f;
+		this.gCol = random.nextFloat() * 0.05f;
+		this.bCol = random.nextFloat() * 0.05f;
+		this.hasPhysics = true;
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+		if (target != null && !onGround) {
+			x += target.getDeltaMovement().x;
+			z += target.getDeltaMovement().z;
+		}
+		alpha = 0.2f * (1.0f - age / (float) lifetime);
+	}
+
+	@Override
+	public float getQuadSize(float partialTicks) {
+		return 0.5f * quadSize;
+	}
+
+	@Override
+	protected float getU0() {
+		return (age % FRAMES) * CELL;
+	}
+
+	@Override
+	protected float getU1() {
+		return getU0() + CELL;
+	}
+
+	@Override
+	protected float getV0() {
+		return ROW_V0;
+	}
+
+	@Override
+	protected float getV1() {
+		return ROW_V0 + CELL;
+	}
+
+	@Override
+	public ParticleRenderType getRenderType() {
+		return RENDER_TYPE;
+	}
 }

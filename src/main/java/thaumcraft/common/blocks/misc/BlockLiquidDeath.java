@@ -1,6 +1,7 @@
 package thaumcraft.common.blocks.misc;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
@@ -35,11 +36,32 @@ import thaumcraft.api.damagesource.ThaumcraftDamageTypes;
  * {@code MobDeathDropEvents#onLivingDrops} drops the victim's own real essentia as crystal-essence stacks
  * instead of its normal loot, ported from the SAME original {@code EntityEvents} handler this block's own
  * real damage source used to trigger, in an earlier, uncaptured session.
+ *
+ * <p>Real client-only ambient surface bubble restored 2026-09-17 (was dropped under this port's old blanket
+ * "no client FX" rule) - a real faithful port of the true original's own real {@code randomDisplayTick}
+ * (1-in-20 chance per real random block tick), routed through
+ * {@link thaumcraft.client.fx.ClientFxHandlers#spawnSlimyBubble} for the same real dist-crash-avoidance
+ * reason every other client-only trigger in this port uses. Real, disclosed approximation: the true
+ * original's own real per-bubble height offset was tied to its own 0-4 {@code meta} quanta scale - this
+ * port's own real {@link net.minecraft.world.level.material.FluidState#getAmount()} uses a real 0-8 scale
+ * instead, so the same real "shallower fluid bubbles higher up" shape is kept, just rescaled rather than
+ * number-for-number identical (matching the same real precedent {@link #entityInside}'s own doc comment
+ * already set for the damage taper).
  */
 public class BlockLiquidDeath extends LiquidBlock {
 
 	public BlockLiquidDeath(FlowingFluid fluid, BlockBehaviour.Properties properties) {
 		super(fluid, properties);
+	}
+
+	@Override
+	public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
+		if (random.nextInt(20) == 0) {
+			int amount = state.getFluidState().getAmount();
+			float h = random.nextFloat() * 0.075f;
+			double y = pos.getY() + 0.1 + 0.225 * (8 - amount) / 2.0;
+			thaumcraft.client.fx.ClientFxHandlers.spawnSlimyBubble(level, pos.getX() + random.nextFloat(), y, pos.getZ() + random.nextFloat(), 0.075f + h);
+		}
 	}
 
 	@Override

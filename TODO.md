@@ -249,13 +249,55 @@ deferred until now. Real findings from that audit, triaged:
         directly in its own real decompiled source this time (not just
         assumed from the crossbow precedent). Two clean 501/501
         `runGameTestServer` passes and a clean `test` task.
-    - Remaining true-original FX classes (`FXBlockRunes`/`FXBreakingFade`/
-      `FXDigging`/`FXFireMote`/`FXPlane`/`FXSlimyBubble`/`FXSmokeSpiral`/
-      `FXSwarmRunes`/`FXVisSparkle`/`FXWispEG`/`FXGenericGui`/`FXGenericP2E`/
-      `FXGenericP2P`, plus `FXEssentiaStream` which does have a real call
-      site - `RenderEventHandler`'s own tube-network essentia-flow
-      visualization, a bigger separate system) not yet scoped in detail -
-      ~~**`FXVent`/`FXVent2`**~~ — closed 2026-09-16 (had been wrongly filed
+    - Scoped 2026-09-17: `FXDigging`/`FXSwarmRunes`/`FXGenericP2P` confirmed
+      **dead in the true original itself** (zero real construction sites
+      anywhere in the pristine tree, checked via `git grep` - won't be
+      ported). `FXEssentiaStream` (`RenderEventHandler`'s own tube-network
+      essentia-flow visualization) is a bigger, separate system, still not
+      individually scoped. `FXBlockRunes`/`FXBreakingFade`/`FXPlane`/
+      `FXGenericGui`/`FXGenericP2E` remain real, reachable, and still not
+      yet built.
+      - ~~**`FXFireMote`/`FXVisSparkle`/`FXSmokeSpiral`/`FXSlimyBubble`/
+        `FXWispEG`**~~ — closed 2026-09-17, one batch since all 5 are real,
+        faithful `SingleQuadParticle`-based billboard quads off the shared
+        `particles.png` sheet, matching the true original's own real
+        per-class motion/animation formula exactly (`FXFireMote`'s own real
+        slow-aging shrink/fade; `FXVisSparkle`'s own real drag+attraction
+        homing-toward-a-fixed-point physics; `FXSmokeSpiral`'s own real
+        expanding-then-contracting double-helix orbit around a fixed origin
+        - baked into the particle's own real tracked position once per
+        TICK here rather than recomputed every FRAME like the true
+        original, since the true original's own render-time offset never
+        actually moves the particle's own real position at all, checked
+        directly rather than assumed; `FXSlimyBubble`'s own real 3-phase
+        forming/rising/popping frame-index state machine; `FXWispEG`'s own
+        real "drafts along with its own owner's real horizontal motion
+        while airborne" formula). Wired to every real confirmed call site
+        (found via `git grep`, not assumed): `EntityFocusProjectile`'s own
+        real Fire/Flame focus trail and `EntityAlumentum`/
+        `EntityCausalityCollapser`'s own real flight trail (`FXFireMote`,
+        shared class, different literal colours per site);
+        `TileFocalManipulator`/`TileRechargePedestal`'s own real vis-spend
+        sparkle cue (`FXVisSparkle`, restored via a real new vanilla
+        entity-event trigger neither tile had before); `EntityEldritchWarden`'s
+        own real teleport/materialize cue and `ItemElementalSword`'s own
+        real hover-trail (`FXSmokeSpiral` - the Warden's own real
+        "growing from small to full size" spawn burst reuses `tickCount`
+        directly instead of adding a new synced `spawnTimer` field, since
+        both already climb in exact lockstep on a freshly-spawned entity);
+        `BlockLiquidDeath`'s own real ambient surface bubble
+        (`FXSlimyBubble`, via a new `animateTick` override - the true
+        original's own real block class here was a stale, unbuilt 1.12.2
+        Forge-fluid leftover, not the real ported `LiquidBlock`-based
+        one); `EntityEldritchGuardian`/`EntityEldritchWarden`'s own real
+        constant per-tick ambient dust trail (`FXWispEG`). Real, disclosed
+        simplification: `EntityFocusProjectile`'s own real trail colour
+        (originally picked per-tick from whichever focus effect would run
+        next) is plain white instead, since the carried `FocusPackage` is
+        deliberately never synced to the client - adding client spawn-data
+        sync for one cosmetic trail colour wasn't worth it this pass. Two
+        clean 500/500 `runGameTestServer` passes and a clean `test` task.
+      - ~~**`FXVent`/`FXVent2`**~~ — closed 2026-09-16 (had been wrongly filed
       as "confirmed zero call site" - a real call site existed after all,
       found while restoring `GOLEM_BUILDER`'s own renderer). Both real,
       faithful `SingleQuadParticle`-based billboard puffs off the shared

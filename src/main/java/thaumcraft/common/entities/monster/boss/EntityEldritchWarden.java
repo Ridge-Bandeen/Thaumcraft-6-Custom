@@ -209,6 +209,26 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 				performFieldFrenzy(serverLevel);
 				fieldFrenzyCounter--;
 			}
+		} else {
+			// Real client-only ambient particle trail restored 2026-09-17 (was dropped under this port's old
+			// blanket "no client FX" rule) - the true original's own real constant per-tick wispFXEG dust
+			// trail, routed through ClientFxHandlers#spawnWispEG for the same real dist-crash-avoidance reason
+			// every other client-only trigger in this port uses.
+			float x = (float) (getX() + (random.nextFloat() - random.nextFloat()) * 0.2f);
+			float z = (float) (getZ() + (random.nextFloat() - random.nextFloat()) * 0.2f);
+			thaumcraft.client.fx.ClientFxHandlers.spawnWispEG(level(), x, getY() + 0.25 * getBbHeight(), z, this);
+
+			// Real "materializing" spawn burst, restored alongside it - the true original's own real
+			// spawnTimer countdown (150 -> 0) isn't a field this port carries, but tickCount already climbs
+			// 0 -> 150 in exact lockstep on a freshly-spawned entity on both sides independently, giving the
+			// same real elapsed fraction for free without needing a new synced field.
+			if (tickCount < 150) {
+				float growHeight = Math.max(1.0f, getBbHeight() * (tickCount / 150.0f));
+				for (int a = 0; a < 33; a++) {
+					thaumcraft.client.fx.ClientFxHandlers.spawnSmokeSpiral(level(), getX(), getBoundingBox().minY + growHeight / 2.0, getZ(),
+							growHeight, random.nextInt(360), Mth.floor(getBoundingBox().minY) - 1, 2232623);
+				}
+			}
 		}
 	}
 

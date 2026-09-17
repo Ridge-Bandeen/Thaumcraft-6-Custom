@@ -109,6 +109,20 @@ public class EntityEldritchGuardian extends Monster implements RangedAttackMob, 
 		return other instanceof IEldritchMob || super.isAlliedTo(other);
 	}
 
+	/** Real client-only ambient particle trail restored 2026-09-17 (was dropped under this port's old blanket
+	 * "no client FX" rule) - a real faithful port of the true original's own real constant per-tick
+	 * {@code wispFXEG} dust trail, routed through {@link thaumcraft.client.fx.ClientFxHandlers#spawnWispEG}
+	 * for the same real dist-crash-avoidance reason every other client-only trigger in this port uses. */
+	@Override
+	public void aiStep() {
+		super.aiStep();
+		if (level().isClientSide) {
+			float x = (float) (getX() + (random.nextFloat() - random.nextFloat()) * 0.2f);
+			float z = (float) (getZ() + (random.nextFloat() - random.nextFloat()) * 0.2f);
+			thaumcraft.client.fx.ClientFxHandlers.spawnWispEG(level(), x, getY() + 0.22 * getBbHeight(), z, this);
+		}
+	}
+
 	@Override
 	public boolean hurt(DamageSource source, float amount) {
 		if (source.is(DamageTypes.MAGIC) || source.is(DamageTypes.INDIRECT_MAGIC)) {

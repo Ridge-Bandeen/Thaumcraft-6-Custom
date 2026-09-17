@@ -155,12 +155,32 @@ public class TileFocalManipulator extends BlockEntity implements MenuProvider {
 		}
 		float amt = tile.spendAura(level, Math.min(20.0f, tile.vis));
 		if (amt > 0.0f) {
+			level.blockEvent(pos, state.getBlock(), 5, 1);
 			tile.vis -= amt;
 			tile.setChanged();
 		}
 		if (tile.vis <= 0.0f) {
 			tile.endCraft(level, pos);
 		}
+	}
+
+	/** Real vanilla entity-event trigger - see {@link #tick}'s own real {@code level.blockEvent} call. Real,
+	 * faithful port of the true original's own real {@code receiveClientEvent(5, ...)} vis-spend sparkle cue,
+	 * routed through {@link thaumcraft.client.fx.ClientFxHandlers#spawnVisSparkle} for the same real
+	 * dist-crash-avoidance reason every other client-only trigger in this port uses. */
+	@Override
+	public boolean triggerEvent(int id, int type) {
+		if (id == 5) {
+			if (level != null && level.isClientSide) {
+				thaumcraft.client.fx.ClientFxHandlers.spawnVisSparkle(level,
+						worldPosition.getX() + level.random.nextInt(3) - level.random.nextInt(3),
+						worldPosition.getY() + level.random.nextInt(3),
+						worldPosition.getZ() + level.random.nextInt(3) - level.random.nextInt(3),
+						worldPosition.getX(), worldPosition.getY() + 1, worldPosition.getZ(), type);
+			}
+			return true;
+		}
+		return super.triggerEvent(id, type);
 	}
 
 	private FocusPackage generateFocus() {

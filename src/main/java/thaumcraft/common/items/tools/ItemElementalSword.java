@@ -2,6 +2,8 @@ package thaumcraft.common.items.tools;
 
 import java.util.List;
 
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
@@ -23,6 +25,12 @@ import net.minecraft.world.phys.Vec3;
  * adds it to push outward). The original's anti-cheat "reset float kick counter" call is dropped - that was
  * a 1.12.2-era vanilla-server workaround with no real modern equivalent needed (a modern server doesn't kick
  * a player for server-applied vertical motion the way the old float-kick heuristic could).
+ *
+ * <p>Real client-only hover trail restored 2026-09-17 (was dropped under this port's old blanket "no client
+ * FX" rule) - a real faithful port of the true original's own real per-tick smoke-spiral burst (5 real
+ * spirals around the wielder's own feet each tick) plus a real vanilla smoke puff while grounded, routed
+ * through {@link thaumcraft.client.fx.ClientFxHandlers#spawnSmokeSpiral} for the same real dist-crash-
+ * avoidance reason every other client-only trigger in this port uses.
  */
 public class ItemElementalSword extends SwordItem {
 
@@ -62,6 +70,20 @@ public class ItemElementalSword extends SwordItem {
 			Vec3 toTarget = target.position().subtract(player.position());
 			double distance = toTarget.length() + 0.1;
 			target.setDeltaMovement(target.getDeltaMovement().add(toTarget.scale(1.0 / 2.5 / distance)));
+		}
+
+		if (level.isClientSide) {
+			double minY = player.onGround() ? Math.floor(player.getBoundingBox().minY) : player.getBoundingBox().minY - 2.0;
+			for (int a = 0; a < 5; a++) {
+				thaumcraft.client.fx.ClientFxHandlers.spawnSmokeSpiral(level, player.getX(), player.getBoundingBox().minY + player.getBbHeight() / 2.0f, player.getZ(),
+						1.5f, level.random.nextInt(360), (int) minY, 14540253);
+			}
+			if (player.onGround()) {
+				float r2 = level.random.nextFloat() * 360.0f;
+				float mx = -Mth.sin(r2 / 180.0f * Mth.PI) / 5.0f;
+				float mz = Mth.cos(r2 / 180.0f * Mth.PI) / 5.0f;
+				level.addParticle(ParticleTypes.SMOKE, player.getX(), player.getBoundingBox().minY + 0.1, player.getZ(), mx, 0.0, mz);
+			}
 		}
 	}
 }
