@@ -231,6 +231,10 @@ public class ThaumcraftClient {
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.TUBE_BUFFER.get(), thaumcraft.client.render.TileTubeBufferRenderer::new);
         // Real OBJ mesh + press-ram animation restored 2026-09-16 - see TileGolemBuilderRenderer's own doc comment.
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.GOLEM_BUILDER.get(), thaumcraft.client.render.TileGolemBuilderRenderer::new);
+        // Real linked-portal tunnel effect restored 2026-09-17, reusing vanilla's own End Portal shader - see
+        // TileMirrorRenderer's own doc comment.
+        event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.MIRROR.get(), thaumcraft.client.render.TileMirrorRenderer::new);
+        event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.MIRROR_ESSENTIA.get(), thaumcraft.client.render.TileMirrorRenderer::new);
     }
 
     /** One real "additional" model per {@link GolemMaterial} (the trunk/limbs silhouette every golem has),

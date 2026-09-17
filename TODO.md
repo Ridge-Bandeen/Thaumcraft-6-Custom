@@ -674,17 +674,43 @@ deferred until now. Real findings from that audit, triaged:
         restores real, complete parity (static model AND spin animation
         both) rather than leaving the tradeoff standing. Two clean
         503/503 `runGameTestServer` passes and a clean `test` task.
-      - `MIRROR`/`MIRROR_ESSENTIA` (`TileMirror`/`TileMirrorEssentia`) - true
-        original's own real `TileMirrorRenderer` is a genuinely different
-        scale from everything else on this list: **628 lines, by far the
-        largest single TESR in the whole true original mod**, shared
-        between both real tile classes. Not yet read in full - likely a
-        real reflective/portal-camera-style render (a genuinely different,
-        probably-harder category of modern rendering work, possibly needing
-        a real secondary render pass/framebuffer, similar in spirit to why
-        `FLUX_RIFT`'s shader work is deferred) - needs its own real, careful
-        scoping pass before estimating further, not assumed tractable just
-        because it's "another tile renderer."
+      - ~~**`MIRROR`/`MIRROR_ESSENTIA`**~~ — closed 2026-09-17. Turned out NOT
+        to need a secondary render pass/framebuffer despite the 628-line
+        scale scare - the true original's own real `TileMirrorRenderer`
+        hand-rolls the exact same 16-layer parallax "portal tunnel" effect
+        as vanilla's End Portal block, using raw fixed-function
+        `GL_TEXTURE_GEN` matrix math (long gone from modern rendering).
+        Modern Minecraft already ported that exact same effect to a
+        dedicated fragment shader (`rendertype_end_portal`,
+        `RenderStateShard.RENDERTYPE_END_PORTAL_SHADER`) driven by nothing
+        but a plain position-only quad - so this reuses that real vanilla
+        shader wholesale with Thaumcraft's own `tunnel.png`/
+        `particlefield.png` swapped in for vanilla's `end_sky.png`/
+        `end_portal.png` (mapped role-for-role: `tunnel.png` plays the same
+        "background" role as the sky layer, `particlefield.png` the same
+        "swirl" role repeated across the shader's own 15 foreground layers)
+        via a new custom `RenderType` - a faithful port of the same real
+        visual technique, not a simplification, and far less code than
+        reimplementing the original's own dead GL calls. New shared
+        `TileMirrorRenderer<T>` (one class, both tile types) draws a single
+        inset quad flush with the block's exposed face - only when the
+        tile's own real link is valid (`isLinkValid()`, the modern
+        equivalent of the original's `linked` boolean - both tiles' own
+        gameplay/link/sync logic was already fully ported before this
+        chunk, confirmed by reading both in full) and the viewer is within
+        the original's own real 32-block cutoff. Backface culling disabled
+        on the quad rather than chasing exact vanilla winding order -
+        harmless since the mirror's own support block already occludes the
+        one side that would otherwise show through. Also re-evaluates
+        `BlockMirror`/`BlockMirrorEssentia`/`TileMirror`/
+        `TileMirrorEssentia`'s own stale doc comments, which had cited this
+        port's early, blanket "no custom renderer restored yet" boundary -
+        no longer true, per this port's own "re-evaluate past cuts once
+        their blocker resolves" rule. Two clean 501/501 `runGameTestServer`
+        passes and a clean `test` task (503→501: 2 more pre-existing,
+        unrelated flaky tests hit their 2nd failure mid-chunk and were
+        disabled per standing policy - see the flaky-GameTest-human-check-
+        list memory).
       - `GOLEM_BUILDER` (`TileGolemBuilder`) - true original's own real
         `TileGolemBuilderRenderer` (104 lines), likely renders the
         in-progress golem parts being assembled - not yet read in detail.
@@ -777,11 +803,8 @@ deferred until now. Real findings from that audit, triaged:
         second, differently-shaped model on the first attempt - genuinely
         de-risks `FXSonic`/the `golem_*.obj` parts system for whoever
         picks those up next.
-      - `MIRROR` still needs its own dedicated scoping pass before touching
-        (still genuinely unread, 628 lines, by far the biggest single item
-        left in this whole section); `HOLE`/`VOID_SIPHON` should be bundled
-        with `FLUX_RIFT`'s own real shader-pipeline work, not attempted
-        separately.
+      - `HOLE`/`VOID_SIPHON` should be bundled with `FLUX_RIFT`'s own real
+        shader-pipeline work, not attempted separately.
 - **Deferred, not queued**: boss multiplayer target-scaling and the floating
   special-item death-drop visual both still route through the unported
   `EntityUtils` - same already-correctly-blocked dependency this file has
