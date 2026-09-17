@@ -233,12 +233,20 @@ deferred until now. Real findings from that audit, triaged:
         Mob Models/Renderers below instead of this Particle FX arc.
     - Remaining true-original FX classes (`FXBlockRunes`/`FXBreakingFade`/
       `FXDigging`/`FXFireMote`/`FXPlane`/`FXSlimyBubble`/`FXSmokeSpiral`/
-      `FXSwarmRunes`/`FXVent`/`FXVent2`/`FXVisSparkle`/`FXWispEG`/
-      `FXGenericGui`/`FXGenericP2E`/`FXGenericP2P`, plus `FXEssentiaStream`
-      which does have a real call site - `RenderEventHandler`'s own tube-
-      network essentia-flow visualization, a bigger separate system) not yet
-      scoped in detail - none of these had any real, currently-compiled call
-      site found during this pass's scoping search, so likely low-value until
+      `FXSwarmRunes`/`FXVisSparkle`/`FXWispEG`/`FXGenericGui`/`FXGenericP2E`/
+      `FXGenericP2P`, plus `FXEssentiaStream` which does have a real call
+      site - `RenderEventHandler`'s own tube-network essentia-flow
+      visualization, a bigger separate system) not yet scoped in detail -
+      **correction 2026-09-16: `FXVent`/`FXVent2` were wrongly included in
+      this "confirmed zero call site" bucket** - a real call site exists
+      after all, found while restoring `GOLEM_BUILDER`'s own renderer: the
+      true original's own `TileGolemBuilder#update` calls `FXDispatcher
+      .drawVentParticles` (real steam-vent bursts) at the press-ram's own
+      60%/90%+ thresholds, deliberately not restored in that same chunk (see
+      its own closed TODO entry above) - a real, small, self-contained
+      follow-up chunk whenever picked up, not zero-value after all. The rest
+      of this list had no real, currently-compiled call site found during
+      this pass's scoping search, so likely low-value until
       whatever gameplay feature they'd back gets built first.
     - ~~**`FocusEffect#renderParticleFX` restoration**~~ — closed 2026-09-16.
       All 10 real `FocusEffect` subclasses with a real particle FX
@@ -668,15 +676,41 @@ deferred until now. Real findings from that audit, triaged:
         whether `TileBellows` already carries a real `inflation`-equivalent
         field. Bigger than the already-closed items, smaller than `JAR`/
         `MIRROR`.
-      - `GOLEM_BUILDER` - turned out to need the SAME real OBJ-model-loading
-        infrastructure `TURRET_CROSSBOW_ADVANCED` above needs (its own real
-        `TileGolemBuilderRenderer` calls `AdvancedModelLoader.loadModel`
-        too) - bundle with that work, not a separate item. This is now the
-        THIRD real consumer of that same infrastructure (alongside
-        `TURRET_CROSSBOW_ADVANCED`/`FXSonic`), on top of the whole
-        `golem_*.obj` parts-customization system already flagged there -
-        makes building the real OBJ-loading path even higher-leverage
-        whenever it happens.
+      - ~~**`GOLEM_BUILDER`**~~ — closed 2026-09-16, same session right after
+        `TURRET_CROSSBOW_ADVANCED` proved the OBJ-loading path out. Genuinely
+        simpler than the crossbow: only 4 real named parts (`table`/`anvil`/
+        `box`/`press`), only 1 animated, and no facing-rotation at all (this
+        port's own `BlockGolemBuilder` has no facing property, matched
+        as-is). `press` (a real client-only vertical-bob field, off the
+        true original's own exact `sin(radians(press))*0.625` formula) is
+        gated on already-synced `cost`/`golem` state. A real, checked-not-
+        assumed difference from the crossbow case: `golembuilder.mtl`
+        genuinely already exists as a real original asset (unlike
+        `crossbow_advanced.obj`'s own missing one) - but its own real
+        `map_Ka`/`map_Kd` lines reference a stale absolute Windows path
+        from the original author's own machine, so a fresh minimal
+        synthetic `.mtl` override was used anyway rather than risk it
+        tripping the modern parser. **A real, previously-unnoticed bug
+        found and fixed along the way, not just a rendering gap**:
+        `TileGolemBuilder` had NO `saveAdditional`/`loadAdditional`
+        overrides at all - an in-progress craft, or even a finished real
+        golem placer sitting in the output slot, would silently vanish on
+        a chunk save/reload. Fixed alongside the real sync wiring the
+        renderer also needed (`getUpdateTag`/`getUpdatePacket`), the same
+        "add both while touching this file anyway" efficiency already
+        proven for `TileCentrifuge`/`TilePatternCrafter`. Real, disclosed
+        cut: the true original's own real vent-steam particle bursts at
+        the 60%/90%+ press thresholds aren't restored (a genuine, real
+        call site for the still-unported `FXVent`/`FXVent2` classes,
+        previously - incorrectly - filed as confirmed-zero-call-site in
+        the Particle FX scoping notes; corrected there too) - the real
+        lava-extinguish sound cues at those same thresholds ARE kept,
+        since they need no new particle infrastructure. Two clean 503/503
+        `runGameTestServer` passes and a clean `test` task. This confirms
+        the real OBJ-loading infrastructure generalizes cleanly to a
+        second, differently-shaped model on the first attempt - genuinely
+        de-risks `FXSonic`/the `golem_*.obj` parts system for whoever
+        picks those up next.
       - `MIRROR` still needs its own dedicated scoping pass before touching
         (still genuinely unread, 628 lines, by far the biggest single item
         left in this whole section); `HOLE`/`VOID_SIPHON` should be bundled

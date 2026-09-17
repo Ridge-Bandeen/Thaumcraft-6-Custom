@@ -1,0 +1,7 @@
+# Minimal synthetic material-library override, added 2026-09-16 - the real golembuilder.mtl DOES exist (a
+# genuine original asset, unlike crossbow_advanced.obj's own missing one), but its own map_Ka/map_Kd lines
+# reference a stale absolute Windows path (E:\Thaumcraft\...) from the original mod author's own machine, not
+# a real Minecraft resource location - not worth risking NeoForge's own modern ObjLoader choking on it at
+# parse time when the real texture is supplied separately via StandaloneGeometryBakingContext at bake time
+# regardless of what this file says.
+newmtl texture

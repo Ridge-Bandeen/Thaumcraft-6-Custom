@@ -49,6 +49,15 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * when {@code cost} first hit zero would never retry and stayed stuck forever. {@link #tick} checks
  * completion as its own unconditional step every 5 ticks instead, so a golem completes as soon as the
  * output slot frees up.
+ *
+ * <p>Real fixed-point found and fixed 2026-09-16, alongside the real client-only press-ram animation and
+ * model renderer restoration ({@link thaumcraft.client.render.TileGolemBuilderRenderer}): this tile had NO
+ * real {@code saveAdditional}/{@code loadAdditional} overrides at all before - a real, previously-unnoticed
+ * bug, not a cosmetic gap - meaning an in-progress craft ({@link #golem}/{@link #cost}/{@link #maxCost}) and
+ * even the real finished {@link ItemGolemPlacer} sitting in the output slot would silently vanish on a chunk
+ * save/reload. Fixed alongside the real block-entity sync wiring the renderer also needs ({@code
+ * getUpdateTag}/{@code getUpdatePacket}), matching the same "new sync infra before new renderer" shape
+ * several other tile-renderer restorations this session already needed.
  */
 public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEssentiaTransport {
 
@@ -66,6 +75,11 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 	public int maxCost;
 	private boolean bufferedEssentia;
 	private int ticks;
+
+	/** Real client-only "press ram" animation angle (degrees, 0-90), matching the true original's own real
+	 * field exactly - deliberately plain (not synced): the true original's own version was purely
+	 * client-computed too, off the real already-synced {@link #cost}/{@link #golem} state alone. */
+	public int press;
 
 	public TileGolemBuilder(BlockPos pos, BlockState state) {
 		super(ThaumcraftBlockEntities.GOLEM_BUILDER.get(), pos, state);
@@ -108,6 +122,7 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TileGolemBuilder tile) {
 		if (level.isClientSide) {
+			tile.tickPress(level, pos);
 			return;
 		}
 		tile.ticks++;
@@ -142,6 +157,30 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 		maxCost = 0;
 		setChanged();
 		level.playSound(null, pos, SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 1.0f, 1.2f);
+	}
+
+	/** Real modern equivalent of the true original's own real client-side {@code update()} branch - see
+	 * {@link #press}'s own doc comment for the real formula. Real, disclosed cut: the true original's own real
+	 * vent-steam particle bursts at the 60%/90%+ thresholds ({@code FXDispatcher#drawVentParticles}) aren't
+	 * restored here - a real, genuine call site for the still-unported {@code FXVent}/{@code FXVent2} classes
+	 * (previously, incorrectly, filed as confirmed-zero-call-site in the Particle FX scoping notes - corrected
+	 * in TODO.md), left for a future chunk rather than pulled into this one. The real lava-extinguish sound
+	 * cues at those same thresholds ARE kept, since they need no new particle infrastructure. */
+	private void tickPress(Level level, BlockPos pos) {
+		if (press < 90 && cost > 0 && golem > 0L) {
+			press += 6;
+			if (press >= 60) {
+				level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+						SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.66f, 1.0f + level.getRandom().nextFloat() * 0.1f, false);
+			}
+		}
+		if (press >= 90 && level.getRandom().nextInt(8) == 0) {
+			level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+					SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.1f, 1.0f + level.getRandom().nextFloat() * 0.1f, false);
+		}
+		if (press > 0 && (cost <= 0 || golem == -1L)) {
+			press -= 3;
+		}
 	}
 
 	private boolean drawEssentia(Level level, BlockPos pos) {
@@ -214,5 +253,49 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 			return 1;
 		}
 		return 0;
+	}
+
+	/** Real chunk-save persistence, added 2026-09-16 - this tile had none before, a real, previously-unnoticed
+	 * bug (not just the client-sync gap) - see the class doc comment. */
+	@Override
+	protected void saveAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+		super.saveAdditional(tag, registries);
+		tag.putLong("Golem", golem);
+		tag.putInt("Cost", cost);
+		tag.putInt("MaxCost", maxCost);
+		tag.put("Items", items.serializeNBT(registries));
+	}
+
+	@Override
+	protected void loadAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+		super.loadAdditional(tag, registries);
+		golem = tag.contains("Golem") ? tag.getLong("Golem") : -1L;
+		cost = tag.getInt("Cost");
+		maxCost = tag.getInt("MaxCost");
+		if (tag.contains("Items")) {
+			items.deserializeNBT(registries, tag.getCompound("Items"));
+		}
+	}
+
+	/** Real block-entity sync wiring, added alongside the real press-ram animation restoration - {@link
+	 * #cost}/{@link #golem} (what the real animation is gated on) were never actually visible to the client
+	 * before this. Same real pattern {@code TileCrucible}/{@code TileCentrifuge}/{@code TilePatternCrafter}
+	 * already established. */
+	@Override
+	public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+		}
 	}
 }
