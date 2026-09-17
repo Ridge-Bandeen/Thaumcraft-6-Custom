@@ -285,8 +285,8 @@ deferred until now. Real findings from that audit, triaged:
     placeholder in `ThaumcraftClient.java` checked directly against the true
     original's own real renderer for that entity, rather than assuming the
     placeholder is always the documented "never had a model" case it
-    legitimately is for `FOCUS_PROJECTILE`/`FOCUS_MINE`(?)/`FOCUS_CLOUD`
-    /`GOLEM_ORB`(?)/`ELDRITCH_ORB`(?)/`TURRET_CROSSBOW_ADVANCED`/`WISP`
+    legitimately is for `FOCUS_PROJECTILE`/`FOCUS_CLOUD` - it wasn't, for
+    `FOCUS_MINE`/`GOLEM_ORB`/`ELDRITCH_ORB`/`TURRET_CROSSBOW_ADVANCED`/`WISP`
     /`FLUX_RIFT`/`CULTIST_PORTAL_LESSER`/`CULTIST_PORTAL_GREATER`. Real
     findings:
       - ~~**`WISP`**~~ — closed 2026-09-16. `EntityWisp` had genuinely no
@@ -309,20 +309,31 @@ deferred until now. Real findings from that audit, triaged:
         client-side branch via `ClientFxHandlers#maintainWisp`; each particle
         self-removes the instant its target dies (matches the true
         original's own real "stop drawing the moment health hits 0" - no
-        fade needed). `FOCUS_MINE` and `FOCUS_PROJECTILE` also share the
+        fade needed). `FOCUS_PROJECTILE`/`FOCUS_CLOUD` also share the
         placeholder but were confirmed to be genuinely blank/real placeholder
         cases in the true original itself (`RenderFocusCloud#renderEntityAt`
-        is a real empty method body; `RenderFocusMine` does have a real
-        model+beam texture though - see below, not yet restored).
+        is a real empty method body).
+      - ~~**`FOCUS_MINE`**~~ — closed 2026-09-16. True original's own real
+        `RenderFocusMine` draws a real `ModelGrappler`-shaped mesh (a cube
+        core plus 3 mutually-perpendicular prongs, a caltrop/mine shape) with
+        a pulsing white-to-red beam texture, not just a particle trail - a
+        real `ModelGrappler`-equivalent already existed in this port (`
+        RenderGrapple`, built for the unrelated `EntityGrapple`, shares the
+        exact same true-original model class) and was reused directly rather
+        than rebuilt from scratch. New `RenderFocusMine` (a plain
+        `EntityRenderer`, since `EntityFocusMine extends ThrowableProjectile`
+        isn't a `Mob`) renders the same 4-part geometry bound to the real
+        `mine.png` texture, with a real per-vertex red pulse tint matching
+        the true original's own exact `(counter+partialTicks)%8/8` formula -
+        substituting the entity's own free, already-real `tickCount` field
+        for the original's now-dropped dedicated `counter` field (both just
+        count real ticks since spawn, so this is a faithful, not simplified,
+        substitution). Two clean 504/504 `runGameTestServer` passes and a
+        clean `test` task.
       - **Real, confirmed gaps, not yet restored** (same
         `RenderFocusProjectile`-placeholder-hiding-a-real-visual pattern as
-        `WISP` above, found via the same direct true-original cross-check):
-        - `FOCUS_MINE` (`EntityFocusMine`) - true original's own real
-          `RenderFocusMine` draws a real `ModelGrappler`-shaped mesh with a
-          pulsing red-tinted beam texture, not just a particle trail. A real
-          `ModelGrappler`-equivalent may already partly exist given
-          `RenderGrapple`/`EntityGrapple` are already real and ported -
-          worth checking for reuse before building fresh.
+        `WISP`/`FOCUS_MINE` above, found via the same direct true-original
+        cross-check):
         - `ELDRITCH_ORB` (`EntityEldritchOrb`) / `GOLEM_ORB`
           (`EntityGolemOrb`) - true original's own real `RenderEldritchOrb`/
           `RenderElectricOrb` both hand-draw a real procedural

@@ -119,7 +119,11 @@ public class ThaumcraftClient {
     @SubscribeEvent
     static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ThaumcraftEntities.FOCUS_PROJECTILE.get(), RenderFocusProjectile::new);
-        event.registerEntityRenderer(ThaumcraftEntities.FOCUS_MINE.get(), RenderFocusProjectile::new);
+        // Real caltrop-shaped geometry + pulsing red tint restored 2026-09-16 - see RenderFocusMine's own doc
+        // comment. This was a real, previously-undocumented gap (not the same permanent "no client FX" case
+        // FOCUS_PROJECTILE/FOCUS_CLOUD below genuinely are), found via a direct cross-check of every entity
+        // type hiding behind the RenderFocusProjectile placeholder.
+        event.registerEntityRenderer(ThaumcraftEntities.FOCUS_MINE.get(), thaumcraft.client.render.RenderFocusMine::new);
         event.registerEntityRenderer(ThaumcraftEntities.FOCUS_CLOUD.get(), RenderFocusProjectile::new);
         // Alumentum renders as a real spinning item icon (vanilla's own snowball/egg renderer), unlike
         // the invisible focus-carrier entities above.
@@ -153,8 +157,11 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.SPELL_BAT.get(), thaumcraft.client.render.RenderSpellBat::new);
         // Real geometry now - see RenderEldritchCrab's own doc comment.
         event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_CRAB.get(), thaumcraft.client.render.RenderEldritchCrab::new);
-        // Real, permanent cut, same reasoning as WISP/FLUX_RIFT above - both original portal renderers
-        // extend Render directly and hand-draw an animated Tessellator billboard, no 3D model at all.
+        // Still a real, confirmed gap, not a permanent cut (corrected 2026-09-16 - this comment previously
+        // claimed otherwise). Both original portal renderers extend Render directly and hand-draw a real
+        // animated Tessellator billboard portal-disc effect, no 3D model at all - same real "billboard off the
+        // shared/a dedicated texture" family WISP was in, likely portable via the same FXWispGlow-style
+        // tracking-particle approach. Not yet restored - see the Custom Mob Models/Renderers TODO entry.
         event.registerEntityRenderer(ThaumcraftEntities.CULTIST_PORTAL_LESSER.get(), RenderFocusProjectile::new);
         event.registerEntityRenderer(ThaumcraftEntities.CULTIST_PORTAL_GREATER.get(), RenderFocusProjectile::new);
         event.registerEntityRenderer(ThaumcraftEntities.GOLEM.get(), RenderThaumcraftGolem::new);
@@ -170,7 +177,7 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.CULTIST_LEADER.get(), thaumcraft.client.render.RenderCultistLeader::new);
         event.registerEntityRenderer(ThaumcraftEntities.INHABITED_ZOMBIE.get(), thaumcraft.client.render.RenderInhabitedZombie::new);
         event.registerEntityRenderer(ThaumcraftEntities.TAINT_CRAWLER.get(), thaumcraft.client.render.RenderTaintCrawler::new);
-        // No visible model - see RenderFocusProjectile's own doc comment (shared with FOCUS_PROJECTILE/FOCUS_MINE/GOLEM_ORB).
+        // No visible model - see RenderFocusProjectile's own doc comment (shared with FOCUS_PROJECTILE/FOCUS_CLOUD/GOLEM_ORB).
         event.registerEntityRenderer(ThaumcraftEntities.TAINT_SWARM.get(), RenderFocusProjectile::new);
         // Real geometry now - see RenderTaintacle/RenderTaintSeed's own doc comments (real per-registration
         // shadow size/chain length, matching the original's own real per-registration shape).
@@ -184,7 +191,11 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.TAINTACLE_GIANT.get(), context -> new thaumcraft.client.render.RenderTaintacle(context, 1.0f, 14));
         event.registerEntityRenderer(ThaumcraftEntities.TAINT_SEED.get(), context -> new thaumcraft.client.render.RenderTaintSeed(context, 0.4f));
         event.registerEntityRenderer(ThaumcraftEntities.TAINT_SEED_PRIME.get(), context -> new thaumcraft.client.render.RenderTaintSeed(context, 0.6f));
-        // No visible model - see RenderFocusProjectile's own doc comment (shared with FOCUS_PROJECTILE/FOCUS_MINE).
+        // Still a real, confirmed gap (not the same permanent "no client FX" case FOCUS_PROJECTILE/FOCUS_CLOUD
+        // above genuinely are) - the true original's own real RenderElectricOrb hand-draws a real procedural
+        // tessellator spark shape here, not an empty placeholder. Found 2026-09-16 during the same
+        // RenderFocusProjectile-placeholder cross-check that fixed FOCUS_MINE/WISP; not yet restored - see the
+        // Custom Mob Models/Renderers TODO entry.
         event.registerEntityRenderer(ThaumcraftEntities.GOLEM_ORB.get(), RenderFocusProjectile::new);
         // Real geometry now - see ModelCrossbow/RenderTurretCrossbow's own doc comments.
         event.registerEntityRenderer(ThaumcraftEntities.TURRET_CROSSBOW.get(), thaumcraft.client.render.RenderTurretCrossbow::new);
@@ -194,7 +205,9 @@ public class ThaumcraftClient {
         // Real geometry now - see ModelArcaneBore/RenderArcaneBore's own doc comments.
         event.registerEntityRenderer(ThaumcraftEntities.ARCANE_BORE.get(), thaumcraft.client.render.RenderArcaneBore::new);
         event.registerEntityRenderer(ThaumcraftEntities.PECH.get(), thaumcraft.client.render.RenderPech::new);
-        // No visible model - see RenderFocusProjectile's own doc comment (shared with FOCUS_PROJECTILE/GOLEM_ORB).
+        // Still a real, confirmed gap, same shape as GOLEM_ORB above - the true original's own real
+        // RenderEldritchOrb hand-draws a real procedural tessellator spike-ball shape here, not an empty
+        // placeholder. Not yet restored - see the Custom Mob Models/Renderers TODO entry.
         event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_ORB.get(), RenderFocusProjectile::new);
         // Temporary placeholder body, not the real mesh - see ModelEldritchPlaceholder's own doc comment.
         event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_GUARDIAN.get(), thaumcraft.client.render.RenderEldritchGuardian::new);
