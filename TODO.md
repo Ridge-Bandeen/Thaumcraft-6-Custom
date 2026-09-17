@@ -639,8 +639,21 @@ deferred until now. Real findings from that audit, triaged:
         `ModelBoreBase`/`ModelBellows` parts - the biggest of the
         non-shader, non-mirror gaps here.
       - `CENTRIFUGE` (`TileCentrifuge`) - true original's own real
-        `TileCentrifugeRenderer` (51 lines), a real `ModelCentrifuge`-driven
-        spin animation - likely one of the smaller/more tractable gaps here.
+        `TileCentrifugeRenderer` (51 lines), a real 6-box `ModelCentrifuge`
+        (a static "box" pair + a rotating "spinny bit" of 4 boxes) - one of
+        the more tractable gaps here, and its real animation confirmed
+        (2026-09-16, read the true original's own real `update()` in full)
+        to follow the exact same real "client independently computes its
+        own rotation from already-synced discrete state" shape
+        `TUBE_VALVE`'s own `rotation` needed above, not a continuously
+        server-synced value: `rotation`/`rotationSpeed` live entirely in the
+        true original's own real `else` (client) branch of `update()`,
+        ramping toward a real target speed based on `aspectIn`/
+        `gettingPower()` (whether essentia is actively being processed) -
+        same real "add a client-only animated field, don't sync the
+        rotation value itself" pattern, though whether THIS port's own
+        current `TileCentrifuge` already syncs `aspectIn`/power state to the
+        client (a prerequisite either way) wasn't checked yet.
       - `MIRROR`/`MIRROR_ESSENTIA` (`TileMirror`/`TileMirrorEssentia`) - true
         original's own real `TileMirrorRenderer` is a genuinely different
         scale from everything else on this list: **628 lines, by far the
