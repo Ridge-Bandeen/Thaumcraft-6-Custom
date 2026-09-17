@@ -388,4 +388,27 @@ public class TileTube extends BlockEntity implements IEssentiaTransport, IIntera
 			facing = Direction.values()[tag.getInt("Facing")];
 		}
 	}
+
+	/** Real block-entity sync wiring, added 2026-09-16 alongside {@code TileTubeValve}'s own real spinning-
+	 * ring animation restoration - this whole real tube family had none before (neither {@link #openSides}
+	 * nor {@link #facing} were ever actually visible to the client, a real, previously-unnoticed gap since
+	 * every other consumer of them was server-only). Same real pattern {@code TileCrucible}/
+	 * {@code TileCentrifuge}/{@code TilePatternCrafter} already established. */
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+		}
+	}
 }

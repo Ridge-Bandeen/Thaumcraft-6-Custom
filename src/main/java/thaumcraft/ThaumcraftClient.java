@@ -224,6 +224,11 @@ public class ThaumcraftClient {
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.CENTRIFUGE.get(), thaumcraft.client.render.TileCentrifugeRenderer::new);
         // Real mode indicator + spinning crank gears restored 2026-09-16 - see TilePatternCrafterRenderer's own doc comment.
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.PATTERN_CRAFTER.get(), thaumcraft.client.render.TilePatternCrafterRenderer::new);
+        // Real spinning valve ring/rod + directional flow indicators restored 2026-09-16 - see
+        // TileTubeValveRenderer's own doc comment (shared ModelTubeValve geometry across all 3).
+        event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.TUBE_VALVE.get(), thaumcraft.client.render.TileTubeValveRenderer::new);
+        event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.TUBE_ONEWAY.get(), thaumcraft.client.render.TileTubeOnewayRenderer::new);
+        event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.TUBE_BUFFER.get(), thaumcraft.client.render.TileTubeBufferRenderer::new);
     }
 
     /** One real "additional" model per {@link GolemMaterial} (the trunk/limbs silhouette every golem has),

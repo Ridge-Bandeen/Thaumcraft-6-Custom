@@ -23,9 +23,9 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * <p>{@code facing} itself - along with the real click-to-configure-it central core button - lives on the
  * shared {@link TileTube} base now (see its own doc comment), matching the true original's own class layout:
  * every real tube variant carries the field and the real click interaction, but only this subclass's
- * {@link #isRelayDirection}/{@link #isPullDirection} overrides actually consult it. No client-only
- * directional arrow overlay ({@code TileTubeOnewayRenderer}) - same "keep the mechanic, drop the flourish"
- * precedent as every other device this port has shipped.
+ * {@link #isRelayDirection}/{@link #isPullDirection} overrides actually consult it. Real client-only
+ * directional flow-indicator rod restored 2026-09-16 - see {@link
+ * thaumcraft.client.render.TileTubeOnewayRenderer}'s own doc comment.
  */
 public class TileTubeOneway extends TileTube {
 

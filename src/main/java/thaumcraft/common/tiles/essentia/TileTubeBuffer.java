@@ -316,4 +316,25 @@ public class TileTubeBuffer extends BlockEntity implements IEssentiaTransport, I
 			}
 		}
 	}
+
+	/** Real block-entity sync wiring, added 2026-09-16 alongside {@code TileTubeValve}'s own real spinning-
+	 * ring animation restoration - see {@code TileTube}'s own doc comment for the same real gap (this class
+	 * doesn't extend that one, so needs its own copy). */
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+		}
+	}
 }

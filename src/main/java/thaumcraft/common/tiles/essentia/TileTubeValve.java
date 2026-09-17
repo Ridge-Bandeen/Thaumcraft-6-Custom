@@ -26,12 +26,22 @@ import javax.annotation.Nullable;
  * its own "facing" for a one-way mode. Neither is built here, consistent with every other tube in this port -
  * this restores the real, independent, non-per-face-dependent part of the device (the redstone-gated relay
  * itself), not a new deviation from the tube family's own established shape.
+ *
+ * Real spinning-valve-ring animation restored 2026-09-16 - see {@link #rotation} and {@link
+ * thaumcraft.client.render.TileTubeValveRenderer}'s own doc comment. {@code TileTube}'s own real
+ * block-entity sync wiring (added in the same chunk) is what makes {@link #isAllowingFlow()} - the state this
+ * animation is gated on - actually visible to the client in the first place.
  */
 public class TileTubeValve extends TileTube {
 
 	private boolean allowFlow = true;
 	private boolean wasPoweredLastTick;
 	private int count;
+
+	/** Real client-only valve-ring rotation angle (degrees), matching the true original's own real field
+	 * exactly - deliberately plain (not synced): the true original's own version was purely client-computed
+	 * too, off the real already-synced {@link #allowFlow} state alone. */
+	public float rotation;
 
 	public TileTubeValve(BlockPos pos, BlockState state) {
 		super(ThaumcraftBlockEntities.TUBE_VALVE.get(), pos, state);
@@ -42,6 +52,13 @@ public class TileTubeValve extends TileTube {
 	}
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TileTubeValve tile) {
+		if (level.isClientSide) {
+			if (!tile.allowFlow && tile.rotation < 360.0f) {
+				tile.rotation += 20.0f;
+			} else if (tile.allowFlow && tile.rotation > 0.0f) {
+				tile.rotation -= 20.0f;
+			}
+		}
 		if (!level.isClientSide) {
 			tile.count++;
 			if (tile.count % 5 == 0) {

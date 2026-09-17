@@ -415,6 +415,10 @@ sourceSets {
             include 'thaumcraft/client/fx/particles/FXCultistPortalGreater.java'
             include 'thaumcraft/client/render/TileCentrifugeRenderer.java'
             include 'thaumcraft/client/render/TilePatternCrafterRenderer.java'
+            include 'thaumcraft/client/render/ModelTubeValve.java'
+            include 'thaumcraft/client/render/TileTubeValveRenderer.java'
+            include 'thaumcraft/client/render/TileTubeOnewayRenderer.java'
+            include 'thaumcraft/client/render/TileTubeBufferRenderer.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'
             include 'thaumcraft/api/internal/IInternalMethodHandler.java'

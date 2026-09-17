@@ -604,27 +604,32 @@ deferred until now. Real findings from that audit, triaged:
         `FLUX_RIFT` below, not the simpler billboard-quad family most of
         this session's other restorations were. Checked directly, not
         assumed to be simple by their small size (64/89 lines).
-      - `TUBE_ONEWAY`/`TUBE_VALVE`/`TUBE_BUFFER` (`TileTubeOneway`/
-        `TileTubeValve`/`TileTubeBuffer`) - a shared real `ModelTubeValve`
-        (2 simple boxes: a rotating rod + ring), animated by a real
-        `rotation` float field. Real, checked-not-assumed extra scope beyond
-        "just write 3 renderers": `TileTubeValve`'s own true original
-        `rotation` field is a real CLIENT-ONLY value (`if (world.isRemote)`
-        gated), animated at a real fixed `+/-20 degrees/tick` toward
-        open/shut based on `allowFlow` - this port's own current
-        `TileTubeValve` has no such field yet. Bigger real gap found while
-        checking this: `TileTube` (the shared base class for this whole
-        family) has NO real `getUpdateTag`/`getUpdatePacket` override at
-        all yet (checked directly - several OTHER tiles in this port, e.g.
-        `TileCrucible`/`TileFocalManipulator`/`TileInfusionMatrix`, already
-        establish the real modern sync pattern needed) - meaning
-        `allowFlow` itself isn't even synced to the client today, a real
-        pre-existing gap this port's own gameplay never surfaced (since
-        `allowFlow`'s only current consumers are server-only). Restoring
-        this real visual needs real block-entity sync wiring added first,
-        not just a new `rotation` field - same "new field/infra before new
-        renderer" shape the cultist portals and `TURRET_CROSSBOW_ADVANCED`
-        above both needed.
+      - ~~**`TUBE_ONEWAY`/`TUBE_VALVE`/`TUBE_BUFFER`**~~ — closed 2026-09-16.
+        Built exactly to the earlier scoping notes: added real
+        `getUpdateTag`/`getUpdatePacket`/`setChanged` sync wiring to both
+        `TileTube` (the shared base class - benefits `TileTubeValve` and
+        `TileTubeOneway` at once) and standalone `TileTubeBuffer` (doesn't
+        extend `TileTube`), plus a real client-only `rotation` field on
+        `TileTubeValve` (matching the true original's own exact `+/-20
+        degrees/tick` formula, gated on the now-actually-synced
+        `allowFlow`). New shared `ModelTubeValve` (a real 2-box
+        `CubeListBuilder` translation - rod + ring) backs all 3 new
+        renderers: `TileTubeValveRenderer` (both parts, spinning),
+        `TileTubeOnewayRenderer` (a single blue-tinted static rod on the
+        tube's own facing side, shown only when a real connectable neighbor
+        exists there - matches the true original's own real gate exactly),
+        `TileTubeBufferRenderer` (one rod per real open+choked+connected
+        side, red for a full choke, blue for a soft one). Also corrected a
+        stale `TileTubeOneway` doc comment that had called the flow
+        indicator dropped "keep the mechanic, drop the flourish" - true only
+        because no `BlockEntityRenderer` precedent existed in this port yet
+        at the time, same stale-cut shape `TileCentrifuge`/`TilePatternCrafter`
+        already went through. Two clean 503/503 `runGameTestServer` passes
+        and a clean `test` task (one unrelated flaky test,
+        `taintSeedTracksItselfSpreadsFibresAndInflictsAreaFluxTaint`, failed
+        once on an unrelated file during this chunk's own first verification
+        run - logged to the "watched" flaky list, not disabled, since it
+        hasn't recurred).
       - `JAR`/`JAR_VOID`/`JAR_BRAIN` (`TileJarFillable`/`TileJarFillableVoid`/
         `TileJarBrain`) - true original's own single `TileJarRenderer` (174
         lines) renders the real essentia liquid fill colour/level inside the
@@ -703,16 +708,16 @@ deferred until now. Real findings from that audit, triaged:
         real nested transform stack, not a verified match - flagged in the
         UI visual-parity checklist for a human `runClient` check. Two clean
         503/503 `runGameTestServer` passes and a clean `test` task.
-    - Real prioritization note for whoever picks this up next:
-      `TUBE_ONEWAY`/`TUBE_VALVE`/`TUBE_BUFFER` are the most tractable
-      remaining non-shader, non-`MIRROR` items (small, same real
-      "add a client-only animated field + sync wiring, reuse `CubeListBuilder`
-      geometry" shape `CENTRIFUGE`/`PATTERN_CRAFTER` both just proved out
-      twice); `MIRROR` needs its own dedicated scoping pass before touching
-      (still genuinely unread, 628 lines); `HOLE`/`VOID_SIPHON` should be
-      bundled with `FLUX_RIFT`'s own real shader-pipeline work, not
-      attempted separately; the 3 essentia jars and `BELLOWS`/
-      `GOLEM_BUILDER` remain unscoped in detail.
+    - Real prioritization note for whoever picks this up next: the 3
+      essentia jars, `BELLOWS`, and `GOLEM_BUILDER` are the only real
+      remaining non-shader, non-`MIRROR` gaps and none are scoped in detail
+      yet (worth checking each for the same "client-only animated field +
+      sync wiring" prerequisite `CENTRIFUGE`/`PATTERN_CRAFTER`/the tube-valve
+      family all needed); `MIRROR` needs its own dedicated scoping pass
+      before touching (still genuinely unread, 628 lines, by far the
+      biggest item left in this whole section); `HOLE`/`VOID_SIPHON` should
+      be bundled with `FLUX_RIFT`'s own real shader-pipeline work, not
+      attempted separately.
 - **Deferred, not queued**: boss multiplayer target-scaling and the floating
   special-item death-drop visual both still route through the unported
   `EntityUtils` - same already-correctly-blocked dependency this file has
