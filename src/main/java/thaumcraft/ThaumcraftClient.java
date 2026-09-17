@@ -194,9 +194,9 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.GOLEM_ORB.get(), RenderFocusProjectile::new);
         // Real geometry now - see ModelCrossbow/RenderTurretCrossbow's own doc comments.
         event.registerEntityRenderer(ThaumcraftEntities.TURRET_CROSSBOW.get(), thaumcraft.client.render.RenderTurretCrossbow::new);
-        // No renderer yet - the original's own real crossbow_advanced.obj mesh needs a genuine custom
-        // OBJ-mesh renderer, see EntityTurretCrossbowAdvanced's own doc comment for why.
-        event.registerEntityRenderer(ThaumcraftEntities.TURRET_CROSSBOW_ADVANCED.get(), RenderFocusProjectile::new);
+        // Real advanced-variant OBJ mesh restored 2026-09-16 - see RenderTurretCrossbowAdvanced's own doc
+        // comment for the real modern OBJ-loading path this uses.
+        event.registerEntityRenderer(ThaumcraftEntities.TURRET_CROSSBOW_ADVANCED.get(), thaumcraft.client.render.RenderTurretCrossbowAdvanced::new);
         // Real geometry now - see ModelArcaneBore/RenderArcaneBore's own doc comments.
         event.registerEntityRenderer(ThaumcraftEntities.ARCANE_BORE.get(), thaumcraft.client.render.RenderArcaneBore::new);
         event.registerEntityRenderer(ThaumcraftEntities.PECH.get(), thaumcraft.client.render.RenderPech::new);

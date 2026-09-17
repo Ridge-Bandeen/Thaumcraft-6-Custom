@@ -62,13 +62,13 @@ import thaumcraft.api.items.ItemsTC;
  * detection range, just without that extra fudge factor.
  *
  * <p>Real, documented cut, same reasoning as the base turret: no ammo slot in the GUI (real dispenser auto-
- * reload already covers it, matching {@link EntityTurretCrossbow}'s own documented cut) and no renderer yet
- * - the original's own {@code RenderTurretCrossbowAdvanced} loads a real, detailed non-cuboid OBJ mesh
- * ({@code crossbow_advanced.obj}, 8 named parts, curved/angled bow limbs) that the vanilla {@code ModelPart}/
- * {@code CubeListBuilder} cuboid system fundamentally can't represent - a real, separate "build a genuine
+ * reload already covers it, matching {@link EntityTurretCrossbow}'s own documented cut). Real detailed,
+ * non-cuboid OBJ mesh renderer restored 2026-09-16 - see {@link
+ * thaumcraft.client.render.RenderTurretCrossbowAdvanced}'s own doc comment for the real modern OBJ-loading
+ * path (the vanilla {@code ModelPart}/{@code CubeListBuilder} cuboid system this port used for every other
+ * mob model genuinely can't represent this one's real curved/angled bow limbs - a real, separate "genuine
  * OBJ-mesh renderer" task, not a same-day model port like {@link EntityTurretCrossbow}'s own {@code
- * ModelCrossbow} was. Registered with the same safe no-visible-model placeholder used for every other
- * "hasn't gotten its real model yet" entity this session.
+ * ModelCrossbow} was).
  */
 public class EntityTurretCrossbowAdvanced extends EntityTurretCrossbow implements MenuProvider {
 

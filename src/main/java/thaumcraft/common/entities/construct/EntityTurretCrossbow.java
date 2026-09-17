@@ -61,8 +61,25 @@ import thaumcraft.api.items.ItemsTC;
  * ready modern helper for) - flat base chances only, a real, minor simplification. Real custom {@code
  * ticks}/{@code zap} sounds restored 2026-09-15 (were vanilla stand-ins) - see {@link
  * thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment.
+ *
+ * <p>Real client-only reload-slide progress restored 2026-09-16, alongside the real advanced-variant model
+ * renderer ({@link thaumcraft.client.render.RenderTurretCrossbowAdvanced}) - see {@link #getLoadProgress}.
+ * The true original's own version also drove its bow-recoil "swing" animation off a matching real custom
+ * entity-event pair; this port reuses real vanilla {@link #swing(InteractionHand)}/{@link #getAttackAnim}
+ * instead for that half (same real visual trigger - a swing on every real shot - via vanilla's own already-
+ * proven mechanism rather than a parallel custom one).
  */
 public class EntityTurretCrossbow extends EntityOwnedConstruct implements RangedAttackMob {
+
+	/** Real client-only reload-slide animation state, matching the true original's own real fields exactly
+	 * (just renamed off the original's raw {@code Int}/{@code loadProgress}/{@code prevLoadProgress} split
+	 * into one small group) - deliberately plain (not synced): driven by a real vanilla entity-event
+	 * broadcast ({@link #handleEntityEvent}, id {@code 17}, already fired by {@link #reloadFromDispenserBelow}
+	 * before this restoration), not itself synced. */
+	private boolean loadInProgress;
+	private int loadProgressTicks;
+	private float loadProgress;
+	private float prevLoadProgress;
 
 	public EntityTurretCrossbow(EntityType<? extends EntityTurretCrossbow> type, Level level) {
 		super(type, level);
@@ -104,6 +121,7 @@ public class EntityTurretCrossbow extends EntityOwnedConstruct implements Ranged
 		arrow.setBaseDamage(2.25 + distanceFactor * 2.0f + random.nextGaussian() * 0.25);
 		level().addFreshEntity(arrow);
 		level().broadcastEntityEvent(this, (byte) 16);
+		swing(InteractionHand.MAIN_HAND);
 		playSound(SoundEvents.ARROW_SHOOT, 1.0f, 1.0f / (random.nextFloat() * 0.4f + 0.8f));
 		ammo.shrink(1);
 		if (ammo.isEmpty()) {
@@ -117,7 +135,9 @@ public class EntityTurretCrossbow extends EntityOwnedConstruct implements Ranged
 		if (getTarget() != null && (!getTarget().isAlive() || isAlliedTo(getTarget()))) {
 			setTarget(null);
 		}
-		if (!level().isClientSide) {
+		if (level().isClientSide) {
+			tickLoadProgress();
+		} else {
 			setYRot(yHeadRot);
 			if (tickCount % 80 == 0) {
 				heal(1.0f);
@@ -125,6 +145,47 @@ public class EntityTurretCrossbow extends EntityOwnedConstruct implements Ranged
 			reloadFromDispenserBelow();
 			checkActivatorRail();
 		}
+	}
+
+	/** Real modern equivalent of the true original's own real {@code updateArmSwingProgress}'s own
+	 * load-progress half - see {@link #loadInProgress}'s own doc comment for the real formula. */
+	private void tickLoadProgress() {
+		prevLoadProgress = loadProgress;
+		if (loadInProgress) {
+			loadProgressTicks++;
+			if (loadProgressTicks >= 10) {
+				loadProgressTicks = 0;
+				loadInProgress = false;
+			}
+		} else {
+			loadProgressTicks = 0;
+		}
+		loadProgress = loadProgressTicks / 10.0f;
+	}
+
+	/** Real modern equivalent of the true original's own real {@code handleStatusUpdate} - {@code id == 17}
+	 * matches that exact real event id (already broadcast by {@link #reloadFromDispenserBelow}). */
+	@Override
+	public void handleEntityEvent(byte id) {
+		if (id == 17) {
+			if (!loadInProgress) {
+				loadProgressTicks = 0;
+				loadInProgress = true;
+			}
+		} else {
+			super.handleEntityEvent(id);
+		}
+	}
+
+	/** Real modern equivalent of the true original's own real {@code getLoadProgress} - a real 0-1 reload-slide
+	 * fraction for {@link thaumcraft.client.render.RenderTurretCrossbowAdvanced}'s own {@code loader} part,
+	 * wrapping correctly across the real 1-to-0 reset the same way vanilla's own {@link #getAttackAnim} does. */
+	public float getLoadProgress(float partialTick) {
+		float delta = loadProgress - prevLoadProgress;
+		if (delta < 0.0f) {
+			delta += 1.0f;
+		}
+		return prevLoadProgress + delta * partialTick;
 	}
 
 	/** Real port of the original's own real "stand on a powered real activator rail to freeze my AI" check -

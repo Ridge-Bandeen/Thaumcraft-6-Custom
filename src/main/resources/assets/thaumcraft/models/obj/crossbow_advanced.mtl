@@ -1,0 +1,7 @@
+# Minimal synthetic material-library stub, added 2026-09-16 - NOT recovered original data (the true
+# original never shipped a .mtl for this model either; its own bespoke 1.12.2-era OBJ loader never needed
+# material-driven texture resolution, since it just binds one texture manually). NeoForge's own modern
+# ObjLoader DOES eagerly resolve any `mtllib` directive it finds and throws if the referenced file is
+# missing, so this exists purely to satisfy that real parse-time requirement - the actual texture is
+# supplied separately via StandaloneGeometryBakingContext at bake time, not read from here.
+newmtl Material__25

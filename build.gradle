@@ -419,6 +419,7 @@ sourceSets {
             include 'thaumcraft/client/render/TileTubeValveRenderer.java'
             include 'thaumcraft/client/render/TileTubeOnewayRenderer.java'
             include 'thaumcraft/client/render/TileTubeBufferRenderer.java'
+            include 'thaumcraft/client/render/RenderTurretCrossbowAdvanced.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'
             include 'thaumcraft/api/internal/IInternalMethodHandler.java'
