@@ -571,6 +571,103 @@ deferred until now. Real findings from that audit, triaged:
     of already-registered-but-possibly-simplified renderers (real vs.
     placeholder model detail/animation fidelity) is still a separate,
     larger, not-yet-started piece of work.
+  - **Block entity (tile entity) renderers - the tile-entity half of that
+    "not yet swept" note above, now actually swept 2026-09-16.** Same real
+    technique as the entity-renderer cross-check: every real
+    `BlockEntityType` registered in `ThaumcraftBlockEntities.java` checked
+    against `ThaumcraftClient.java`'s own `registerBlockEntityRenderer`
+    calls, and every one WITHOUT a renderer checked directly against the
+    true original's own single, exhaustive TESR registration site
+    (`proxies/ProxyTESR.java` on `master`) - unlike a missing entity
+    renderer, a missing block-entity renderer is NOT a crash risk (a block
+    entity renders fine via its block's own static model with none at all),
+    so every finding below is a real visual-fidelity gap, not a stability
+    one. 11 already-registered renderers (banner/pedestal/recharge pedestal/
+    research table/thaumatorium/infusion matrix/focal manipulator/crucible/
+    alembic/dioptra/hungry chest) all correctly match the true original - no
+    action needed on those. 19 of the 31 renderer-less block entities are
+    real false positives, confirmed correct as-is (`ProxyTESR` never
+    registered a renderer for any of them either): arcane workbench,
+    stabilizer, arcane lamp, vis generator, water jug/everfull urn, arcane
+    ear, levitator, infernal furnace, growth/fertility lamps, plain tube,
+    tube filter, tube restrict, essentia input/output, condenser, potion
+    sprayer, smelter, barrier stone, spa.
+    - **11 real, confirmed visual-fidelity gaps** (the true original had a
+      real, non-trivial TESR class with real rendering logic - none of these
+      renderer classes exist in this port at all yet, confirmed via listing
+      `client/render/*Tile*`):
+      - `TILE_HOLE`/`TILE_VOID_SIPHON` (`TileHole`/`TileVoidSiphon`) - real
+        GLSL-shader-based void/starfield visuals (binds `end_portal.png`,
+        drives a real custom shader off the player's own yaw/pitch, same
+        real mechanism `FLUX_RIFT`'s own renderer uses) - genuinely belongs
+        in the SAME deferred "real shader-pipeline work" bucket as
+        `FLUX_RIFT` below, not the simpler billboard-quad family most of
+        this session's other restorations were. Checked directly, not
+        assumed to be simple by their small size (64/89 lines).
+      - `TUBE_ONEWAY`/`TUBE_VALVE`/`TUBE_BUFFER` (`TileTubeOneway`/
+        `TileTubeValve`/`TileTubeBuffer`) - a shared real `ModelTubeValve`
+        (2 simple boxes: a rotating rod + ring), animated by a real
+        `rotation` float field. Real, checked-not-assumed extra scope beyond
+        "just write 3 renderers": `TileTubeValve`'s own true original
+        `rotation` field is a real CLIENT-ONLY value (`if (world.isRemote)`
+        gated), animated at a real fixed `+/-20 degrees/tick` toward
+        open/shut based on `allowFlow` - this port's own current
+        `TileTubeValve` has no such field yet. Bigger real gap found while
+        checking this: `TileTube` (the shared base class for this whole
+        family) has NO real `getUpdateTag`/`getUpdatePacket` override at
+        all yet (checked directly - several OTHER tiles in this port, e.g.
+        `TileCrucible`/`TileFocalManipulator`/`TileInfusionMatrix`, already
+        establish the real modern sync pattern needed) - meaning
+        `allowFlow` itself isn't even synced to the client today, a real
+        pre-existing gap this port's own gameplay never surfaced (since
+        `allowFlow`'s only current consumers are server-only). Restoring
+        this real visual needs real block-entity sync wiring added first,
+        not just a new `rotation` field - same "new field/infra before new
+        renderer" shape the cultist portals and `TURRET_CROSSBOW_ADVANCED`
+        above both needed.
+      - `JAR`/`JAR_VOID`/`JAR_BRAIN` (`TileJarFillable`/`TileJarFillableVoid`/
+        `TileJarBrain`) - true original's own single `TileJarRenderer` (174
+        lines) renders the real essentia liquid fill colour/level inside the
+        glass model, and separately handles the brain-jar case (a real
+        floating eye + glow) via an `instanceof` branch in that same class.
+        All 3 real port equivalents currently render as empty glass with no
+        liquid-fill visual at all, and the brain jar loses its distinctive
+        eye/glow. Not yet checked which port jar entity fields (liquid
+        colour/amount) are already available vs. need adding.
+      - `BELLOWS` (`TileBellows`) - true original's own real
+        `TileBellowsRenderer` (151 lines) animates real moving
+        `ModelBoreBase`/`ModelBellows` parts - the biggest of the
+        non-shader, non-mirror gaps here.
+      - `CENTRIFUGE` (`TileCentrifuge`) - true original's own real
+        `TileCentrifugeRenderer` (51 lines), a real `ModelCentrifuge`-driven
+        spin animation - likely one of the smaller/more tractable gaps here.
+      - `MIRROR`/`MIRROR_ESSENTIA` (`TileMirror`/`TileMirrorEssentia`) - true
+        original's own real `TileMirrorRenderer` is a genuinely different
+        scale from everything else on this list: **628 lines, by far the
+        largest single TESR in the whole true original mod**, shared
+        between both real tile classes. Not yet read in full - likely a
+        real reflective/portal-camera-style render (a genuinely different,
+        probably-harder category of modern rendering work, possibly needing
+        a real secondary render pass/framebuffer, similar in spirit to why
+        `FLUX_RIFT`'s shader work is deferred) - needs its own real, careful
+        scoping pass before estimating further, not assumed tractable just
+        because it's "another tile renderer."
+      - `GOLEM_BUILDER` (`TileGolemBuilder`) - true original's own real
+        `TileGolemBuilderRenderer` (104 lines), likely renders the
+        in-progress golem parts being assembled - not yet read in detail.
+      - `PATTERN_CRAFTER` (`TilePatternCrafter`) - true original's own real
+        `TilePatternCrafterRenderer` (79 lines), a real `ModelBoreBase`-based
+        moving part - likely reuses geometry/animation technique already
+        proven via `ModelArcaneBore`'s own real port this session.
+    - Real prioritization note for whoever picks this up next: `CENTRIFUGE`
+      and `PATTERN_CRAFTER` look like the most tractable non-shader,
+      non-`MIRROR` starting points (small, no new sync infra known to be
+      needed yet, likely reuse already-proven geometry/animation
+      techniques) - `TUBE_ONEWAY`/`TUBE_VALVE`/`TUBE_BUFFER` are also
+      tractable but need the real sync-wiring prerequisite above first;
+      `MIRROR` needs its own dedicated scoping pass before touching; `HOLE`/
+      `VOID_SIPHON` should be bundled with `FLUX_RIFT`'s own real
+      shader-pipeline work, not attempted separately.
 - **Deferred, not queued**: boss multiplayer target-scaling and the floating
   special-item death-drop visual both still route through the unported
   `EntityUtils` - same already-correctly-blocked dependency this file has
