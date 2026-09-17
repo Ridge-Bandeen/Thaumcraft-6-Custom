@@ -188,6 +188,28 @@ public final class ClientFxHandlers {
 		mc.particleEngine.add(new thaumcraft.client.fx.particles.FXGolemOrb(level, orb, red));
 	}
 
+	private static final Set<Integer> ELDRITCH_ORBS = new HashSet<>();
+
+	/** Real {@link thaumcraft.client.fx.particles.FXEldritchOrbSpikes}/{@link
+	 * thaumcraft.client.fx.particles.FXEldritchOrbGlow} spawn for {@link
+	 * thaumcraft.common.entities.projectile.EntityEldritchOrb} - see those particles' own doc comments.
+	 * Fire-and-forget, one real time per real orb id, same shape as {@link #maintainWisp}/{@link
+	 * #maintainGolemOrb} - 2 real particles this time (the untextured spike geometry and the textured glow
+	 * quad are 2 separate real render passes in the true original, and can't share one particle instance). */
+	public static void maintainEldritchOrb(Entity orb) {
+		if (!ELDRITCH_ORBS.add(orb.getId())) {
+			return;
+		}
+		Minecraft mc = Minecraft.getInstance();
+		ClientLevel level = mc.level;
+		if (level == null) {
+			ELDRITCH_ORBS.remove(orb.getId());
+			return;
+		}
+		mc.particleEngine.add(new thaumcraft.client.fx.particles.FXEldritchOrbSpikes(level, orb));
+		mc.particleEngine.add(new thaumcraft.client.fx.particles.FXEldritchOrbGlow(level, orb));
+	}
+
 	private ClientFxHandlers() {
 	}
 

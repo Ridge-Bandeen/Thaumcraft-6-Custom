@@ -409,6 +409,8 @@ sourceSets {
             include 'thaumcraft/client/fx/particles/FXWispGlow.java'
             include 'thaumcraft/client/render/RenderFocusMine.java'
             include 'thaumcraft/client/fx/particles/FXGolemOrb.java'
+            include 'thaumcraft/client/fx/particles/FXEldritchOrbSpikes.java'
+            include 'thaumcraft/client/fx/particles/FXEldritchOrbGlow.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'
             include 'thaumcraft/api/internal/IInternalMethodHandler.java'

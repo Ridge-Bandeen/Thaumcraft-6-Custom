@@ -202,9 +202,9 @@ public class ThaumcraftClient {
         // Real geometry now - see ModelArcaneBore/RenderArcaneBore's own doc comments.
         event.registerEntityRenderer(ThaumcraftEntities.ARCANE_BORE.get(), thaumcraft.client.render.RenderArcaneBore::new);
         event.registerEntityRenderer(ThaumcraftEntities.PECH.get(), thaumcraft.client.render.RenderPech::new);
-        // Still a real, confirmed gap, same shape as GOLEM_ORB above - the true original's own real
-        // RenderEldritchOrb hand-draws a real procedural tessellator spike-ball shape here, not an empty
-        // placeholder. Not yet restored - see the Custom Mob Models/Renderers TODO entry.
+        // Real spike-ball + glow visual restored 2026-09-16 - see FXEldritchOrbSpikes's own doc comment. Same
+        // "the real visual is entirely client-local tracking particles, not this EntityRenderer" shape
+        // WISP/GOLEM_ORB above already established - this placeholder is still the correct registration.
         event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_ORB.get(), RenderFocusProjectile::new);
         // Temporary placeholder body, not the real mesh - see ModelEldritchPlaceholder's own doc comment.
         event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_GUARDIAN.get(), thaumcraft.client.render.RenderEldritchGuardian::new);

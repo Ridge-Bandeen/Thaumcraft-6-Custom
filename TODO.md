@@ -347,71 +347,64 @@ deferred until now. Real findings from that audit, triaged:
         synced boolean, since the client genuinely needs it to pick the
         right UV variant. Two clean 504/504 `runGameTestServer` passes and a
         clean `test` task.
+      - ~~**`ELDRITCH_ORB`**~~ — closed 2026-09-16, same session right after
+        `GOLEM_ORB`. Built exactly to the real detailed scoping notes logged
+        earlier that same day (see the previous commit's own message) - a
+        real `FXEldritchOrbSpikes` (extends `Particle` directly, not
+        `SingleQuadParticle` - a real custom `render()` building 12
+        procedural triangular spikes as 36 real `TRIANGLES`-mode vertices,
+        untextured/vertex-coloured, additively blended) plus a real separate
+        `FXEldritchOrbGlow` (the billboard layer, same `SingleQuadParticle`
+        shape as `GOLEM_ORB`'s own, but real NORMAL alpha blend - checked
+        directly, NOT additive like `GOLEM_ORB`'s own glow - and a real
+        different `gridSize=64`/13-frame/row-3/fixed-`0.75`-scale config, no
+        pulsing bob). Both spawned together, fire-and-forget, from
+        `EntityEldritchOrb#tick`'s own client-side branch.
+        - Real mechanical translation, not guesswork: the 12 spikes' fixed
+          `new Random(187L)` shape (6 rotation angles + length + width per
+          spike, 96 values total) is precomputed once in a static
+          initializer: confirmed by direct trace that the true original
+          never resets/pushes a matrix between spikes within one frame, so
+          each spike's own 6 rotations apply CUMULATIVELY on top of every
+          earlier spike's own rotations (one shared transform for the whole
+          loop, not 12 independent ones) - reproduced via one running
+          `Quaternionf` updated across the loop and snapshotted per spike,
+          with the real per-frame `ticksExisted/80` spin term folded into
+          each spike's own final rotation call.
+        - Resolved the color ambiguity flagged during scoping by taking the
+          documented, disclosed choice: the true original's own real
+          outer-spike-vertex `color(64.0f,64.0f,64.0f,255.0f*...)` call
+          (almost certainly a real `/255`-normalization bug in the true
+          original, unverifiable without a real 1.12.2 client) is rendered
+          as the obviously-intended `64/255` grey, not a literal
+          byte-for-byte guess at old LWJGL overflow behaviour.
+        - Also disabled face culling entirely (the true original enables it,
+          which needs exact triangle winding to avoid inside-out geometry
+          from some angles - unverifiable blind, and getting it wrong risks
+          invisible spikes, a worse outcome than the minor realism loss of
+          always-visible double-sided triangles).
+        - **Unrelated flaky-test fallout while verifying this chunk**:
+          `taintFibreConnectsSpreadsAndDiesWithoutARealSeed` (already on the
+          "watched" flaky list from a first failure on 2026-09-15) failed a
+          second time during this chunk's own `runGameTestServer` runs, on a
+          completely unrelated file - moved to "disabled" per the
+          established policy (see the flaky-GameTest-human-check-list
+          memory), `@GameTest` commented out, not deleted. Also hit 2 real
+          `runGameTestServer` runs that failed with exit code 1 and NO
+          visible failed-test summary at all (not even a flaky one) -
+          confirmed via full untruncated log capture that these were some
+          other transient GameTestServer-level hiccup, not a real test
+          regression (a clean rerun immediately after showed 503/503
+          passing with zero code changes in between). Worth remembering: a
+          `tail -40`-style truncated capture of a `runGameTestServer` run
+          can cut off the actual pass/fail summary line entirely behind a
+          long tail of "player left the game" shutdown noise - redirect to a
+          real file and `grep` for `required tests` rather than trusting a
+          short tail when a run's outcome is ambiguous.
       - **Real, confirmed gaps, not yet restored** (same
         `RenderFocusProjectile`-placeholder-hiding-a-real-visual pattern as
-        `WISP`/`FOCUS_MINE`/`GOLEM_ORB` above, found via the same direct
-        true-original cross-check):
-        - `ELDRITCH_ORB` (`EntityEldritchOrb`) - genuinely harder than
-          `GOLEM_ORB` turned out to be: the true original's own real
-          `RenderEldritchOrb` hand-draws a real procedural geometry, not a
-          flat quad - 12 randomly-rotated untextured triangle-fan spikes
-          radiating from the origin, vertex-coloured white-to-grey, PLUS a
-          second real billboarded glow quad on top (same family as
-          `GOLEM_ORB`, off `particles.png`, `gridSize=64`/13-frame
-          column-cycle/row 3/scale 0.75/alpha 1.0 - checked directly, a
-          different grid/frame-count than `GOLEM_ORB`'s own). Real
-          entity itself needs no new synced state (unlike `GOLEM_ORB`'s
-          `red`) - straightforward `ThrowableProjectile`, no per-instance
-          variant. Scoped in real detail 2026-09-16, not yet built:
-          - Needs a real `Particle#render(VertexConsumer,Camera,float)`
-            override building the spike geometry directly (matching `FXArc`'s
-            own real custom-geometry precedent), not just
-            `SingleQuadParticle`'s single-quad shape, PLUS a second real
-            particle instance for the billboard glow layer (a `Particle`'s
-            own `render()` is bound to exactly one texture/vertex-format per
-            call via `getRenderType()`, so the untextured vertex-coloured
-            spikes and the textured glow quad can't share one particle
-            instance - same real "2+ particles per visual effect" shape
-            `WISP`'s own 3-particle glow already established).
-          - Real, checked-not-assumed discovery: despite LOOKING like the 12
-            spikes get freshly re-randomized every single frame (`Random
-            random` reseeded to a fixed `187L` at the top of every real
-            `renderEntityAt` call, then `nextFloat()` called 8 times per
-            spike - 6 for the rotation chain, 2 for length/width - all from
-            that SAME reseeded sequence), the fixed seed means the result is
-            actually 100% deterministic/identical every frame - the spike
-            arrangement never actually changes, only an added
-            `ticksExisted/80`-driven extra Z-rotation term (applied inside
-            each spike's own already-rotated local frame, not as one outer
-            rigid rotation) makes the cluster visually spin/tumble. This
-            means the real port doesn't need to re-derive random values every
-            tick either - precompute all 12 spikes' 6 fixed angles + 2 fixed
-            length/width values ONCE (e.g. in the particle's own
-            constructor, replicating the exact same `new Random(187L)` /
-            8-calls-per-spike / 12-spike order so the shape matches byte
-            for byte), then only recompute the real per-frame spin term.
-          - Real, genuinely unresolved ambiguity found while reading the
-            true original's own exact vertex-colour calls, flagged rather
-            than guessed past: the apex vertex of each spike is coloured via
-            the real, clearly-intentional `color(1.0f,1.0f,1.0f,1.0f-f3)`
-            (a `[0,1]`-range float call, white), but the 3 outer vertices use
-            `color(64.0f,64.0f,64.0f,255.0f*(1.0f-f3))` - almost certainly a
-            real bug in the true original itself (values look like a
-            forgotten `/255` normalization, meant to be `64/255` gray, not a
-            literal `64.0f` passed into a `[0,1]`-range call) but WHAT that
-            actually renders as in real 1.12.2 LWJGL (clamped to white, or
-            integer-overflowed to something else entirely) can't be
-            determined without running the true original directly, which
-            isn't available in this environment. A future chunk should
-            either (a) treat it as the obviously-intended `64/255` grey (the
-            reasonable-in-spirit choice, not a literal byte-for-byte
-            reproduction) or (b) if the user can check the true original in
-            a real client, confirm what it actually looks like first.
-          - `f3` (spike alpha driver) is hardcoded `0.0f` and never
-            reassigned anywhere in the spike-drawing loop in the true
-            original - despite reading like a fade variable, spike alpha is
-            actually always a flat `1.0` in the real original; don't build a
-            fade animation that doesn't actually exist there.
+        `WISP`/`FOCUS_MINE`/`GOLEM_ORB`/`ELDRITCH_ORB` above, found via the
+        same direct true-original cross-check):
         - `CULTIST_PORTAL_LESSER`/`CULTIST_PORTAL_GREATER`
           (`EntityCultistPortalLesser`/`EntityCultistPortalGreater`) - true
           original's own real `RenderCultistPortalLesser`/

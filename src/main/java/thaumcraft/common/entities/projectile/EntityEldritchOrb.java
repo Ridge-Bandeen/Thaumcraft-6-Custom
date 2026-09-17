@@ -30,10 +30,11 @@ import thaumcraft.common.registry.ThaumcraftEntities;
  * matches the original's own {@code onImpact} exactly (it scanned around the orb itself, not just whatever
  * it directly hit - a real splash attack, not a single-target one). Real self-expiry at 100 ticks.
  *
- * Real, documented cuts: no impact/travel particle effects (tied to the unported {@code FXDispatcher}, same
- * cut as every other projectile this port ships). Uses
- * {@link thaumcraft.client.render.RenderFocusProjectile} (no visible model) for the same reason
- * {@link EntityGolemOrb} does.
+ * Real, documented cut: no impact/travel particle trail effects (tied to the unported {@code FXDispatcher}).
+ * Real visible model restored 2026-09-16 - see {@link thaumcraft.client.fx.particles.FXEldritchOrbSpikes}'s
+ * own doc comment (this entity's own registered {@code EntityRenderer} stays the invisible {@code
+ * RenderFocusProjectile} placeholder, matching {@code WISP}/{@code GOLEM_ORB} - the real visual is entirely 2
+ * real client-local tracking particles, not drawn from an {@code EntityRenderer} at all).
  */
 public class EntityEldritchOrb extends ThrowableProjectile {
 
@@ -59,6 +60,9 @@ public class EntityEldritchOrb extends ThrowableProjectile {
 	@Override
 	public void tick() {
 		super.tick();
+		if (level().isClientSide) {
+			thaumcraft.client.fx.ClientFxHandlers.maintainEldritchOrb(this);
+		}
 		if (tickCount > 100) {
 			discard();
 		}
