@@ -638,22 +638,30 @@ deferred until now. Real findings from that audit, triaged:
         `TileBellowsRenderer` (151 lines) animates real moving
         `ModelBoreBase`/`ModelBellows` parts - the biggest of the
         non-shader, non-mirror gaps here.
-      - `CENTRIFUGE` (`TileCentrifuge`) - true original's own real
-        `TileCentrifugeRenderer` (51 lines), a real 6-box `ModelCentrifuge`
-        (a static "box" pair + a rotating "spinny bit" of 4 boxes) - one of
-        the more tractable gaps here, and its real animation confirmed
-        (2026-09-16, read the true original's own real `update()` in full)
-        to follow the exact same real "client independently computes its
-        own rotation from already-synced discrete state" shape
-        `TUBE_VALVE`'s own `rotation` needed above, not a continuously
-        server-synced value: `rotation`/`rotationSpeed` live entirely in the
-        true original's own real `else` (client) branch of `update()`,
-        ramping toward a real target speed based on `aspectIn`/
-        `gettingPower()` (whether essentia is actively being processed) -
-        same real "add a client-only animated field, don't sync the
-        rotation value itself" pattern, though whether THIS port's own
-        current `TileCentrifuge` already syncs `aspectIn`/power state to the
-        client (a prerequisite either way) wasn't checked yet.
+      - ~~**`CENTRIFUGE`**~~ — closed 2026-09-16. Built to the scoping notes
+        logged just before: added real client-only `rotation`/
+        `rotationSpeed` fields to `TileCentrifuge` (ramping toward a target
+        speed based on `aspectIn`/redstone power, exactly matching the true
+        original's own real formula, including the real 180-degree-mark
+        `pump` sound cue) plus real `getUpdateTag`/`getUpdatePacket`/
+        `setChanged` sync wiring this tile never had before (a real,
+        previously-unnoticed gap - `aspectIn` itself wasn't synced to the
+        client at all until now, same real pattern `TileCrucible`/
+        `TileFocalManipulator`/`TileInfusionMatrix` already established).
+        New `TileCentrifugeRenderer` (a real 4-box `ModelCentrifuge`
+        "spinny bit" translated into the modern `CubeListBuilder` system,
+        same technique `RenderGrapple`/`RenderFocusMine` already proved) -
+        the static top/bottom pair stays on the real already-present baked
+        block model, matching the true original's own real split between
+        its `renderBoxes()`/`renderSpinnyBit()` calls. Also corrected 2
+        stale doc comments (`TileCentrifuge`'s own and `BlockCentrifuge`'s
+        own) that had called dropping this animation "a real improvement" -
+        true once, stale once a real `BlockEntityRenderer` precedent
+        existed elsewhere in this port; per the project's own standing
+        "reevaluate past cuts once their blocker resolves" directive, this
+        restores real, complete parity (static model AND spin animation
+        both) rather than leaving the tradeoff standing. Two clean
+        503/503 `runGameTestServer` passes and a clean `test` task.
       - `MIRROR`/`MIRROR_ESSENTIA` (`TileMirror`/`TileMirrorEssentia`) - true
         original's own real `TileMirrorRenderer` is a genuinely different
         scale from everything else on this list: **628 lines, by far the

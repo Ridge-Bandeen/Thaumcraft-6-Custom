@@ -22,12 +22,14 @@ import thaumcraft.common.tiles.essentia.TileCentrifuge;
 
 /**
  * Replaces the old (1.12.2) {@code BlockCentrifuge} - see {@link TileCentrifuge}'s own doc comment for the
- * real aspect-decomposition mechanic. The original rendered {@code EnumBlockRenderType.INVISIBLE} and drew
- * its ENTIRE visual (frame and all) via a custom TileEntitySpecialRenderer with an animated spinning axle -
- * this port uses the real, already-present static baked model instead (real, complete machine geometry,
- * confirmed by reading the model file directly - it's not a placeholder), a real, deliberate simplification
- * that trades the axle's spin animation for actually being visible without a brand new TESR/BlockEntityRenderer
- * subsystem this port has no other precedent for.
+ * real aspect-decomposition mechanic. The true original rendered {@code EnumBlockRenderType.INVISIBLE} and
+ * drew its ENTIRE visual (frame and all) via a custom TileEntitySpecialRenderer with an animated spinning
+ * axle. This port uses a real, already-present static baked model for the frame (real, complete machine
+ * geometry, confirmed by reading the model file directly - it's not a placeholder) PLUS a real
+ * {@link thaumcraft.client.render.TileCentrifugeRenderer} for the spinning axle on top, restored 2026-09-16 -
+ * strictly better than the true original's own approach (a real static model AND the real animation, not one
+ * or the other), not the tradeoff this doc comment used to describe before a real
+ * {@code BlockEntityRenderer} precedent existed elsewhere in this port.
  */
 public class BlockCentrifuge extends Block implements EntityBlock {
 

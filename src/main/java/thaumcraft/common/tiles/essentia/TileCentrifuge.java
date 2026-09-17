@@ -20,11 +20,19 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * own 2 real component aspects (random pick, matching the original exactly), ready to be drawn from above.
  * Powering the block with redstone pauses it entirely, same as the original.
  *
- * Real, deliberate cut: the original's client-only spinning-axle animation (drawn by a custom
- * TileEntitySpecialRenderer, since the block itself rendered fully invisible) is dropped in favor of the
- * real, already-present static baked model - see {@link thaumcraft.common.blocks.essentia.BlockCentrifuge}'s
- * own doc comment for why that's a real improvement (visible at all) over reproducing the original's own
- * render setup exactly.
+ * Real spinning-axle animation restored 2026-09-16 - see {@link thaumcraft.client.render.TileCentrifugeRenderer}'s
+ * own doc comment (this class's own earlier doc comment had called dropping it "a real improvement" over the
+ * original, since the block itself was otherwise fully invisible without a real static model - that reasoning
+ * was stale once a real static baked model already existed to render on top of; per the project's own standing
+ * "reevaluate past cuts once their blocker resolves" directive, restoring the real original animation too is
+ * strictly better, not a tradeoff). {@link #rotation}/{@link #rotationSpeed} are real, plain (not synced)
+ * client-only fields - the true original's own real version computed them purely client-side too, off
+ * already-synced state ({@link #aspectIn}/redstone power), so they self-synchronize without needing their own
+ * value pushed over the network every tick (same real shape this port's own cultist-portal
+ * {@code activeCounter}/{@code pulse} fields already established). Real
+ * {@code getUpdateTag}/{@code getUpdatePacket} sync wiring added alongside this (this class had none before -
+ * {@link #aspectIn} itself was never actually visible to the client until now, a real, previously-unnoticed
+ * gap since every other consumer of it was server-only).
  */
 public class TileCentrifuge extends BlockEntity implements IAspectContainer, IEssentiaTransport {
 
@@ -33,12 +41,21 @@ public class TileCentrifuge extends BlockEntity implements IAspectContainer, IEs
 	private int count;
 	private int process;
 
+	/** Real client-only spin-rate/angle, matching the true original's own real fields exactly - see the class
+	 * doc comment for why these are deliberately plain, not synced. */
+	public float rotationSpeed;
+	public float rotation;
+
 	public TileCentrifuge(BlockPos pos, BlockState state) {
 		super(ThaumcraftBlockEntities.CENTRIFUGE.get(), pos, state);
 	}
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TileCentrifuge tile) {
-		if (level.isClientSide || level.hasNeighborSignal(pos)) return;
+		if (level.isClientSide) {
+			tile.tickRotation(level, pos);
+			return;
+		}
+		if (level.hasNeighborSignal(pos)) return;
 		if (tile.aspectOut == null && tile.aspectIn == null && ++tile.count % 5 == 0) {
 			tile.drawEssentia(level, pos);
 		}
@@ -47,6 +64,24 @@ public class TileCentrifuge extends BlockEntity implements IAspectContainer, IEs
 		}
 		if (tile.aspectOut == null && tile.aspectIn != null && tile.process == 0) {
 			tile.processEssentia();
+		}
+	}
+
+	/** Real modern equivalent of the true original's own real client-side {@code update()} branch - see the
+	 * class doc comment. */
+	private void tickRotation(Level level, BlockPos pos) {
+		boolean powered = level.hasNeighborSignal(pos);
+		if (aspectIn != null && !powered && rotationSpeed < 20.0f) {
+			rotationSpeed += 2.0f;
+		}
+		if ((aspectIn == null || powered) && rotationSpeed > 0.0f) {
+			rotationSpeed -= 0.5f;
+		}
+		int previous = (int) rotation;
+		rotation += rotationSpeed;
+		if (rotation % 180.0f <= 20.0f && previous % 180 >= 160 && rotationSpeed > 0.0f) {
+			level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+					thaumcraft.common.registry.ThaumcraftSounds.PUMP.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f, false);
 		}
 	}
 
@@ -206,5 +241,27 @@ public class TileCentrifuge extends BlockEntity implements IAspectContainer, IEs
 		if (aspectIn != null) tag.putString("aspectIn", aspectIn.getTag());
 		if (aspectOut != null) tag.putString("aspectOut", aspectOut.getTag());
 		tag.putInt("process", process);
+	}
+
+	/** Real block-entity sync wiring, added alongside the real spinning-axle animation restoration - see the
+	 * class doc comment (this tile had none before; {@link #aspectIn} was never actually visible to the
+	 * client until now). Same real pattern {@code TileCrucible}/{@code TileFocalManipulator}/
+	 * {@code TileInfusionMatrix} already established. */
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+		}
 	}
 }
