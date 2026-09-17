@@ -429,6 +429,10 @@ sourceSets {
             include 'thaumcraft/client/render/ModelJar.java'
             include 'thaumcraft/client/render/ModelBrain.java'
             include 'thaumcraft/client/render/TileJarRenderer.java'
+            include 'thaumcraft/client/render/EnderShader.java'
+            include 'thaumcraft/client/render/TileHoleRenderer.java'
+            include 'thaumcraft/client/render/TileVoidSiphonRenderer.java'
+            include 'thaumcraft/client/render/RenderFluxRift.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'
             include 'thaumcraft/api/internal/IInternalMethodHandler.java'

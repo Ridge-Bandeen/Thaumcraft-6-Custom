@@ -11,6 +11,7 @@ import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.client.resources.model.ModelResourceLocation;
@@ -147,7 +148,9 @@ public class ThaumcraftClient {
         // real raw-shader "warp" visual is still a real, deferred gap (see the Custom Mob Models/Renderers
         // TODO entry - a GLSL shader port, not just another billboard).
         event.registerEntityRenderer(ThaumcraftEntities.WISP.get(), RenderFocusProjectile::new);
-        event.registerEntityRenderer(ThaumcraftEntities.FLUX_RIFT.get(), RenderFocusProjectile::new);
+        // Real wobbling tendril mesh restored 2026-09-17, replacing the placeholder - see
+        // thaumcraft.client.render.RenderFluxRift's own doc comment.
+        event.registerEntityRenderer(ThaumcraftEntities.FLUX_RIFT.get(), thaumcraft.client.render.RenderFluxRift::new);
         // Real geometry now - see RenderGrapple's own doc comment (the rope/tether visual is dropped, the
         // hook itself is real).
         event.registerEntityRenderer(ThaumcraftEntities.GRAPPLE.get(), thaumcraft.client.render.RenderGrapple::new);
@@ -242,6 +245,23 @@ public class ThaumcraftClient {
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.JAR.get(), thaumcraft.client.render.TileJarRenderer::new);
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.JAR_VOID.get(), thaumcraft.client.render.TileJarRenderer::new);
         event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.JAR_BRAIN.get(), thaumcraft.client.render.TileJarRenderer::new);
+        // Real starfield display restored 2026-09-17, alongside the new custom "ender" shader - see
+        // thaumcraft.client.render.EnderShader's own doc comment.
+        event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.HOLE.get(), thaumcraft.client.render.TileHoleRenderer::new);
+        event.registerBlockEntityRenderer(thaumcraft.common.registry.ThaumcraftBlockEntities.VOID_SIPHON.get(), thaumcraft.client.render.TileVoidSiphonRenderer::new);
+    }
+
+    /** Real port of the true original's own real {@code ender.vert}/{@code ender.frag} shader - see
+     * {@link thaumcraft.client.render.EnderShader}'s own doc comment. A load failure here (a malformed shader,
+     * or a broken driver) just leaves the shader unregistered - every caller checks for that and skips drawing
+     * rather than crashing, same real safety property this port's other client-only construction already has. */
+    @SubscribeEvent
+    static void onRegisterShaders(RegisterShadersEvent event) {
+        try {
+            thaumcraft.client.render.EnderShader.register(event);
+        } catch (java.io.IOException e) {
+            Thaumcraft.LOGGER.error("Failed to load the ender shader", e);
+        }
     }
 
     /** One real "additional" model per {@link GolemMaterial} (the trunk/limbs silhouette every golem has),

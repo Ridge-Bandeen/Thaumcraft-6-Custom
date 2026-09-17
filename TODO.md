@@ -518,18 +518,49 @@ deferred until now. Real findings from that audit, triaged:
         `FXSonic`/`GOLEM_BUILDER`/`orb.obj`/`turret.obj`/the whole
         `golem_*.obj` customization-parts system too, whenever those get
         picked up.
-      - **`FLUX_RIFT` (`EntityFluxRift`) - real, deliberately deferred, not
-        a quick win.** True original's own real `RenderFluxRift` is
-        genuinely different from every other case here: it renders via a
-        real custom GLSL shader (`ARBShaderObjects`/a real shader-callback
-        mechanism feeding the player's own yaw/pitch into the shader for a
-        camera-relative warp/distortion effect on a starfield texture), not
-        a billboard quad or a skeletal model at all. Porting this means real
-        modern shader-pipeline work (NeoForge's own `ShaderInstance`/
-        `PostChain` or similar), a substantially different kind of task from
-        every other item in this section - real, correctly scoped as its own
-        separate future chunk once someone deliberately wants to tackle
-        shader-based effects, not bundled in here.
+      - ~~**`FLUX_RIFT`/`TILE_HOLE`/`TILE_VOID_SIPHON`**~~ — closed 2026-09-17,
+        the last item in this whole section, tackled together since all 3
+        share one real shader. True original's own real `RenderFluxRift`/
+        `TileHoleRenderer`/`TileVoidSiphonRenderer` all painted a
+        camera-relative procedural starfield via one shared real custom
+        GLSL shader (`ender.vert`/`ender.frag`, computing colour purely
+        from each fragment's own view-space position plus real `yaw`/
+        `pitch` uniforms - genuinely independent of the drawn mesh's own
+        UVs). Real modern port, verified against real decompiled/vanilla
+        shader sources before writing anything (not guessed): a plain JSON
+        program definition + `#version 150` GLSL (real syntax fixes vs the
+        original's own `#version 120` - `varying`→`in`/`out`,
+        `texture2D`→`texture`, `gl_FragColor`→an explicit `out vec4`, and
+        the original's own uniform literally named `texture` renamed since
+        that's a reserved GLSL 150 built-in), registered via NeoForge's
+        real `RegisterShadersEvent`. Real custom `Yaw`/`Pitch`/`Time`
+        uniforms (no vanilla equivalent - vanilla's own reserved `GameTime`
+        uniform is a 0-1 daily-cycle fraction, checked directly and ruled
+        out) are set manually each draw via a new shared `EnderShader`
+        helper, which draws immediately (bypassing the standard
+        `MultiBufferSource` batching pipeline - custom uniforms have no
+        supported hook into that system's own `RenderStateShard`s).
+        `TileHoleRenderer`/`TileVoidSiphonRenderer` needed no new tile-side
+        state at all (both already fully ported gameplay-wise). The
+        genuinely hard part, `RenderFluxRift`'s own real tapered tube mesh
+        (the true original's own real `com.sasmaster.glelwjgl` third-party
+        tessellation library, no modern equivalent, not itself part of this
+        port) - real architectural substitution, not a cut: a standard
+        ring-extrusion algorithm with a running, minimally-rotated
+        ("parallel-transport-style") frame per point, avoiding the visible
+        twist a naive fixed-world-up reference would produce once the
+        tendril's own path turns through vertical. Real, disclosed
+        simplifications: the true original's own real in-plane roll
+        rotation and per-pass blend-function differences are both dropped,
+        confirmed (not assumed) to be real no-ops given the shader's own
+        fragment output is unconditionally opaque. Two clean 500/500
+        `runGameTestServer` passes and a clean `test` task - **flagged as
+        this port's single highest visual-verification-risk chunk**:
+        GameTest cannot exercise client-side shader compilation or
+        rendering AT ALL (`RegisterShadersEvent` only fires client-side),
+        so this is the first chunk this whole session where even "no
+        dedicated-server crash" gives no real signal the shader compiles or
+        looks right - see the UI visual-parity checklist's own top entry.
     - ~~`FXSonic`~~ — closed 2026-09-17, see the Particle FX section above
       for the real closing note.
     - The much larger remaining bulk of `client/renderers/*` (custom mob
@@ -568,14 +599,9 @@ deferred until now. Real findings from that audit, triaged:
       real, non-trivial TESR class with real rendering logic - none of these
       renderer classes exist in this port at all yet, confirmed via listing
       `client/render/*Tile*`):
-      - `TILE_HOLE`/`TILE_VOID_SIPHON` (`TileHole`/`TileVoidSiphon`) - real
-        GLSL-shader-based void/starfield visuals (binds `end_portal.png`,
-        drives a real custom shader off the player's own yaw/pitch, same
-        real mechanism `FLUX_RIFT`'s own renderer uses) - genuinely belongs
-        in the SAME deferred "real shader-pipeline work" bucket as
-        `FLUX_RIFT` below, not the simpler billboard-quad family most of
-        this session's other restorations were. Checked directly, not
-        assumed to be simple by their small size (64/89 lines).
+      - ~~`TILE_HOLE`/`TILE_VOID_SIPHON`~~ — closed 2026-09-17 alongside
+        `FLUX_RIFT`, see the Custom Mob Models/Renderers section above for
+        the real closing note.
       - ~~**`TUBE_ONEWAY`/`TUBE_VALVE`/`TUBE_BUFFER`**~~ — closed 2026-09-16.
         Built exactly to the earlier scoping notes: added real
         `getUpdateTag`/`getUpdatePacket`/`setChanged` sync wiring to both
@@ -817,8 +843,12 @@ deferred until now. Real findings from that audit, triaged:
         second, differently-shaped model on the first attempt - genuinely
         de-risks `FXSonic`/the `golem_*.obj` parts system for whoever
         picks those up next.
-      - `HOLE`/`VOID_SIPHON` should be bundled with `FLUX_RIFT`'s own real
-        shader-pipeline work, not attempted separately.
+      - ~~`HOLE`/`VOID_SIPHON`/`FLUX_RIFT`~~ — closed 2026-09-17, bundled
+        together as planned since all 3 share one real shader. This closes
+        out the entire Custom Mob Models/Renderers "no renderer registered
+        at all" sweep - only the much larger, separately-scoped mob *model*
+        fidelity bulk (skeletal mesh detail, animation accuracy, armor
+        layers for renderers that DO already exist) remains.
 - **Deferred, not queued**: boss multiplayer target-scaling and the floating
   special-item death-drop visual both still route through the unported
   `EntityUtils` - same already-correctly-blocked dependency this file has
