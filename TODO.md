@@ -708,16 +708,47 @@ deferred until now. Real findings from that audit, triaged:
         real nested transform stack, not a verified match - flagged in the
         UI visual-parity checklist for a human `runClient` check. Two clean
         503/503 `runGameTestServer` passes and a clean `test` task.
-    - Real prioritization note for whoever picks this up next: the 3
-      essentia jars, `BELLOWS`, and `GOLEM_BUILDER` are the only real
-      remaining non-shader, non-`MIRROR` gaps and none are scoped in detail
-      yet (worth checking each for the same "client-only animated field +
-      sync wiring" prerequisite `CENTRIFUGE`/`PATTERN_CRAFTER`/the tube-valve
-      family all needed); `MIRROR` needs its own dedicated scoping pass
-      before touching (still genuinely unread, 628 lines, by far the
-      biggest item left in this whole section); `HOLE`/`VOID_SIPHON` should
-      be bundled with `FLUX_RIFT`'s own real shader-pipeline work, not
-      attempted separately.
+    - Real prioritization note, updated 2026-09-16 after scoping the last 3
+      items directly (none turned out to be quick):
+      - `JAR`/`JAR_VOID`/`JAR_BRAIN` - genuinely large, multi-subsystem, not
+        a "quick" item like `CENTRIFUGE`/`PATTERN_CRAFTER`/the tube-valve
+        family were: the true original's own real `TileJarRenderer` (174
+        lines) drives a real `ModelJar` (lid brace/extension/brine, plus the
+        base jar shape) AND a separate real `ModelBrain` (the brain-jar's
+        own floating, wandering-yaw-rotation brain - `TileJarBrain`'s own
+        doc comment already flags this exact animation as a real, disclosed
+        cut, same "pure client FX, zero gameplay effect" shape
+        `TileCentrifuge` went through) AND a real animated liquid-fill
+        visual (via `RenderCubes`, a real custom 6-face cube renderer, not
+        a simple flat quad) AND a real rotatable aspect-icon "label sticker"
+        (`UtilsFX.drawTag`, a whole separate icon-drawing subsystem not yet
+        read). `TileJarFillable` already carries the real gameplay state
+        needed (`aspectFilter`/`amount`/`blocked`), just no sync wiring yet.
+        Comparable in real scope to `MIRROR`, not the smaller items already
+        closed - needs its own real, dedicated scoping/implementation pass.
+      - `BELLOWS` - also genuinely large: true original's own real
+        `TileBellowsRenderer` (151 lines) drives a real multi-part
+        `ModelBellows` (a separately-scaled/repositioned Bag/TopPlank/
+        BottomPlank doing a real accordion-style "breathing" animation off
+        a real `inflation` field) plus a conditional `ModelBoreBase` nozzle
+        extension when mounted next to a `TileTubeBuffer`. Not yet checked
+        whether `TileBellows` already carries a real `inflation`-equivalent
+        field. Bigger than the already-closed items, smaller than `JAR`/
+        `MIRROR`.
+      - `GOLEM_BUILDER` - turned out to need the SAME real OBJ-model-loading
+        infrastructure `TURRET_CROSSBOW_ADVANCED` above needs (its own real
+        `TileGolemBuilderRenderer` calls `AdvancedModelLoader.loadModel`
+        too) - bundle with that work, not a separate item. This is now the
+        THIRD real consumer of that same infrastructure (alongside
+        `TURRET_CROSSBOW_ADVANCED`/`FXSonic`), on top of the whole
+        `golem_*.obj` parts-customization system already flagged there -
+        makes building the real OBJ-loading path even higher-leverage
+        whenever it happens.
+      - `MIRROR` still needs its own dedicated scoping pass before touching
+        (still genuinely unread, 628 lines, by far the biggest single item
+        left in this whole section); `HOLE`/`VOID_SIPHON` should be bundled
+        with `FLUX_RIFT`'s own real shader-pipeline work, not attempted
+        separately.
 - **Deferred, not queued**: boss multiplayer target-scaling and the floating
   special-item death-drop visual both still route through the unported
   `EntityUtils` - same already-correctly-blocked dependency this file has
