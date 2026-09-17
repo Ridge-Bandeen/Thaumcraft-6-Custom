@@ -602,15 +602,46 @@ deferred until now. Real findings from that audit, triaged:
         once on an unrelated file during this chunk's own first verification
         run - logged to the "watched" flaky list, not disabled, since it
         hasn't recurred).
-      - `JAR`/`JAR_VOID`/`JAR_BRAIN` (`TileJarFillable`/`TileJarFillableVoid`/
-        `TileJarBrain`) - true original's own single `TileJarRenderer` (174
-        lines) renders the real essentia liquid fill colour/level inside the
-        glass model, and separately handles the brain-jar case (a real
-        floating eye + glow) via an `instanceof` branch in that same class.
-        All 3 real port equivalents currently render as empty glass with no
-        liquid-fill visual at all, and the brain jar loses its distinctive
-        eye/glow. Not yet checked which port jar entity fields (liquid
-        colour/amount) are already available vs. need adding.
+      - ~~**`JAR`/`JAR_VOID`/`JAR_BRAIN`**~~ — closed 2026-09-17, the last
+        remaining large multi-subsystem renderer gap. Turned out to need a
+        real, previously-unnoticed sync fix (not just a decoration
+        prerequisite): `TileJarFillable` had NO `getUpdateTag`/
+        `getUpdatePacket` at all - `amount`/`aspect`/`aspectFilter`/`blocked`
+        were never actually visible to the client, meaning the liquid fill,
+        aspect label, and lid overlays literally had no server state to draw
+        from before this chunk. New shared `TileJarRenderer` (one class,
+        matching the true original's own single-class `instanceof` split
+        between the essentia and brain-jar cases exactly) handles: a lid
+        brace overlay when blocked, a lid extension overlay when a real
+        `IEssentiaTransport` neighbor sits above, a rotatable aspect-label
+        sticker (background quad + a tinted aspect-icon quad - real,
+        faithful translations of the true original's own real
+        `UtilsFX.renderQuadCentered`/`drawTag` calls, using
+        `Aspect#getImage()`/`Aspect#getColor()` which were already ported
+        early in this whole project with exactly this eventual use in
+        mind), and a continuously-scaled liquid-fill box (a real
+        improvement over the true original's own discrete 5-model swap, not
+        a simplification - see `TileJarFillable`'s own doc comment) tinted
+        by the held aspect's own colour. Brain jar: the real "looks around,
+        sighs occasionally" idle animation
+        (`TileJarBrain#rota`/`rotb`/`targetYaw`, a real direct port of the
+        true original's own exact ease-toward-target-angle formula,
+        including the real random 5-30 second ambient sigh cadence) plus
+        the same real brine-glass overlay geometry the essentia jar's lid
+        brace reuses. Real, disclosed simplifications: this port's own
+        `BlockJar` has no facing/orientation state at all, so the label
+        sticker always faces one fixed direction rather than the true
+        original's own real per-facing rotation; the true original's own
+        `ModConfig.CONFIG_GRAPHICS.crooked` cosmetic toggle (a small random
+        per-jar label tilt, on by default) is applied unconditionally
+        rather than resurrecting the whole dropped graphics-config surface
+        for one single-purpose boolean - same real tilt formula, just not
+        user-disableable. Two clean 500/500 `runGameTestServer` passes and
+        a clean `test` task - 4 more unrelated single-run flaky-test
+        failures turned up across this chunk's own verification (Hungry
+        Chest auto-consume, Workbench vis cost, Infusion Matrix speed
+        corners, none recurring) - all logged to the watched list per
+        standing policy, none disabled since none recurred.
       - ~~**`BELLOWS`**~~ — closed 2026-09-17. Turned out to need NO new sync
         wiring at all, unlike almost every other renderer restoration this
         port has done - `TileBellows`'s own real client-only `inflation`
@@ -740,22 +771,12 @@ deferred until now. Real findings from that audit, triaged:
         503/503 `runGameTestServer` passes and a clean `test` task.
     - Real prioritization note, updated 2026-09-16 after scoping the last 3
       items directly (none turned out to be quick):
-      - `JAR`/`JAR_VOID`/`JAR_BRAIN` - genuinely large, multi-subsystem, not
-        a "quick" item like `CENTRIFUGE`/`PATTERN_CRAFTER`/the tube-valve
-        family were: the true original's own real `TileJarRenderer` (174
-        lines) drives a real `ModelJar` (lid brace/extension/brine, plus the
-        base jar shape) AND a separate real `ModelBrain` (the brain-jar's
-        own floating, wandering-yaw-rotation brain - `TileJarBrain`'s own
-        doc comment already flags this exact animation as a real, disclosed
-        cut, same "pure client FX, zero gameplay effect" shape
-        `TileCentrifuge` went through) AND a real animated liquid-fill
-        visual (via `RenderCubes`, a real custom 6-face cube renderer, not
-        a simple flat quad) AND a real rotatable aspect-icon "label sticker"
-        (`UtilsFX.drawTag`, a whole separate icon-drawing subsystem not yet
-        read). `TileJarFillable` already carries the real gameplay state
-        needed (`aspectFilter`/`amount`/`blocked`), just no sync wiring yet.
-        Comparable in real scope to `MIRROR`, not the smaller items already
-        closed - needs its own real, dedicated scoping/implementation pass.
+      - ~~`JAR`/`JAR_VOID`/`JAR_BRAIN`~~ — closed 2026-09-17, see the Custom
+        Mob Models/Renderers section above for the real closing note. The
+        real animated liquid fill turned out tractable as a plain 6-quad
+        `VertexConsumer` box (same established technique `TileCrucibleRenderer`
+        already proved for its own water fill) rather than needing the true
+        original's own real `RenderCubes` class ported wholesale.
       - ~~`BELLOWS`~~ — closed 2026-09-17, see the Custom Mob Models/
         Renderers section above for the real closing note. Turned out
         smaller than feared once actually read - no new sync wiring

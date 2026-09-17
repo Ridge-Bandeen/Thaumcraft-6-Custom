@@ -6,14 +6,17 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.ExperienceOrb;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import thaumcraft.common.registry.ThaumcraftBlockEntities;
+import thaumcraft.common.registry.ThaumcraftSounds;
 
 /**
  * Replaces the old (1.12.2) {@code TileJarBrain} - the "Brain in a Jar", a portable XP battery. Real
@@ -26,11 +29,17 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * (matching the original's own real 40-tick value) stops the jar from immediately re-swallowing the orbs it
  * just spawned.
  *
- * <p>Real, documented cut: the original's own client-side "the brain slowly looks around the room, sighs
- * occasionally" idle animation ({@code TileJarRenderer#renderBrain}, driven by a handful of rotation/timer
- * fields with zero real gameplay effect) isn't ported - same "drop pure client FX, keep the real mechanic"
- * precedent this session already applied to {@code GolemLegLevitator}/{@code GolemLegWheels}. The block
- * always renders as the plain static jar model.
+ * <p>Real client-only "looks around the room, sighs occasionally" idle animation restored 2026-09-17
+ * ({@link #rota}/{@link #rotb}/{@link #targetYaw}/{@link #nextSighTime}) - re-evaluating this class's own
+ * earlier "drop pure client FX" cut per this port's own standing "reevaluate past cuts once their blocker
+ * resolves" rule. Real, faithful port of the true original's own exact formula: eases its own facing angle
+ * toward the nearest XP orb it's actively pulling, or the nearest player within 6 blocks if no orb is in
+ * range, or just slowly spins on its own if neither is present; plays a quiet ambient sigh
+ * ({@link ThaumcraftSounds#BRAIN}) on a real random 5-30 second cadence whenever a player is nearby. See
+ * {@link thaumcraft.client.render.TileJarRenderer}'s own doc comment for the rendering side. The true
+ * original's own separate {@code field_40059_f}/{@code field_40061_d} fields are real dead code - declared
+ * and updated, but never actually read by its own real renderer - not ported, same "don't resurrect
+ * genuinely unused state" precedent as {@code ModelJar}'s own unused {@code Core} box.
  *
  * <p>Real, documented cut: the original's own {@code getEnchantPowerBonus() -> 5.0f} (a stronger-than-a-
  * bookshelf enchanting boost) has no direct modern equivalent - modern Minecraft replaced the old per-block
@@ -52,6 +61,12 @@ public class TileJarBrain extends BlockEntity {
 	private int xp;
 	private int eatDelay;
 
+	/** Client-only idle-animation state - see this class's own doc comment. Never synced. */
+	private float rota;
+	private float rotb;
+	private float targetYaw;
+	private long nextSighTime = System.currentTimeMillis() + 1500L;
+
 	public TileJarBrain(BlockPos pos, BlockState state) {
 		super(ThaumcraftBlockEntities.JAR_BRAIN.get(), pos, state);
 	}
@@ -60,8 +75,19 @@ public class TileJarBrain extends BlockEntity {
 		return xp;
 	}
 
+	public float getRota() {
+		return rota;
+	}
+
+	public float getRotb() {
+		return rotb;
+	}
+
 	public static void tick(Level level, BlockPos pos, BlockState state, TileJarBrain tile) {
-		if (level.isClientSide) return;
+		if (level.isClientSide) {
+			tile.tickClient(level, pos);
+			return;
+		}
 		if (tile.eatDelay > 0) {
 			tile.eatDelay--;
 			return;
@@ -99,6 +125,40 @@ public class TileJarBrain extends BlockEntity {
 				orb.setDeltaMovement(orb.getDeltaMovement().add(dx / dist * pull * 0.3, dy / dist * pull * 0.5, dz / dist * pull * 0.3));
 			}
 		}
+	}
+
+	/** Real direct port of the true original's own real client-only idle "look toward whatever's interesting,
+	 * ease into it" formula - see this class's own doc comment. */
+	private void tickClient(Level level, BlockPos pos) {
+		rotb = rota;
+		Player nearest = level.getNearestPlayer(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 6.0, false);
+		if (nearest != null) {
+			if (nextSighTime < System.currentTimeMillis()) {
+				level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, ThaumcraftSounds.BRAIN.get(),
+						SoundSource.AMBIENT, 0.15f, 0.8f + level.random.nextFloat() * 0.4f, false);
+				nextSighTime = System.currentTimeMillis() + 5000L + level.random.nextInt(25000);
+			}
+			double dx = nearest.getX() - (pos.getX() + 0.5);
+			double dz = nearest.getZ() - (pos.getZ() + 0.5);
+			targetYaw = (float) Math.atan2(dz, dx);
+		} else {
+			targetYaw += 0.01f;
+		}
+		rota = wrapRadians(rota);
+		targetYaw = wrapRadians(targetYaw);
+		rota += wrapRadians(targetYaw - rota) * 0.04f;
+	}
+
+	/** Real direct port of the true original's own literal normalize-into-(-pi,pi] loop (no modern {@link Mth}
+	 * equivalent exists - that class only has a degrees-based wrap). */
+	private static float wrapRadians(float angle) {
+		while (angle >= Mth.PI) {
+			angle -= Mth.TWO_PI;
+		}
+		while (angle < -Mth.PI) {
+			angle += Mth.TWO_PI;
+		}
+		return angle;
 	}
 
 	/** Real right-click drain - see this class's own doc comment. Always resets {@link #eatDelay}, even when

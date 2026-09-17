@@ -42,10 +42,14 @@ import thaumcraft.common.world.aura.AuraHandler;
  * {@link thaumcraft.common.blocks.essentia.BlockJar#applyLabel}) - a labelled jar's raised 64 suction lets it
  * out-pull a plain jar/tube's 32 outright, using the real original's own strict {@code <} comparison (see
  * {@link #tick}'s own comment for why an earlier {@code <=} workaround here is gone again).</li>
- * <li>No fill-level model swapping - the original rendered this via a client-only
- * {@code TileEntitySpecialRenderer} picking between 5 baked models (0/25/50/75/100%) at draw time, entirely
- * outside the blockstate system; same "drop the animation, keep the function" precedent as every other
- * device this session. The block always renders as the plain empty jar model.</li>
+ * <li>Real fill-level visual restored 2026-09-17, re-evaluating this class's own earlier "drop the animation"
+ * cut - see {@link thaumcraft.client.render.TileJarRenderer}'s own doc comment. Not a discrete 5-model swap
+ * like the true original's own real client-only {@code TileEntitySpecialRenderer} (which picked between 5
+ * separately baked 0/25/50/75/100% block models entirely outside the blockstate system) - a continuously
+ * scaled liquid quad instead, same real underlying {@code amount}/{@link #CAPACITY} fraction, just smoother.
+ * This needed real {@link #getUpdateTag}/{@link #getUpdatePacket} sync wiring this tile never had before - a
+ * real, previously-unnoticed gap: {@code amount}/{@code aspect}/{@code aspectFilter}/{@code blocked} were
+ * never actually visible to the client at all until now (persisted via NBT, never broadcast on change).</li>
  * <li>Breaking a filled jar drops a plain empty jar, not one preserving its contents (the original stored
  * the held aspect+amount in the dropped item's own NBT) - a real but minor loss, flagged rather than hidden.</li>
  * </ul>
@@ -248,6 +252,18 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 		return aspectFilter;
 	}
 
+	public Aspect getAspect() {
+		return aspect;
+	}
+
+	public int getAmount() {
+		return amount;
+	}
+
+	public static int getCapacity() {
+		return CAPACITY;
+	}
+
 	/** Applies a label - locks this jar to one aspect (raising its suction) if it's currently empty, or to
 	 * whatever it already holds otherwise. Mirrors {@code BlockJar#applyLabel} in the original exactly: a
 	 * jar that already has a filter can't be re-labelled, and labelling an empty jar with a plain (blank)
@@ -307,5 +323,26 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 		aspectFilter = tag.contains("AspectFilter") ? Aspect.getAspect(tag.getString("AspectFilter")) : null;
 		amount = tag.getInt("Amount");
 		blocked = tag.getBoolean("Blocked");
+	}
+
+	/** Real block-entity sync wiring, added alongside the real fill-level visual restoration - see this
+	 * class's own doc comment. Same real pattern {@code TileCrucible}/{@code TileCentrifuge}/
+	 * {@code TilePatternCrafter} already established. */
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+		}
 	}
 }
