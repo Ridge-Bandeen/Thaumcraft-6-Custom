@@ -372,6 +372,26 @@ public final class ClientFxHandlers {
 		Minecraft.getInstance().particleEngine.add(fx);
 	}
 
+	/** Real {@link thaumcraft.client.fx.particles.FXBreakingFade} shatter burst - see the true original's own
+	 * real {@code FXDispatcher.taintsplosionFX}. */
+	public static void spawnTaintsplosion(net.minecraft.world.level.Level level, Entity target) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var random = clientLevel.random;
+		var fx = new thaumcraft.client.fx.particles.FXBreakingFade(clientLevel, target.getX(), target.getY() + random.nextFloat() * target.getBbHeight(), target.getZ(),
+				new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SLIME_BALL));
+		if (random.nextBoolean()) {
+			fx.setColor(0.6f, 0.0f, 0.3f);
+			fx.setStartAlpha(0.4f);
+		} else {
+			fx.setColor(0.3f, 0.0f, 0.3f);
+			fx.setStartAlpha(0.6f);
+		}
+		fx.setSpeed(Math.random() * 2.0 - 1.0, Math.random() * 2.0 - 1.0, Math.random() * 2.0 - 1.0);
+		fx.boom();
+		fx.setParticleMaxAge((int) (66.0f / (random.nextFloat() * 0.9f + 0.1f)));
+		Minecraft.getInstance().particleEngine.add(fx);
+	}
+
 	private ClientFxHandlers() {
 	}
 

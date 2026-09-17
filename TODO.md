@@ -287,39 +287,45 @@ deferred until now. Real findings from that audit, triaged:
         network was dropped as cosmetic-only when `BlockInlay` was first
         ported, well before this chunk). Two clean 500/500
         `runGameTestServer` passes and a clean `test` task.
-      - ~~**`FXBreakingFade`**~~ — closed 2026-09-17 for 2 of its 4 reachable
-        real call sites. Real, checked-not-guessed finding: modern
-        vanilla's own real equivalent of the true original's own real
-        `ParticleBreaking` base is `BreakingItemParticle` (a real 4x4
-        random-sub-quadrant sampling of an item's own particle icon,
-        confirmed via its own real decompiled source) - but its own real
-        constructors are `protected` and unreachable from a mod, so this
-        replicates its own real sprite-lookup/sub-quadrant-UV technique
-        directly in a new public class instead, reusing vanilla's own real
-        `ParticleRenderType#TERRAIN_SHEET` bucket (the item icon lives in
-        the block atlas already - no new texture binding needed). Wired to
-        `EntityTaintacle`'s own real "arising from the ground" cue and
-        `EntityThaumicSlime`'s own real landing-splat cue (a new
-        `wasOnGroundLastTick` field drives the real "just touched down"
-        edge detection, matching the true original's own real
-        `onGround && !wasOnGround` check). Real, checked-not-assumed
-        finding along the way: `EntityFallingTaint` (a real 5th
-        `FXBreakingFade` caller site, `taintLandFX`) is a stale, unbuilt
-        1.12.2 leftover in this port's own tree, not the real class - this
-        port already replaced that whole mechanic with vanilla's own
-        `FallingBlockEntity`, confirmed via an earlier full-tree audit
-        this session (`BlockTaint#tryToFall`) - its own real landing-FX
-        equivalent needs finding wherever THAT vanilla mechanism's own
-        landing hook lives instead, not a simple `git grep` match. Still
-        real remaining scope: `EntityBottleTaint`'s own real
-        `taintsplosionFX`/`bottleTaintBreak` pair (a real vanilla
-        entity-event-driven trigger, `handleStatusUpdate` id 3 - same real
-        pattern this session has used repeatedly, just not yet wired) and
-        `ChampionModInfested`'s own real `showFX` champion-mod hook (a
-        real 40%-chance-per-call `slimeJumpFX` reuse, needs checking its
-        own real call cadence first). Its own real 5th call site,
-        `splooshFX`, stays dead (zero real callers). Two clean 500/500
-        `runGameTestServer` passes and a clean `test` task.
+      - ~~**`FXBreakingFade`**~~ — closed 2026-09-17, all real reachable call
+        sites now wired (2 in the first pass, 2 more right after). Real,
+        checked-not-guessed finding: modern vanilla's own real equivalent
+        of the true original's own real `ParticleBreaking` base is
+        `BreakingItemParticle` (a real 4x4 random-sub-quadrant sampling of
+        an item's own particle icon, confirmed via its own real decompiled
+        source) - but its own real constructors are `protected` and
+        unreachable from a mod, so this replicates its own real sprite-
+        lookup/sub-quadrant-UV technique directly in a new public class
+        instead, reusing vanilla's own real `ParticleRenderType#TERRAIN_SHEET`
+        bucket (the item icon lives in the block atlas already - no new
+        texture binding needed). Wired to `EntityTaintacle`'s own real
+        "arising from the ground" cue, `EntityThaumicSlime`'s own real
+        landing-splat cue (a new `wasOnGroundLastTick` field drives the
+        real "just touched down" edge detection), and `EntityBottleTaint`'s
+        own real `taintsplosionFX`/`bottleTaintBreak` pair (a real vanilla
+        entity-event trigger, id 3, matching the true original's own real
+        `world.setEntityState` call exactly - the `bottleTaintBreak` half
+        never needed a custom particle class at all, just plain vanilla
+        item-crack particles + a splash sound). `ChampionModInfested`'s own
+        real "gore" sound cue is restored too (a real, separate, previously
+        stale doc-comment claim corrected along the way - the sound
+        registry this cue needed has existed since the "Custom sounds"
+        chunk, this call site just hadn't been revisited) - its own real
+        `showFX` particle flourish stays dropped, since that's a real cut
+        at the shared `IChampionModifierEffect` interface level (every
+        champion-mod effect implements it), a bigger, separate decision
+        from this chunk's own scope, not a simple missing call. Real,
+        checked-not-assumed finding: `EntityFallingTaint` (a real 5th
+        `FXBreakingFade` caller in the true original, `taintLandFX`) is a
+        stale, unbuilt 1.12.2 leftover in this port's own tree, not the
+        real class - this port already replaced that whole mechanic with
+        vanilla's own `FallingBlockEntity`, confirmed via an earlier
+        full-tree audit this session (`BlockTaint#tryToFall`) - its own
+        real landing-FX equivalent needs finding wherever THAT vanilla
+        mechanism's own landing hook lives instead, a real, separate future
+        item, not simply unwired. Its own real 6th call site, `splooshFX`,
+        stays dead (zero real callers). Two clean 500/500
+        `runGameTestServer` passes and a clean `test` task, both passes.
       - Real remaining scope, not yet built: **`FXGenericGui`** (real,
         one real call site - `drawSimpleSparkleGui`, a real GUI-space
         (screen-overlay, not in-world) sparkle animation, likely used by
