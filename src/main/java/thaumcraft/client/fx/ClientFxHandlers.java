@@ -311,6 +311,28 @@ public final class ClientFxHandlers {
 		}
 	}
 
+	/** Real {@link thaumcraft.client.fx.particles.FXBlockRunes} spawn - the plain {@code blockRunes} variant
+	 * (real random X-jitter, real default scale). */
+	public static void spawnBlockRunes(net.minecraft.world.level.Level level, double x, double y, double z,
+			float r, float g, float b, int duration, float gravity) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var fb = new thaumcraft.client.fx.particles.FXBlockRunes(clientLevel, x + 0.5, y + 0.5, z + 0.5, r, g, b, duration);
+		fb.setGravity(gravity);
+		Minecraft.getInstance().particleEngine.add(fb);
+	}
+
+	/** Real {@link thaumcraft.client.fx.particles.FXBlockRunes} spawn - the {@code blockRunes2} variant (real
+	 * fixed scale, zeroed X-jitter). */
+	public static void spawnBlockRunes2(net.minecraft.world.level.Level level, double x, double y, double z,
+			float r, float g, float b, int duration, float gravity) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var fb = new thaumcraft.client.fx.particles.FXBlockRunes(clientLevel, x + 0.5, y + 0.5, z + 0.5, r, g, b, duration);
+		fb.setGravity(gravity);
+		fb.setScale((float) (0.5 + clientLevel.random.nextGaussian() * 0.1));
+		fb.setOffsetX(0.0);
+		Minecraft.getInstance().particleEngine.add(fb);
+	}
+
 	private ClientFxHandlers() {
 	}
 

@@ -27,9 +27,11 @@ import thaumcraft.api.research.ScanningManager;
  * at all.
  *
  * Simplified vs the original: no aura-chunk HUD overlay (the original's {@code onUpdate} pushed a client
- * aura-display packet every 20 ticks while held) or scan-target highlight particles (the original's
- * client-side {@code onUpdate}/{@code drawFX}) - both real client FX/HUD work, same boundary as every other
- * device this session.
+ * aura-display packet every 20 ticks while held) - real client HUD work, same boundary as every other device
+ * this session. The scan-target highlight particles ({@code drawFX}) ARE restored (2026-09-17, was dropped
+ * under this port's old blanket "no client FX" rule) - routed through
+ * {@link thaumcraft.client.fx.ClientFxHandlers#spawnBlockRunes} for the same real dist-crash-avoidance reason
+ * every other client-only trigger in this port uses.
  */
 public class ItemThaumometer extends Item {
 
@@ -39,7 +41,14 @@ public class ItemThaumometer extends Item {
 
 	@Override
 	public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
-		if (player.level().isClientSide) return InteractionResult.SUCCESS;
+		if (player.level().isClientSide) {
+			Level level = player.level();
+			for (int a = 0; a < 10; a++) {
+				thaumcraft.client.fx.ClientFxHandlers.spawnBlockRunes(level, target.getX() - 0.5, target.getY() + target.getEyeHeight() / 2.0f, target.getZ() - 0.5,
+						0.3f + level.random.nextFloat() * 0.7f, 0.0f, 0.3f + level.random.nextFloat() * 0.7f, (int) (target.getBbHeight() * 15.0f), 0.03f);
+			}
+			return InteractionResult.SUCCESS;
+		}
 		ScanningManager.scanTheThing(player, target);
 		return InteractionResult.SUCCESS;
 	}
@@ -49,7 +58,14 @@ public class ItemThaumometer extends Item {
 		Player player = context.getPlayer();
 		Level level = context.getLevel();
 		if (player == null) return InteractionResult.PASS;
-		if (level.isClientSide) return InteractionResult.SUCCESS;
+		if (level.isClientSide) {
+			var pos = context.getClickedPos();
+			for (int a = 0; a < 10; a++) {
+				thaumcraft.client.fx.ClientFxHandlers.spawnBlockRunes(level, pos.getX(), pos.getY() + 0.25, pos.getZ(),
+						0.3f + level.random.nextFloat() * 0.7f, 0.0f, 0.3f + level.random.nextFloat() * 0.7f, 15, 0.03f);
+			}
+			return InteractionResult.SUCCESS;
+		}
 		ScanningManager.scanTheThing(player, context.getClickedPos());
 		return InteractionResult.SUCCESS;
 	}

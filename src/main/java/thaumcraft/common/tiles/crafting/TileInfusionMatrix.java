@@ -162,7 +162,16 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 			tile.checkSurroundings = false;
 			tile.getSurroundings(level);
 		}
-		if (level.isClientSide) return;
+		// Real client-only crafting rune restored 2026-09-17 (was dropped under this port's old blanket "no
+		// client FX" rule) - routed through ClientFxHandlers#spawnBlockRunes for the same real
+		// dist-crash-avoidance reason every other client-only trigger in this port uses.
+		if (level.isClientSide) {
+			if (tile.crafting) {
+				thaumcraft.client.fx.ClientFxHandlers.spawnBlockRunes(level, pos.getX(), pos.getY() - 2, pos.getZ(),
+						0.5f + level.random.nextFloat() * 0.2f, 0.1f, 0.7f + level.random.nextFloat() * 0.3f, 25, -0.03f);
+			}
+			return;
+		}
 
 		if (tile.count % (tile.crafting ? 20 : 100) == 0 && !tile.validLocation(level)) {
 			tile.active = false;

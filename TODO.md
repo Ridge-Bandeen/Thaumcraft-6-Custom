@@ -265,15 +265,29 @@ deferred until now. Real findings from that audit, triaged:
       accepted simplification, not an open gap; re-visiting it for the
       real textured slash-plane visual is a possible future upgrade, not a
       blocker.
-      - Real remaining scope, not yet built: **`FXBlockRunes`/
-        `FXBlockRunes2`** (real, 4 real call sites: `BlockPavingStone`'s
-        own real step-on rune glow, `ItemThaumometer`'s own real scan
-        effect, `TileInfusionMatrix`'s own real crafting rune,
-        `BlockPedestal`'s own real offering rune - a real fixed-orientation
-        quad painted flush against a block face, NOT a camera-billboard,
-        needs a real custom `Particle#render()` override same shape as
-        `FXEldritchOrbSpikes`/`FXCultistPortalLesser` rather than
-        `SingleQuadParticle`). **`FXBreakingFade`** (real, 4 reachable call
+      - ~~**`FXBlockRunes`/`FXBlockRunes2`**~~ — closed 2026-09-17. A real
+        fixed-orientation quad painted flush against a block face (NOT a
+        camera-billboard), built as a custom `Particle#render()` override
+        (same real shape `FXEldritchOrbSpikes`/`FXCultistPortalLesser`
+        already established) rather than `SingleQuadParticle`. Wired to 3
+        of its 4 real call sites: `TileInfusionMatrix`'s own real crafting
+        rune (the `crafting` field was already real-synced, no new sync
+        wiring needed this time), `ItemThaumometer`'s own real scan effect
+        (both the entity-target and block-target real interaction hooks),
+        and `BlockPavingStoneBarrier`'s own real 3-way ambient warding-
+        state cue (powered/dormant vs. barrier-damaged vs. a real living
+        non-player intruder detected, via a new `animateTick` override -
+        `TileBarrierStone` already exposed every real check needed:
+        `gettingPower()`, the real `BlocksTC.barrier` presence check). The
+        4th real call site, `BlockPedestal`'s own real offering rune, is
+        genuinely blocked, not just unbuilt: it reads a `BlockInlay.CHARGE`
+        blockstate value this port's own `BlockInlay` deliberately doesn't
+        track at all (a real, already-documented, separate decision -
+        the original's whole redstone-wire-style charge-propagation
+        network was dropped as cosmetic-only when `BlockInlay` was first
+        ported, well before this chunk). Two clean 500/500
+        `runGameTestServer` passes and a clean `test` task.
+      - Real remaining scope, not yet built: **`FXBreakingFade`** (real, 4 reachable call
         sites, all Taint/Slime-monster ambient cues -
         `EntityTaintacle`/`EntityThaumicSlime`/`ChampionModInfested`/
         `EntityFallingTaint`, all 4 confirmed already ported and present in
