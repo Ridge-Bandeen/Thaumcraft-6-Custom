@@ -14,6 +14,7 @@ import net.minecraft.client.particle.Particle;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -331,6 +332,44 @@ public final class ClientFxHandlers {
 		fb.setScale((float) (0.5 + clientLevel.random.nextGaussian() * 0.1));
 		fb.setOffsetX(0.0);
 		Minecraft.getInstance().particleEngine.add(fb);
+	}
+
+	/** Real {@link thaumcraft.client.fx.particles.FXBreakingFade} "arising from the ground" burst - see the
+	 * true original's own real {@code FXDispatcher.tentacleAriseFX}. {@code target} is a plain, dist-agnostic
+	 * vanilla {@link Entity}, safe to reference directly from a common-side method signature. */
+	public static void spawnTentacleArise(net.minecraft.world.level.Level level, Entity target) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var particleEngine = Minecraft.getInstance().particleEngine;
+		float height = target.getBbHeight();
+		for (int j = 0; j < 2.0f * height; j++) {
+			float f = clientLevel.random.nextFloat() * (float) Math.PI * height;
+			float f2 = clientLevel.random.nextFloat() * 0.5f + 0.5f;
+			float f3 = Mth.sin(f) * height * 0.25f * f2;
+			float f4 = Mth.cos(f) * height * 0.25f * f2;
+			var fx = new thaumcraft.client.fx.particles.FXBreakingFade(clientLevel, target.getX() + f3, target.getY(), target.getZ() + f4,
+					new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SLIME_BALL));
+			fx.setColor(0.4f, 0.0f, 0.4f);
+			fx.setStartAlpha(0.5f);
+			fx.setParticleMaxAge((int) (66.0f / (clientLevel.random.nextFloat() * 0.9f + 0.1f)));
+			particleEngine.add(fx);
+		}
+	}
+
+	/** Real {@link thaumcraft.client.fx.particles.FXBreakingFade} landing-splat burst - see the true
+	 * original's own real {@code FXDispatcher.slimeJumpFX}. */
+	public static void spawnSlimeJump(net.minecraft.world.level.Level level, Entity target, int size) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		float f = clientLevel.random.nextFloat() * (float) Math.PI * 2.0f;
+		float f2 = clientLevel.random.nextFloat() * 0.5f + 0.5f;
+		float f3 = Mth.sin(f) * size * 0.5f * f2;
+		float f4 = Mth.cos(f) * size * 0.5f * f2;
+		double midY = (target.getBoundingBox().minY + target.getBoundingBox().maxY) / 2.0;
+		var fx = new thaumcraft.client.fx.particles.FXBreakingFade(clientLevel, target.getX() + f3, midY, target.getZ() + f4,
+				new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SLIME_BALL));
+		fx.setColor(0.7f, 0.0f, 1.0f);
+		fx.setStartAlpha(0.4f);
+		fx.setParticleMaxAge((int) (66.0f / (clientLevel.random.nextFloat() * 0.9f + 0.1f)));
+		Minecraft.getInstance().particleEngine.add(fx);
 	}
 
 	private ClientFxHandlers() {

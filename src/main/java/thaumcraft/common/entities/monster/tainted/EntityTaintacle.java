@@ -120,6 +120,12 @@ public class EntityTaintacle extends Monster implements ITaintedMob {
 				}
 			}
 		}
+		// Real client-only "arising from the ground" cue restored 2026-09-17 (was dropped under this port's
+		// old blanket "no client FX" rule) - routed through ClientFxHandlers#spawnTentacleArise for the same
+		// real dist-crash-avoidance reason every other client-only trigger in this port uses.
+		if (level().isClientSide && tickCount < getBbHeight() * 10.0f && onGround()) {
+			thaumcraft.client.fx.ClientFxHandlers.spawnTentacleArise(level(), this);
+		}
 	}
 
 	protected void spawnTentacles(Entity entity) {

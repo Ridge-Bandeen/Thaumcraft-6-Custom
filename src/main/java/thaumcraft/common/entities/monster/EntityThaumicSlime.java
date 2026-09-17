@@ -44,8 +44,27 @@ import thaumcraft.api.items.ItemsTC;
  */
 public class EntityThaumicSlime extends Slime implements ITaintedMob {
 
+	private boolean wasOnGroundLastTick;
+
 	public EntityThaumicSlime(EntityType<? extends EntityThaumicSlime> type, Level level) {
 		super(type, level);
+	}
+
+	/** Real client-only landing-splat cue restored 2026-09-17 (was dropped under this port's old blanket "no
+	 * client FX" rule) - a real faithful port of the true original's own real "just touched down" detection,
+	 * routed through {@link thaumcraft.client.fx.ClientFxHandlers#spawnSlimeJump} for the same real
+	 * dist-crash-avoidance reason every other client-only trigger in this port uses. */
+	@Override
+	public void tick() {
+		super.tick();
+		if (level().isClientSide) {
+			if (onGround() && !wasOnGroundLastTick) {
+				for (int j = 0; j < getSize() * 2; j++) {
+					thaumcraft.client.fx.ClientFxHandlers.spawnSlimeJump(level(), this, getSize());
+				}
+			}
+			wasOnGroundLastTick = onGround();
+		}
 	}
 
 	/** {@code Slime} doesn't define its own static attribute builder (unlike most vanilla mobs) - matches

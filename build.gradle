@@ -425,6 +425,7 @@ sourceSets {
             include 'thaumcraft/client/fx/particles/FXVent.java'
             include 'thaumcraft/client/fx/particles/FXVent2.java'
             include 'thaumcraft/client/fx/particles/FXBlockRunes.java'
+            include 'thaumcraft/client/fx/particles/FXBreakingFade.java'
             include 'thaumcraft/client/fx/particles/FXFireMote.java'
             include 'thaumcraft/client/fx/particles/FXVisSparkle.java'
             include 'thaumcraft/client/fx/particles/FXSmokeSpiral.java'
