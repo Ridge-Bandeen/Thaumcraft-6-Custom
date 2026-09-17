@@ -217,65 +217,38 @@ deferred until now. Real findings from that audit, triaged:
       fade, real shared 3-buzz sound cooldown, all faithfully reproduced. Also
       restored the entity's own real `swarm`/`swarmattack` sounds (were
       vanilla bee-sound stand-ins).
-      - **`FXSonic` re-scoped in real detail 2026-09-16** (`EntityEldritchWarden`/
-        `EntityEldritchGuardian`'s own real "sonic scream" broadcast), after
-        the real OBJ-loading infrastructure (`ObjLoader`/
-        `StandaloneGeometryBakingContext`/`CompositeRenderable`) got proven
-        out twice over (`TURRET_CROSSBOW_ADVANCED`/`GOLEM_BUILDER` above) -
-        still NOT built, but now understood well enough to scope precisely
-        rather than broadly:
-        - Real, checked-not-assumed mesh simplicity: `hemis.obj` has exactly
-          ONE real named group (`GeoSphere001`, one shared material) - no
-          per-part rigging needed at all, unlike the crossbow/golem builder
-          (a plain `CompositeRenderable.Transforms.EMPTY` render call would
-          suffice for the geometry alone). `hemis.mtl` doesn't exist (same
-          real "true original's own loader never needed one" case
-          `crossbow_advanced.obj` was) - needs the same synthetic-stub fix.
-        - Real, confirmed texture-frame-swap animation (not a mesh
-          animation): the true original's own real `renderParticle`
-          rebinds a DIFFERENT texture each frame (`ripple<N>.png`, 15 real
-          frames, all confirmed present in this port's resource tree,
-          picked by `min(15, (int)(14*fade)+1)` off the effect's own real
-          age/max-age fraction) rather than animating the mesh itself.
-          `CompositeRenderable` bakes its own texture binding ONCE at
-          construction (`StandaloneGeometryBakingContext.create` is baked
-          into the `Mesh`, not swappable per render call) - the real fix is
-          baking 15 SEPARATE `CompositeRenderable` instances up front (one
-          per `rippleN.png`) and selecting which one to call `.render()` on
-          each frame, a real, if slightly wasteful (15x redundant vertex
-          baking, a one-time renderer-construction cost, not per-frame),
-          workable approach.
-        - **Real, genuine architectural question, resolved here rather than
-          left open**: the true original's own `FXSonic` is a real client
-          `Particle` (`extends Particle`, spawned via `PacketFXSonic`,
-          tracking its own target entity's position every tick) - but
-          `Particle#render(VertexConsumer, Camera, float)` has no
-          `PoseStack`/`MultiBufferSource` available at all, which
-          `CompositeRenderable#render` requires. Rather than bridge that gap
-          awkwardly (constructing an ad-hoc temporary `PoseStack`/
-          `MultiBufferSource` wrapper inside a `Particle#render()` override),
-          the real, clean fix: draw this effect directly from within
-          `RenderEldritchWarden`/`RenderEldritchGuardian`'s own real
-          `EntityRenderer#render()` calls instead (both already real,
-          already-ported classes this session built) - that method already
-          has the exact right `PoseStack`+`MultiBufferSource` context for
-          free, sidestepping the mismatch entirely, and it's a faithful fit
-          anyway since the true original's own effect always tracked
-          exactly one entity (its own owner). This needs a real trigger/
-          duration field on both entity classes (a "sonic boom active,
-          N ticks remaining" counter) rather than a separate spawned
-          particle object.
-        - **Real, still-missing piece, not yet built at all**: `PacketFXSonic`
-          itself isn't wired up in this port yet (still just referenced in
-          `EntityEldritchWarden`/`EntityEldritchGuardian`'s own doc comments
-          as "unported") - restoring this real visual means finding the
-          true original's own real trigger call site(s) in those 2 entities'
-          own attack logic first, not just building the renderer.
-        - Given the real combined scope (a new packet/trigger mechanism on 2
-          entity classes + 15 pre-baked renderables + reattaching the draw
-          call to 2 existing entity renderers), this is comparable in size
-          to `TURRET_CROSSBOW_ADVANCED`, not a quick follow-on despite reusing
-          proven infrastructure - budget real dedicated time for it.
+      - ~~**`FXSonic`**~~ — closed 2026-09-17, built to the detailed scoping
+        notes logged the session before rather than re-deriving anything
+        blind. Real, genuine architectural finding confirmed while building
+        (not just scoped): the true original's own `FXSonic` "target" field
+        is actually the SCREAMING MOB ITSELF, not the player being screamed
+        at - `PacketFXSonic`'s own `source` is `getEntityId()` called from
+        within the mob's own `attackEntityWithRangedAttack`, checked directly
+        against `master`. That fully validated the planned fix: drawn
+        directly from `RenderEldritchGuardian`/`RenderEldritchWarden`'s own
+        `render()` overrides (both call `EldritchSonicFx.render(...)`, a new
+        shared static helper - both mobs' own melee-range "scream" fallback
+        already applies the real Wither/Warp/knockback gameplay, unchanged),
+        rather than a separate tracked `Particle`. Real vanilla entity-event
+        trigger (id 17, same real pattern established for the cultist
+        portals/turret crossbow) replaces `PacketFXSonic` - freezes the
+        mob's own real head yaw/pitch at the moment it fires (matching the
+        true original's own real `Particle` constructor capturing
+        `target.getRotationYawHead()`/`rotationPitch` ONCE, not every frame)
+        while position keeps tracking live. `hemis.mtl` authored as the same
+        synthetic stub `crossbow_advanced.mtl`/`golembuilder_override.mtl`
+        already established. 15 separate `CompositeRenderable` instances
+        (one per real `ripple<N>.png` frame, confirmed present) baked lazily
+        on first use rather than all 15 eagerly at construction - a real
+        difference from the scoping note's original plan, but a strict
+        improvement (avoids ever baking a frame a given play session never
+        actually reaches). Real, disclosed simplification: the true
+        original's own 50%-grey vertex dim is dropped -
+        `CompositeRenderable`'s own real `Mesh#render` hardcodes full
+        white/opaque per vertex with no exposed tint parameter, confirmed
+        directly in its own real decompiled source this time (not just
+        assumed from the crossbow precedent). Two clean 501/501
+        `runGameTestServer` passes and a clean `test` task.
     - Remaining true-original FX classes (`FXBlockRunes`/`FXBreakingFade`/
       `FXDigging`/`FXFireMote`/`FXPlane`/`FXSlimyBubble`/`FXSmokeSpiral`/
       `FXSwarmRunes`/`FXVisSparkle`/`FXWispEG`/`FXGenericGui`/`FXGenericP2E`/
@@ -557,16 +530,8 @@ deferred until now. Real findings from that audit, triaged:
         every other item in this section - real, correctly scoped as its own
         separate future chunk once someone deliberately wants to tackle
         shader-based effects, not bundled in here.
-    - `FXSonic` (the Eldritch Warden/Guardian's own real sonic-scream
-    shockwave, see the Particle FX section above) belongs here too, not in
-    Particle FX proper - real `.obj` mesh rendering (`hemis.obj` + 15
-    `ripple<N>.png` frames, both already present unused), likely via
-    NeoForge's own built-in `neoforge:obj` model loader rather than a
-    hand-rolled parser (the same real infrastructure `TURRET_CROSSBOW_
-    ADVANCED` above also needs) - integrating a baked model into a
-    `Particle#render()`/`EntityRenderer#render()` call is genuinely new
-    pipeline work worth its own real scoping pass, not a quick add-on to an
-    existing particle class.
+    - ~~`FXSonic`~~ — closed 2026-09-17, see the Particle FX section above
+      for the real closing note.
     - The much larger remaining bulk of `client/renderers/*` (custom mob
     *models* specifically - `ModelEldritchGolem`-style skeletal meshes,
     armor models, tile-entity renderers) was NOT swept in this pass - this

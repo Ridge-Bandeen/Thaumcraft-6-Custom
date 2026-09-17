@@ -58,6 +58,7 @@ sourceSets {
             include 'thaumcraft/client/render/ModelEldritchPlaceholder.java'
             include 'thaumcraft/client/render/RenderEldritchGuardian.java'
             include 'thaumcraft/client/render/RenderEldritchWarden.java'
+            include 'thaumcraft/client/render/EldritchSonicFx.java'
             include 'thaumcraft/client/render/RenderEldritchGolem.java'
             include 'thaumcraft/common/container/PechMenu.java'
             include 'thaumcraft/client/gui/GuiPechTrade.java'

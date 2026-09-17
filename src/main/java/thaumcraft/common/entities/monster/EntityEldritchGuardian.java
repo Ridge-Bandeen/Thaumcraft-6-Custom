@@ -46,9 +46,13 @@ import thaumcraft.common.entities.projectile.EntityEldritchOrb;
  * Real home-position restriction comes free from vanilla's own {@link Monster#restrictTo} (see {@code
  * EntityCultist}'s own doc comment for why the original needed to hand-roll this and this port doesn't).
  *
+ * Real sonic-scream client FX ({@link #sonicStartTick}, restored 2026-09-17): the true original's own real
+ * {@code PacketFXSonic} broadcast, now a plain vanilla entity-event trigger (id 17) instead - the client-only
+ * dome effect itself is drawn directly from {@link thaumcraft.client.render.RenderEldritchGuardian}'s own
+ * render call (see {@link thaumcraft.client.render.EldritchSonicFx}'s own doc comment for why).
+ *
  * Real, documented cuts: no arm-lift swing animation ({@code armLiftL}/{@code armLiftR}, tied to the not-yet-
- * ported mesh - see {@link thaumcraft.client.render.ModelEldritchPlaceholder}'s own doc comment), no sonic-
- * scream client FX broadcast ({@code PacketFXSonic}, tied to the unported {@code FXDispatcher}), no per-
+ * ported mesh - see {@link thaumcraft.client.render.ModelEldritchPlaceholder}'s own doc comment), no per-
  * dimension absorption buff (the original's own extra half-health shield gated on
  * {@code ModConfig.CONFIG_WORLD.dimensionOuterId} - confirmed 2026-09-09, not just a porting gap: Thaumcraft
  * 6 never shipped a real custom dimension at all, exhaustively checked directly against the true original
@@ -58,6 +62,15 @@ import thaumcraft.common.entities.projectile.EntityEldritchOrb;
  * own doc comment explains for the same reason - the unported {@code EntityUtils}).
  */
 public class EntityEldritchGuardian extends Monster implements RangedAttackMob, IEldritchMob {
+
+	private static final byte SONIC_EVENT = 17;
+
+	/** Client-only "sonic scream" trigger state - {@link #tickCount} at the moment it fired, or {@link
+	 * Integer#MIN_VALUE} for "no effect active". Never synced directly; set from {@link #handleEntityEvent}. */
+	private int sonicStartTick = Integer.MIN_VALUE;
+	private int sonicDuration;
+	private float sonicYaw;
+	private float sonicPitch;
 
 	public EntityEldritchGuardian(EntityType<? extends EntityEldritchGuardian> type, Level level) {
 		super(type, level);
@@ -121,6 +134,35 @@ public class EntityEldritchGuardian extends Monster implements RangedAttackMob, 
 				ThaumcraftCapabilities.getWarp(player).add(IPlayerWarp.EnumWarpType.TEMPORARY, 1 + random.nextInt(3));
 			}
 			playSound(net.minecraft.sounds.SoundEvents.WARDEN_SONIC_BOOM, 3.0f, 1.0f + random.nextFloat() * 0.1f);
+			level().broadcastEntityEvent(this, SONIC_EVENT);
 		}
+	}
+
+	@Override
+	public void handleEntityEvent(byte id) {
+		if (id == SONIC_EVENT) {
+			sonicStartTick = tickCount;
+			sonicDuration = 10 + random.nextInt(5);
+			sonicYaw = getYHeadRot();
+			sonicPitch = getXRot();
+		} else {
+			super.handleEntityEvent(id);
+		}
+	}
+
+	public int getSonicStartTick() {
+		return sonicStartTick;
+	}
+
+	public int getSonicDuration() {
+		return sonicDuration;
+	}
+
+	public float getSonicYaw() {
+		return sonicYaw;
+	}
+
+	public float getSonicPitch() {
+		return sonicPitch;
 	}
 }

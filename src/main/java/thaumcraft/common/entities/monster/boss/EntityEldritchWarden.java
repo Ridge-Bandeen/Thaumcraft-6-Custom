@@ -81,8 +81,12 @@ import thaumcraft.common.entities.projectile.EntityEldritchOrb;
  * this whole project has made consistently.
  *
  * <p>Real, still-documented cuts: no arm-lift swing animation (tied to the not-yet-ported mesh - see
- * {@link thaumcraft.client.render.ModelEldritchPlaceholder}'s own doc comment). No sonic-scream client FX
- * broadcast ({@code PacketFXSonic}, unported {@code FXDispatcher}).
+ * {@link thaumcraft.client.render.ModelEldritchPlaceholder}'s own doc comment).
+ *
+ * <p>Real sonic-scream client FX restored 2026-09-17, same shape as {@link
+ * thaumcraft.common.entities.monster.EntityEldritchGuardian}'s own doc comment describes (a plain vanilla
+ * entity-event trigger, drawn from {@link thaumcraft.client.render.RenderEldritchWarden}'s own render call
+ * via {@link thaumcraft.client.render.EldritchSonicFx}).
  */
 public class EntityEldritchWarden extends EntityThaumcraftBoss implements RangedAttackMob, IEldritchMob {
 
@@ -100,6 +104,15 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 	/** Real one-shot "field frenzy" state - see this class's own doc comment. */
 	private int fieldFrenzyCounter;
 	private boolean fieldFrenzyTriggered;
+
+	private static final byte SONIC_EVENT = 17;
+
+	/** Client-only "sonic scream" trigger state - see {@link
+	 * thaumcraft.common.entities.monster.EntityEldritchGuardian}'s own identical fields for the real shape. */
+	private int sonicStartTick = Integer.MIN_VALUE;
+	private int sonicDuration;
+	private float sonicYaw;
+	private float sonicPitch;
 
 	public EntityEldritchWarden(EntityType<? extends EntityEldritchWarden> type, Level level) {
 		super(type, level);
@@ -287,6 +300,35 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 				ThaumcraftCapabilities.getWarp(player).add(IPlayerWarp.EnumWarpType.TEMPORARY, 3 + random.nextInt(3));
 			}
 			playSound(SoundEvents.WARDEN_SONIC_BOOM, 4.0f, 1.0f + random.nextFloat() * 0.1f);
+			level().broadcastEntityEvent(this, SONIC_EVENT);
 		}
+	}
+
+	@Override
+	public void handleEntityEvent(byte id) {
+		if (id == SONIC_EVENT) {
+			sonicStartTick = tickCount;
+			sonicDuration = 10 + random.nextInt(5);
+			sonicYaw = getYHeadRot();
+			sonicPitch = getXRot();
+		} else {
+			super.handleEntityEvent(id);
+		}
+	}
+
+	public int getSonicStartTick() {
+		return sonicStartTick;
+	}
+
+	public int getSonicDuration() {
+		return sonicDuration;
+	}
+
+	public float getSonicYaw() {
+		return sonicYaw;
+	}
+
+	public float getSonicPitch() {
+		return sonicPitch;
 	}
 }
