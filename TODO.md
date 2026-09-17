@@ -437,13 +437,107 @@ deferred until now. Real findings from that audit, triaged:
           variant) - true original's own real `RenderTurretCrossbowAdvanced`
           loads and draws a real `.obj` mesh via the true original's own
           bespoke `AdvancedModelLoader`/`IModelCustom` - the SAME real OBJ
-          model-loading infrastructure gap `FXSonic` already identified
-          (NeoForge's own built-in `neoforge:obj` loader is the likely real
-          "easy way" for both once someone builds it) - these two should
-          likely be scoped/built together as one real "OBJ model loading"
-          mini-project rather than separately. The regular (non-advanced)
-          `TURRET_CROSSBOW` already has a real, different, already-ported
-          renderer - only the advanced variant is the gap.
+          model-loading infrastructure gap `FXSonic` already identified. The
+          regular (non-advanced) `TURRET_CROSSBOW` already has a real,
+          different, already-ported renderer - only the advanced variant is
+          the gap. **Real OBJ-loading infrastructure path fully researched
+          and de-risked 2026-09-16** (via the same real decompiled-1.21.1-
+          source technique the `WISP`/`FOCUS_MINE` chunk used), but NOT yet
+          built - genuinely the largest single remaining item in this whole
+          section, bigger than any chunk actually shipped this session:
+          - **Real, confirmed, directly-usable modern API path** (verified
+            against real decompiled `net.neoforged.neoforge.client.model.*`
+            sources, not guessed): `ObjLoader.INSTANCE.loadModel(new
+            ObjModel.ModelSettings(objLocation, true, true, false, true,
+            mtlOverride))` loads a real `ObjModel` from any `.obj` resource
+            at any time (not tied to block/item JSON registration).
+            `ObjModel#bakeRenderable(IGeometryBakingContext)` bakes it into a
+            real `CompositeRenderable` - `IGeometryBakingContext` has a
+            real, purpose-built standalone implementation for exactly this
+            use case, `StandaloneGeometryBakingContext.create(Map<String,
+            ResourceLocation> materialNameToTexture)`. `CompositeRenderable`
+            implements the real `IRenderable<Transforms>` interface, whose
+            own `render(PoseStack, MultiBufferSource,
+            ITextureRenderTypeLookup, int lightmap, int overlay, float
+            partialTick, Transforms context)` signature matches
+            `EntityRenderer#render`'s own parameters almost 1:1 - bake the
+            `CompositeRenderable` ONCE (e.g. in the renderer's own
+            constructor) and call its real `render(...)` from
+            `EntityRenderer#render` every frame, passing a simple
+            `ITextureRenderTypeLookup` lambda (e.g. `tex ->
+            RenderType.entityCutout(tex)`) and `CompositeRenderable.Transforms.EMPTY`
+            (no per-part transform overrides needed for this specific model).
+          - **Real, previously-unknown blocker found and resolved (not just
+            flagged) while researching**: `crossbow_advanced.obj` (like
+            `hemis.obj`/`orb.obj`/`turret.obj`/every `golem_*.obj` part) has
+            no companion `.mtl` material-library file anywhere in this
+            port's resource tree - confirmed this is NOT a lost-during-
+            porting asset (checked directly: `master`, the pristine true
+            original, never shipped one for any of these either, only for
+            the block/item OBJs like `crystal.obj`/`golembuilder.obj`).
+            Real root cause, not a mystery: the true original's own bespoke
+            `AdvancedModelLoader`/`IModelCustom` (1.12.2-era Forge) never
+            needed material-library-driven texture resolution at all - it
+            just binds ONE texture manually via `bindEntityTexture`/
+            `getEntityTexture`, ignoring any embedded per-material texture
+            refs entirely (confirmed: `crossbow_advanced.obj`'s own 8 real
+            named groups all share one single `usemtl Material__25`
+            anyway). NeoForge's own modern `ObjLoader`, unlike the true
+            original's loader, DOES eagerly resolve any `mtllib` directive
+            it encounters while parsing (`ObjModel.parse`'s own `"mtllib"`
+            case calls `ObjLoader.loadMaterialLibrary`, which throws if the
+            referenced resource doesn't exist) - meaning loading this real
+            `.obj` file as-is via the modern loader would throw immediately.
+            The real, low-risk fix (not data recreation, since there was
+            never any original `.mtl` content to recreate): author one new,
+            explicitly-synthetic, minimal `.mtl` stub (just `newmtl
+            Material__25`, no texture reference needed inside it at all,
+            since the real texture gets supplied separately via
+            `StandaloneGeometryBakingContext.create(Map.of("Material__25",
+            crossbowAdvancedTextureLocation))` at bake time regardless of
+            what the `.mtl` itself says) and pass its `ResourceLocation` as
+            `ModelSettings`'s own `mtlOverride` parameter. Same real fix
+            needed for `hemis.obj`/`orb.obj`/`turret.obj`/every `golem_*.obj`
+            part before any of them can load via this modern pipeline
+            either - worth building one small shared "always-synthesize-a-
+            trivial-mtl-if-missing" helper rather than repeating this 20+
+            times across every affected model.
+          - **Real remaining rigging work, checked directly against the true
+            original's own real `renderTurret` method, not yet started**:
+            8 real named model parts/groups (`legs`, `mech`, `box`, `shield`,
+            `brain`, `loader`, `bow1`, `bow2` - matching `CompositeRenderable
+            .Builder#child(String name)`'s own real per-part addressing,
+            using the group names `ObjModel` parses straight out of the
+            `.obj` file's own `g <name>` lines, already confirmed present),
+            each with real distinct behaviour: `legs` renders with a real
+            base `(0, +0.75, 0)` offset (plus a real `0.66/0.75/0.66` scale
+            IF riding an `EntityMinecart` - a real, narrow edge case); `mech`
+            /`box`/`shield`/`brain`/`loader`/`bow1`/`bow2` all share a real
+            rotation by the turret's own real aim (head yaw + pitch) and a
+            real hurt-jiggle (random small translate + red tint while
+            `hurtTime > 0`, a real vanilla `LivingEntity` field, free);
+            `loader` ADDITIONALLY gets a real breathing Z-slide off a real
+            `loadProgressForRender` reload-animation value; `bow1`/`bow2`
+            EACH get a real opposite-direction Y-rotation "recoil" swing off
+            vanilla's own real `getAttackAnim(partialTick)` mechanism
+            (reused for the crossbow's own visual "fire" animation, not
+            literal melee combat). Real, checked-not-assumed gap on this
+            port's own current `EntityTurretCrossbow`: no real
+            `getLoadProgress`-equivalent method/field exists yet at all (only
+            checked, not built) - restoring the `loader` part's own real
+            slide animation needs that added first, same "new field before
+            new renderer" shape the cultist portals' own `activeCounter`/
+            `pulse` needed. Head-yaw/pitch tracking (`yHeadRot`/`getXRot`)
+            already exists for free (standard vanilla `LivingEntity` fields).
+          - Given the real combined size here (new asset authoring + new OBJ
+            -loading Java infrastructure + a real missing entity field/
+            method + real 8-part animated rigging), this is a genuinely
+            separate, larger chunk than anything else in this section -
+            budget real dedicated time for it, and consider whether to build
+            the shared "synthesize a trivial `.mtl` stub" helper generically
+            enough to also unblock `FXSonic`/`orb.obj`/`turret.obj`/the whole
+            `golem_*.obj` customization-parts system in the same pass, given
+            how much OBJ-based work this unblocks at once.
       - **`FLUX_RIFT` (`EntityFluxRift`) - real, deliberately deferred, not
         a quick win.** True original's own real `RenderFluxRift` is
         genuinely different from every other case here: it renders via a
