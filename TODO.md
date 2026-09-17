@@ -249,14 +249,45 @@ deferred until now. Real findings from that audit, triaged:
         directly in its own real decompiled source this time (not just
         assumed from the crossbow precedent). Two clean 501/501
         `runGameTestServer` passes and a clean `test` task.
-    - Scoped 2026-09-17: `FXDigging`/`FXSwarmRunes`/`FXGenericP2P` confirmed
-      **dead in the true original itself** (zero real construction sites
-      anywhere in the pristine tree, checked via `git grep` - won't be
-      ported). `FXEssentiaStream` (`RenderEventHandler`'s own tube-network
-      essentia-flow visualization) is a bigger, separate system, still not
-      individually scoped. `FXBlockRunes`/`FXBreakingFade`/`FXPlane`/
-      `FXGenericGui`/`FXGenericP2E` remain real, reachable, and still not
-      yet built.
+    - Scoped 2026-09-17: `FXDigging`/`FXSwarmRunes`/`FXGenericP2P`/
+      **`FXGenericP2E`** (added to the dead list after checking its own
+      real call site directly - `FXDispatcher.drawWispyMotesEntity` itself
+      has zero real callers anywhere in the pristine tree, not just
+      `FXGenericP2E` itself) confirmed **dead in the true original itself**
+      (zero real construction sites anywhere, checked via `git grep` - none
+      of these 4 will be ported). `FXEssentiaStream`
+      (`RenderEventHandler`'s own tube-network essentia-flow visualization)
+      is a bigger, separate system, still not individually scoped.
+      **`FXPlane`'s own one real call site** (the ARCING infusion
+      enchantment's cleave slash, via `PacketFXSlash`) already has a
+      working, documented vanilla-particle-burst substitute in place
+      (`ClientFxHandlers#handleSlash`) - a real, deliberate, already-
+      accepted simplification, not an open gap; re-visiting it for the
+      real textured slash-plane visual is a possible future upgrade, not a
+      blocker.
+      - Real remaining scope, not yet built: **`FXBlockRunes`/
+        `FXBlockRunes2`** (real, 4 real call sites: `BlockPavingStone`'s
+        own real step-on rune glow, `ItemThaumometer`'s own real scan
+        effect, `TileInfusionMatrix`'s own real crafting rune,
+        `BlockPedestal`'s own real offering rune - a real fixed-orientation
+        quad painted flush against a block face, NOT a camera-billboard,
+        needs a real custom `Particle#render()` override same shape as
+        `FXEldritchOrbSpikes`/`FXCultistPortalLesser` rather than
+        `SingleQuadParticle`). **`FXBreakingFade`** (real, 4 reachable call
+        sites, all Taint/Slime-monster ambient cues -
+        `EntityTaintacle`/`EntityThaumicSlime`/`ChampionModInfested`/
+        `EntityFallingTaint`, all 4 confirmed already ported and present in
+        this tree, not blocked by the taint-fluid subsystem after all - a
+        real `ParticleBreaking`-derived vanilla item-icon particle with a
+        custom fade, needs checking what the real modern equivalent vanilla
+        particle base class is before building; its own 5th real call site,
+        `splooshFX`, is dead - zero real callers). **`FXGenericGui`** (real,
+        one real call site - `drawSimpleSparkleGui`, a real GUI-space
+        (screen-overlay, not in-world) sparkle animation, likely used by
+        the Thaumonomicon/research GUI - genuinely different rendering
+        pipeline from every other particle this port has built so far
+        (2D screen-space, not a real in-world `Particle`), needs its own
+        real scoping pass before estimating further.
       - ~~**`FXFireMote`/`FXVisSparkle`/`FXSmokeSpiral`/`FXSlimyBubble`/
         `FXWispEG`**~~ — closed 2026-09-17, one batch since all 5 are real,
         faithful `SingleQuadParticle`-based billboard quads off the shared
