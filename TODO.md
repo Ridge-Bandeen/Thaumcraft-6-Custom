@@ -319,12 +319,34 @@ deferred until now. Real findings from that audit, triaged:
         stale, unbuilt 1.12.2 leftover in this port's own tree, not the
         real class - this port already replaced that whole mechanic with
         vanilla's own `FallingBlockEntity`, confirmed via an earlier
-        full-tree audit this session (`BlockTaint#tryToFall`) - its own
-        real landing-FX equivalent needs finding wherever THAT vanilla
-        mechanism's own landing hook lives instead, a real, separate future
-        item, not simply unwired. Its own real 6th call site, `splooshFX`,
-        stays dead (zero real callers). Two clean 500/500
-        `runGameTestServer` passes and a clean `test` task, both passes.
+        full-tree audit this session (`BlockTaint#tryToFall`). Its own real
+        6th call site, `splooshFX`, stays dead (zero real callers). Two
+        clean 500/500 `runGameTestServer` passes and a clean `test` task,
+        both passes.
+        ~~`EntityFallingTaint`'s own real landing-FX equivalent~~ — closed
+        2026-09-24, a separate later chunk. Real architectural-fork question
+        put to the user (per the autonomy memory's own stated exception -
+        "the main place I want input is where we plan to intentionally
+        deviate from the 1.12 version"); user chose "reintroduce a custom
+        entity" over a hook-free polling workaround or leaving it un-
+        restored. Investigation then found a cleaner real modern extension
+        point than a full custom `FallingBlockEntity` subclass would have
+        needed: decompiling vanilla's own real `FallingBlockEntity#tick()`
+        (via the NeoForm decompile cache, not guessed) showed it already
+        calls a real `Fallable#onLand(Level, BlockPos, BlockState,
+        BlockState, FallingBlockEntity)` hook the instant it successfully
+        places itself back down - a real, purpose-built modern extension
+        point for exactly this "a falling block just landed" case, which
+        didn't exist when the original custom-entity-to-vanilla-
+        `FallingBlockEntity` simplification was first made. `BlockTaint` now
+        implements `Fallable` directly; `onLand` plays the real `gore` sound
+        and broadcasts a new `PacketFXTaintLand` (client resolves into 10x
+        `FXBreakingFade` dark-tinted splat particles, matching the true
+        original's own real `taintLandFX` loop exactly) - same real visual/
+        audio cue as the true original, zero new entity class needed, and
+        vanilla's own already-correct falling-block physics/rendering stay
+        untouched. Two clean 499/499 `runGameTestServer` passes and a clean
+        `test` task.
       - **`FXGenericGui`** - real research pass completed 2026-09-24 (a full
         `Explore`-agent read of the true original source, not guessed) -
         turned out to be a MUCH bigger real gap than "port one particle

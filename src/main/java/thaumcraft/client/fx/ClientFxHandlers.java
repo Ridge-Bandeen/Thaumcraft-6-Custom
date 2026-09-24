@@ -372,6 +372,30 @@ public final class ClientFxHandlers {
 		Minecraft.getInstance().particleEngine.add(fx);
 	}
 
+	/** Real client-bound handler for {@link thaumcraft.common.lib.network.fx.PacketFXTaintLand} - see that
+	 * packet's own doc comment and {@code BlockTaint#onLand}'s own doc comment for the real modern hook this
+	 * replaces the true original's own real {@code EntityFallingTaint}/{@code taintLandFX} with. Real 10x
+	 * burst (matches the true original's own real {@code for (j<10) taintLandFX(this)} loop), same real
+	 * {@link thaumcraft.client.fx.particles.FXBreakingFade} scatter shape {@link #spawnSlimeJump} already
+	 * established, dark taint tint instead of slime's own bright purple. */
+	public static void handleTaintLand(thaumcraft.common.lib.network.fx.PacketFXTaintLand payload) {
+		var mc = Minecraft.getInstance();
+		if (!(mc.level instanceof ClientLevel clientLevel)) return;
+		var particleEngine = mc.particleEngine;
+		for (int j = 0; j < 10; j++) {
+			float f = clientLevel.random.nextFloat() * (float) Math.PI * 2.0f;
+			float f2 = clientLevel.random.nextFloat() * 0.5f + 0.5f;
+			float f3 = Mth.sin(f) * 2.0f * 0.5f * f2;
+			float f4 = Mth.cos(f) * 2.0f * 0.5f * f2;
+			var fx = new thaumcraft.client.fx.particles.FXBreakingFade(clientLevel, payload.x() + f3, payload.y() + 0.5, payload.z() + f4,
+					new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SLIME_BALL));
+			fx.setColor(0.1f, 0.0f, 0.1f);
+			fx.setStartAlpha(0.4f);
+			fx.setParticleMaxAge((int) (66.0f / (clientLevel.random.nextFloat() * 0.9f + 0.1f)));
+			particleEngine.add(fx);
+		}
+	}
+
 	/** Real {@link thaumcraft.client.fx.particles.FXBreakingFade} shatter burst - see the true original's own
 	 * real {@code FXDispatcher.taintsplosionFX}. */
 	public static void spawnTaintsplosion(net.minecraft.world.level.Level level, Entity target) {

@@ -318,6 +318,7 @@ sourceSets {
             include 'thaumcraft/common/blocks/world/taint/TaintHelper.java'
             include 'thaumcraft/common/blocks/world/taint/BlockTaintFibre.java'
             include 'thaumcraft/common/blocks/world/taint/BlockTaint.java'
+            include 'thaumcraft/common/lib/network/fx/PacketFXTaintLand.java'
             include 'thaumcraft/common/blocks/world/taint/BlockTaintFeature.java'
             include 'thaumcraft/common/blocks/world/taint/BlockTaintLog.java'
             include 'thaumcraft/common/blocks/world/taint/BlockFluxGoo.java'
