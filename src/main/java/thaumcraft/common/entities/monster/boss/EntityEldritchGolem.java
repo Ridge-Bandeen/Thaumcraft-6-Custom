@@ -57,15 +57,33 @@ import thaumcraft.common.entities.projectile.EntityGolemOrb;
  * handleStatusUpdate} case 19 / {@code onUpdate}, purely decorative) - see {@link #handleEntityEvent}/{@link
  * #aiStep} and {@link thaumcraft.client.fx.beams.FXArc}'s own doc comment for the real modern rendering. No
  * "destroys the block it's standing on" griefing mechanic (a minor, real-risk-to-player-builds behavior, not
- * central to the fight). No headless-vs-normal visual distinction (tied to the not-yet-ported mesh - see
- * {@link thaumcraft.client.render.ModelEldritchPlaceholder}'s own doc comment). No arm-lift swing animation
- * for the same reason.
+ * central to the fight).
+ *
+ * Real headless-vs-normal visual distinction and real attack-swing arm animation, both restored 2026-09-24
+ * alongside the real mesh port ({@link thaumcraft.client.renderers.models.entity.ModelEldritchGolem}). The
+ * attack swing needed a real, previously-unwired client entity-event ({@link #ATTACK_SWING_EVENT}, matching
+ * the true original's own real {@code handleStatusUpdate} case 4 byte id exactly) broadcast from {@link
+ * #doHurtTarget} - {@link #hurtTimer} already existed as this port's own real server-side attack-cooldown
+ * gate, but nothing client-side ever needed its value before this mesh existed, so the matching real client
+ * mirror was never wired. {@link net.minecraft.sounds.SoundEvents#IRON_GOLEM_ATTACK} (matching the true
+ * original's own real sound choice) is restored alongside it, played directly server-side rather than through
+ * the entity-event (modern {@code playSound} on a server-side entity already broadcasts to nearby clients on
+ * its own - no need for the true original's own real client-side-triggered-sound workaround, which was itself
+ * only needed for a 1.12.2-specific timing reason).
  */
 public class EntityEldritchGolem extends EntityThaumcraftBoss implements RangedAttackMob, IEldritchMob {
 
 	private static final EntityDataAccessor<Boolean> DATA_HEADLESS =
 			SynchedEntityData.defineId(EntityEldritchGolem.class, EntityDataSerializers.BOOLEAN);
 
+	private static final byte ATTACK_SWING_EVENT = 4;
+
+	/** Real server-side attack-cooldown gate (see {@link #doHurtTarget}), and - since 2026-09-24 - also this
+	 * port's own real client-mirrored attack-swing countdown (set from {@link #handleEntityEvent}, read by
+	 * {@link #getHurtTimer} for {@link thaumcraft.client.renderers.models.entity.ModelEldritchGolem}'s own real
+	 * arm animation). The server's own copy and the client's own copy are genuinely separate {@code Entity}
+	 * instances (one per side, like every other client-only visual-state field this port uses), so sharing one
+	 * field name causes no real conflict. */
 	private int hurtTimer;
 	private int beamCharge;
 
@@ -149,6 +167,8 @@ public class EntityEldritchGolem extends EntityThaumcraftBoss implements RangedA
 	public boolean doHurtTarget(Entity target) {
 		if (hurtTimer > 0) return false;
 		hurtTimer = 10;
+		level().broadcastEntityEvent(this, ATTACK_SWING_EVENT);
+		playSound(SoundEvents.IRON_GOLEM_ATTACK, 1.0f, 1.0f);
 		var atk = getAttribute(Attributes.ATTACK_DAMAGE);
 		float damage = atk != null ? (float) atk.getValue() * 0.75f : 7.5f;
 		boolean hit = target.hurt(level().damageSources().mobAttack(this), damage);
@@ -191,7 +211,9 @@ public class EntityEldritchGolem extends EntityThaumcraftBoss implements RangedA
 	 * occasional flourish rather than a guaranteed one, matching the true original's own real rarity. */
 	@Override
 	public void handleEntityEvent(byte id) {
-		if (id == 19) {
+		if (id == ATTACK_SWING_EVENT) {
+			hurtTimer = 10;
+		} else if (id == 19) {
 			if (arcing == 0) {
 				float radius = 2.0f + random.nextFloat() * 2.0f;
 				double radians = Math.toRadians(random.nextInt(360));
@@ -221,6 +243,10 @@ public class EntityEldritchGolem extends EntityThaumcraftBoss implements RangedA
 	 * client-side arc-search outcome directly instead of only indirectly (e.g. via the sound it plays). */
 	public int getArcingForTesting() {
 		return arcing;
+	}
+
+	public int getHurtTimer() {
+		return hurtTimer;
 	}
 
 	@Override

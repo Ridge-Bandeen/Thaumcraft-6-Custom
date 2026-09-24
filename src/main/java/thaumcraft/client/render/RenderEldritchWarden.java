@@ -11,7 +11,7 @@ import thaumcraft.common.entities.monster.boss.EntityEldritchWarden;
 
 /**
  * Renders {@link EntityEldritchWarden} via the real {@link ModelEldritchGuardian} mesh (restored 2026-09-24,
- * replacing the temporary {@link ModelEldritchPlaceholder}) - shared with {@code EntityEldritchGuardian},
+ * replacing the temporary {@code ModelEldritchPlaceholder}, since deleted) - shared with {@code EntityEldritchGuardian},
  * matching the true original's own real class sharing (the Warden had no model of its own). Sized to the
  * entity's own real 0.8x2.25 hitbox, its own real texture keeps it visually distinct from the Guardian, and
  * its own real Warden-only glowing hood eye (see {@link ModelEldritchGuardian}'s own doc comment).

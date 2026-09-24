@@ -1,300 +1,317 @@
 package thaumcraft.client.renderers.models.entity;
-import net.minecraft.client.model.ModelBase;
-import net.minecraft.client.model.ModelRenderer;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.util.math.MathHelper;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+
+import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.util.Mth;
 import thaumcraft.common.entities.monster.boss.EntityEldritchGolem;
 
+/**
+ * Real, faithful geometry+animation translation of the true original's own real {@code ModelEldritchGolem} -
+ * 36 real parented cuboids (matching the true original's own real count exactly). Replaces the now-deleted
+ * {@code ModelEldritchPlaceholder} single-box stand-in for {@link thaumcraft.client.render.RenderEldritchGolem}
+ * - see {@link ModelEldritchGuardian}'s own doc comment for the real shared technique/conventions this class
+ * also follows (every part's rotation explicitly
+ * reasserted every frame in {@link #setupAnim}, no {@link net.minecraft.client.model.HierarchicalModel} auto
+ * pose reset).
+ *
+ * <p>Real, faithfully-kept true-original quirk: {@code frontcloth1} really is rendered twice in {@link
+ * #renderToBuffer} (once early, once again after the collar) - harmless (same transform both times), but kept
+ * rather than "fixed", matching this whole port's own established precedent of faithfully reproducing real
+ * true-original behavior rather than silently improving it.
+ *
+ * <p>Real, disclosed simplification: the true original's own real "look straight ahead and nod based on
+ * {@code getSpawnTimer()}" head override (active for a few real ticks right after the golem first spawns, and
+ * again right after it goes headless) is dropped - that field is real but currently server-only in this port's
+ * own {@link thaumcraft.common.entities.monster.boss.EntityThaumcraftBoss} (no {@code SynchedEntityData}
+ * accessor), so the client would always read it as 0 anyway; adding real new sync plumbing to a shared boss
+ * superclass is a separate, bigger decision than this one model's own geometry port. {@code head}/{@code
+ * head2} both just always use the real normal head-look rotation instead - same real visual language (a head
+ * that tracks the player), missing only a few real ticks of a "look straight ahead" cosmetic override with
+ * genuinely low visibility (the affected head isn't even the one being rendered during the headless-transition
+ * case, since {@code head2} - the stump - is what {@link #renderToBuffer} actually draws once headless, and
+ * the true original's own real spawn-timer override only ever touched {@code head}, not {@code head2}).
+ *
+ * <p>Real, previously-unwired gap found and restored alongside this mesh: the true original's own real 10-tick
+ * attack-swing arm animation needs a real client-mirrored countdown, which needs the true original's own real
+ * {@code handleStatusUpdate} case 4 entity-event broadcast - this port's own {@code EntityEldritchGolem} had
+ * the real server-side attack-cooldown gate ({@code hurtTimer}) but never actually broadcast the matching
+ * real client entity-event, since nothing client-side needed it before this mesh existed. See {@code
+ * EntityEldritchGolem#doHurtTarget}'s own doc comment for the real fix. Real, minor simplification within
+ * that fix: the true original's own real sub-tick interpolation smoothing for the swing (subtracting a
+ * fractional partial-tick value from the integer countdown) is dropped - modern {@link #setupAnim} doesn't
+ * expose a raw partial-tick value separately from the already-blended {@code ageInTicks}, so the swing is
+ * driven by the plain integer countdown instead; over a 10-tick swing this only costs the very last tick's
+ * worth of sub-frame smoothness, not worth adding new plumbing for.
+ */
+public class ModelEldritchGolem extends EntityModel<EntityEldritchGolem> {
 
-public class ModelEldritchGolem extends ModelBase
-{
-    ModelRenderer Frontcloth1;
-    ModelRenderer CollarL;
-    ModelRenderer Cloak1;
-    ModelRenderer CloakCL;
-    ModelRenderer CloakCR;
-    ModelRenderer Cloak3;
-    ModelRenderer Cloak2;
-    ModelRenderer Head;
-    ModelRenderer Head2;
-    ModelRenderer Frontcloth0;
-    ModelRenderer CollarB;
-    ModelRenderer Torso;
-    ModelRenderer CollarR;
-    ModelRenderer CollarF;
-    ModelRenderer CollarBlack;
-    ModelRenderer ShoulderR1;
-    ModelRenderer ArmL;
-    ModelRenderer ShoulderR;
-    ModelRenderer ShoulderR2;
-    ModelRenderer ShoulderR0;
-    ModelRenderer ArmR;
-    ModelRenderer ShoulderL1;
-    ModelRenderer ShoulderL0;
-    ModelRenderer ShoulderL;
-    ModelRenderer ShoulderL2;
-    ModelRenderer BackpanelR1;
-    ModelRenderer WaistR1;
-    ModelRenderer WaistR2;
-    ModelRenderer WaistR3;
-    ModelRenderer LegR;
-    ModelRenderer WaistL1;
-    ModelRenderer WaistL2;
-    ModelRenderer WaistL3;
-    ModelRenderer Frontcloth2;
-    ModelRenderer BackpanelL1;
-    ModelRenderer LegL;
-    
-    public ModelEldritchGolem() {
-        textureWidth = 128;
-        textureHeight = 64;
-        (Cloak1 = new ModelRenderer(this, 0, 47)).addBox(-5.0f, 1.5f, 4.0f, 10, 12, 1);
-        Cloak1.setRotationPoint(0.0f, 0.0f, -2.5f);
-        Cloak1.setTextureSize(128, 64);
-        setRotation(Cloak1, 0.1396263f, 0.0f, 0.0f);
-        (Cloak3 = new ModelRenderer(this, 0, 37)).addBox(-5.0f, 17.5f, -0.8f, 10, 4, 1);
-        Cloak3.setRotationPoint(0.0f, 0.0f, -2.5f);
-        Cloak3.setTextureSize(128, 64);
-        setRotation(Cloak3, 0.4465716f, 0.0f, 0.0f);
-        (Cloak2 = new ModelRenderer(this, 0, 59)).addBox(-5.0f, 13.5f, 1.7f, 10, 4, 1);
-        Cloak2.setRotationPoint(0.0f, 0.0f, -2.5f);
-        Cloak2.setTextureSize(128, 64);
-        setRotation(Cloak2, 0.3069452f, 0.0f, 0.0f);
-        (CloakCL = new ModelRenderer(this, 0, 43)).addBox(3.0f, 0.5f, 2.0f, 2, 1, 3);
-        CloakCL.setRotationPoint(0.0f, 0.0f, -2.5f);
-        CloakCL.setTextureSize(128, 64);
-        setRotation(CloakCL, 0.1396263f, 0.0f, 0.0f);
-        (CloakCR = new ModelRenderer(this, 0, 43)).addBox(-5.0f, 0.5f, 2.0f, 2, 1, 3);
-        CloakCR.setRotationPoint(0.0f, 0.0f, -2.5f);
-        CloakCR.setTextureSize(128, 64);
-        setRotation(CloakCR, 0.1396263f, 0.0f, 0.0f);
-        (Head = new ModelRenderer(this, 47, 12)).addBox(-3.5f, -6.0f, -2.5f, 7, 7, 5);
-        Head.setRotationPoint(0.0f, 4.5f, -3.8f);
-        Head.setTextureSize(128, 64);
-        setRotation(Head, -0.1047198f, 0.0f, 0.0f);
-        (Head2 = new ModelRenderer(this, 26, 16)).addBox(-2.0f, -2.0f, -2.0f, 4, 4, 4);
-        Head2.setRotationPoint(0.0f, 0.0f, -5.0f);
-        Head2.setTextureSize(128, 64);
-        setRotation(Head2, -0.1047198f, 0.0f, 0.0f);
-        (CollarL = new ModelRenderer(this, 75, 50)).addBox(3.5f, -0.5f, -7.0f, 1, 4, 10);
-        CollarL.setRotationPoint(0.0f, 0.0f, -2.5f);
-        CollarL.setTextureSize(128, 64);
-        setRotation(CollarL, 0.837758f, 0.0f, 0.0f);
-        (CollarR = new ModelRenderer(this, 67, 50)).addBox(-4.5f, -0.5f, -7.0f, 1, 4, 10);
-        CollarR.setRotationPoint(0.0f, 0.0f, -2.5f);
-        CollarR.setTextureSize(128, 64);
-        setRotation(CollarR, 0.837758f, 0.0f, 0.0f);
-        (CollarB = new ModelRenderer(this, 77, 59)).addBox(-3.5f, -0.5f, 2.0f, 7, 4, 1);
-        CollarB.setRotationPoint(0.0f, 0.0f, -2.5f);
-        CollarB.setTextureSize(128, 64);
-        setRotation(CollarB, 0.837758f, 0.0f, 0.0f);
-        (CollarF = new ModelRenderer(this, 77, 59)).addBox(-3.5f, -0.5f, -7.0f, 7, 4, 1);
-        CollarF.setRotationPoint(0.0f, 0.0f, -2.5f);
-        CollarF.setTextureSize(128, 64);
-        setRotation(CollarF, 0.837758f, 0.0f, 0.0f);
-        (CollarBlack = new ModelRenderer(this, 22, 0)).addBox(-3.5f, 0.0f, -6.0f, 7, 1, 8);
-        CollarBlack.setRotationPoint(0.0f, 0.0f, -2.5f);
-        CollarBlack.setTextureSize(128, 64);
-        setRotation(CollarBlack, 0.837758f, 0.0f, 0.0f);
-        (Frontcloth0 = new ModelRenderer(this, 114, 52)).addBox(-3.0f, 3.2f, -3.5f, 6, 10, 1);
-        Frontcloth0.setRotationPoint(0.0f, 0.0f, -2.5f);
-        Frontcloth0.setTextureSize(114, 64);
-        setRotation(Frontcloth0, 0.1745329f, 0.0f, 0.0f);
-        (Frontcloth1 = new ModelRenderer(this, 114, 39)).addBox(-1.0f, 1.5f, -3.5f, 6, 6, 1);
-        Frontcloth1.setRotationPoint(-2.0f, 12.0f, 0.0f);
-        Frontcloth1.setTextureSize(114, 64);
-        setRotation(Frontcloth1, -0.1047198f, 0.0f, 0.0f);
-        (Frontcloth2 = new ModelRenderer(this, 114, 47)).addBox(-1.0f, 8.5f, -1.5f, 6, 3, 1);
-        Frontcloth2.setRotationPoint(-2.0f, 11.0f, 0.0f);
-        Frontcloth2.setTextureSize(114, 64);
-        setRotation(Frontcloth2, -0.3316126f, 0.0f, 0.0f);
-        (Torso = new ModelRenderer(this, 34, 45)).addBox(-5.0f, 2.5f, -3.0f, 10, 10, 6);
-        Torso.setRotationPoint(0.0f, 0.0f, -2.5f);
-        Torso.setTextureSize(128, 64);
-        Torso.mirror = true;
-        setRotation(Torso, 0.1745329f, 0.0f, 0.0f);
-        (ArmR = new ModelRenderer(this, 78, 32)).addBox(-3.5f, 1.5f, -2.0f, 4, 13, 5);
-        ArmR.setRotationPoint(-5.0f, 3.0f, -2.0f);
-        ArmR.setTextureSize(128, 64);
-        setRotation(ArmR, 0.0f, 0.0f, 0.1047198f);
-        (ShoulderR1 = new ModelRenderer(this, 0, 23)).addBox(-3.3f, 4.0f, -2.5f, 1, 2, 6);
-        ShoulderR1.setTextureSize(128, 64);
-        setRotation(ShoulderR1, 0.0f, 0.0f, 1.186824f);
-        (ShoulderR = new ModelRenderer(this, 0, 0)).addBox(-4.3f, -1.0f, -3.0f, 4, 5, 7);
-        ShoulderR.setTextureSize(128, 64);
-        setRotation(ShoulderR, 0.0f, 0.0f, 1.186824f);
-        (ShoulderR2 = new ModelRenderer(this, 0, 12)).addBox(-2.3f, 4.0f, -3.0f, 2, 3, 7);
-        ShoulderR2.setTextureSize(128, 64);
-        setRotation(ShoulderR2, 0.0f, 0.0f, 1.186824f);
-        (ShoulderR0 = new ModelRenderer(this, 56, 31)).addBox(-4.5f, -1.5f, -2.5f, 5, 6, 6);
-        ShoulderR0.setTextureSize(128, 64);
-        setRotation(ShoulderR0, 0.0f, 0.0f, 0.0f);
-        ArmL = new ModelRenderer(this, 78, 32);
-        ArmL.mirror = true;
-        ArmL.addBox(-0.5f, 1.5f, -2.0f, 4, 13, 5);
-        ArmL.setRotationPoint(5.0f, 3.0f, -2.0f);
-        ArmL.setTextureSize(128, 64);
-        setRotation(ArmL, 0.0f, 0.0f, -0.1047198f);
-        ShoulderL1 = new ModelRenderer(this, 0, 23);
-        ShoulderL1.mirror = true;
-        ShoulderL1.addBox(2.3f, 4.0f, -2.5f, 1, 2, 6);
-        ShoulderL1.setTextureSize(128, 64);
-        setRotation(ShoulderL1, 0.0f, 0.0f, -1.186824f);
-        ShoulderL0 = new ModelRenderer(this, 56, 31);
-        ShoulderL0.mirror = true;
-        ShoulderL0.addBox(-0.5f, -1.5f, -2.5f, 5, 6, 6);
-        ShoulderL0.setTextureSize(128, 64);
-        setRotation(ShoulderL0, 0.0f, 0.0f, 0.0f);
-        ShoulderL = new ModelRenderer(this, 0, 0);
-        ShoulderL.mirror = true;
-        ShoulderL.addBox(0.3f, -1.0f, -3.0f, 4, 5, 7);
-        ShoulderL.setTextureSize(128, 64);
-        setRotation(ShoulderL, 0.0f, 0.0f, -1.186824f);
-        ShoulderL2 = new ModelRenderer(this, 0, 12);
-        ShoulderL2.mirror = true;
-        ShoulderL2.addBox(0.3f, 4.0f, -3.0f, 2, 3, 7);
-        ShoulderL2.setTextureSize(128, 64);
-        setRotation(ShoulderL2, 0.0f, 0.0f, -1.186824f);
-        (BackpanelR1 = new ModelRenderer(this, 96, 7)).addBox(0.0f, 2.5f, -2.5f, 2, 2, 5);
-        BackpanelR1.setRotationPoint(-2.0f, 12.0f, 0.0f);
-        BackpanelR1.setTextureSize(128, 64);
-        setRotation(BackpanelR1, 0.0f, 0.0f, 0.1396263f);
-        (WaistR1 = new ModelRenderer(this, 96, 14)).addBox(-3.0f, -0.5f, -2.5f, 5, 3, 5);
-        WaistR1.setRotationPoint(-2.0f, 12.0f, 0.0f);
-        WaistR1.setTextureSize(128, 64);
-        setRotation(WaistR1, 0.0f, 0.0f, 0.1396263f);
-        (WaistR2 = new ModelRenderer(this, 116, 13)).addBox(-3.0f, 2.5f, -2.5f, 1, 4, 5);
-        WaistR2.setRotationPoint(-2.0f, 12.0f, 0.0f);
-        WaistR2.setTextureSize(128, 64);
-        setRotation(WaistR2, 0.0f, 0.0f, 0.1396263f);
-        WaistR3 = new ModelRenderer(this, 114, 5);
-        WaistR3.mirror = true;
-        WaistR3.addBox(-2.0f, 2.5f, -2.5f, 2, 3, 5);
-        WaistR3.setRotationPoint(-2.0f, 12.0f, 0.0f);
-        WaistR3.setTextureSize(128, 64);
-        setRotation(WaistR3, 0.0f, 0.0f, 0.1396263f);
-        (LegR = new ModelRenderer(this, 79, 19)).addBox(-2.5f, 2.5f, -2.0f, 4, 9, 4);
-        LegR.setRotationPoint(-2.0f, 12.5f, 0.0f);
-        LegR.setTextureSize(128, 64);
-        setRotation(LegR, 0.0f, 0.0f, 0.0f);
-        (WaistL1 = new ModelRenderer(this, 96, 14)).addBox(-2.0f, -0.5f, -2.5f, 5, 3, 5);
-        WaistL1.setRotationPoint(2.0f, 12.0f, 0.0f);
-        WaistL1.setTextureSize(128, 64);
-        WaistL1.mirror = true;
-        setRotation(WaistL1, 0.0f, 0.0f, -0.1396263f);
-        (WaistL2 = new ModelRenderer(this, 116, 13)).addBox(2.0f, 2.5f, -2.5f, 1, 4, 5);
-        WaistL2.setRotationPoint(2.0f, 12.0f, 0.0f);
-        WaistL2.setTextureSize(128, 64);
-        WaistL2.mirror = true;
-        setRotation(WaistL2, 0.0f, 0.0f, -0.1396263f);
-        (WaistL3 = new ModelRenderer(this, 114, 5)).addBox(0.0f, 2.5f, -2.5f, 2, 3, 5);
-        WaistL3.setRotationPoint(2.0f, 12.0f, 0.0f);
-        WaistL3.setTextureSize(128, 64);
-        WaistL3.mirror = true;
-        setRotation(WaistL3, 0.0f, 0.0f, -0.1396263f);
-        (BackpanelL1 = new ModelRenderer(this, 96, 7)).addBox(-2.0f, 2.5f, -2.5f, 2, 2, 5);
-        BackpanelL1.setRotationPoint(2.0f, 12.0f, 0.0f);
-        BackpanelL1.setTextureSize(128, 64);
-        BackpanelL1.mirror = true;
-        setRotation(BackpanelL1, 0.0f, 0.0f, -0.1396263f);
-        (LegL = new ModelRenderer(this, 79, 19)).addBox(-1.5f, 2.5f, -2.0f, 4, 9, 4);
-        LegL.setRotationPoint(2.0f, 12.5f, 0.0f);
-        LegL.setTextureSize(128, 64);
-        LegL.mirror = true;
-        setRotation(LegL, 0.0f, 0.0f, 0.0f);
-        ArmL.addChild(ShoulderL);
-        ArmL.addChild(ShoulderL0);
-        ArmL.addChild(ShoulderL1);
-        ArmL.addChild(ShoulderL2);
-        ArmR.addChild(ShoulderR);
-        ArmR.addChild(ShoulderR0);
-        ArmR.addChild(ShoulderR1);
-        ArmR.addChild(ShoulderR2);
-    }
-    
-    public void render(Entity entity, float f, float f1, float f2, float f3, float f4, float f5) {
-        super.render(entity, f, f1, f2, f3, f4, f5);
-        setRotationAngles(f, f1, f2, f3, f4, f5, entity);
-        float a = MathHelper.cos(f * 0.44f) * 1.4f * f1;
-        float b = MathHelper.cos(f * 0.44f + 3.1415927f) * 1.4f * f1;
-        float c = Math.min(a, b);
-        Frontcloth1.rotateAngleX = c - 0.1047198f;
-        Frontcloth2.rotateAngleX = c - 0.3316126f;
-        Cloak1.rotateAngleX = -c / 3.0f + 0.1396263f;
-        Cloak2.rotateAngleX = -c / 3.0f + 0.3069452f;
-        Cloak3.rotateAngleX = -c / 3.0f + 0.4465716f;
-        Frontcloth1.render(f5);
-        CollarL.render(f5);
-        CollarBlack.render(f5);
-        Cloak1.render(f5);
-        CloakCL.render(f5);
-        CloakCR.render(f5);
-        Cloak3.render(f5);
-        Cloak2.render(f5);
-        if (entity instanceof EntityEldritchGolem && !((EntityEldritchGolem)entity).isHeadless()) {
-            Head.render(f5);
-        }
-        else {
-            Head2.render(f5);
-        }
-        Frontcloth0.render(f5);
-        CollarB.render(f5);
-        Torso.render(f5);
-        CollarR.render(f5);
-        CollarF.render(f5);
-        Frontcloth1.render(f5);
-        ArmL.render(f5);
-        ArmR.render(f5);
-        BackpanelR1.render(f5);
-        WaistR1.render(f5);
-        WaistR2.render(f5);
-        WaistR3.render(f5);
-        LegR.render(f5);
-        WaistL1.render(f5);
-        WaistL2.render(f5);
-        WaistL3.render(f5);
-        Frontcloth2.render(f5);
-        BackpanelL1.render(f5);
-        LegL.render(f5);
-    }
-    
-    public void setRotationAngles(float par1, float par2, float par3, float par4, float par5, float par6, Entity entity) {
-        super.setRotationAngles(par1, par2, par3, par4, par5, par6, entity);
-        if (entity instanceof EntityEldritchGolem && ((EntityEldritchGolem)entity).getSpawnTimer() > 0) {
-            Head.rotateAngleY = 0.0f;
-            Head.rotateAngleX = ((EntityEldritchGolem)entity).getSpawnTimer() / 2 / 57.295776f;
-        }
-        else {
-            Head.rotateAngleY = par4 / 4.0f / 57.295776f;
-            Head.rotateAngleX = par5 / 2.0f / 57.295776f;
-            Head2.rotateAngleY = par4 / 57.295776f;
-            Head2.rotateAngleX = par5 / 57.295776f;
-        }
-        LegR.rotateAngleX = MathHelper.cos(par1 * 0.4662f) * 1.4f * par2;
-        LegL.rotateAngleX = MathHelper.cos(par1 * 0.4662f + 3.1415927f) * 1.4f * par2;
-    }
-    
-    public void setLivingAnimations(EntityLivingBase p_78086_1_, float par1, float par2, float par3) {
-        EntityEldritchGolem golem = (EntityEldritchGolem)p_78086_1_;
-        int i = golem.getAttackTimer();
-        if (i > 0) {
-            ArmR.rotateAngleX = -2.0f + 1.5f * doAbs(i - par3, 10.0f);
-            ArmL.rotateAngleX = -2.0f + 1.5f * doAbs(i - par3, 10.0f);
-        }
-        else {
-            ArmR.rotateAngleX = MathHelper.cos(par1 * 0.4f + 3.1415927f) * 2.0f * par2 * 0.5f;
-            ArmL.rotateAngleX = MathHelper.cos(par1 * 0.4f) * 2.0f * par2 * 0.5f;
-        }
-    }
-    
-    private float doAbs(float p_78172_1_, float p_78172_2_) {
-        return (Math.abs(p_78172_1_ % p_78172_2_ - p_78172_2_ * 0.5f) - p_78172_2_ * 0.25f) / (p_78172_2_ * 0.25f);
-    }
-    
-    private void setRotation(ModelRenderer model, float x, float y, float z) {
-        model.rotateAngleX = x;
-        model.rotateAngleY = y;
-        model.rotateAngleZ = z;
-    }
+	private final ModelPart frontcloth0;
+	private final ModelPart frontcloth1;
+	private final ModelPart frontcloth2;
+	private final ModelPart collarL;
+	private final ModelPart collarR;
+	private final ModelPart collarB;
+	private final ModelPart collarF;
+	private final ModelPart collarBlack;
+	private final ModelPart cloak1;
+	private final ModelPart cloak2;
+	private final ModelPart cloak3;
+	private final ModelPart cloakCL;
+	private final ModelPart cloakCR;
+	private final ModelPart head;
+	private final ModelPart head2;
+	private final ModelPart torso;
+	private final ModelPart armR;
+	private final ModelPart shoulderR;
+	private final ModelPart shoulderR0;
+	private final ModelPart shoulderR1;
+	private final ModelPart shoulderR2;
+	private final ModelPart armL;
+	private final ModelPart shoulderL;
+	private final ModelPart shoulderL0;
+	private final ModelPart shoulderL1;
+	private final ModelPart shoulderL2;
+	private final ModelPart backpanelR1;
+	private final ModelPart waistR1;
+	private final ModelPart waistR2;
+	private final ModelPart waistR3;
+	private final ModelPart legR;
+	private final ModelPart waistL1;
+	private final ModelPart waistL2;
+	private final ModelPart waistL3;
+	private final ModelPart backpanelL1;
+	private final ModelPart legL;
+
+	private boolean headless;
+
+	public ModelEldritchGolem() {
+		super(RenderType::entityCutout);
+		MeshDefinition mesh = new MeshDefinition();
+		PartDefinition root = mesh.getRoot();
+
+		root.addOrReplaceChild("cloak1", CubeListBuilder.create().texOffs(0, 47).addBox(-5.0f, 1.5f, 4.0f, 10, 12, 1),
+				PartPose.offsetAndRotation(0.0f, 0.0f, -2.5f, 0.1396263f, 0.0f, 0.0f));
+		root.addOrReplaceChild("cloak3", CubeListBuilder.create().texOffs(0, 37).addBox(-5.0f, 17.5f, -0.8f, 10, 4, 1),
+				PartPose.offsetAndRotation(0.0f, 0.0f, -2.5f, 0.4465716f, 0.0f, 0.0f));
+		root.addOrReplaceChild("cloak2", CubeListBuilder.create().texOffs(0, 59).addBox(-5.0f, 13.5f, 1.7f, 10, 4, 1),
+				PartPose.offsetAndRotation(0.0f, 0.0f, -2.5f, 0.3069452f, 0.0f, 0.0f));
+		root.addOrReplaceChild("cloak_cl", CubeListBuilder.create().texOffs(0, 43).addBox(3.0f, 0.5f, 2.0f, 2, 1, 3),
+				PartPose.offsetAndRotation(0.0f, 0.0f, -2.5f, 0.1396263f, 0.0f, 0.0f));
+		root.addOrReplaceChild("cloak_cr", CubeListBuilder.create().texOffs(0, 43).addBox(-5.0f, 0.5f, 2.0f, 2, 1, 3),
+				PartPose.offsetAndRotation(0.0f, 0.0f, -2.5f, 0.1396263f, 0.0f, 0.0f));
+		root.addOrReplaceChild("head", CubeListBuilder.create().texOffs(47, 12).addBox(-3.5f, -6.0f, -2.5f, 7, 7, 5),
+				PartPose.offsetAndRotation(0.0f, 4.5f, -3.8f, -0.1047198f, 0.0f, 0.0f));
+		root.addOrReplaceChild("head2", CubeListBuilder.create().texOffs(26, 16).addBox(-2.0f, -2.0f, -2.0f, 4, 4, 4),
+				PartPose.offsetAndRotation(0.0f, 0.0f, -5.0f, -0.1047198f, 0.0f, 0.0f));
+		root.addOrReplaceChild("collar_l", CubeListBuilder.create().texOffs(75, 50).addBox(3.5f, -0.5f, -7.0f, 1, 4, 10),
+				PartPose.offsetAndRotation(0.0f, 0.0f, -2.5f, 0.837758f, 0.0f, 0.0f));
+		root.addOrReplaceChild("collar_r", CubeListBuilder.create().texOffs(67, 50).addBox(-4.5f, -0.5f, -7.0f, 1, 4, 10),
+				PartPose.offsetAndRotation(0.0f, 0.0f, -2.5f, 0.837758f, 0.0f, 0.0f));
+		root.addOrReplaceChild("collar_b", CubeListBuilder.create().texOffs(77, 59).addBox(-3.5f, -0.5f, 2.0f, 7, 4, 1),
+				PartPose.offsetAndRotation(0.0f, 0.0f, -2.5f, 0.837758f, 0.0f, 0.0f));
+		root.addOrReplaceChild("collar_f", CubeListBuilder.create().texOffs(77, 59).addBox(-3.5f, -0.5f, -7.0f, 7, 4, 1),
+				PartPose.offsetAndRotation(0.0f, 0.0f, -2.5f, 0.837758f, 0.0f, 0.0f));
+		root.addOrReplaceChild("collar_black", CubeListBuilder.create().texOffs(22, 0).addBox(-3.5f, 0.0f, -6.0f, 7, 1, 8),
+				PartPose.offsetAndRotation(0.0f, 0.0f, -2.5f, 0.837758f, 0.0f, 0.0f));
+		root.addOrReplaceChild("frontcloth0", CubeListBuilder.create().texOffs(114, 52).addBox(-3.0f, 3.2f, -3.5f, 6, 10, 1),
+				PartPose.offsetAndRotation(0.0f, 0.0f, -2.5f, 0.1745329f, 0.0f, 0.0f));
+		root.addOrReplaceChild("frontcloth1", CubeListBuilder.create().texOffs(114, 39).addBox(-1.0f, 1.5f, -3.5f, 6, 6, 1),
+				PartPose.offsetAndRotation(-2.0f, 12.0f, 0.0f, -0.1047198f, 0.0f, 0.0f));
+		root.addOrReplaceChild("frontcloth2", CubeListBuilder.create().texOffs(114, 47).addBox(-1.0f, 8.5f, -1.5f, 6, 3, 1),
+				PartPose.offsetAndRotation(-2.0f, 11.0f, 0.0f, -0.3316126f, 0.0f, 0.0f));
+		root.addOrReplaceChild("torso", CubeListBuilder.create().texOffs(34, 45).addBox(-5.0f, 2.5f, -3.0f, 10, 10, 6),
+				PartPose.offsetAndRotation(0.0f, 0.0f, -2.5f, 0.1745329f, 0.0f, 0.0f));
+
+		PartDefinition armRDef = root.addOrReplaceChild("arm_r", CubeListBuilder.create().texOffs(78, 32).addBox(-3.5f, 1.5f, -2.0f, 4, 13, 5),
+				PartPose.offsetAndRotation(-5.0f, 3.0f, -2.0f, 0.0f, 0.0f, 0.1047198f));
+		armRDef.addOrReplaceChild("shoulder_r", CubeListBuilder.create().texOffs(0, 0).addBox(-4.3f, -1.0f, -3.0f, 4, 5, 7),
+				PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.186824f));
+		armRDef.addOrReplaceChild("shoulder_r0", CubeListBuilder.create().texOffs(56, 31).addBox(-4.5f, -1.5f, -2.5f, 5, 6, 6), PartPose.ZERO);
+		armRDef.addOrReplaceChild("shoulder_r1", CubeListBuilder.create().texOffs(0, 23).addBox(-3.3f, 4.0f, -2.5f, 1, 2, 6),
+				PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.186824f));
+		armRDef.addOrReplaceChild("shoulder_r2", CubeListBuilder.create().texOffs(0, 12).addBox(-2.3f, 4.0f, -3.0f, 2, 3, 7),
+				PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.186824f));
+
+		PartDefinition armLDef = root.addOrReplaceChild("arm_l", CubeListBuilder.create().texOffs(78, 32).mirror().addBox(-0.5f, 1.5f, -2.0f, 4, 13, 5),
+				PartPose.offsetAndRotation(5.0f, 3.0f, -2.0f, 0.0f, 0.0f, -0.1047198f));
+		armLDef.addOrReplaceChild("shoulder_l", CubeListBuilder.create().texOffs(0, 0).mirror().addBox(0.3f, -1.0f, -3.0f, 4, 5, 7),
+				PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.186824f));
+		armLDef.addOrReplaceChild("shoulder_l0", CubeListBuilder.create().texOffs(56, 31).mirror().addBox(-0.5f, -1.5f, -2.5f, 5, 6, 6), PartPose.ZERO);
+		armLDef.addOrReplaceChild("shoulder_l1", CubeListBuilder.create().texOffs(0, 23).mirror().addBox(2.3f, 4.0f, -2.5f, 1, 2, 6),
+				PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.186824f));
+		armLDef.addOrReplaceChild("shoulder_l2", CubeListBuilder.create().texOffs(0, 12).mirror().addBox(0.3f, 4.0f, -3.0f, 2, 3, 7),
+				PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.186824f));
+
+		root.addOrReplaceChild("backpanel_r1", CubeListBuilder.create().texOffs(96, 7).addBox(0.0f, 2.5f, -2.5f, 2, 2, 5),
+				PartPose.offsetAndRotation(-2.0f, 12.0f, 0.0f, 0.0f, 0.0f, 0.1396263f));
+		root.addOrReplaceChild("waist_r1", CubeListBuilder.create().texOffs(96, 14).addBox(-3.0f, -0.5f, -2.5f, 5, 3, 5),
+				PartPose.offsetAndRotation(-2.0f, 12.0f, 0.0f, 0.0f, 0.0f, 0.1396263f));
+		root.addOrReplaceChild("waist_r2", CubeListBuilder.create().texOffs(116, 13).addBox(-3.0f, 2.5f, -2.5f, 1, 4, 5),
+				PartPose.offsetAndRotation(-2.0f, 12.0f, 0.0f, 0.0f, 0.0f, 0.1396263f));
+		root.addOrReplaceChild("waist_r3", CubeListBuilder.create().texOffs(114, 5).mirror().addBox(-2.0f, 2.5f, -2.5f, 2, 3, 5),
+				PartPose.offsetAndRotation(-2.0f, 12.0f, 0.0f, 0.0f, 0.0f, 0.1396263f));
+		root.addOrReplaceChild("leg_r", CubeListBuilder.create().texOffs(79, 19).addBox(-2.5f, 2.5f, -2.0f, 4, 9, 4),
+				PartPose.offset(-2.0f, 12.5f, 0.0f));
+		root.addOrReplaceChild("waist_l1", CubeListBuilder.create().texOffs(96, 14).addBox(-2.0f, -0.5f, -2.5f, 5, 3, 5),
+				PartPose.offsetAndRotation(2.0f, 12.0f, 0.0f, 0.0f, 0.0f, -0.1396263f));
+		root.addOrReplaceChild("waist_l2", CubeListBuilder.create().texOffs(116, 13).addBox(2.0f, 2.5f, -2.5f, 1, 4, 5),
+				PartPose.offsetAndRotation(2.0f, 12.0f, 0.0f, 0.0f, 0.0f, -0.1396263f));
+		root.addOrReplaceChild("waist_l3", CubeListBuilder.create().texOffs(114, 5).addBox(0.0f, 2.5f, -2.5f, 2, 3, 5),
+				PartPose.offsetAndRotation(2.0f, 12.0f, 0.0f, 0.0f, 0.0f, -0.1396263f));
+		root.addOrReplaceChild("backpanel_l1", CubeListBuilder.create().texOffs(96, 7).addBox(-2.0f, 2.5f, -2.5f, 2, 2, 5),
+				PartPose.offsetAndRotation(2.0f, 12.0f, 0.0f, 0.0f, 0.0f, -0.1396263f));
+		root.addOrReplaceChild("leg_l", CubeListBuilder.create().texOffs(79, 19).mirror().addBox(-1.5f, 2.5f, -2.0f, 4, 9, 4),
+				PartPose.offset(2.0f, 12.5f, 0.0f));
+
+		ModelPart baked = LayerDefinition.create(mesh, 128, 64).bakeRoot();
+		cloak1 = baked.getChild("cloak1");
+		cloak3 = baked.getChild("cloak3");
+		cloak2 = baked.getChild("cloak2");
+		cloakCL = baked.getChild("cloak_cl");
+		cloakCR = baked.getChild("cloak_cr");
+		head = baked.getChild("head");
+		head2 = baked.getChild("head2");
+		collarL = baked.getChild("collar_l");
+		collarR = baked.getChild("collar_r");
+		collarB = baked.getChild("collar_b");
+		collarF = baked.getChild("collar_f");
+		collarBlack = baked.getChild("collar_black");
+		frontcloth0 = baked.getChild("frontcloth0");
+		frontcloth1 = baked.getChild("frontcloth1");
+		frontcloth2 = baked.getChild("frontcloth2");
+		torso = baked.getChild("torso");
+		armR = baked.getChild("arm_r");
+		shoulderR = armR.getChild("shoulder_r");
+		shoulderR0 = armR.getChild("shoulder_r0");
+		shoulderR1 = armR.getChild("shoulder_r1");
+		shoulderR2 = armR.getChild("shoulder_r2");
+		armL = baked.getChild("arm_l");
+		shoulderL = armL.getChild("shoulder_l");
+		shoulderL0 = armL.getChild("shoulder_l0");
+		shoulderL1 = armL.getChild("shoulder_l1");
+		shoulderL2 = armL.getChild("shoulder_l2");
+		backpanelR1 = baked.getChild("backpanel_r1");
+		waistR1 = baked.getChild("waist_r1");
+		waistR2 = baked.getChild("waist_r2");
+		waistR3 = baked.getChild("waist_r3");
+		legR = baked.getChild("leg_r");
+		waistL1 = baked.getChild("waist_l1");
+		waistL2 = baked.getChild("waist_l2");
+		waistL3 = baked.getChild("waist_l3");
+		backpanelL1 = baked.getChild("backpanel_l1");
+		legL = baked.getChild("leg_l");
+	}
+
+	@Override
+	public void setupAnim(EntityEldritchGolem entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+		headless = entity.isHeadless();
+
+		// Parts the true original only ever rotated once at construction time - reasserted every frame here,
+		// same real defensive convention ModelEldritchGuardian/ModelEldritchCrab already established.
+		cloakCL.setRotation(0.1396263f, 0.0f, 0.0f);
+		cloakCR.setRotation(0.1396263f, 0.0f, 0.0f);
+		collarL.setRotation(0.837758f, 0.0f, 0.0f);
+		collarR.setRotation(0.837758f, 0.0f, 0.0f);
+		collarB.setRotation(0.837758f, 0.0f, 0.0f);
+		collarF.setRotation(0.837758f, 0.0f, 0.0f);
+		collarBlack.setRotation(0.837758f, 0.0f, 0.0f);
+		frontcloth0.setRotation(0.1745329f, 0.0f, 0.0f);
+		torso.setRotation(0.1745329f, 0.0f, 0.0f);
+		shoulderR.setRotation(0.0f, 0.0f, 1.186824f);
+		shoulderR0.setRotation(0.0f, 0.0f, 0.0f);
+		shoulderR1.setRotation(0.0f, 0.0f, 1.186824f);
+		shoulderR2.setRotation(0.0f, 0.0f, 1.186824f);
+		shoulderL.setRotation(0.0f, 0.0f, -1.186824f);
+		shoulderL0.setRotation(0.0f, 0.0f, 0.0f);
+		shoulderL1.setRotation(0.0f, 0.0f, -1.186824f);
+		shoulderL2.setRotation(0.0f, 0.0f, -1.186824f);
+		backpanelR1.setRotation(0.0f, 0.0f, 0.1396263f);
+		waistR1.setRotation(0.0f, 0.0f, 0.1396263f);
+		waistR2.setRotation(0.0f, 0.0f, 0.1396263f);
+		waistR3.setRotation(0.0f, 0.0f, 0.1396263f);
+		waistL1.setRotation(0.0f, 0.0f, -0.1396263f);
+		waistL2.setRotation(0.0f, 0.0f, -0.1396263f);
+		waistL3.setRotation(0.0f, 0.0f, -0.1396263f);
+		backpanelL1.setRotation(0.0f, 0.0f, -0.1396263f);
+
+		// Real head look - see the class doc comment for the real, disclosed spawn-timer-nod simplification.
+		head.yRot = netHeadYaw / 4.0f / Mth.RAD_TO_DEG;
+		head.xRot = headPitch / 2.0f / Mth.RAD_TO_DEG;
+		head2.yRot = netHeadYaw / Mth.RAD_TO_DEG;
+		head2.xRot = headPitch / Mth.RAD_TO_DEG;
+
+		// Real leg walk cycle.
+		legR.xRot = Mth.cos(limbSwing * 0.4662f) * 1.4f * limbSwingAmount;
+		legL.xRot = Mth.cos(limbSwing * 0.4662f + Mth.PI) * 1.4f * limbSwingAmount;
+
+		// Real cloak/frontcloth sway, walk-driven (the true original computed this directly in its own real
+		// render() rather than setRotationAngles - same real inputs, ported as-is).
+		float a = Mth.cos(limbSwing * 0.44f) * 1.4f * limbSwingAmount;
+		float b = Mth.cos(limbSwing * 0.44f + Mth.PI) * 1.4f * limbSwingAmount;
+		float c = Math.min(a, b);
+		frontcloth1.setRotation(c - 0.1047198f, 0.0f, 0.0f);
+		frontcloth2.setRotation(c - 0.3316126f, 0.0f, 0.0f);
+		cloak1.setRotation(-c / 3.0f + 0.1396263f, 0.0f, 0.0f);
+		cloak2.setRotation(-c / 3.0f + 0.3069452f, 0.0f, 0.0f);
+		cloak3.setRotation(-c / 3.0f + 0.4465716f, 0.0f, 0.0f);
+
+		// Real attack-swing arm animation vs. real idle sway - see the class doc comment for the real,
+		// previously-unwired client entity-event restoration and its own real sub-tick simplification.
+		int swing = entity.getHurtTimer();
+		if (swing > 0) {
+			float t = -2.0f + 1.5f * doAbs(swing, 10.0f);
+			armR.setRotation(t, 0.0f, 0.1047198f);
+			armL.setRotation(t, 0.0f, -0.1047198f);
+		} else {
+			armR.setRotation(Mth.cos(limbSwing * 0.4f + Mth.PI) * 2.0f * limbSwingAmount * 0.5f, 0.0f, 0.1047198f);
+			armL.setRotation(Mth.cos(limbSwing * 0.4f) * 2.0f * limbSwingAmount * 0.5f, 0.0f, -0.1047198f);
+		}
+	}
+
+	@Override
+	public void renderToBuffer(PoseStack poseStack, VertexConsumer buffer, int packedLight, int packedOverlay, int color) {
+		frontcloth1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		collarL.render(poseStack, buffer, packedLight, packedOverlay, color);
+		collarBlack.render(poseStack, buffer, packedLight, packedOverlay, color);
+		cloak1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		cloakCL.render(poseStack, buffer, packedLight, packedOverlay, color);
+		cloakCR.render(poseStack, buffer, packedLight, packedOverlay, color);
+		cloak3.render(poseStack, buffer, packedLight, packedOverlay, color);
+		cloak2.render(poseStack, buffer, packedLight, packedOverlay, color);
+		(headless ? head2 : head).render(poseStack, buffer, packedLight, packedOverlay, color);
+		frontcloth0.render(poseStack, buffer, packedLight, packedOverlay, color);
+		collarB.render(poseStack, buffer, packedLight, packedOverlay, color);
+		torso.render(poseStack, buffer, packedLight, packedOverlay, color);
+		collarR.render(poseStack, buffer, packedLight, packedOverlay, color);
+		collarF.render(poseStack, buffer, packedLight, packedOverlay, color);
+		frontcloth1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		armL.render(poseStack, buffer, packedLight, packedOverlay, color);
+		armR.render(poseStack, buffer, packedLight, packedOverlay, color);
+		backpanelR1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		waistR1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		waistR2.render(poseStack, buffer, packedLight, packedOverlay, color);
+		waistR3.render(poseStack, buffer, packedLight, packedOverlay, color);
+		legR.render(poseStack, buffer, packedLight, packedOverlay, color);
+		waistL1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		waistL2.render(poseStack, buffer, packedLight, packedOverlay, color);
+		waistL3.render(poseStack, buffer, packedLight, packedOverlay, color);
+		frontcloth2.render(poseStack, buffer, packedLight, packedOverlay, color);
+		backpanelL1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		legL.render(poseStack, buffer, packedLight, packedOverlay, color);
+	}
+
+	/** Faithful translation of the true original's own real helper - real "triangle wave" easing used for the
+	 * real attack-swing arm animation. */
+	private static float doAbs(float a, float b) {
+		return (Math.abs(a % b - b * 0.5f) - b * 0.25f) / (b * 0.25f);
+	}
 }

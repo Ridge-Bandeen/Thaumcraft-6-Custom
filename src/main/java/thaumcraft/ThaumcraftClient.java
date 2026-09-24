@@ -207,7 +207,8 @@ public class ThaumcraftClient {
         // "the real visual is entirely client-local tracking particles, not this EntityRenderer" shape
         // WISP/GOLEM_ORB above already established - this placeholder is still the correct registration.
         event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_ORB.get(), RenderFocusProjectile::new);
-        // Temporary placeholder body, not the real mesh - see ModelEldritchPlaceholder's own doc comment.
+        // Real hand-modeled mesh restored 2026-09-24 for all 3 - see ModelEldritchGuardian/ModelEldritchGolem's
+        // own doc comments.
         event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_GUARDIAN.get(), thaumcraft.client.render.RenderEldritchGuardian::new);
         event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_WARDEN.get(), thaumcraft.client.render.RenderEldritchWarden::new);
         event.registerEntityRenderer(ThaumcraftEntities.ELDRITCH_GOLEM.get(), thaumcraft.client.render.RenderEldritchGolem::new);

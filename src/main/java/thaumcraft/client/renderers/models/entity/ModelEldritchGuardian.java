@@ -21,10 +21,9 @@ import thaumcraft.common.entities.monster.boss.EntityEldritchWarden;
  * Real, faithful geometry+animation translation of the true original's own real {@code ModelEldritchGuardian}
  * - 54 real parented cuboids (matching the true original's own real count exactly), shared between {@link
  * thaumcraft.client.render.RenderEldritchGuardian}/{@link thaumcraft.client.render.RenderEldritchWarden} the
- * same real way the true original shared one model class between both entities. Replaces {@link
- * thaumcraft.client.render.ModelEldritchPlaceholder} for both - see that class's own doc comment for why the
- * placeholder existed (GameTest can't verify a mesh port at all; this needs a real human {@code runClient}
- * screenshot check, tracked in the UI visual-parity checklist).
+ * same real way the true original shared one model class between both entities. Replaces the now-deleted
+ * {@code ModelEldritchPlaceholder} single-box stand-in for both (GameTest can't verify a mesh port at all;
+ * this needs a real human {@code runClient} screenshot check, tracked in the UI visual-parity checklist).
  *
  * <p>Every part's rotation is explicitly reasserted every frame in {@link #setupAnim} (not just the ones the
  * true original's own {@code setRotationAngles} touched) - same real defensive convention {@link

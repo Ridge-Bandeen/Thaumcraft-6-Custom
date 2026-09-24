@@ -874,11 +874,38 @@ deferred until now. Real findings from that audit, triaged:
         `fluxGooFallsSpreadsDecaysAndAffectsEntities`, disabled for
         flakiness mid-chunk after a 2nd unrelated-file failure - see
         `flaky-gametest-human-check-list` memory) and a clean `test` task.
-        **`ModelEldritchGolem`** (the true original's own real ~300-line
-        hand-modeled mesh, currently still backed by
-        `ModelEldritchPlaceholder` via `RenderEldritchGolem`) remains a
-        real, separate, not-yet-started item - same technique now proven,
-        just not yet applied to that entity.
+        ~~**`ModelEldritchGolem`**~~ — closed 2026-09-24, same session. Real,
+        faithful 36-cuboid geometry+animation translation of the true
+        original's own real hand-modeled mesh (matching its own real cuboid
+        count exactly), replacing `ModelEldritchPlaceholder` for
+        `RenderEldritchGolem` - the now fully-unused `ModelEldritchPlaceholder`
+        class itself was deleted alongside this (every one of the 3
+        Eldritch bosses now has a real mesh). Real, faithfully-kept true-
+        original quirk: `frontcloth1` really is rendered twice in the true
+        original's own real render order (harmless, same transform both
+        times) - kept as-is rather than "fixed". Real, previously-unwired
+        gap found and restored alongside this mesh: the true original's own
+        real 10-tick attack-swing arm animation needed a real client-
+        mirrored countdown, which needed the true original's own real
+        `handleStatusUpdate` case-4 entity-event broadcast - this port's own
+        `EntityEldritchGolem` had the real server-side attack-cooldown gate
+        (`hurtTimer`) but never actually broadcast the matching client
+        entity-event, since nothing client-side needed it before this mesh
+        existed; `SoundEvents#IRON_GOLEM_ATTACK` (the true original's own
+        real sound choice) is restored alongside it too. Real, disclosed
+        simplification: the true original's own real "look straight ahead
+        and nod based on `getSpawnTimer()`" head override is dropped - that
+        field is real but currently server-only in the shared
+        `EntityThaumcraftBoss` superclass (no `SynchedEntityData` accessor
+        - a separate, bigger decision than this one model's own geometry
+        port, and the affected head (`head`, not `head2`) isn't even the
+        one rendered during the one case (going headless) where this would
+        matter most). Two clean 499/499 `runGameTestServer` passes and a
+        clean `test` task. **This closes the entire "mob model fidelity"
+        item for all 3 Eldritch bosses** - `ModelEldritchGuardian`/
+        `ModelEldritchWarden`/`ModelEldritchGolem` (shared: Guardian+Warden
+        use one real class, Golem its own) all now render their real
+        hand-modeled meshes.
   - **Block entity (tile entity) renderers - the tile-entity half of that
     "not yet swept" note above, now actually swept 2026-09-16.** Same real
     technique as the entity-renderer cross-check: every real

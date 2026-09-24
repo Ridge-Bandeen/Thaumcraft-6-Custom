@@ -11,7 +11,7 @@ import thaumcraft.common.entities.monster.EntityEldritchGuardian;
 
 /**
  * Renders {@link EntityEldritchGuardian} via the real {@link ModelEldritchGuardian} mesh (restored
- * 2026-09-24, replacing the temporary {@link ModelEldritchPlaceholder}). Sized to the entity's own real
+ * 2026-09-24, replacing the temporary {@code ModelEldritchPlaceholder}, since deleted). Sized to the entity's own real
  * 0.8x2.25 hitbox.
  *
  * <p>Also draws the entity's own real "sonic scream" dome effect on top - see {@link EldritchSonicFx}'s own
