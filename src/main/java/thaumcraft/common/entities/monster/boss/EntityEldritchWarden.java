@@ -80,8 +80,11 @@ import thaumcraft.common.entities.projectile.EntityEldritchOrb;
  * mechanic); the client-side portal-teleport particle trail is dropped, matching every other client-FX cut
  * this whole project has made consistently.
  *
- * <p>Real, still-documented cuts: no arm-lift swing animation (tied to the not-yet-ported mesh - see
- * {@link thaumcraft.client.render.ModelEldritchPlaceholder}'s own doc comment).
+ * <p>Real arm-lift swing animation, restored 2026-09-24 alongside the real mesh port - see {@link
+ * thaumcraft.common.entities.monster.EntityEldritchGuardian}'s own identical fields/event pair for the real
+ * shape (this class's own {@code armLiftL}/{@code armLiftR} are a genuinely separate pair of fields, not
+ * shared with the Guardian, matching the true original's own real independent {@code EntityEldritchWarden}
+ * class).
  *
  * <p>Real sonic-scream client FX restored 2026-09-17, same shape as {@link
  * thaumcraft.common.entities.monster.EntityEldritchGuardian}'s own doc comment describes (a plain vanilla
@@ -105,6 +108,8 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 	private int fieldFrenzyCounter;
 	private boolean fieldFrenzyTriggered;
 
+	private static final byte ORB_LEFT_EVENT = 15;
+	private static final byte ORB_RIGHT_EVENT = 16;
 	private static final byte SONIC_EVENT = 17;
 
 	/** Client-only "sonic scream" trigger state - see {@link
@@ -113,6 +118,12 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 	private int sonicDuration;
 	private float sonicYaw;
 	private float sonicPitch;
+
+	/** Client-only arm-lift swing state, decayed in {@link #aiStep}. Never synced directly; set from
+	 * {@link #handleEntityEvent}. */
+	private float armLiftL;
+	private float armLiftR;
+	private boolean lastBlast;
 
 	public EntityEldritchWarden(EntityType<? extends EntityEldritchWarden> type, Level level) {
 		super(type, level);
@@ -210,6 +221,13 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 				fieldFrenzyCounter--;
 			}
 		} else {
+			if (armLiftL > 0.0f) {
+				armLiftL -= 0.05f;
+			}
+			if (armLiftR > 0.0f) {
+				armLiftR -= 0.05f;
+			}
+
 			// Real client-only ambient particle trail restored 2026-09-17 (was dropped under this port's old
 			// blanket "no client FX" rule) - the true original's own real constant per-tick wispFXEG dust
 			// trail, routed through ClientFxHandlers#spawnWispEG for the same real dist-crash-avoidance reason
@@ -305,6 +323,8 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 	public void performRangedAttack(LivingEntity target, float distanceFactor) {
 		if (random.nextFloat() > 0.2f) {
 			EntityEldritchOrb blast = new EntityEldritchOrb(this);
+			lastBlast = !lastBlast;
+			level().broadcastEntityEvent(this, lastBlast ? ORB_RIGHT_EVENT : ORB_LEFT_EVENT);
 			double dx = target.getX() - getX();
 			double dy = target.getBoundingBox().minY + target.getBbHeight() / 2.0 - (getY() + getEyeHeight() / 2.0) + 2.0;
 			double dz = target.getZ() - getZ();
@@ -331,6 +351,10 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 			sonicDuration = 10 + random.nextInt(5);
 			sonicYaw = getYHeadRot();
 			sonicPitch = getXRot();
+		} else if (id == ORB_LEFT_EVENT) {
+			armLiftL = 0.5f;
+		} else if (id == ORB_RIGHT_EVENT) {
+			armLiftR = 0.5f;
 		} else {
 			super.handleEntityEvent(id);
 		}
@@ -350,5 +374,13 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 
 	public float getSonicPitch() {
 		return sonicPitch;
+	}
+
+	public float getArmLiftL() {
+		return armLiftL;
+	}
+
+	public float getArmLiftR() {
+		return armLiftR;
 	}
 }

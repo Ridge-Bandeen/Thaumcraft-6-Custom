@@ -51,9 +51,13 @@ import thaumcraft.common.entities.projectile.EntityEldritchOrb;
  * dome effect itself is drawn directly from {@link thaumcraft.client.render.RenderEldritchGuardian}'s own
  * render call (see {@link thaumcraft.client.render.EldritchSonicFx}'s own doc comment for why).
  *
- * Real, documented cuts: no arm-lift swing animation ({@code armLiftL}/{@code armLiftR}, tied to the not-yet-
- * ported mesh - see {@link thaumcraft.client.render.ModelEldritchPlaceholder}'s own doc comment), no per-
- * dimension absorption buff (the original's own extra half-health shield gated on
+ * Real arm-lift swing animation ({@link #armLiftL}/{@link #armLiftR}, restored 2026-09-24 alongside the real
+ * mesh port - see {@link thaumcraft.client.renderers.models.entity.ModelEldritchGuardian}): a real client-only
+ * entity-event pair ({@link #ORB_LEFT_EVENT}/{@link #ORB_RIGHT_EVENT}) fired on every real orb-blast ranged
+ * attack, alternating, matching the true original's own real {@code lastBlast} toggle exactly; decayed 0.05f/
+ * tick client-side in {@link #aiStep}, same real formula as the true original's own {@code onUpdate}.
+ *
+ * Real, documented cuts: no per-dimension absorption buff (the original's own extra half-health shield gated on
  * {@code ModConfig.CONFIG_WORLD.dimensionOuterId} - confirmed 2026-09-09, not just a porting gap: Thaumcraft
  * 6 never shipped a real custom dimension at all, exhaustively checked directly against the true original
  * source and a community wiki; that config field is a real, generic "recognize some OTHER mod's dimension by
@@ -63,6 +67,8 @@ import thaumcraft.common.entities.projectile.EntityEldritchOrb;
  */
 public class EntityEldritchGuardian extends Monster implements RangedAttackMob, IEldritchMob {
 
+	private static final byte ORB_LEFT_EVENT = 15;
+	private static final byte ORB_RIGHT_EVENT = 16;
 	private static final byte SONIC_EVENT = 17;
 
 	/** Client-only "sonic scream" trigger state - {@link #tickCount} at the moment it fired, or {@link
@@ -71,6 +77,12 @@ public class EntityEldritchGuardian extends Monster implements RangedAttackMob, 
 	private int sonicDuration;
 	private float sonicYaw;
 	private float sonicPitch;
+
+	/** Client-only arm-lift swing state, decayed in {@link #aiStep}. Never synced directly; set from
+	 * {@link #handleEntityEvent}. */
+	private float armLiftL;
+	private float armLiftR;
+	private boolean lastBlast;
 
 	public EntityEldritchGuardian(EntityType<? extends EntityEldritchGuardian> type, Level level) {
 		super(type, level);
@@ -117,6 +129,12 @@ public class EntityEldritchGuardian extends Monster implements RangedAttackMob, 
 	public void aiStep() {
 		super.aiStep();
 		if (level().isClientSide) {
+			if (armLiftL > 0.0f) {
+				armLiftL -= 0.05f;
+			}
+			if (armLiftR > 0.0f) {
+				armLiftR -= 0.05f;
+			}
 			float x = (float) (getX() + (random.nextFloat() - random.nextFloat()) * 0.2f);
 			float z = (float) (getZ() + (random.nextFloat() - random.nextFloat()) * 0.2f);
 			thaumcraft.client.fx.ClientFxHandlers.spawnWispEG(level(), x, getY() + 0.22 * getBbHeight(), z, this);
@@ -135,6 +153,8 @@ public class EntityEldritchGuardian extends Monster implements RangedAttackMob, 
 	public void performRangedAttack(LivingEntity target, float distanceFactor) {
 		if (random.nextFloat() > 0.15f) {
 			EntityEldritchOrb blast = new EntityEldritchOrb(this);
+			lastBlast = !lastBlast;
+			level().broadcastEntityEvent(this, lastBlast ? ORB_RIGHT_EVENT : ORB_LEFT_EVENT);
 			double dx = target.getX() - getX();
 			double dy = target.getBoundingBox().minY + target.getBbHeight() / 2.0 - (getY() + getEyeHeight() / 2.0) + 2.0;
 			double dz = target.getZ() - getZ();
@@ -159,6 +179,10 @@ public class EntityEldritchGuardian extends Monster implements RangedAttackMob, 
 			sonicDuration = 10 + random.nextInt(5);
 			sonicYaw = getYHeadRot();
 			sonicPitch = getXRot();
+		} else if (id == ORB_LEFT_EVENT) {
+			armLiftL = 0.5f;
+		} else if (id == ORB_RIGHT_EVENT) {
+			armLiftR = 0.5f;
 		} else {
 			super.handleEntityEvent(id);
 		}
@@ -178,5 +202,13 @@ public class EntityEldritchGuardian extends Monster implements RangedAttackMob, 
 
 	public float getSonicPitch() {
 		return sonicPitch;
+	}
+
+	public float getArmLiftL() {
+		return armLiftL;
+	}
+
+	public float getArmLiftR() {
+		return armLiftR;
 	}
 }

@@ -6,22 +6,23 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
+import thaumcraft.client.renderers.models.entity.ModelEldritchGuardian;
 import thaumcraft.common.entities.monster.EntityEldritchGuardian;
 
 /**
- * Renders {@link EntityEldritchGuardian} via the temporary {@link ModelEldritchPlaceholder} - see that
- * class's own doc comment for why this isn't the real mesh yet. Sized to the entity's own real 0.8x2.25
- * hitbox.
+ * Renders {@link EntityEldritchGuardian} via the real {@link ModelEldritchGuardian} mesh (restored
+ * 2026-09-24, replacing the temporary {@link ModelEldritchPlaceholder}). Sized to the entity's own real
+ * 0.8x2.25 hitbox.
  *
  * <p>Also draws the entity's own real "sonic scream" dome effect on top - see {@link EldritchSonicFx}'s own
  * doc comment for the real technique.
  */
-public class RenderEldritchGuardian extends MobRenderer<EntityEldritchGuardian, ModelEldritchPlaceholder<EntityEldritchGuardian>> {
+public class RenderEldritchGuardian extends MobRenderer<EntityEldritchGuardian, ModelEldritchGuardian<EntityEldritchGuardian>> {
 
 	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/eldritch_guardian.png");
 
 	public RenderEldritchGuardian(EntityRendererProvider.Context context) {
-		super(context, new ModelEldritchPlaceholder<>(0.8f, 2.25f), 0.5f);
+		super(context, new ModelEldritchGuardian<>(), 0.5f);
 	}
 
 	@Override

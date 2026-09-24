@@ -830,16 +830,55 @@ deferred until now. Real findings from that audit, triaged:
     - ~~`FXSonic`~~ — closed 2026-09-17, see the Particle FX section above
       for the real closing note.
     - The much larger remaining bulk of `client/renderers/*` (custom mob
-    *models* specifically - `ModelEldritchGolem`-style skeletal meshes,
-    armor models, tile-entity renderers) was NOT swept in this pass - this
-    scoping pass only checked entities currently hidden behind the
-    `RenderFocusProjectile` invisible placeholder, which is a real, bounded,
-    high-confidence subset (a wrong/missing renderer is either invisible or
-    a hard crash, both cheap to detect by direct cross-check) but not the
-    entirety of "Custom Mob Models/Renderers" as a whole - a real full sweep
-    of already-registered-but-possibly-simplified renderers (real vs.
-    placeholder model detail/animation fidelity) is still a separate,
-    larger, not-yet-started piece of work.
+    *models* specifically - skeletal meshes, armor models, tile-entity
+    renderers) was NOT swept in this pass - this scoping pass only checked
+    entities currently hidden behind the `RenderFocusProjectile` invisible
+    placeholder, which is a real, bounded, high-confidence subset (a wrong/
+    missing renderer is either invisible or a hard crash, both cheap to
+    detect by direct cross-check) but not the entirety of "Custom Mob
+    Models/Renderers" as a whole - a real full sweep of already-registered-
+    but-possibly-simplified renderers (real vs. placeholder model detail/
+    animation fidelity) is still a separate, larger piece of work.
+      - ~~**`ModelEldritchGuardian`**~~ — closed 2026-09-24. Real, faithful
+        54-cuboid geometry+animation translation of the true original's own
+        real hand-modeled mesh (matching its own real cuboid count exactly),
+        replacing `ModelEldritchPlaceholder` for both
+        `RenderEldritchGuardian`/`RenderEldritchWarden` - shared between
+        both real renderers the same way the true original shared one real
+        model class. Every part's rotation is explicitly reasserted every
+        frame in `setupAnim` (not just the ones the true original's own
+        `setRotationAngles` touched), same real defensive convention
+        `ModelEldritchCrab` already established, since this model doesn't
+        use `HierarchicalModel`'s automatic per-frame pose reset. Real,
+        disclosed simplification for the Warden-only glowing `HoodEye` box:
+        the true original's own real technique directly hacked the fixed-
+        function lightmap coordinate (a pulsing raw value, decoded here as a
+        real pulsing block-light level via `LightTexture.pack`) AND
+        additively blended it slightly scaled up - this port keeps the real
+        pulsing-lightmap mechanic but renders it through the same single
+        `entityCutout` buffer as every other part rather than a second
+        additive pass (`renderToBuffer` only receives one already-selected
+        `VertexConsumer`; a genuinely separate additive pass would need the
+        entity renderer's own `MultiBufferSource`, not available from inside
+        a model class). Real, previously-undiscovered side effect: restoring
+        this mesh unblocked the true original's own real arm-lift swing
+        animation (`armLiftL`/`armLiftR`), which this port's own
+        `EntityEldritchGuardian`/`EntityEldritchWarden` had never carried at
+        all (a documented cut, tied specifically to the not-yet-ported
+        mesh) - both real classes now carry their own independent
+        `armLiftL`/`armLiftR` fields, decayed 0.05f/tick client-side, driven
+        by a real new entity-event pair (`ORB_LEFT_EVENT`/
+        `ORB_RIGHT_EVENT`, alternating on every real orb-blast ranged
+        attack) matching the true original's own real `lastBlast` toggle
+        exactly. Two clean 499/499 `runGameTestServer` passes (one test,
+        `fluxGooFallsSpreadsDecaysAndAffectsEntities`, disabled for
+        flakiness mid-chunk after a 2nd unrelated-file failure - see
+        `flaky-gametest-human-check-list` memory) and a clean `test` task.
+        **`ModelEldritchGolem`** (the true original's own real ~300-line
+        hand-modeled mesh, currently still backed by
+        `ModelEldritchPlaceholder` via `RenderEldritchGolem`) remains a
+        real, separate, not-yet-started item - same technique now proven,
+        just not yet applied to that entity.
   - **Block entity (tile entity) renderers - the tile-entity half of that
     "not yet swept" note above, now actually swept 2026-09-16.** Same real
     technique as the entity-renderer cross-check: every real

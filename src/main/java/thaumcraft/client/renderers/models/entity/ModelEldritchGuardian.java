@@ -1,454 +1,424 @@
 package thaumcraft.client.renderers.models.entity;
-import net.minecraft.client.model.ModelBase;
-import net.minecraft.client.model.ModelRenderer;
-import net.minecraft.client.renderer.OpenGlHelper;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.util.math.MathHelper;
-import org.lwjgl.opengl.GL11;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+
+import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Mob;
 import thaumcraft.common.entities.monster.EntityEldritchGuardian;
 import thaumcraft.common.entities.monster.boss.EntityEldritchWarden;
 
+/**
+ * Real, faithful geometry+animation translation of the true original's own real {@code ModelEldritchGuardian}
+ * - 54 real parented cuboids (matching the true original's own real count exactly), shared between {@link
+ * thaumcraft.client.render.RenderEldritchGuardian}/{@link thaumcraft.client.render.RenderEldritchWarden} the
+ * same real way the true original shared one model class between both entities. Replaces {@link
+ * thaumcraft.client.render.ModelEldritchPlaceholder} for both - see that class's own doc comment for why the
+ * placeholder existed (GameTest can't verify a mesh port at all; this needs a real human {@code runClient}
+ * screenshot check, tracked in the UI visual-parity checklist).
+ *
+ * <p>Every part's rotation is explicitly reasserted every frame in {@link #setupAnim} (not just the ones the
+ * true original's own {@code setRotationAngles} touched) - same real defensive convention {@link
+ * thaumcraft.client.render.ModelEldritchCrab} already established in this port, since this model doesn't use
+ * {@link net.minecraft.client.model.HierarchicalModel}'s automatic per-frame pose reset.
+ *
+ * <p>Real, disclosed simplification for {@code HoodEye} (the Warden-only glowing eye box hidden inside
+ * {@code Hood1}'s own geometry): the true original's own real technique directly hacked the fixed-function
+ * lightmap texture coordinate (a pulsing ~195-225 raw coordinate, decoded here as a real pulsing block-light
+ * level via {@link LightTexture#pack}) AND additively blended it slightly scaled up to read as a glow through
+ * the hood. This port keeps the real pulsing-lightmap mechanic (draws {@code HoodEye} at a computed bright,
+ * pulsing {@code packedLight} rather than the model's own real ambient light) but renders it through the same
+ * single {@code entityCutout} buffer as every other part rather than a second additive pass - {@link
+ * #renderToBuffer} only receives one already-selected {@link VertexConsumer}, and standing up a genuinely
+ * separate additive {@link RenderType} pass would need the entity renderer's own {@link
+ * net.minecraft.client.renderer.MultiBufferSource}, not available from inside a model class. Same real
+ * "pulsing glow via a brighter part" visual goal, simpler real single-pass mechanism.
+ */
+public class ModelEldritchGuardian<T extends Mob> extends EntityModel<T> {
 
-public class ModelEldritchGuardian extends ModelBase
-{
-    ModelRenderer BeltR;
-    ModelRenderer Mbelt;
-    ModelRenderer MbeltL;
-    ModelRenderer MbeltR;
-    ModelRenderer BeltL;
-    ModelRenderer Hood4;
-    ModelRenderer Cloak3;
-    ModelRenderer Chestplate;
-    ModelRenderer HoodEye;
-    ModelRenderer Hood1;
-    ModelRenderer Hood2;
-    ModelRenderer Hood3;
-    ModelRenderer Backplate;
-    ModelRenderer Cloak1;
-    ModelRenderer Cloak2;
-    ModelRenderer ShoulderplateTopR;
-    ModelRenderer ShoulderplateR1;
-    ModelRenderer ShoulderplateR2;
-    ModelRenderer ShoulderplateR3;
-    ModelRenderer ShoulderR;
-    ModelRenderer ArmR3;
-    ModelRenderer ArmL1;
-    ModelRenderer ArmL3;
-    ModelRenderer ArmR1;
-    ModelRenderer ArmR2;
-    ModelRenderer ArmL2;
-    ModelRenderer ShoulderL;
-    ModelRenderer ShoulderplateLtop;
-    ModelRenderer ShoulderplateL1;
-    ModelRenderer ShoulderplateL2;
-    ModelRenderer ShoulderplateL3;
-    ModelRenderer LegpanelR4;
-    ModelRenderer LegpanelR5;
-    ModelRenderer LegpanelR6;
-    ModelRenderer SidepanelR1;
-    ModelRenderer BackpanelR1;
-    ModelRenderer BackpanelR2;
-    ModelRenderer BackpanelR3;
-    ModelRenderer BackpanelL3;
-    ModelRenderer LegpanelL4;
-    ModelRenderer LegpanelL5;
-    ModelRenderer LegpanelL6;
-    ModelRenderer SidepanelL1;
-    ModelRenderer SidepanelR4;
-    ModelRenderer BackpanelL1;
-    ModelRenderer BackpanelL2;
-    ModelRenderer LegpanelC1;
-    ModelRenderer LegpanelC2;
-    ModelRenderer LegpanelC3;
-    ModelRenderer SidepanelR3;
-    ModelRenderer SidepanelL4;
-    ModelRenderer SidepanelL3;
-    ModelRenderer SidepanelR2;
-    ModelRenderer SidepanelL2;
-    private float partialTicks;
-    
-    public ModelEldritchGuardian() {
-        textureWidth = 128;
-        textureHeight = 64;
-        (BeltR = new ModelRenderer(this, 76, 44)).addBox(-5.0f, 4.0f, -3.0f, 1, 3, 6);
-        BeltR.setRotationPoint(0.0f, -6.0f, 0.0f);
-        BeltR.setTextureSize(128, 64);
-        BeltR.mirror = true;
-        setRotation(BeltR, 0.0f, 0.0f, 0.0f);
-        (Mbelt = new ModelRenderer(this, 56, 55)).addBox(-4.0f, 8.0f, -3.0f, 8, 4, 1);
-        Mbelt.setRotationPoint(0.0f, -6.0f, 0.0f);
-        Mbelt.setTextureSize(128, 64);
-        Mbelt.mirror = true;
-        setRotation(Mbelt, 0.0f, 0.0f, 0.0f);
-        (MbeltL = new ModelRenderer(this, 76, 44)).addBox(4.0f, 8.0f, -3.0f, 1, 3, 6);
-        MbeltL.setRotationPoint(0.0f, -6.0f, 0.0f);
-        MbeltL.setTextureSize(128, 64);
-        MbeltL.mirror = true;
-        setRotation(MbeltL, 0.0f, 0.0f, 0.0f);
-        (MbeltR = new ModelRenderer(this, 76, 44)).addBox(-5.0f, 8.0f, -3.0f, 1, 3, 6);
-        MbeltR.setRotationPoint(0.0f, -6.0f, 0.0f);
-        MbeltR.setTextureSize(128, 64);
-        MbeltR.mirror = true;
-        setRotation(MbeltR, 0.0f, 0.0f, 0.0f);
-        (BeltL = new ModelRenderer(this, 76, 44)).addBox(4.0f, 4.0f, -3.0f, 1, 3, 6);
-        BeltL.setRotationPoint(0.0f, -6.0f, 0.0f);
-        BeltL.setTextureSize(128, 64);
-        BeltL.mirror = true;
-        setRotation(BeltL, 0.0f, 0.0f, 0.0f);
-        (Chestplate = new ModelRenderer(this, 56, 45)).addBox(-4.0f, 1.0f, -4.0f, 8, 7, 2);
-        Chestplate.setRotationPoint(0.0f, -6.0f, 0.0f);
-        Chestplate.setTextureSize(128, 64);
-        Chestplate.mirror = true;
-        setRotation(Chestplate, 0.0f, 0.0f, 0.0f);
-        (HoodEye = new ModelRenderer(this, 0, 0)).addBox(-4.0f, -8.0f, -4.0f, 8, 8, 8);
-        HoodEye.setRotationPoint(0.0f, -6.0f, 0.0f);
-        HoodEye.setTextureSize(128, 64);
-        HoodEye.mirror = true;
-        setRotation(HoodEye, 0.0f, 0.0f, 0.0f);
-        (Hood1 = new ModelRenderer(this, 40, 12)).addBox(-4.0f, -8.0f, -4.0f, 8, 8, 8);
-        Hood1.setRotationPoint(0.0f, -6.0f, 0.0f);
-        Hood1.setTextureSize(128, 64);
-        Hood1.mirror = true;
-        setRotation(Hood1, 0.0f, 0.0f, 0.0f);
-        (Hood2 = new ModelRenderer(this, 36, 28)).addBox(-3.5f, -8.7f, 2.0f, 7, 7, 3);
-        Hood2.setTextureSize(128, 64);
-        Hood2.mirror = true;
-        setRotation(Hood2, -0.2268928f, 0.0f, 0.0f);
-        (Hood3 = new ModelRenderer(this, 22, 19)).addBox(-3.0f, -9.0f, 2.5f, 6, 6, 3);
-        Hood3.setTextureSize(128, 64);
-        Hood3.mirror = true;
-        setRotation(Hood3, -0.3490659f, 0.0f, 0.0f);
-        (Hood4 = new ModelRenderer(this, 40, 4)).addBox(-2.5f, -9.7f, 3.5f, 5, 5, 3);
-        Hood4.setTextureSize(128, 64);
-        Hood4.mirror = true;
-        setRotation(Hood4, -0.5759587f, 0.0f, 0.0f);
-        Hood1.addChild(Hood2);
-        Hood1.addChild(Hood3);
-        Hood1.addChild(Hood4);
-        (Backplate = new ModelRenderer(this, 36, 45)).addBox(-4.0f, 1.0f, 2.0f, 8, 11, 2);
-        Backplate.setRotationPoint(0.0f, -6.0f, 0.0f);
-        Backplate.setTextureSize(128, 64);
-        Backplate.mirror = true;
-        setRotation(Backplate, 0.0f, 0.0f, 0.0f);
-        (ShoulderplateTopR = new ModelRenderer(this, 110, 37)).addBox(-5.5f, -2.5f, -3.5f, 2, 1, 7);
-        ShoulderplateTopR.setRotationPoint(-5.0f, -4.0f, 0.0f);
-        ShoulderplateTopR.setTextureSize(128, 64);
-        ShoulderplateTopR.mirror = true;
-        setRotation(ShoulderplateTopR, -0.3665191f, 0.3141593f, 0.4363323f);
-        (ShoulderplateR1 = new ModelRenderer(this, 110, 45)).addBox(3.5f, -1.5f, -3.5f, 1, 4, 7);
-        ShoulderplateR1.setRotationPoint(5.0f, -4.0f, 0.0f);
-        ShoulderplateR1.setTextureSize(128, 64);
-        ShoulderplateR1.mirror = true;
-        setRotation(ShoulderplateR1, -0.3665191f, -0.3141593f, -0.4363323f);
-        (ShoulderplateR2 = new ModelRenderer(this, 94, 45)).addBox(-3.5f, 1.5f, -3.5f, 1, 3, 7);
-        ShoulderplateR2.setRotationPoint(-5.0f, -4.0f, 0.0f);
-        ShoulderplateR2.setTextureSize(128, 64);
-        ShoulderplateR2.mirror = true;
-        setRotation(ShoulderplateR2, -0.3665191f, 0.3141593f, 0.4363323f);
-        (ShoulderplateR3 = new ModelRenderer(this, 94, 45)).addBox(-2.5f, 3.5f, -3.5f, 1, 3, 7);
-        ShoulderplateR3.setRotationPoint(-5.0f, -4.0f, 0.0f);
-        ShoulderplateR3.setTextureSize(128, 64);
-        ShoulderplateR3.mirror = true;
-        setRotation(ShoulderplateR3, -0.3665191f, 0.3141593f, 0.4363323f);
-        (ShoulderR = new ModelRenderer(this, 56, 35)).addBox(-3.5f, -2.5f, -2.5f, 5, 5, 5);
-        ShoulderR.setRotationPoint(-5.0f, -4.0f, 0.0f);
-        ShoulderR.setTextureSize(128, 64);
-        ShoulderR.mirror = true;
-        setRotation(ShoulderR, -0.3665191f, 0.122173f, 0.0349066f);
-        (ArmL1 = new ModelRenderer(this, 72, 8)).addBox(-1.0f, 2.5f, -1.5f, 4, 10, 5);
-        ArmL1.setRotationPoint(5.0f, -4.0f, 0.0f);
-        ArmL1.setTextureSize(128, 64);
-        ArmL1.mirror = true;
-        setRotation(ArmL1, -0.9599311f, -0.1047198f, -0.1919862f);
-        (ArmL2 = new ModelRenderer(this, 76, 28)).addBox(-1.0f, 9.5f, 3.5f, 4, 3, 3);
-        ArmL2.setTextureSize(128, 64);
-        ArmL2.mirror = true;
-        (ArmL3 = new ModelRenderer(this, 76, 23)).addBox(-1.0f, 6.5f, 3.5f, 4, 3, 2);
-        ArmL3.setTextureSize(128, 64);
-        ArmL3.mirror = true;
-        ArmL1.addChild(ArmL2);
-        ArmL1.addChild(ArmL3);
-        (ArmR1 = new ModelRenderer(this, 72, 8)).addBox(-3.0f, 2.5f, -1.5f, 4, 10, 5);
-        ArmR1.setRotationPoint(-5.0f, -4.0f, 0.0f);
-        ArmR1.setTextureSize(128, 64);
-        ArmR1.mirror = true;
-        setRotation(ArmR1, -0.9599311f, 0.1047198f, 0.1919862f);
-        (ArmR2 = new ModelRenderer(this, 76, 28)).addBox(-3.0f, 9.5f, 3.5f, 4, 3, 3);
-        ArmR2.setTextureSize(128, 64);
-        ArmR2.mirror = true;
-        (ArmR3 = new ModelRenderer(this, 76, 23)).addBox(-3.0f, 6.5f, 3.5f, 4, 3, 2);
-        ArmR3.setTextureSize(128, 64);
-        ArmR3.mirror = true;
-        ArmR1.addChild(ArmR2);
-        ArmR1.addChild(ArmR3);
-        ShoulderL = new ModelRenderer(this, 56, 35);
-        ShoulderL.mirror = true;
-        ShoulderL.addBox(-1.5f, -2.5f, -2.5f, 5, 5, 5);
-        ShoulderL.setRotationPoint(5.0f, -4.0f, 0.0f);
-        ShoulderL.setTextureSize(128, 64);
-        setRotation(ShoulderL, -0.3665191f, -0.122173f, -0.0349066f);
-        (ShoulderplateLtop = new ModelRenderer(this, 110, 37)).addBox(3.5f, -2.5f, -3.5f, 2, 1, 7);
-        ShoulderplateLtop.setRotationPoint(5.0f, -4.0f, 0.0f);
-        ShoulderplateLtop.setTextureSize(128, 64);
-        ShoulderplateLtop.mirror = true;
-        setRotation(ShoulderplateLtop, -0.3665191f, -0.3141593f, -0.4363323f);
-        (ShoulderplateL1 = new ModelRenderer(this, 110, 45)).addBox(-4.5f, -1.5f, -3.5f, 1, 4, 7);
-        ShoulderplateL1.setRotationPoint(-5.0f, -4.0f, 0.0f);
-        ShoulderplateL1.setTextureSize(128, 64);
-        ShoulderplateL1.mirror = true;
-        setRotation(ShoulderplateL1, -0.3665191f, 0.3141593f, 0.4363323f);
-        ShoulderplateLtop.mirror = false;
-        (ShoulderplateL2 = new ModelRenderer(this, 94, 45)).addBox(2.5f, 1.5f, -3.5f, 1, 3, 7);
-        ShoulderplateL2.setRotationPoint(5.0f, -4.0f, 0.0f);
-        ShoulderplateL2.setTextureSize(128, 64);
-        ShoulderplateL2.mirror = true;
-        setRotation(ShoulderplateL2, -0.3665191f, -0.3141593f, -0.4363323f);
-        ShoulderplateL2.mirror = false;
-        (ShoulderplateL3 = new ModelRenderer(this, 94, 45)).addBox(1.5f, 3.5f, -3.5f, 1, 3, 7);
-        ShoulderplateL3.setRotationPoint(5.0f, -4.0f, 0.0f);
-        ShoulderplateL3.setTextureSize(128, 64);
-        ShoulderplateL3.mirror = true;
-        setRotation(ShoulderplateL3, -0.3665191f, -0.3141593f, -0.4363323f);
-        ShoulderplateL3.mirror = false;
-        (LegpanelR4 = new ModelRenderer(this, 0, 43)).addBox(-3.0f, 0.5f, -3.5f, 2, 3, 1);
-        LegpanelR4.setRotationPoint(-2.0f, 6.0f, 0.0f);
-        LegpanelR4.setTextureSize(128, 64);
-        LegpanelR4.mirror = true;
-        setRotation(LegpanelR4, -0.4363323f, 0.0f, 0.0f);
-        (LegpanelR5 = new ModelRenderer(this, 0, 47)).addBox(-3.0f, 2.5f, -2.5f, 2, 3, 1);
-        LegpanelR5.setRotationPoint(-2.0f, 6.0f, 0.0f);
-        LegpanelR5.setTextureSize(128, 64);
-        LegpanelR5.mirror = true;
-        setRotation(LegpanelR5, -0.4363323f, 0.0f, 0.0f);
-        (LegpanelR6 = new ModelRenderer(this, 6, 43)).addBox(-3.0f, 4.5f, -1.5f, 2, 3, 1);
-        LegpanelR6.setRotationPoint(-2.0f, 6.0f, 0.0f);
-        LegpanelR6.setTextureSize(128, 64);
-        LegpanelR6.mirror = true;
-        setRotation(LegpanelR6, -0.4363323f, 0.0f, 0.0f);
-        (BackpanelR1 = new ModelRenderer(this, 0, 18)).addBox(-3.0f, 0.5f, 2.5f, 5, 3, 1);
-        BackpanelR1.setRotationPoint(-2.0f, 6.0f, 0.0f);
-        BackpanelR1.setTextureSize(128, 64);
-        BackpanelR1.mirror = true;
-        setRotation(BackpanelR1, 0.4363323f, 0.0f, 0.0f);
-        (BackpanelR2 = new ModelRenderer(this, 0, 18)).addBox(-3.0f, 2.5f, 1.5f, 5, 3, 1);
-        BackpanelR2.setRotationPoint(-2.0f, 6.0f, 0.0f);
-        BackpanelR2.setTextureSize(128, 64);
-        BackpanelR2.mirror = true;
-        setRotation(BackpanelR2, 0.4363323f, 0.0f, 0.0f);
-        (BackpanelR3 = new ModelRenderer(this, 0, 18)).addBox(-3.0f, 4.5f, 0.5f, 5, 3, 1);
-        BackpanelR3.setRotationPoint(-2.0f, 6.0f, 0.0f);
-        BackpanelR3.setTextureSize(128, 64);
-        BackpanelR3.mirror = true;
-        setRotation(BackpanelR3, 0.4363323f, 0.0f, 0.0f);
-        (BackpanelL3 = new ModelRenderer(this, 0, 18)).addBox(-2.0f, 4.5f, 0.5f, 5, 3, 1);
-        BackpanelL3.setRotationPoint(2.0f, 6.0f, 0.0f);
-        BackpanelL3.setTextureSize(128, 64);
-        BackpanelL3.mirror = true;
-        setRotation(BackpanelL3, 0.4363323f, 0.0f, 0.0f);
-        (LegpanelL4 = new ModelRenderer(this, 0, 43)).addBox(1.0f, 0.5f, -3.5f, 2, 3, 1);
-        LegpanelL4.setRotationPoint(2.0f, 6.0f, 0.0f);
-        LegpanelL4.setTextureSize(128, 64);
-        LegpanelL4.mirror = true;
-        setRotation(LegpanelL4, -0.4363323f, 0.0f, 0.0f);
-        LegpanelL4.mirror = false;
-        (LegpanelL5 = new ModelRenderer(this, 0, 47)).addBox(1.0f, 2.5f, -2.5f, 2, 3, 1);
-        LegpanelL5.setRotationPoint(2.0f, 6.0f, 0.0f);
-        LegpanelL5.setTextureSize(128, 64);
-        LegpanelL5.mirror = true;
-        setRotation(LegpanelL5, -0.4363323f, 0.0f, 0.0f);
-        LegpanelL5.mirror = false;
-        (LegpanelL6 = new ModelRenderer(this, 6, 43)).addBox(1.0f, 4.5f, -1.5f, 2, 3, 1);
-        LegpanelL6.setRotationPoint(2.0f, 6.0f, 0.0f);
-        LegpanelL6.setTextureSize(128, 64);
-        LegpanelL6.mirror = true;
-        setRotation(LegpanelL6, -0.4363323f, 0.0f, 0.0f);
-        LegpanelL6.mirror = false;
-        (BackpanelL1 = new ModelRenderer(this, 0, 18)).addBox(-2.0f, 0.5f, 2.5f, 5, 3, 1);
-        BackpanelL1.setRotationPoint(2.0f, 6.0f, 0.0f);
-        BackpanelL1.setTextureSize(128, 64);
-        BackpanelL1.mirror = true;
-        setRotation(BackpanelL1, 0.4363323f, 0.0f, 0.0f);
-        (BackpanelL2 = new ModelRenderer(this, 0, 18)).addBox(-2.0f, 2.5f, 1.5f, 5, 3, 1);
-        BackpanelL2.setRotationPoint(2.0f, 6.0f, 0.0f);
-        BackpanelL2.setTextureSize(128, 64);
-        BackpanelL2.mirror = true;
-        setRotation(BackpanelL2, 0.4363323f, 0.0f, 0.0f);
-        (SidepanelL1 = new ModelRenderer(this, 0, 22)).addBox(1.5f, 0.5f, -2.5f, 1, 4, 5);
-        SidepanelL1.setRotationPoint(2.0f, 6.0f, 0.0f);
-        SidepanelL1.setTextureSize(128, 64);
-        SidepanelL1.mirror = true;
-        setRotation(SidepanelL1, 0.0f, 0.0f, -0.4363323f);
-        (SidepanelR1 = new ModelRenderer(this, 0, 22)).addBox(-2.5f, 0.5f, -2.5f, 1, 4, 5);
-        SidepanelR1.setRotationPoint(-2.0f, 6.0f, 0.0f);
-        SidepanelR1.setTextureSize(128, 64);
-        SidepanelR1.mirror = true;
-        setRotation(SidepanelR1, 0.0f, 0.0f, 0.4363323f);
-        (SidepanelR2 = new ModelRenderer(this, 0, 54)).addBox(0.0f, 0.0f, -0.5f, 1, 5, 5);
-        SidepanelR2.setRotationPoint(-4.5f, 9.5f, -2.0f);
-        SidepanelR2.setTextureSize(128, 64);
-        SidepanelR2.mirror = true;
-        setRotation(SidepanelR2, 0.0f, 0.0f, 0.122173f);
-        (SidepanelR3 = new ModelRenderer(this, 0, 35)).addBox(0.0f, 0.0f, -0.5f, 1, 3, 5);
-        SidepanelR3.setRotationPoint(0.0f, 5.0f, 0.0f);
-        SidepanelR3.setTextureSize(128, 64);
-        SidepanelR3.mirror = true;
-        setRotation(SidepanelR3, 0.0f, 0.0f, 0.296706f);
-        (SidepanelR4 = new ModelRenderer(this, 24, 35)).addBox(0.0f, 0.0f, -0.5f, 1, 3, 5);
-        SidepanelR4.setRotationPoint(0.0f, 3.0f, 0.0f);
-        SidepanelR4.setTextureSize(128, 64);
-        SidepanelR4.mirror = true;
-        setRotation(SidepanelR4, 0.0f, 0.0f, 0.5235988f);
-        (SidepanelL2 = new ModelRenderer(this, 0, 54)).addBox(0.0f, 0.0f, -0.5f, 1, 5, 5);
-        SidepanelL2.setRotationPoint(4.5f, 9.5f, -2.0f);
-        SidepanelL2.setTextureSize(128, 64);
-        SidepanelL2.mirror = true;
-        setRotation(SidepanelL2, 0.0f, 0.0f, -0.122173f);
-        (SidepanelL3 = new ModelRenderer(this, 0, 35)).addBox(0.0f, 0.0f, -0.5f, 1, 3, 5);
-        SidepanelL3.setRotationPoint(0.0f, 5.0f, 0.0f);
-        SidepanelL3.setTextureSize(128, 64);
-        SidepanelL3.mirror = true;
-        setRotation(SidepanelL3, 0.0f, 0.0f, -0.296706f);
-        (SidepanelL4 = new ModelRenderer(this, 24, 35)).addBox(0.0f, 0.0f, -0.5f, 1, 3, 5);
-        SidepanelL4.setRotationPoint(0.0f, 3.0f, 0.0f);
-        SidepanelL4.setTextureSize(128, 64);
-        SidepanelL4.mirror = true;
-        setRotation(SidepanelL4, 0.0f, 0.0f, -0.5235988f);
-        (LegpanelC1 = new ModelRenderer(this, 16, 45)).addBox(-3.0f, 0.0f, -0.5f, 6, 8, 1);
-        LegpanelC1.setRotationPoint(0.0f, 5.5f, -3.0f);
-        LegpanelC1.setTextureSize(128, 64);
-        LegpanelC1.mirror = true;
-        setRotation(LegpanelC1, 0.0f, 0.0f, 0.0f);
-        (LegpanelC2 = new ModelRenderer(this, 16, 54)).addBox(-3.0f, 0.0f, -0.5f, 6, 4, 1);
-        LegpanelC2.setRotationPoint(0.0f, 8.0f, 0.0f);
-        LegpanelC2.setTextureSize(128, 64);
-        LegpanelC2.mirror = true;
-        setRotation(LegpanelC2, 0.0f, 0.0f, 0.0f);
-        (LegpanelC3 = new ModelRenderer(this, 32, 59)).addBox(-3.0f, 0.0f, -0.5f, 6, 4, 1);
-        LegpanelC3.setRotationPoint(0.0f, 4.0f, 0.0f);
-        LegpanelC3.setTextureSize(128, 64);
-        LegpanelC3.mirror = true;
-        setRotation(LegpanelC3, 0.0f, 0.0f, 0.0f);
-        (Cloak1 = new ModelRenderer(this, 106, 0)).addBox(0.0f, 0.0f, -0.5f, 10, 18, 1);
-        Cloak1.setRotationPoint(-5.0f, -6.0f, 4.0f);
-        Cloak1.setTextureSize(128, 64);
-        Cloak1.mirror = true;
-        setRotation(Cloak1, 0.0f, 0.0f, 0.0f);
-        (Cloak2 = new ModelRenderer(this, 106, 19)).addBox(0.0f, 0.0f, -0.5f, 10, 4, 1);
-        Cloak2.setRotationPoint(0.0f, 18.0f, 0.0f);
-        Cloak2.setTextureSize(128, 64);
-        Cloak2.mirror = true;
-        setRotation(Cloak2, 0.0f, 0.0f, 0.0f);
-        (Cloak3 = new ModelRenderer(this, 106, 24)).addBox(0.0f, 0.0f, -0.5f, 10, 4, 1);
-        Cloak3.setRotationPoint(0.0f, 4.0f, 0.0f);
-        Cloak3.setTextureSize(128, 64);
-        Cloak3.mirror = true;
-        setRotation(Cloak3, 0.0f, 0.0f, 0.0f);
-        LegpanelC1.addChild(LegpanelC2);
-        LegpanelC2.addChild(LegpanelC3);
-        SidepanelL2.addChild(SidepanelL3);
-        SidepanelL3.addChild(SidepanelL4);
-        SidepanelR2.addChild(SidepanelR3);
-        SidepanelR3.addChild(SidepanelR4);
-        Cloak1.addChild(Cloak2);
-        Cloak2.addChild(Cloak3);
-    }
-    
-    public void setLivingAnimations(EntityLivingBase p_78086_1_, float p_78086_2_, float p_78086_3_, float p_78086_4_) {
-        partialTicks = p_78086_4_;
-    }
-    
-    public void render(Entity entity, float f, float f1, float f2, float f3, float f4, float f5) {
-        super.render(entity, f, f1, f2, f3, f4, f5);
-        setRotationAngles(f, f1, f2, f3, f4, f5, entity);
-        BeltR.render(f5);
-        Mbelt.render(f5);
-        MbeltL.render(f5);
-        MbeltR.render(f5);
-        BeltL.render(f5);
-        Chestplate.render(f5);
-        Hood1.render(f5);
-        Backplate.render(f5);
-        ShoulderplateTopR.render(f5);
-        ShoulderplateR1.render(f5);
-        ShoulderplateR2.render(f5);
-        ShoulderplateR3.render(f5);
-        ShoulderR.render(f5);
-        ArmL1.render(f5);
-        ArmR1.render(f5);
-        ShoulderL.render(f5);
-        ShoulderplateLtop.render(f5);
-        ShoulderplateL1.render(f5);
-        ShoulderplateL2.render(f5);
-        ShoulderplateL3.render(f5);
-        LegpanelR4.render(f5);
-        LegpanelR5.render(f5);
-        LegpanelR6.render(f5);
-        BackpanelR1.render(f5);
-        BackpanelR2.render(f5);
-        BackpanelR3.render(f5);
-        BackpanelL3.render(f5);
-        LegpanelL4.render(f5);
-        LegpanelL5.render(f5);
-        LegpanelL6.render(f5);
-        BackpanelL1.render(f5);
-        BackpanelL2.render(f5);
-        Cloak1.render(f5);
-        SidepanelR1.render(f5);
-        SidepanelL1.render(f5);
-        SidepanelL2.render(f5);
-        SidepanelR2.render(f5);
-        LegpanelC1.render(f5);
-        if (entity instanceof EntityEldritchWarden) {
-            GL11.glPushMatrix();
-            GL11.glEnable(3042);
-            GL11.glBlendFunc(770, 1);
-            GL11.glScaled(1.01, 1.01, 1.01);
-            int j = (int)(195.0f + MathHelper.sin(entity.ticksExisted / 3.0f) * 15.0f + 15.0f);
-            int k = j % 65536;
-            int l = j / 65536;
-            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, k / 1.0f, l / 1.0f);
-            HoodEye.render(f5);
-            GL11.glDisable(3042);
-            GL11.glPopMatrix();
-        }
-    }
-    
-    public void setRotationAngles(float par1, float par2, float par3, float par4, float par5, float par6, Entity entity) {
-        super.setRotationAngles(par1, par2, par3, par4, par5, par6, entity);
-        Hood1.rotateAngleY = par4 / 57.295776f;
-        Hood1.rotateAngleX = par5 / 57.295776f;
-        HoodEye.rotateAngleX = Hood1.rotateAngleX;
-        HoodEye.rotateAngleY = Hood1.rotateAngleY;
-        float alr = 0.0f;
-        float all = 0.0f;
-        if (entity instanceof EntityEldritchGuardian) {
-            alr = ((EntityEldritchGuardian)entity).armLiftR;
-            all = ((EntityEldritchGuardian)entity).armLiftL;
-        }
-        if (entity instanceof EntityEldritchWarden) {
-            alr = ((EntityEldritchWarden)entity).armLiftR;
-            all = ((EntityEldritchWarden)entity).armLiftL;
-        }
-        ArmL1.rotateAngleX = -1.0f - all + MathHelper.sin((entity.ticksExisted + 20 + partialTicks) / 10.0f) * 0.08f;
-        ArmR1.rotateAngleX = -1.0f - alr + MathHelper.sin((entity.ticksExisted + partialTicks) / 10.0f) * 0.08f;
-        LegpanelC1.rotateAngleX = -0.15f + MathHelper.sin((entity.ticksExisted + partialTicks) / 8.0f) * 0.12f;
-        LegpanelC2.rotateAngleX = MathHelper.sin((entity.ticksExisted + partialTicks - 5.0f) / 8.0f) * 0.13f;
-        LegpanelC3.rotateAngleX = MathHelper.sin((entity.ticksExisted + partialTicks - 10.0f) / 8.0f) * 0.14f;
-        Cloak1.rotateAngleX = 0.2f + MathHelper.sin((entity.ticksExisted + partialTicks) / 7.0f) * 0.08f;
-        Cloak2.rotateAngleX = MathHelper.sin((entity.ticksExisted + partialTicks - 5.0f) / 7.0f) * 0.1f;
-        Cloak3.rotateAngleX = MathHelper.sin((entity.ticksExisted + partialTicks - 10.0f) / 7.0f) * 0.12f;
-        SidepanelL2.rotateAngleZ = -0.2f + MathHelper.sin((entity.ticksExisted + 10 + partialTicks) / 8.0f) * 0.12f;
-        SidepanelL3.rotateAngleZ = MathHelper.sin((entity.ticksExisted + partialTicks + 5.0f) / 8.0f) * 0.13f;
-        SidepanelL4.rotateAngleZ = MathHelper.sin((entity.ticksExisted + partialTicks) / 8.0f) * 0.14f;
-        SidepanelR2.rotateAngleZ = 0.2f + MathHelper.sin((entity.ticksExisted - 5 + partialTicks) / 8.0f) * 0.12f;
-        SidepanelR3.rotateAngleZ = MathHelper.sin((entity.ticksExisted + partialTicks - 10.0f) / 8.0f) * 0.13f;
-        SidepanelR4.rotateAngleZ = MathHelper.sin((entity.ticksExisted + partialTicks - 15.0f) / 8.0f) * 0.14f;
-    }
-    
-    private void setRotation(ModelRenderer model, float x, float y, float z) {
-        model.rotateAngleX = x;
-        model.rotateAngleY = y;
-        model.rotateAngleZ = z;
-    }
+	private final ModelPart beltR;
+	private final ModelPart mbelt;
+	private final ModelPart mbeltL;
+	private final ModelPart mbeltR;
+	private final ModelPart beltL;
+	private final ModelPart chestplate;
+	private final ModelPart hoodEye;
+	private final ModelPart hood1;
+	private final ModelPart hood2;
+	private final ModelPart hood3;
+	private final ModelPart hood4;
+	private final ModelPart backplate;
+	private final ModelPart shoulderplateTopR;
+	private final ModelPart shoulderplateR1;
+	private final ModelPart shoulderplateR2;
+	private final ModelPart shoulderplateR3;
+	private final ModelPart shoulderR;
+	private final ModelPart armL1;
+	private final ModelPart armL2;
+	private final ModelPart armL3;
+	private final ModelPart armR1;
+	private final ModelPart armR2;
+	private final ModelPart armR3;
+	private final ModelPart shoulderL;
+	private final ModelPart shoulderplateLtop;
+	private final ModelPart shoulderplateL1;
+	private final ModelPart shoulderplateL2;
+	private final ModelPart shoulderplateL3;
+	private final ModelPart legpanelR4;
+	private final ModelPart legpanelR5;
+	private final ModelPart legpanelR6;
+	private final ModelPart backpanelR1;
+	private final ModelPart backpanelR2;
+	private final ModelPart backpanelR3;
+	private final ModelPart backpanelL3;
+	private final ModelPart legpanelL4;
+	private final ModelPart legpanelL5;
+	private final ModelPart legpanelL6;
+	private final ModelPart backpanelL1;
+	private final ModelPart backpanelL2;
+	private final ModelPart sidepanelL1;
+	private final ModelPart sidepanelR1;
+	private final ModelPart sidepanelR2;
+	private final ModelPart sidepanelR3;
+	private final ModelPart sidepanelR4;
+	private final ModelPart sidepanelL2;
+	private final ModelPart sidepanelL3;
+	private final ModelPart sidepanelL4;
+	private final ModelPart legpanelC1;
+	private final ModelPart legpanelC2;
+	private final ModelPart legpanelC3;
+	private final ModelPart cloak1;
+	private final ModelPart cloak2;
+	private final ModelPart cloak3;
+
+	private boolean isWarden;
+	private int hoodEyeLight;
+
+	public ModelEldritchGuardian() {
+		super(RenderType::entityCutout);
+		MeshDefinition mesh = new MeshDefinition();
+		PartDefinition root = mesh.getRoot();
+
+		root.addOrReplaceChild("belt_r", CubeListBuilder.create().texOffs(76, 44).addBox(-5.0f, 4.0f, -3.0f, 1, 3, 6),
+				PartPose.offset(0.0f, -6.0f, 0.0f));
+		root.addOrReplaceChild("mbelt", CubeListBuilder.create().texOffs(56, 55).addBox(-4.0f, 8.0f, -3.0f, 8, 4, 1),
+				PartPose.offset(0.0f, -6.0f, 0.0f));
+		root.addOrReplaceChild("mbelt_l", CubeListBuilder.create().texOffs(76, 44).addBox(4.0f, 8.0f, -3.0f, 1, 3, 6),
+				PartPose.offset(0.0f, -6.0f, 0.0f));
+		root.addOrReplaceChild("mbelt_r", CubeListBuilder.create().texOffs(76, 44).addBox(-5.0f, 8.0f, -3.0f, 1, 3, 6),
+				PartPose.offset(0.0f, -6.0f, 0.0f));
+		root.addOrReplaceChild("belt_l", CubeListBuilder.create().texOffs(76, 44).addBox(4.0f, 4.0f, -3.0f, 1, 3, 6),
+				PartPose.offset(0.0f, -6.0f, 0.0f));
+		root.addOrReplaceChild("chestplate", CubeListBuilder.create().texOffs(56, 45).addBox(-4.0f, 1.0f, -4.0f, 8, 7, 2),
+				PartPose.offset(0.0f, -6.0f, 0.0f));
+		root.addOrReplaceChild("hood_eye", CubeListBuilder.create().texOffs(0, 0).addBox(-4.0f, -8.0f, -4.0f, 8, 8, 8),
+				PartPose.offset(0.0f, -6.0f, 0.0f));
+
+		PartDefinition hood1Def = root.addOrReplaceChild("hood1", CubeListBuilder.create().texOffs(40, 12).addBox(-4.0f, -8.0f, -4.0f, 8, 8, 8),
+				PartPose.offset(0.0f, -6.0f, 0.0f));
+		hood1Def.addOrReplaceChild("hood2", CubeListBuilder.create().texOffs(36, 28).addBox(-3.5f, -8.7f, 2.0f, 7, 7, 3),
+				PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, -0.2268928f, 0.0f, 0.0f));
+		hood1Def.addOrReplaceChild("hood3", CubeListBuilder.create().texOffs(22, 19).addBox(-3.0f, -9.0f, 2.5f, 6, 6, 3),
+				PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, -0.3490659f, 0.0f, 0.0f));
+		hood1Def.addOrReplaceChild("hood4", CubeListBuilder.create().texOffs(40, 4).addBox(-2.5f, -9.7f, 3.5f, 5, 5, 3),
+				PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, -0.5759587f, 0.0f, 0.0f));
+
+		root.addOrReplaceChild("backplate", CubeListBuilder.create().texOffs(36, 45).addBox(-4.0f, 1.0f, 2.0f, 8, 11, 2),
+				PartPose.offset(0.0f, -6.0f, 0.0f));
+		root.addOrReplaceChild("shoulderplate_top_r", CubeListBuilder.create().texOffs(110, 37).addBox(-5.5f, -2.5f, -3.5f, 2, 1, 7),
+				PartPose.offsetAndRotation(-5.0f, -4.0f, 0.0f, -0.3665191f, 0.3141593f, 0.4363323f));
+		root.addOrReplaceChild("shoulderplate_r1", CubeListBuilder.create().texOffs(110, 45).addBox(3.5f, -1.5f, -3.5f, 1, 4, 7),
+				PartPose.offsetAndRotation(5.0f, -4.0f, 0.0f, -0.3665191f, -0.3141593f, -0.4363323f));
+		root.addOrReplaceChild("shoulderplate_r2", CubeListBuilder.create().texOffs(94, 45).addBox(-3.5f, 1.5f, -3.5f, 1, 3, 7),
+				PartPose.offsetAndRotation(-5.0f, -4.0f, 0.0f, -0.3665191f, 0.3141593f, 0.4363323f));
+		root.addOrReplaceChild("shoulderplate_r3", CubeListBuilder.create().texOffs(94, 45).addBox(-2.5f, 3.5f, -3.5f, 1, 3, 7),
+				PartPose.offsetAndRotation(-5.0f, -4.0f, 0.0f, -0.3665191f, 0.3141593f, 0.4363323f));
+		root.addOrReplaceChild("shoulder_r", CubeListBuilder.create().texOffs(56, 35).addBox(-3.5f, -2.5f, -2.5f, 5, 5, 5),
+				PartPose.offsetAndRotation(-5.0f, -4.0f, 0.0f, -0.3665191f, 0.122173f, 0.0349066f));
+
+		PartDefinition armL1Def = root.addOrReplaceChild("arm_l1", CubeListBuilder.create().texOffs(72, 8).addBox(-1.0f, 2.5f, -1.5f, 4, 10, 5),
+				PartPose.offsetAndRotation(5.0f, -4.0f, 0.0f, -0.9599311f, -0.1047198f, -0.1919862f));
+		armL1Def.addOrReplaceChild("arm_l2", CubeListBuilder.create().texOffs(76, 28).addBox(-1.0f, 9.5f, 3.5f, 4, 3, 3), PartPose.ZERO);
+		armL1Def.addOrReplaceChild("arm_l3", CubeListBuilder.create().texOffs(76, 23).addBox(-1.0f, 6.5f, 3.5f, 4, 3, 2), PartPose.ZERO);
+
+		PartDefinition armR1Def = root.addOrReplaceChild("arm_r1", CubeListBuilder.create().texOffs(72, 8).addBox(-3.0f, 2.5f, -1.5f, 4, 10, 5),
+				PartPose.offsetAndRotation(-5.0f, -4.0f, 0.0f, -0.9599311f, 0.1047198f, 0.1919862f));
+		armR1Def.addOrReplaceChild("arm_r2", CubeListBuilder.create().texOffs(76, 28).addBox(-3.0f, 9.5f, 3.5f, 4, 3, 3), PartPose.ZERO);
+		armR1Def.addOrReplaceChild("arm_r3", CubeListBuilder.create().texOffs(76, 23).addBox(-3.0f, 6.5f, 3.5f, 4, 3, 2), PartPose.ZERO);
+
+		root.addOrReplaceChild("shoulder_l", CubeListBuilder.create().texOffs(56, 35).mirror().addBox(-1.5f, -2.5f, -2.5f, 5, 5, 5),
+				PartPose.offsetAndRotation(5.0f, -4.0f, 0.0f, -0.3665191f, -0.122173f, -0.0349066f));
+		root.addOrReplaceChild("shoulderplate_ltop", CubeListBuilder.create().texOffs(110, 37).addBox(3.5f, -2.5f, -3.5f, 2, 1, 7),
+				PartPose.offsetAndRotation(5.0f, -4.0f, 0.0f, -0.3665191f, -0.3141593f, -0.4363323f));
+		root.addOrReplaceChild("shoulderplate_l1", CubeListBuilder.create().texOffs(110, 45).addBox(-4.5f, -1.5f, -3.5f, 1, 4, 7),
+				PartPose.offsetAndRotation(-5.0f, -4.0f, 0.0f, -0.3665191f, 0.3141593f, 0.4363323f));
+		root.addOrReplaceChild("shoulderplate_l2", CubeListBuilder.create().texOffs(94, 45).addBox(2.5f, 1.5f, -3.5f, 1, 3, 7),
+				PartPose.offsetAndRotation(5.0f, -4.0f, 0.0f, -0.3665191f, -0.3141593f, -0.4363323f));
+		root.addOrReplaceChild("shoulderplate_l3", CubeListBuilder.create().texOffs(94, 45).addBox(1.5f, 3.5f, -3.5f, 1, 3, 7),
+				PartPose.offsetAndRotation(5.0f, -4.0f, 0.0f, -0.3665191f, -0.3141593f, -0.4363323f));
+
+		root.addOrReplaceChild("legpanel_r4", CubeListBuilder.create().texOffs(0, 43).addBox(-3.0f, 0.5f, -3.5f, 2, 3, 1),
+				PartPose.offsetAndRotation(-2.0f, 6.0f, 0.0f, -0.4363323f, 0.0f, 0.0f));
+		root.addOrReplaceChild("legpanel_r5", CubeListBuilder.create().texOffs(0, 47).addBox(-3.0f, 2.5f, -2.5f, 2, 3, 1),
+				PartPose.offsetAndRotation(-2.0f, 6.0f, 0.0f, -0.4363323f, 0.0f, 0.0f));
+		root.addOrReplaceChild("legpanel_r6", CubeListBuilder.create().texOffs(6, 43).addBox(-3.0f, 4.5f, -1.5f, 2, 3, 1),
+				PartPose.offsetAndRotation(-2.0f, 6.0f, 0.0f, -0.4363323f, 0.0f, 0.0f));
+		root.addOrReplaceChild("backpanel_r1", CubeListBuilder.create().texOffs(0, 18).addBox(-3.0f, 0.5f, 2.5f, 5, 3, 1),
+				PartPose.offsetAndRotation(-2.0f, 6.0f, 0.0f, 0.4363323f, 0.0f, 0.0f));
+		root.addOrReplaceChild("backpanel_r2", CubeListBuilder.create().texOffs(0, 18).addBox(-3.0f, 2.5f, 1.5f, 5, 3, 1),
+				PartPose.offsetAndRotation(-2.0f, 6.0f, 0.0f, 0.4363323f, 0.0f, 0.0f));
+		root.addOrReplaceChild("backpanel_r3", CubeListBuilder.create().texOffs(0, 18).addBox(-3.0f, 4.5f, 0.5f, 5, 3, 1),
+				PartPose.offsetAndRotation(-2.0f, 6.0f, 0.0f, 0.4363323f, 0.0f, 0.0f));
+		root.addOrReplaceChild("backpanel_l3", CubeListBuilder.create().texOffs(0, 18).addBox(-2.0f, 4.5f, 0.5f, 5, 3, 1),
+				PartPose.offsetAndRotation(2.0f, 6.0f, 0.0f, 0.4363323f, 0.0f, 0.0f));
+		root.addOrReplaceChild("legpanel_l4", CubeListBuilder.create().texOffs(0, 43).addBox(1.0f, 0.5f, -3.5f, 2, 3, 1),
+				PartPose.offsetAndRotation(2.0f, 6.0f, 0.0f, -0.4363323f, 0.0f, 0.0f));
+		root.addOrReplaceChild("legpanel_l5", CubeListBuilder.create().texOffs(0, 47).addBox(1.0f, 2.5f, -2.5f, 2, 3, 1),
+				PartPose.offsetAndRotation(2.0f, 6.0f, 0.0f, -0.4363323f, 0.0f, 0.0f));
+		root.addOrReplaceChild("legpanel_l6", CubeListBuilder.create().texOffs(6, 43).addBox(1.0f, 4.5f, -1.5f, 2, 3, 1),
+				PartPose.offsetAndRotation(2.0f, 6.0f, 0.0f, -0.4363323f, 0.0f, 0.0f));
+		root.addOrReplaceChild("backpanel_l1", CubeListBuilder.create().texOffs(0, 18).addBox(-2.0f, 0.5f, 2.5f, 5, 3, 1),
+				PartPose.offsetAndRotation(2.0f, 6.0f, 0.0f, 0.4363323f, 0.0f, 0.0f));
+		root.addOrReplaceChild("backpanel_l2", CubeListBuilder.create().texOffs(0, 18).addBox(-2.0f, 2.5f, 1.5f, 5, 3, 1),
+				PartPose.offsetAndRotation(2.0f, 6.0f, 0.0f, 0.4363323f, 0.0f, 0.0f));
+		root.addOrReplaceChild("sidepanel_l1", CubeListBuilder.create().texOffs(0, 22).addBox(1.5f, 0.5f, -2.5f, 1, 4, 5),
+				PartPose.offsetAndRotation(2.0f, 6.0f, 0.0f, 0.0f, 0.0f, -0.4363323f));
+		root.addOrReplaceChild("sidepanel_r1", CubeListBuilder.create().texOffs(0, 22).addBox(-2.5f, 0.5f, -2.5f, 1, 4, 5),
+				PartPose.offsetAndRotation(-2.0f, 6.0f, 0.0f, 0.0f, 0.0f, 0.4363323f));
+
+		PartDefinition sidepanelR2Def = root.addOrReplaceChild("sidepanel_r2", CubeListBuilder.create().texOffs(0, 54).addBox(0.0f, 0.0f, -0.5f, 1, 5, 5),
+				PartPose.offsetAndRotation(-4.5f, 9.5f, -2.0f, 0.0f, 0.0f, 0.122173f));
+		PartDefinition sidepanelR3Def = sidepanelR2Def.addOrReplaceChild("sidepanel_r3", CubeListBuilder.create().texOffs(0, 35).addBox(0.0f, 0.0f, -0.5f, 1, 3, 5),
+				PartPose.offsetAndRotation(0.0f, 5.0f, 0.0f, 0.0f, 0.0f, 0.296706f));
+		sidepanelR3Def.addOrReplaceChild("sidepanel_r4", CubeListBuilder.create().texOffs(24, 35).addBox(0.0f, 0.0f, -0.5f, 1, 3, 5),
+				PartPose.offsetAndRotation(0.0f, 3.0f, 0.0f, 0.0f, 0.0f, 0.5235988f));
+
+		PartDefinition sidepanelL2Def = root.addOrReplaceChild("sidepanel_l2", CubeListBuilder.create().texOffs(0, 54).addBox(0.0f, 0.0f, -0.5f, 1, 5, 5),
+				PartPose.offsetAndRotation(4.5f, 9.5f, -2.0f, 0.0f, 0.0f, -0.122173f));
+		PartDefinition sidepanelL3Def = sidepanelL2Def.addOrReplaceChild("sidepanel_l3", CubeListBuilder.create().texOffs(0, 35).addBox(0.0f, 0.0f, -0.5f, 1, 3, 5),
+				PartPose.offsetAndRotation(0.0f, 5.0f, 0.0f, 0.0f, 0.0f, -0.296706f));
+		sidepanelL3Def.addOrReplaceChild("sidepanel_l4", CubeListBuilder.create().texOffs(24, 35).addBox(0.0f, 0.0f, -0.5f, 1, 3, 5),
+				PartPose.offsetAndRotation(0.0f, 3.0f, 0.0f, 0.0f, 0.0f, -0.5235988f));
+
+		PartDefinition legpanelC1Def = root.addOrReplaceChild("legpanel_c1", CubeListBuilder.create().texOffs(16, 45).addBox(-3.0f, 0.0f, -0.5f, 6, 8, 1),
+				PartPose.offset(0.0f, 5.5f, -3.0f));
+		PartDefinition legpanelC2Def = legpanelC1Def.addOrReplaceChild("legpanel_c2", CubeListBuilder.create().texOffs(16, 54).addBox(-3.0f, 0.0f, -0.5f, 6, 4, 1),
+				PartPose.offset(0.0f, 8.0f, 0.0f));
+		legpanelC2Def.addOrReplaceChild("legpanel_c3", CubeListBuilder.create().texOffs(32, 59).addBox(-3.0f, 0.0f, -0.5f, 6, 4, 1),
+				PartPose.offset(0.0f, 4.0f, 0.0f));
+
+		PartDefinition cloak1Def = root.addOrReplaceChild("cloak1", CubeListBuilder.create().texOffs(106, 0).addBox(0.0f, 0.0f, -0.5f, 10, 18, 1),
+				PartPose.offset(-5.0f, -6.0f, 4.0f));
+		PartDefinition cloak2Def = cloak1Def.addOrReplaceChild("cloak2", CubeListBuilder.create().texOffs(106, 19).addBox(0.0f, 0.0f, -0.5f, 10, 4, 1),
+				PartPose.offset(0.0f, 18.0f, 0.0f));
+		cloak2Def.addOrReplaceChild("cloak3", CubeListBuilder.create().texOffs(106, 24).addBox(0.0f, 0.0f, -0.5f, 10, 4, 1),
+				PartPose.offset(0.0f, 4.0f, 0.0f));
+
+		ModelPart baked = LayerDefinition.create(mesh, 128, 64).bakeRoot();
+		beltR = baked.getChild("belt_r");
+		mbelt = baked.getChild("mbelt");
+		mbeltL = baked.getChild("mbelt_l");
+		mbeltR = baked.getChild("mbelt_r");
+		beltL = baked.getChild("belt_l");
+		chestplate = baked.getChild("chestplate");
+		hoodEye = baked.getChild("hood_eye");
+		hood1 = baked.getChild("hood1");
+		hood2 = hood1.getChild("hood2");
+		hood3 = hood1.getChild("hood3");
+		hood4 = hood1.getChild("hood4");
+		backplate = baked.getChild("backplate");
+		shoulderplateTopR = baked.getChild("shoulderplate_top_r");
+		shoulderplateR1 = baked.getChild("shoulderplate_r1");
+		shoulderplateR2 = baked.getChild("shoulderplate_r2");
+		shoulderplateR3 = baked.getChild("shoulderplate_r3");
+		shoulderR = baked.getChild("shoulder_r");
+		armL1 = baked.getChild("arm_l1");
+		armL2 = armL1.getChild("arm_l2");
+		armL3 = armL1.getChild("arm_l3");
+		armR1 = baked.getChild("arm_r1");
+		armR2 = armR1.getChild("arm_r2");
+		armR3 = armR1.getChild("arm_r3");
+		shoulderL = baked.getChild("shoulder_l");
+		shoulderplateLtop = baked.getChild("shoulderplate_ltop");
+		shoulderplateL1 = baked.getChild("shoulderplate_l1");
+		shoulderplateL2 = baked.getChild("shoulderplate_l2");
+		shoulderplateL3 = baked.getChild("shoulderplate_l3");
+		legpanelR4 = baked.getChild("legpanel_r4");
+		legpanelR5 = baked.getChild("legpanel_r5");
+		legpanelR6 = baked.getChild("legpanel_r6");
+		backpanelR1 = baked.getChild("backpanel_r1");
+		backpanelR2 = baked.getChild("backpanel_r2");
+		backpanelR3 = baked.getChild("backpanel_r3");
+		backpanelL3 = baked.getChild("backpanel_l3");
+		legpanelL4 = baked.getChild("legpanel_l4");
+		legpanelL5 = baked.getChild("legpanel_l5");
+		legpanelL6 = baked.getChild("legpanel_l6");
+		backpanelL1 = baked.getChild("backpanel_l1");
+		backpanelL2 = baked.getChild("backpanel_l2");
+		sidepanelL1 = baked.getChild("sidepanel_l1");
+		sidepanelR1 = baked.getChild("sidepanel_r1");
+		sidepanelR2 = baked.getChild("sidepanel_r2");
+		sidepanelR3 = sidepanelR2.getChild("sidepanel_r3");
+		sidepanelR4 = sidepanelR3.getChild("sidepanel_r4");
+		sidepanelL2 = baked.getChild("sidepanel_l2");
+		sidepanelL3 = sidepanelL2.getChild("sidepanel_l3");
+		sidepanelL4 = sidepanelL3.getChild("sidepanel_l4");
+		legpanelC1 = baked.getChild("legpanel_c1");
+		legpanelC2 = legpanelC1.getChild("legpanel_c2");
+		legpanelC3 = legpanelC2.getChild("legpanel_c3");
+		cloak1 = baked.getChild("cloak1");
+		cloak2 = cloak1.getChild("cloak2");
+		cloak3 = cloak2.getChild("cloak3");
+	}
+
+	@Override
+	public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+		isWarden = entity instanceof EntityEldritchWarden;
+
+		// Parts the true original only ever rotated once at construction time - reasserted every frame here
+		// since this model has no automatic per-frame pose reset (same real defensive convention already
+		// established for ModelEldritchCrab).
+		setRotation(beltR, 0.0f, 0.0f, 0.0f);
+		setRotation(mbelt, 0.0f, 0.0f, 0.0f);
+		setRotation(mbeltL, 0.0f, 0.0f, 0.0f);
+		setRotation(mbeltR, 0.0f, 0.0f, 0.0f);
+		setRotation(beltL, 0.0f, 0.0f, 0.0f);
+		setRotation(chestplate, 0.0f, 0.0f, 0.0f);
+		setRotation(backplate, 0.0f, 0.0f, 0.0f);
+		setRotation(shoulderplateTopR, -0.3665191f, 0.3141593f, 0.4363323f);
+		setRotation(shoulderplateR1, -0.3665191f, -0.3141593f, -0.4363323f);
+		setRotation(shoulderplateR2, -0.3665191f, 0.3141593f, 0.4363323f);
+		setRotation(shoulderplateR3, -0.3665191f, 0.3141593f, 0.4363323f);
+		setRotation(shoulderR, -0.3665191f, 0.122173f, 0.0349066f);
+		setRotation(armL2, 0.0f, 0.0f, 0.0f);
+		setRotation(armL3, 0.0f, 0.0f, 0.0f);
+		setRotation(armR2, 0.0f, 0.0f, 0.0f);
+		setRotation(armR3, 0.0f, 0.0f, 0.0f);
+		setRotation(shoulderL, -0.3665191f, -0.122173f, -0.0349066f);
+		setRotation(shoulderplateLtop, -0.3665191f, -0.3141593f, -0.4363323f);
+		setRotation(shoulderplateL1, -0.3665191f, 0.3141593f, 0.4363323f);
+		setRotation(shoulderplateL2, -0.3665191f, -0.3141593f, -0.4363323f);
+		setRotation(shoulderplateL3, -0.3665191f, -0.3141593f, -0.4363323f);
+		setRotation(legpanelR4, -0.4363323f, 0.0f, 0.0f);
+		setRotation(legpanelR5, -0.4363323f, 0.0f, 0.0f);
+		setRotation(legpanelR6, -0.4363323f, 0.0f, 0.0f);
+		setRotation(backpanelR1, 0.4363323f, 0.0f, 0.0f);
+		setRotation(backpanelR2, 0.4363323f, 0.0f, 0.0f);
+		setRotation(backpanelR3, 0.4363323f, 0.0f, 0.0f);
+		setRotation(backpanelL3, 0.4363323f, 0.0f, 0.0f);
+		setRotation(legpanelL4, -0.4363323f, 0.0f, 0.0f);
+		setRotation(legpanelL5, -0.4363323f, 0.0f, 0.0f);
+		setRotation(legpanelL6, -0.4363323f, 0.0f, 0.0f);
+		setRotation(backpanelL1, 0.4363323f, 0.0f, 0.0f);
+		setRotation(backpanelL2, 0.4363323f, 0.0f, 0.0f);
+		setRotation(sidepanelL1, 0.0f, 0.0f, -0.4363323f);
+		setRotation(sidepanelR1, 0.0f, 0.0f, 0.4363323f);
+		setRotation(hood2, -0.2268928f, 0.0f, 0.0f);
+		setRotation(hood3, -0.3490659f, 0.0f, 0.0f);
+		setRotation(hood4, -0.5759587f, 0.0f, 0.0f);
+
+		// Real head look - Hood1's own rotation, HoodEye copies it exactly (matching the true original).
+		hood1.yRot = netHeadYaw / Mth.RAD_TO_DEG;
+		hood1.xRot = headPitch / Mth.RAD_TO_DEG;
+		hoodEye.xRot = hood1.xRot;
+		hoodEye.yRot = hood1.yRot;
+
+		// Real arm-lift (fired by a real entity-event on ranged-attack orb release, decayed client-side) plus
+		// the real constant idle sway both arms always have.
+		float armLiftR = 0.0f;
+		float armLiftL = 0.0f;
+		if (entity instanceof EntityEldritchGuardian guardian) {
+			armLiftR = guardian.getArmLiftR();
+			armLiftL = guardian.getArmLiftL();
+		} else if (entity instanceof EntityEldritchWarden warden) {
+			armLiftR = warden.getArmLiftR();
+			armLiftL = warden.getArmLiftL();
+		}
+		armL1.setRotation(-1.0f - armLiftL + Mth.sin((ageInTicks + 20.0f) / 10.0f) * 0.08f, -0.1047198f, -0.1919862f);
+		armR1.setRotation(-1.0f - armLiftR + Mth.sin(ageInTicks / 10.0f) * 0.08f, 0.1047198f, 0.1919862f);
+
+		// Real leg-panel, cloak, and side-panel sway - all driven off the same real interpolated age.
+		legpanelC1.setRotation(-0.15f + Mth.sin(ageInTicks / 8.0f) * 0.12f, 0.0f, 0.0f);
+		legpanelC2.setRotation(Mth.sin((ageInTicks - 5.0f) / 8.0f) * 0.13f, 0.0f, 0.0f);
+		legpanelC3.setRotation(Mth.sin((ageInTicks - 10.0f) / 8.0f) * 0.14f, 0.0f, 0.0f);
+		cloak1.setRotation(0.2f + Mth.sin(ageInTicks / 7.0f) * 0.08f, 0.0f, 0.0f);
+		cloak2.setRotation(Mth.sin((ageInTicks - 5.0f) / 7.0f) * 0.1f, 0.0f, 0.0f);
+		cloak3.setRotation(Mth.sin((ageInTicks - 10.0f) / 7.0f) * 0.12f, 0.0f, 0.0f);
+		sidepanelL2.setRotation(0.0f, 0.0f, -0.2f + Mth.sin((ageInTicks + 10.0f) / 8.0f) * 0.12f);
+		sidepanelL3.setRotation(0.0f, 0.0f, Mth.sin((ageInTicks + 5.0f) / 8.0f) * 0.13f);
+		sidepanelL4.setRotation(0.0f, 0.0f, Mth.sin(ageInTicks / 8.0f) * 0.14f);
+		sidepanelR2.setRotation(0.0f, 0.0f, 0.2f + Mth.sin((ageInTicks - 5.0f) / 8.0f) * 0.12f);
+		sidepanelR3.setRotation(0.0f, 0.0f, Mth.sin((ageInTicks - 10.0f) / 8.0f) * 0.13f);
+		sidepanelR4.setRotation(0.0f, 0.0f, Mth.sin((ageInTicks - 15.0f) / 8.0f) * 0.14f);
+
+		// Real pulsing eye glow (Warden only) - see the class doc comment for the real single-pass
+		// simplification vs. the true original's own real second additive draw call.
+		if (isWarden) {
+			float pulse = 195.0f + Mth.sin(entity.tickCount / 3.0f) * 15.0f + 15.0f;
+			int blockLight = Mth.clamp(Math.round((pulse - 8.0f) / 16.0f), 0, 15);
+			hoodEyeLight = LightTexture.pack(blockLight, 0);
+		}
+	}
+
+	@Override
+	public void renderToBuffer(PoseStack poseStack, VertexConsumer buffer, int packedLight, int packedOverlay, int color) {
+		beltR.render(poseStack, buffer, packedLight, packedOverlay, color);
+		mbelt.render(poseStack, buffer, packedLight, packedOverlay, color);
+		mbeltL.render(poseStack, buffer, packedLight, packedOverlay, color);
+		mbeltR.render(poseStack, buffer, packedLight, packedOverlay, color);
+		beltL.render(poseStack, buffer, packedLight, packedOverlay, color);
+		chestplate.render(poseStack, buffer, packedLight, packedOverlay, color);
+		hood1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		backplate.render(poseStack, buffer, packedLight, packedOverlay, color);
+		shoulderplateTopR.render(poseStack, buffer, packedLight, packedOverlay, color);
+		shoulderplateR1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		shoulderplateR2.render(poseStack, buffer, packedLight, packedOverlay, color);
+		shoulderplateR3.render(poseStack, buffer, packedLight, packedOverlay, color);
+		shoulderR.render(poseStack, buffer, packedLight, packedOverlay, color);
+		armL1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		armR1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		shoulderL.render(poseStack, buffer, packedLight, packedOverlay, color);
+		shoulderplateLtop.render(poseStack, buffer, packedLight, packedOverlay, color);
+		shoulderplateL1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		shoulderplateL2.render(poseStack, buffer, packedLight, packedOverlay, color);
+		shoulderplateL3.render(poseStack, buffer, packedLight, packedOverlay, color);
+		legpanelR4.render(poseStack, buffer, packedLight, packedOverlay, color);
+		legpanelR5.render(poseStack, buffer, packedLight, packedOverlay, color);
+		legpanelR6.render(poseStack, buffer, packedLight, packedOverlay, color);
+		backpanelR1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		backpanelR2.render(poseStack, buffer, packedLight, packedOverlay, color);
+		backpanelR3.render(poseStack, buffer, packedLight, packedOverlay, color);
+		backpanelL3.render(poseStack, buffer, packedLight, packedOverlay, color);
+		legpanelL4.render(poseStack, buffer, packedLight, packedOverlay, color);
+		legpanelL5.render(poseStack, buffer, packedLight, packedOverlay, color);
+		legpanelL6.render(poseStack, buffer, packedLight, packedOverlay, color);
+		backpanelL1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		backpanelL2.render(poseStack, buffer, packedLight, packedOverlay, color);
+		cloak1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		sidepanelR1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		sidepanelL1.render(poseStack, buffer, packedLight, packedOverlay, color);
+		sidepanelL2.render(poseStack, buffer, packedLight, packedOverlay, color);
+		sidepanelR2.render(poseStack, buffer, packedLight, packedOverlay, color);
+		legpanelC1.render(poseStack, buffer, packedLight, packedOverlay, color);
+
+		if (isWarden) {
+			poseStack.pushPose();
+			poseStack.scale(1.01f, 1.01f, 1.01f);
+			hoodEye.render(poseStack, buffer, hoodEyeLight, packedOverlay, color);
+			poseStack.popPose();
+		}
+	}
+
+	private static void setRotation(ModelPart part, float x, float y, float z) {
+		part.setRotation(x, y, z);
+	}
 }
