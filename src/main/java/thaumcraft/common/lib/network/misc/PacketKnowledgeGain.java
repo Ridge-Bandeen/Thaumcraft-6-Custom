@@ -1,63 +1,38 @@
 package thaumcraft.common.lib.network.misc;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Minecraft;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.util.SoundCategory;
-import net.minecraftforge.fml.common.network.ByteBufUtils;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
-import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-import thaumcraft.api.capabilities.IPlayerKnowledge;
-import thaumcraft.api.research.ResearchCategories;
-import thaumcraft.api.research.ResearchCategory;
-import thaumcraft.client.lib.events.HudHandler;
-import thaumcraft.client.lib.events.RenderEventHandler;
-import thaumcraft.common.lib.SoundsTC;
 
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import thaumcraft.Thaumcraft;
 
-public class PacketKnowledgeGain implements IMessage, IMessageHandler<PacketKnowledgeGain, IMessage>
-{
-    private byte type;
-    private String cat;
-    
-    public PacketKnowledgeGain() {
-    }
-    
-    public PacketKnowledgeGain(byte type, String value) {
-        this.type = type;
-        cat = ((value == null) ? "" : value);
-    }
-    
-    public void toBytes(ByteBuf buffer) {
-        buffer.writeByte(type);
-        ByteBufUtils.writeUTF8String(buffer, cat);
-    }
-    
-    public void fromBytes(ByteBuf buffer) {
-        type = buffer.readByte();
-        cat = ByteBufUtils.readUTF8String(buffer);
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public IMessage onMessage(PacketKnowledgeGain message, MessageContext ctx) {
-        Minecraft.getMinecraft().addScheduledTask(new Runnable() {
-            @Override
-            public void run() {
-                processMessage(message);
-            }
-        });
-        return null;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    void processMessage(PacketKnowledgeGain message) {
-        EntityPlayer p = Minecraft.getMinecraft().player;
-        IPlayerKnowledge.EnumKnowledgeType type = IPlayerKnowledge.EnumKnowledgeType.values()[message.type];
-        ResearchCategory cat = (message.cat.length() > 0) ? ResearchCategories.getResearchCategory(message.cat) : null;
-        RenderEventHandler instance = RenderEventHandler.INSTANCE;
-        RenderEventHandler.hudHandler.knowledgeGainTrackers.add(new HudHandler.KnowledgeGainTracker(type, cat, 40 + p.world.rand.nextInt(20), p.world.rand.nextLong()));
-        p.world.playSound(p.posX, p.posY, p.posZ, SoundsTC.learn, SoundCategory.AMBIENT, 1.0f, 1.0f, false);
-    }
+/**
+ * Replaces the old (1.12.2) {@code PacketKnowledgeGain} - a client-bound "you gained a point of knowledge"
+ * notification, restored 2026-09-24 alongside {@link thaumcraft.client.gui.KnowledgeGainOverlay}. The true
+ * original's own real dispatch fires one of these PER POINT actually gained (see {@code
+ * ThaumcraftInternalMethodHandler#addKnowledge}'s own doc comment for why - the true original's own real
+ * {@code ResearchManager#addKnowledge} sends one packet per point of real post-clamp delta, not one packet per
+ * call), so a single {@code addKnowledge(..., 5)} call can - and should - fire 5 of these, each becoming its
+ * own real independently-animated flying icon.
+ *
+ * <p>{@code category} is the empty string for a knowledge type with no real per-category breakdown (matches
+ * the true original's own real {@code EnumKnowledgeType#hasFields()} gate and its own real "" sentinel for
+ * "no category" - {@link net.minecraft.world.item.ItemStack#STREAM_CODEC}-style optional wrapping wasn't used
+ * here specifically to mirror that real sentinel convention).
+ */
+public record PacketKnowledgeGain(byte knowledgeType, String category) implements CustomPacketPayload {
+
+	public static final Type<PacketKnowledgeGain> TYPE =
+			new Type<>(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "knowledge_gain"));
+
+	public static final StreamCodec<RegistryFriendlyByteBuf, PacketKnowledgeGain> STREAM_CODEC = StreamCodec.composite(
+			ByteBufCodecs.BYTE, PacketKnowledgeGain::knowledgeType,
+			ByteBufCodecs.STRING_UTF8, PacketKnowledgeGain::category,
+			PacketKnowledgeGain::new);
+
+	@Override
+	public Type<? extends CustomPacketPayload> type() {
+		return TYPE;
+	}
 }

@@ -468,6 +468,23 @@ public final class ClientFxHandlers {
 		}
 	}
 
+	/** Real client-bound handler for {@link thaumcraft.common.lib.network.misc.PacketKnowledgeGain} - resolves
+	 * the real category key back to a {@link thaumcraft.api.research.ResearchCategory} (the empty-string
+	 * sentinel means "no category", matching the true original's own real convention), hands the gain off to
+	 * {@link thaumcraft.client.gui.KnowledgeGainOverlay}, and plays the real {@code learn} sound at the
+	 * player's own position (matches the true original's own real ambient-category playback exactly). */
+	public static void handleKnowledgeGain(thaumcraft.common.lib.network.misc.PacketKnowledgeGain payload) {
+		var mc = Minecraft.getInstance();
+		var player = mc.player;
+		var level = mc.level;
+		if (player == null || level == null) return;
+		var type = thaumcraft.api.capabilities.IPlayerKnowledge.EnumKnowledgeType.values()[payload.knowledgeType()];
+		var category = payload.category().isEmpty() ? null : thaumcraft.api.research.ResearchCategories.getResearchCategory(payload.category());
+		thaumcraft.client.gui.KnowledgeGainOverlay.add(type, category, level.random);
+		level.playLocalSound(player.getX(), player.getY(), player.getZ(),
+				thaumcraft.common.registry.ThaumcraftSounds.LEARN.get(), SoundSource.AMBIENT, 1.0f, 1.0f, false);
+	}
+
 	private ClientFxHandlers() {
 	}
 

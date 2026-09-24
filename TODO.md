@@ -355,46 +355,47 @@ deferred until now. Real findings from that audit, triaged:
           hover text, no scrollbar). Restoring the sparkle here means
           restoring that whole percentage-sidebar feature first - real,
           separate, larger UI-feature scope, not a quick FX follow-on.
-        - **`HudHandler`'s own real call site is blocked on a real, entirely
-          UNBUILT feature, not just missing FX**: the true original's own
-          real "knowledge gained" HUD notification (an animated icon flying
-          from screen-center to the hotbar's book icon, plus a fade-in book
-          glow, plus `SoundsTC.learn`, plus this sparkle trail) has NO
-          modern equivalent anywhere in this port at all. Checked, not
-          assumed: `PacketKnowledgeGain`
-          (`common/lib/network/misc/PacketKnowledgeGain.java`) and the
-          `HudHandler` it targets are both stale, unported 1.12.2 copies
-          (old `IMessage`/`EntityPlayer`/`SideOnly` imports, won't compile
-          under NeoForge 1.21.1 as-is - same "stale leftover, not the real
-          class" pattern found repeatedly all session); the real modern
-          knowledge-gain entry point, `ThaumcraftInternalMethodHandler
-          #addKnowledge` (`common/ThaumcraftInternalMethodHandler.java:53`,
-          confirmed to be the one real call chain every `addKnowledge`
-          caller in the whole tree actually reaches), sends NO client
-          notification of any kind today - no packet, no sound, no HUD
-          cue. This is a real, previously-unnoticed, complete feature gap
-          (not a simplification anyone chose), bigger than the sparkle FX
-          it happens to also carry.
-        Real recommended shape for whenever this gets built (not started):
-        a small standalone POJO for the sparkle particle itself (position/
-        velocity/color/age/frame fields mirroring `FXGeneric`'s own already-
-        ported field set, since modern `FXGeneric` is now a real vanilla
-        `Particle` subclass and can't be reused as a GUI-space parent the
-        way the true original's inheritance did), ticked via a
-        `ClientTickEvent.Post` subscriber (same pattern `FocusRadialOverlay`
-        already uses for its own tick-driven state) and rendered via
-        `RenderGuiEvent.Post`. The knowledge-gain HUD feature itself would
-        need a new sibling class alongside `FocusRadialOverlay`/
-        `SanityCheckerOverlay` (e.g. `KnowledgeGainOverlay`), a modernized
-        `CustomPacketPayload` version of `PacketKnowledgeGain`, and a real
-        new broadcast call from `ThaumcraftInternalMethodHandler
-        #addKnowledge`. Given the size (2 genuinely separate prerequisite
-        features before the FX itself even applies), this is now scoped
-        comparably to `FLUX_RIFT`'s own dedicated shader session - a real
-        future chunk, not a quick pickup, and probably worth splitting
-        into 2 independent chunks (`HudHandler`'s knowledge-gain
-        notification system; `GuiResearchTable`'s percentage sidebar) built
-        separately before either gets its own sparkle trail wired on top.
+        - ~~**`HudHandler`'s own real "knowledge gained" HUD notification**~~
+          — closed 2026-09-24. Confirmed, not assumed: `PacketKnowledgeGain`
+          and the `HudHandler` it targeted were both stale, unported 1.12.2
+          copies (old `IMessage`/`EntityPlayer`/`SideOnly` imports); the real
+          modern knowledge-gain entry point,
+          `ThaumcraftInternalMethodHandler#addKnowledge`, sent NO client
+          notification of any kind before this chunk - no packet, no sound,
+          no HUD cue, a real complete feature gap, not a simplification
+          anyone chose. Restored as a new `KnowledgeGainOverlay` class
+          (matching the `FocusRadialOverlay`/`SanityCheckerOverlay` sibling
+          pattern): a modern `PacketKnowledgeGain` `CustomPacketPayload`,
+          fired once PER POINT of real post-clamp knowledge delta (matching
+          the true original's own real `ResearchManager#addKnowledge` loop,
+          not once per call - `addKnowledge` now computes a real before/
+          after delta and loops), and the real multi-phase icon animation
+          (fly-in/settle/shrink-toward-the-book-icon, birth/death glow-burst
+          flashes, category icon overlay, book-icon fade) ported faithfully
+          from `HudHandler#renderKnowledgeGains`'s own real formulas. Built
+          a real new shared "tinted, optionally-additive 2D screen-space
+          quad via a manual `Tesselator`/`BufferBuilder` draw against the
+          `GuiGraphics` pose stack" technique along the way - directly
+          reusable for `FXGenericGui`'s own real particle system whenever
+          that gets built. Real, separate, still-NOT-built gap: the true
+          original's own real sparkle-particle tie-in (`current.sparks`,
+          `drawSimpleSparkleGui`) isn't wired - that's `FXGenericGui`'s own
+          real particle system itself, not this notification feature; the
+          `sparks` field is carried faithfully but currently always false.
+          Two clean 499/499 `runGameTestServer` passes and a clean `test`
+          task.
+        **`GuiResearchTable`'s own real percentage-sidebar half remains
+        real, separate, not-yet-started work.** Directly confirmed
+        2026-09-24 (read the true original's own real `GuiResearchTable.java`
+        in full, not just the earlier research pass's summary): genuinely
+        762 real lines vs. this port's own 123 - real card hover/zoom-in/
+        zoom-out animation state per card, a real dedicated Galactic font
+        renderer for card flavor text, real gilded-paper vs. plain-paper
+        card textures, plus the real percentage sidebar itself - confirms
+        this is comparably scoped to a full screen rewrite, not a quick
+        addition to the existing one, comparable to `FLUX_RIFT`'s own
+        dedicated shader session. Not picked up this session; a real future
+        chunk on its own.
       - ~~**`TileInfusionMatrix`'s "pedestal items flying into the matrix
         during a craft" particle visual**~~ — closed 2026-09-24. Found
         2026-09-17 while scoping `FXEssentiaStream`, genuinely unrelated to

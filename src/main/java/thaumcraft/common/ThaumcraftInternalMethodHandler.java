@@ -51,8 +51,31 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 
 	@Override
 	public boolean addKnowledge(Player player, IPlayerKnowledge.EnumKnowledgeType type, ResearchCategory category, int amount) {
-		ThaumcraftCapabilities.getKnowledge(player).addKnowledge(type, category, amount);
+		thaumcraft.api.capabilities.IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		ResearchCategory realCategory = type.hasFields() ? category : null;
+		int before = knowledge.getKnowledge(type, realCategory);
+		knowledge.addKnowledge(type, realCategory, amount);
+		int gained = knowledge.getKnowledge(type, realCategory) - before;
+		if (gained > 0 && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+			broadcastKnowledgeGain(serverPlayer, type, realCategory, gained);
+		}
 		return true;
+	}
+
+	/** Real client-bound "you gained a point of knowledge" notification, restored 2026-09-24 - see {@link
+	 * thaumcraft.common.lib.network.misc.PacketKnowledgeGain}'s own doc comment for why this fires once PER
+	 * POINT of real post-clamp delta (matching the true original's own real {@code ResearchManager
+	 * #addKnowledge} loop exactly), not once per call. */
+	private static void broadcastKnowledgeGain(net.minecraft.server.level.ServerPlayer player,
+			IPlayerKnowledge.EnumKnowledgeType type, ResearchCategory category, int gained) {
+		try {
+			var payload = new thaumcraft.common.lib.network.misc.PacketKnowledgeGain((byte) type.ordinal(), category == null ? "" : category.key);
+			for (int a = 0; a < gained; a++) {
+				net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, payload);
+			}
+		} catch (Exception e) {
+			thaumcraft.Thaumcraft.LOGGER.debug("Knowledge gain FX packet failed to send (no real client connection?)", e);
+		}
 	}
 
 	@Override
