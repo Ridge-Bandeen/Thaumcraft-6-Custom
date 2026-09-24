@@ -392,6 +392,43 @@ public final class ClientFxHandlers {
 		Minecraft.getInstance().particleEngine.add(fx);
 	}
 
+	/** Real client-bound handler for {@link thaumcraft.common.lib.network.fx.PacketFXEssentiaSource} - spawns
+	 * (or extends an already-active) real {@link thaumcraft.client.fx.particles.FXEssentiaStream}, matching
+	 * the true original's own real {@code PacketFXEssentiaSource#onMessage} de-duplication exactly (the
+	 * particle's own constructor does the actual key-lookup/extend-vs-spawn decision). The true original's own
+	 * real "count" seed ({@code RenderEventHandler.tickCount}, a real shared, ever-incrementing client tick
+	 * counter) is replaced with the real client level's own real game time - same real purpose (vary the
+	 * initial-kick wobble phase between concurrently-triggered streams), no new counter needed. */
+	public static void handleEssentiaSource(thaumcraft.common.lib.network.fx.PacketFXEssentiaSource payload) {
+		var level = Minecraft.getInstance().level;
+		if (level == null) return;
+		var source = payload.source();
+		var target = payload.target();
+		int tickSeed = (int) level.getGameTime();
+		var fx = new thaumcraft.client.fx.particles.FXEssentiaStream(level, source.x(), source.y(), source.z(),
+				target.x(), target.y(), target.z(), tickSeed, payload.color(), 1.0f, payload.ext(), 0.0);
+		Minecraft.getInstance().particleEngine.add(fx);
+	}
+
+	/** Real {@link thaumcraft.client.fx.particles.FXGeneric} "essentia drip" spawn - see the true original's
+	 * own real {@code FXDispatcher.essentiaDropFx}, reused by {@link
+	 * thaumcraft.client.fx.particles.FXEssentiaStream} itself for its own real target/mid-trail drip cues. */
+	public static void spawnEssentiaDrop(net.minecraft.world.level.Level level, double x, double y, double z, float r, float g, float b, float alpha) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z,
+				clientLevel.random.nextGaussian() * 0.005, clientLevel.random.nextGaussian() * 0.005, clientLevel.random.nextGaussian() * 0.005);
+		fb.setMaxAge(20 + clientLevel.random.nextInt(10));
+		fb.setRBGColorF(r, g, b);
+		fb.setAlphaF(alpha);
+		fb.setLoop(false);
+		fb.setParticles(25, 1, 1);
+		fb.setScale(0.4f + clientLevel.random.nextFloat() * 0.2f, 0.2f);
+		fb.setLayer(1);
+		fb.setGravity(0.01f);
+		fb.setRotationSpeed(0.0f);
+		Minecraft.getInstance().particleEngine.add(fb);
+	}
+
 	private ClientFxHandlers() {
 	}
 

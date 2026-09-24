@@ -255,9 +255,8 @@ deferred until now. Real findings from that audit, triaged:
       has zero real callers anywhere in the pristine tree, not just
       `FXGenericP2E` itself) confirmed **dead in the true original itself**
       (zero real construction sites anywhere, checked via `git grep` - none
-      of these 4 will be ported). `FXEssentiaStream`
-      (`RenderEventHandler`'s own tube-network essentia-flow visualization)
-      is a bigger, separate system, still not individually scoped.
+      of these 4 will be ported). ~~`FXEssentiaStream`~~ — closed
+      2026-09-17, see the closing note further below.
       **`FXPlane`'s own one real call site** (the ARCING infusion
       enchantment's cleave slash, via `PacketFXSlash`) already has a
       working, documented vanilla-particle-burst substitute in place
@@ -340,22 +339,69 @@ deferred until now. Real findings from that audit, triaged:
         kind to how `FLUX_RIFT`'s real custom-shader work needed its own
         dedicated session before building, not a quick follow-on to
         anything already proven this session.
-      - **`FXEssentiaStream`** - confirmed 2026-09-17 to have 2 real call
-        sites of genuinely different scale: `TileWaterJug`'s own real
-        single water-pour trigger (small, well-scoped on its own) and
-        `RenderEventHandler`'s own real essentia-tube-network flow
-        visualization (a whole separate real client-only subsystem that
-        scans nearby tube connections every frame and draws a flowing
-        stream per active link - genuinely the bigger, primary real use
-        case this particle exists for). The particle's own real tube
-        geometry needs the same real ring-extrusion technique
-        `RenderFluxRift` already proved this session (same real
-        `com.sasmaster.glelwjgl` third-party dependency, confirmed by
-        reading its own real source directly), so that part is now
-        de-risked - but building just the particle for `TileWaterJug`'s
-        own minor use case while leaving the real primary tube-network
-        visualization unaddressed isn't worth doing separately; scope both
-        together as one real future chunk.
+      - **New, real, previously-unnoticed gap found 2026-09-17 while
+        scoping `FXEssentiaStream`**: `TileInfusionMatrix`'s own real
+        "pedestal items flying into the matrix during a craft" particle
+        visual (the true original's own real
+        `drawInfusionParticles1`/`drawInfusionParticles2`/
+        `drawInfusionParticles3` trio, driven by its own real local
+        `TileInfusionMatrix.SourceFX` tracking class and
+        `PacketFXInfusionSource`) - genuinely unrelated to essentia tube
+        flow despite the superficially similar name, not yet scoped in any
+        detail (which of the 3 variants map to which real pedestal-content
+        case, what geometry each needs).
+      - ~~**`FXEssentiaStream`**~~ — closed 2026-09-17. The initial read of
+        `RenderEventHandler`'s own role turned out to be wrong in a real,
+        important way once actually read in full: it's NOT a per-frame
+        world-scan of tube connections at all - the true original's own
+        real static {@code EssentiaHandler.sourceFX} map is populated by a
+        real client-bound network packet (`PacketFXEssentiaSource`),
+        exactly the same real packet-driven pattern this whole session has
+        used repeatedly (`PacketFXBlockArc`/`PacketFXSlash`/etc) -
+        `RenderEventHandler`'s own client tick handler just polls and
+        drains that queue once per tick. This is a MUCH smaller, more
+        contained real integration point than the earlier scoping guess,
+        and this port's own already-simplified `EssentiaHandler`
+        (2 clean methods, `drainEssentia`/`addEssentia`, not the true
+        original's own more complex real caching/retry version) made it
+        even more tractable: both real methods now broadcast a real new
+        `PacketFXEssentiaSource` on every real successful transfer.
+        `TileWaterJug` (the other real call site the earlier scoping note
+        flagged) reuses the exact same particle class, not separately
+        wired this pass. Real, genuine architectural substitution for the
+        particle's own real tube geometry, not a simplification: the true
+        original's own geometry came from the same real
+        `com.sasmaster.glelwjgl` third-party library `RenderFluxRift`
+        already needed a substitute for - reused that exact same real
+        ring-extrusion technique here too, applied to this particle's own
+        real dynamic, growing-then-shrinking point/radius history (a
+        single real tracked head homes toward the target with real
+        drag+attraction physics - same real shape `FXVisSparkle` already
+        established - leaving a real tapered trail behind it) rather than
+        `RenderFluxRift`'s own fixed point list. Real, faithful
+        de-duplication kept: concurrent real triggers for the exact same
+        real source→target→colour connection extend an already-active
+        real stream instead of spawning a redundant new one, matching the
+        true original's own real static-map key-reuse logic exactly - real
+        and load-bearing, since an actively-draining device calls this
+        every few real ticks and needs to read as one continuous flow.
+        Real, disclosed simplifications: the true original's own real
+        ad-hoc index-based radius taper (first ~5/last ~10 points each
+        individually formula'd) is replaced with a real smoothstep taper
+        at both real ends instead (same real visual goal - a tapered
+        capsule shape); the true original's own real continuous per-FRAME
+        wobble recompute is baked in once per real TICK instead (same real
+        tradeoff `FXSmokeSpiral` already made); real per-point brightness
+        pulsing is dropped for a flat per-particle colour. A real,
+        previously-unnoticed SEPARATE FX subsystem was found and
+        deliberately NOT pulled into this chunk while reading
+        `TileInfusionMatrix`'s own real code: a real "pedestal items flying
+        into the matrix during a craft" particle visual
+        (`drawInfusionParticles1/2/3`), genuinely unrelated to essentia
+        tube flow despite sharing a superficially similar name
+        (`TileInfusionMatrix.SourceFX`, a different, local class) - logged
+        as new, real, separate remaining scope, not built here. Two clean
+        500/500 `runGameTestServer` passes and a clean `test` task.
       - ~~**`FXFireMote`/`FXVisSparkle`/`FXSmokeSpiral`/`FXSlimyBubble`/
         `FXWispEG`**~~ — closed 2026-09-17, one batch since all 5 are real,
         faithful `SingleQuadParticle`-based billboard quads off the shared

@@ -5,10 +5,14 @@ import java.util.Comparator;
 import java.util.List;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.neoforged.neoforge.network.PacketDistributor;
+import thaumcraft.Thaumcraft;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.IAspectSource;
+import thaumcraft.common.lib.network.fx.PacketFXEssentiaSource;
 
 /**
  * Replaces the old (1.12.2) {@code EssentiaHandler}. Lets a device pull ({@link #drainEssentia}) or push
@@ -33,7 +37,8 @@ import thaumcraft.api.aspects.IAspectSource;
  * original) is ported. Real, deliberate simplification for the essentia input/output tiles specifically
  * (their own real original behavior scanned a cone off their front face) - same "drop the directional
  * precision, keep the core mechanic" precedent this port has used elsewhere.</li>
- * <li>No essentia-beam FX packet - client FX, dropped like everywhere else this session.</li>
+ * <li>No essentia-beam FX packet - dropped like everywhere else this session under this port's old blanket
+ * "no client FX" rule; restored 2026-09-17, see {@link #broadcastStreamFx}'s own doc comment.</li>
  * </ul>
  */
 public class EssentiaHandler {
@@ -49,7 +54,12 @@ public class EssentiaHandler {
 	 */
 	public static boolean drainEssentia(BlockEntity tile, Aspect aspect, int range) {
 		BlockPos target = findNearest(tile, range, source -> source.doesContainerContainAmount(aspect, 1));
-		return target != null && ((IAspectSource) tile.getLevel().getBlockEntity(target)).takeFromContainer(aspect, 1);
+		if (target == null) return false;
+		boolean taken = ((IAspectSource) tile.getLevel().getBlockEntity(target)).takeFromContainer(aspect, 1);
+		if (taken) {
+			broadcastStreamFx(tile.getLevel(), target, tile.getBlockPos(), aspect);
+		}
+		return taken;
 	}
 
 	/**
@@ -62,7 +72,30 @@ public class EssentiaHandler {
 	 */
 	public static boolean addEssentia(BlockEntity tile, Aspect aspect, int range) {
 		BlockPos target = findNearest(tile, range, source -> source.doesContainerAccept(aspect));
-		return target != null && ((IAspectSource) tile.getLevel().getBlockEntity(target)).addToContainer(aspect, 1) == 0;
+		if (target == null) return false;
+		boolean added = ((IAspectSource) tile.getLevel().getBlockEntity(target)).addToContainer(aspect, 1) == 0;
+		if (added) {
+			broadcastStreamFx(tile.getLevel(), tile.getBlockPos(), target, aspect);
+		}
+		return added;
+	}
+
+	/** Real client FX broadcast restored 2026-09-17 (was dropped under this port's old blanket "no client FX"
+	 * rule) - a real vanilla-network client-bound packet ({@link PacketFXEssentiaSource}, matching the true
+	 * original's own real packet-based mechanism exactly, not a shared-static-field trick that would break
+	 * real multiplayer) notifying nearby clients that a unit of essentia just moved from {@code from} to
+	 * {@code to}, so they can show a real flowing {@link thaumcraft.client.fx.particles.FXEssentiaStream}. Safe
+	 * to call directly from this common-side class - {@link PacketFXEssentiaSource} is a plain data record with
+	 * no client-only type anywhere in it, the same real dist-safety property {@code PacketFXBlockArc} already
+	 * established. */
+	private static void broadcastStreamFx(Level level, BlockPos from, BlockPos to, Aspect aspect) {
+		if (!(level instanceof ServerLevel serverLevel)) return;
+		try {
+			PacketDistributor.sendToPlayersNear(serverLevel, null, to.getX(), to.getY(), to.getZ(), 32.0,
+					PacketFXEssentiaSource.of(from, to, aspect.getColor(), 0));
+		} catch (Exception e) {
+			Thaumcraft.LOGGER.debug("Essentia stream FX packet failed to send (no real client connection?)", e);
+		}
 	}
 
 	private static BlockPos findNearest(BlockEntity tile, int range, java.util.function.Predicate<IAspectSource> matches) {
