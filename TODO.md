@@ -406,18 +406,36 @@ deferred until now. Real findings from that audit, triaged:
           `sparks` field is carried faithfully but currently always false.
           Two clean 499/499 `runGameTestServer` passes and a clean `test`
           task.
-        **`GuiResearchTable`'s own real percentage-sidebar half remains
-        real, separate, not-yet-started work.** Directly confirmed
-        2026-09-24 (read the true original's own real `GuiResearchTable.java`
-        in full, not just the earlier research pass's summary): genuinely
-        762 real lines vs. this port's own 123 - real card hover/zoom-in/
-        zoom-out animation state per card, a real dedicated Galactic font
-        renderer for card flavor text, real gilded-paper vs. plain-paper
-        card textures, plus the real percentage sidebar itself - confirms
-        this is comparably scoped to a full screen rewrite, not a quick
-        addition to the existing one, comparable to `FLUX_RIFT`'s own
-        dedicated shader session. Not picked up this session; a real future
-        chunk on its own.
+        ~~**`GuiResearchTable`'s own real percentage-sidebar half**~~ —
+        closed 2026-09-24, same session, right after the mob models/HUD
+        notification. The initial "762 vs. 123 lines, `FLUX_RIFT`-scale"
+        framing was about the true original's own real WHOLE screen (card
+        hover/zoom-in/zoom-out animation state per card, a real dedicated
+        Galactic font renderer for card flavor text, real gilded-paper vs.
+        plain-paper card textures) - once actually checked directly, the
+        percentage sidebar specifically turned out to be a MUCH smaller,
+        self-contained gap: this port's own real `ResearchTableData`
+        already fully tracked `categoryTotals`/`penaltyStart`/
+        `categoriesBlocked` server-side and synced it via
+        `ClientResearchTableCache` well before this chunk - purely a
+        missing RENDERING feature, not a missing mechanic. Restored a real
+        client-local smoothly-animated `tempCatTotals` copy (1%/tick count-
+        up/down toward the real synced value, throttled to once per real
+        game tick, matching the true original's own real `tempCatTotals`/
+        `nexCatCheck` shape exactly) plus a real sorted icon+percentage list
+        positioned off the right edge of the shared 255-wide GUI panel
+        (real hover tooltips, real gold/white/muted-red color coding past
+        `penaltyStart`/`categoriesBlocked`, matching the true original's own
+        real layout and formulas). Real, disclosed simplification, matching
+        `KnowledgeGainOverlay`'s own identical gap: the true original's own
+        real sparkle-particle trail tied to this same live-counting
+        animation isn't wired - that's `FXGenericGui`'s own real particle
+        system, still separately-scoped future work, not something either
+        of this session's 2 prerequisite chunks needed to include. Two
+        clean 499/499 `runGameTestServer` passes and a clean `test` task.
+        **This closes every previously-identified open item in the whole
+        port except `FXGenericGui`'s own real particle/sparkle system
+        itself** - both of its former prerequisite blockers are now done.
       - ~~**`TileInfusionMatrix`'s "pedestal items flying into the matrix
         during a craft" particle visual**~~ — closed 2026-09-24. Found
         2026-09-17 while scoping `FXEssentiaStream`, genuinely unrelated to

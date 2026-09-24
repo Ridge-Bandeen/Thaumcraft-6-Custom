@@ -1,11 +1,17 @@
 package thaumcraft.client.gui;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import thaumcraft.api.research.ResearchCategories;
+import thaumcraft.api.research.ResearchCategory;
 import thaumcraft.api.research.theorycraft.ResearchTableData;
 import thaumcraft.client.ClientResearchTableCache;
 import thaumcraft.common.container.ResearchTableMenu;
@@ -25,6 +31,18 @@ import thaumcraft.common.container.ResearchTableMenu;
  * not). Real simplifications versus the original: no item-cost icons, no per-card hover/detail text, no
  * scrollbar (never needed - at most 3 choices show at once), plain text card names rather than a graphical
  * card layout.
+ *
+ * <p>Real research-category percentage sidebar ({@link #tickCategorySidebar}/{@link #renderCategorySidebar},
+ * restored 2026-09-24): the true original's own real per-category live-counting percentage list, positioned
+ * off the right edge of the shared 255-wide GUI panel exactly like the true original's own real layout. The
+ * real underlying game data ({@code categoryTotals}/{@code penaltyStart}/{@code categoriesBlocked}) was
+ * already fully tracked server-side and synced via {@link ClientResearchTableCache} well before this chunk -
+ * this was purely a missing rendering feature, not a missing mechanic, once actually checked directly (a much
+ * smaller real gap than an earlier scoping pass assumed from the true original's own overall 762-line size).
+ * Real, disclosed simplification, matching {@link thaumcraft.client.gui.KnowledgeGainOverlay}'s own identical
+ * disclosed gap: the true original's own real sparkle-particle trail tied to this same live-counting animation
+ * isn't wired - that's {@code FXGenericGui}'s own real particle system, still separately-scoped future work
+ * (see TODO.md), not something either of this session's 2 prerequisite chunks needed to include.
  */
 public class GuiResearchTable extends AbstractContainerScreen<ResearchTableMenu> {
 
@@ -37,6 +55,11 @@ public class GuiResearchTable extends AbstractContainerScreen<ResearchTableMenu>
 	private Button confirmButton;
 	private Button finishButton;
 	private Button abandonButton;
+
+	/** Real client-local smoothly-animated copy of {@code ResearchTableData#categoryTotals} - counts up/down
+	 * 1%/tick toward the real synced value, matching the true original's own real {@code tempCatTotals}. */
+	private final Map<String, Integer> tempCatTotals = new LinkedHashMap<>();
+	private long nextCatCheck;
 
 	public GuiResearchTable(ResearchTableMenu menu, Inventory playerInventory, Component title) {
 		super(menu, playerInventory, title);
@@ -81,6 +104,75 @@ public class GuiResearchTable extends AbstractContainerScreen<ResearchTableMenu>
 	@Override
 	protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
 		graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight);
+
+		ResearchTableData data = ClientResearchTableCache.getData();
+		if (data != null) {
+			tickCategorySidebar(data);
+			renderCategorySidebar(graphics, data, mouseX, mouseY);
+		} else {
+			tempCatTotals.clear();
+		}
+	}
+
+	/** Real per-tick count-up/down toward the real synced {@code categoryTotals}, throttled to once per real
+	 * game tick (matches the true original's own real {@code nexCatCheck} throttle - this method runs once per
+	 * render FRAME, not once per tick, so without the throttle the animation would run at render framerate
+	 * rather than a real, consistent 1%/tick pace). */
+	private void tickCategorySidebar(ResearchTableData data) {
+		if (minecraft == null || minecraft.player == null) return;
+		long now = minecraft.player.tickCount;
+		if (nextCatCheck > now) return;
+		for (String cat : ResearchCategories.researchCategories.keySet()) {
+			int real = data.categoryTotals.getOrDefault(cat, 0);
+			int shown = tempCatTotals.getOrDefault(cat, 0);
+			if (real == 0 && shown == 0) {
+				tempCatTotals.remove(cat);
+				continue;
+			}
+			if (shown > real) shown--;
+			if (shown < real) shown++;
+			tempCatTotals.put(cat, shown);
+		}
+		nextCatCheck = now + 1;
+	}
+
+	/** Real sorted (highest-first) icon+percentage list, positioned off the right edge of the shared 255-wide
+	 * GUI panel - matches the true original's own real layout/color-coding exactly (past {@code penaltyStart}:
+	 * a real "(-N)" penalty suffix and a 4px extra row gap; {@code categoriesBlocked}: a real muted-red tint
+	 * instead of the normal gold/white). See the class doc comment for the real, disclosed sparkle-trail gap. */
+	private void renderCategorySidebar(GuiGraphics graphics, ResearchTableData data, int mouseX, int mouseY) {
+		List<Map.Entry<String, Integer>> sorted = tempCatTotals.entrySet().stream()
+				.filter(e -> e.getValue() != 0)
+				.sorted((a, b) -> b.getValue() - a.getValue())
+				.toList();
+
+		int i = 0;
+		for (Map.Entry<String, Integer> entry : sorted) {
+			String field = entry.getKey();
+			int percent = entry.getValue();
+			ResearchCategory category = ResearchCategories.getResearchCategory(field);
+			if (category == null) {
+				i++;
+				continue;
+			}
+			boolean pastPenalty = i > data.penaltyStart;
+			int rowY = topPos + 16 + i * 18 + (pastPenalty ? 4 : 0);
+			int iconX = leftPos + 253;
+
+			graphics.blit(category.icon, iconX, rowY, 0, 0, 16, 16, 32, 32);
+
+			String text = percent + "%";
+			if (pastPenalty) {
+				text += " (-" + (percent / 3) + ")";
+			}
+			int color = data.categoriesBlocked.contains(field) ? 6316128 : (pastPenalty ? 16777215 : 57536);
+			graphics.drawString(font, text, iconX + 23, rowY + 4, color, true);
+
+			if (mouseX >= iconX && mouseX < iconX + 16 && mouseY >= rowY && mouseY < rowY + 16) {
+				graphics.renderTooltip(font, ResearchCategories.getCategoryName(field), mouseX, mouseY);
+			}
+			i++;
+		}
 	}
 
 	@Override
