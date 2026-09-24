@@ -20,9 +20,9 @@ import net.minecraft.world.level.block.state.BlockState;
  * the real homing motion (identical formula to {@link FXBoreSparkle} - the true original itself duplicates
  * this exact code between the two classes, not shared there either) needs a real override.
  *
- * <p>Real, documented cut: the true original's own second constructor (spawning from a dropped item's own
- * icon rather than a block's) isn't ported - its only real true-original call site is {@code
- * drawInfusionParticles1}, a separate Infusion Matrix visual not yet restored; add it if/when that lands.
+ * <p>The true original's own second constructor (spawning from a dropped item's own icon rather than a
+ * block's) is restored too, 2026-09-17 - see {@link FXBoreParticlesItem}'s own doc comment for why it's a
+ * real separate class here rather than a second constructor on this one.
  */
 public class FXBoreParticles extends TerrainParticle {
 
@@ -53,6 +53,14 @@ public class FXBoreParticles extends TerrainParticle {
 
 	public void setTarget(Entity target) {
 		this.target = target;
+	}
+
+	/** Public wrapper for {@link #setAlpha} - {@code protected} on the base {@link
+	 * net.minecraft.client.particle.Particle}, unreachable from {@code ClientFxHandlers}' own different
+	 * package otherwise. */
+	public FXBoreParticles setAlphaF(float value) {
+		setAlpha(value);
+		return this;
 	}
 
 	@Override

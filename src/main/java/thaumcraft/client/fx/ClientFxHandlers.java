@@ -429,6 +429,45 @@ public final class ClientFxHandlers {
 		Minecraft.getInstance().particleEngine.add(fb);
 	}
 
+	/** Real client-bound handler for {@link thaumcraft.common.lib.network.fx.PacketFXInfusionSource} - a real
+	 * short burst (4 particles) of whichever real variant matches the consumed item, plus a real 1-in-3 chance
+	 * of a real {@link thaumcraft.client.fx.particles.FXBoreSparkle} instead - matching the true original's
+	 * own real dispatch and weighting exactly (see that packet's own doc comment for the real "one burst at
+	 * consumption" vs. the true original's own real multi-tick trickle). */
+	public static void handleInfusionSource(thaumcraft.common.lib.network.fx.PacketFXInfusionSource payload) {
+		var level = Minecraft.getInstance().level;
+		if (level == null) return;
+		BlockPos source = payload.source();
+		BlockPos target = payload.target();
+		net.minecraft.world.item.ItemStack stack = payload.stack();
+		var particleEngine = Minecraft.getInstance().particleEngine;
+		var random = level.random;
+
+		if (random.nextInt(3) == 0) {
+			var sparkle = new thaumcraft.client.fx.particles.FXBoreSparkle(level,
+					source.getX() + random.nextFloat(), source.getY() + 1 + random.nextFloat(), source.getZ() + random.nextFloat(),
+					target.getX() + 0.5, target.getY() - 0.5, target.getZ() + 0.5);
+			sparkle.setRBGColorF(0.4f + random.nextFloat() * 0.2f, 0.2f, 0.6f + random.nextFloat() * 0.3f);
+			particleEngine.add(sparkle);
+		} else if (stack.getItem() instanceof net.minecraft.world.item.BlockItem blockItem) {
+			var state = blockItem.getBlock().defaultBlockState();
+			for (int a = 0; a < 4; a++) {
+				var fb = new thaumcraft.client.fx.particles.FXBoreParticles(level,
+						source.getX() + random.nextFloat(), source.getY() + 1 + random.nextFloat(), source.getZ() + random.nextFloat(),
+						target.getX() + 0.5, target.getY() - 0.5, target.getZ() + 0.5, state);
+				fb.setAlphaF(0.3f);
+				particleEngine.add(fb);
+			}
+		} else {
+			for (int a = 0; a < 4; a++) {
+				var fb = new thaumcraft.client.fx.particles.FXBoreParticlesItem(level,
+						source.getX() + 0.4 + random.nextFloat() * 0.2, source.getY() + 1.23 + random.nextFloat() * 0.2, source.getZ() + 0.4 + random.nextFloat() * 0.2,
+						target.getX() + 0.5, target.getY() - 0.5, target.getZ() + 0.5, stack);
+				particleEngine.add(fb);
+			}
+		}
+	}
+
 	private ClientFxHandlers() {
 	}
 

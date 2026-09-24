@@ -14,6 +14,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
@@ -29,6 +30,8 @@ import net.minecraft.world.level.block.SkullBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.neoforged.neoforge.network.PacketDistributor;
+import thaumcraft.Thaumcraft;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.aspects.IAspectContainer;
@@ -349,8 +352,10 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 					if (level.getBlockEntity(pp) instanceof TilePedestal ped2
 							&& !ped2.getItem().isEmpty()
 							&& ItemStack.isSameItemSameComponents(ped2.getItem(), recipeIngredients.get(a))) {
+						ItemStack consumed = ped2.getItem().copy();
 						ped2.setItem(ItemStack.EMPTY);
 						recipeIngredients.remove(a);
+						broadcastInfusionSourceFx(level, pp, consumed);
 						setChanged();
 						return;
 					}
@@ -362,6 +367,21 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		crafting = false;
 		craftingFinish(level);
 		setChanged();
+	}
+
+	/** Real client FX broadcast restored 2026-09-17 (was dropped under this port's old blanket "no client FX"
+	 * rule) - see {@link thaumcraft.common.lib.network.fx.PacketFXInfusionSource}'s own doc comment for the
+	 * real simplification (one burst at consumption, not the true original's own real multi-tick trickle) and
+	 * why it's safe to call directly from this common-side class (a plain data record, no client-only type
+	 * anywhere in it). */
+	private void broadcastInfusionSourceFx(Level level, BlockPos pedestal, ItemStack consumed) {
+		if (!(level instanceof ServerLevel serverLevel)) return;
+		try {
+			PacketDistributor.sendToPlayersNear(serverLevel, null, pedestal.getX(), pedestal.getY(), pedestal.getZ(), 32.0,
+					new thaumcraft.common.lib.network.fx.PacketFXInfusionSource(pedestal, worldPosition, consumed));
+		} catch (Exception e) {
+			Thaumcraft.LOGGER.debug("Infusion source FX packet failed to send (no real client connection?)", e);
+		}
 	}
 
 	/** Public (not just an implementation detail) specifically so real GameTest coverage can drive this

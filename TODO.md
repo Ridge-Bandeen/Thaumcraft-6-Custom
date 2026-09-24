@@ -339,17 +339,40 @@ deferred until now. Real findings from that audit, triaged:
         kind to how `FLUX_RIFT`'s real custom-shader work needed its own
         dedicated session before building, not a quick follow-on to
         anything already proven this session.
-      - **New, real, previously-unnoticed gap found 2026-09-17 while
-        scoping `FXEssentiaStream`**: `TileInfusionMatrix`'s own real
-        "pedestal items flying into the matrix during a craft" particle
-        visual (the true original's own real
-        `drawInfusionParticles1`/`drawInfusionParticles2`/
-        `drawInfusionParticles3` trio, driven by its own real local
-        `TileInfusionMatrix.SourceFX` tracking class and
-        `PacketFXInfusionSource`) - genuinely unrelated to essentia tube
-        flow despite the superficially similar name, not yet scoped in any
-        detail (which of the 3 variants map to which real pedestal-content
-        case, what geometry each needs).
+      - ~~**`TileInfusionMatrix`'s "pedestal items flying into the matrix
+        during a craft" particle visual**~~ — closed 2026-09-24. Found
+        2026-09-17 while scoping `FXEssentiaStream`, genuinely unrelated to
+        essentia tube flow despite the superficially similar name. New
+        `PacketFXInfusionSource` (source pedestal pos, target matrix pos,
+        the consumed `ItemStack`) broadcast from `TileInfusionMatrix
+        #craftCycle`'s own real ingredient-consumption branch on every
+        pedestal→matrix transfer. Client dispatch
+        (`ClientFxHandlers#handleInfusionSource`) matches the true
+        original's own real weighting exactly: 1-in-3 chance of a
+        `FXBoreSparkle` (new public `setRBGColorF` wrapper lets this call
+        override its default green tint), else a real `BlockItem` draws 4x
+        `FXBoreParticles` (block-icon based, new public `setAlphaF`
+        wrapper), else 4x new `FXBoreParticlesItem` (item-icon based, a
+        real separate sibling class rather than a second constructor on
+        `FXBoreParticles` - that class extends vanilla's own `TerrainParticle`
+        specifically for its free block-icon lookup, which Java's `super()`
+        rules won't let a second, item-icon-sourced constructor share; the
+        true original's own real class duplicated this same homing-physics
+        `onUpdate` between its two variants too, so keeping it duplicated
+        here matches the true original's own real shape). Real, disclosed
+        simplification: this port's own already-simplified
+        `TileInfusionMatrix#craftCycle` consumes a matching pedestal's item
+        in one real atomic step, not the true original's own real
+        multi-tick `itemCount` countdown, so this fires one real short
+        particle burst at the moment of consumption rather than
+        reintroducing a persistent multi-tick tracking map - same real
+        visual language, simpler trigger shape matching this port's own
+        already-simpler crafting flow. The true original's own real
+        XP-cost recipe branch (`drawInfusionParticles4`, a player→altar
+        variant) isn't ported either - `recipeXP`/`recipeType` don't exist
+        in this port's own real crafting model at all (a real, separate,
+        already-existing simplification, not new here). Two clean 500/500
+        `runGameTestServer` passes and a clean `test` task.
       - ~~**`FXEssentiaStream`**~~ — closed 2026-09-17. The initial read of
         `RenderEventHandler`'s own role turned out to be wrong in a real,
         important way once actually read in full: it's NOT a per-frame

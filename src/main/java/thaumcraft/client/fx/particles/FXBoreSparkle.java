@@ -91,6 +91,15 @@ public class FXBoreSparkle extends SingleQuadParticle {
 		this.target = target;
 	}
 
+	/** Public wrapper for {@link #setColor} - {@code protected} on the base {@link
+	 * net.minecraft.client.particle.Particle}, unreachable from {@code ClientFxHandlers}' own different
+	 * package otherwise. Lets {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix}'s own real pedestal
+	 * FX override this class's own default green tint. */
+	public FXBoreSparkle setRBGColorF(float r, float g, float b) {
+		setColor(r, g, b);
+		return this;
+	}
+
 	@Override
 	public void tick() {
 		xo = x;

@@ -366,6 +366,9 @@ public class Thaumcraft {
         registrar.playToClient(thaumcraft.common.lib.network.fx.PacketFXEssentiaSource.TYPE,
                 thaumcraft.common.lib.network.fx.PacketFXEssentiaSource.STREAM_CODEC,
                 (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.handleEssentiaSource(payload));
+        registrar.playToClient(thaumcraft.common.lib.network.fx.PacketFXInfusionSource.TYPE,
+                thaumcraft.common.lib.network.fx.PacketFXInfusionSource.STREAM_CODEC,
+                (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.handleInfusionSource(payload));
 
         // First client->server packet this port has needed - see ServerboundSaveFocusGraphPacket's own
         // doc comment. enqueueWork defers the actual tile mutation to the main server thread, same
