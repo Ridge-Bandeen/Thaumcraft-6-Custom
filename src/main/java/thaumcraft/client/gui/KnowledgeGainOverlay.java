@@ -3,18 +3,10 @@ package thaumcraft.client.gui;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Axis;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
@@ -47,10 +39,16 @@ import thaumcraft.api.research.ResearchCategory;
  * further back, category icon drawn 1 unit closer than its own type icon) is dropped - paint ORDER alone
  * (book, then each tracker in turn, category icon immediately after its own type icon) already produces the
  * same real visual stacking in this port's own alpha-blended, no-depth-test 2D pass, without needing literal Z
- * offsets. Real, separate, not-yet-built gap: the true original's own real sparkle-particle tie-in ({@code
- * current.sparks}, calling {@code drawSimpleSparkleGui}) isn't wired here - that's {@code FXGenericGui}'s own
- * real particle system, still separately-scoped future work (see TODO.md); this class's own real {@code
- * sparks} field is carried faithfully but currently always false.
+ * offsets.
+ *
+ * <p>Real, checked-not-assumed finding (2026-09-24, while building {@link FXGenericGui}): the true original's
+ * own real {@code KnowledgeGainTracker.sparks} field is declared, defaulted {@code false}, and never once set
+ * {@code true} anywhere in the whole pristine tree - real, confirmed dead code in the true original itself,
+ * the same shape as {@code FXDigging}/{@code FXSwarmRunes} earlier this session. This class's own {@code
+ * Tracker} carries no {@code sparks} field at all and never calls {@link FXGenericGui#spawn} - not a gap, a
+ * faithful match of the true original's own real (never-firing) behavior. {@link
+ * thaumcraft.client.gui.GuiResearchTable}'s own real percentage-sidebar sparkle tie-in is the true original's
+ * only genuinely LIVE {@code drawSimpleSparkleGui} caller.
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID, value = Dist.CLIENT)
 public class KnowledgeGainOverlay {
@@ -106,7 +104,7 @@ public class KnowledgeGainOverlay {
 		if (kgFade > 0.0f) {
 			graphics.pose().pushPose();
 			graphics.pose().translate(ww - 9, hh - 9, 0);
-			renderQuadCentered(graphics, BOOK, 1, 0, 16.0f, 1.0f, 1.0f, 1.0f, kgFade / 40.0f, false);
+			GuiQuadRenderer.renderQuadCentered(graphics, BOOK, 1, 0, 16.0f, 1.0f, 1.0f, 1.0f, kgFade / 40.0f, false);
 			graphics.pose().popPose();
 		}
 
@@ -146,10 +144,10 @@ public class KnowledgeGainOverlay {
 		graphics.pose().pushPose();
 		graphics.pose().translate(xx, yy, 0);
 		graphics.pose().mulPose(Axis.ZP.rotationDegrees(84 + rand.nextInt(12)));
-		renderQuadCentered(graphics, KNOW_TYPE[t.type.ordinal()], 1, 0, s, 1.0f, 1.0f, 1.0f, 1.0f, false);
+		GuiQuadRenderer.renderQuadCentered(graphics, KNOW_TYPE[t.type.ordinal()], 1, 0, s, 1.0f, 1.0f, 1.0f, 1.0f, false);
 
 		if (t.category != null) {
-			renderQuadCentered(graphics, t.category.icon, 1, 0, s * 0.75f, 1.0f, 1.0f, 1.0f, 1.0f, false);
+			GuiQuadRenderer.renderQuadCentered(graphics, t.category.icon, 1, 0, s * 0.75f, 1.0f, 1.0f, 1.0f, 1.0f, false);
 		}
 
 		if (t.progress > t.max * 0.9f) {
@@ -160,7 +158,7 @@ public class KnowledgeGainOverlay {
 			float r2 = warm(rand, 0);
 			float g2 = warm(rand, 1);
 			float b2 = warm(rand, 2);
-			renderQuadCentered(graphics, PARTICLES, PARTICLE_GRID, 320 + rand.nextInt(16), size, r2, g2, b2, 1.0f, true);
+			GuiQuadRenderer.renderQuadCentered(graphics, PARTICLES, PARTICLE_GRID, 320 + rand.nextInt(16), size, r2, g2, b2, 1.0f, true);
 		}
 		if (t.progress < t.max * 0.1f) {
 			float wot3 = 1.0f - (t.progress - partialTick) / (t.max * 0.1f);
@@ -170,7 +168,7 @@ public class KnowledgeGainOverlay {
 			float r2 = warm(rand, 0);
 			float g2 = warm(rand, 1);
 			float b2 = warm(rand, 2);
-			renderQuadCentered(graphics, PARTICLES, PARTICLE_GRID, 320 + rand.nextInt(16), size, r2, g2, b2, 1.0f, true);
+			GuiQuadRenderer.renderQuadCentered(graphics, PARTICLES, PARTICLE_GRID, 320 + rand.nextInt(16), size, r2, g2, b2, 1.0f, true);
 		}
 
 		graphics.pose().popPose();
@@ -184,36 +182,6 @@ public class KnowledgeGainOverlay {
 			case 1 -> (189 + rand.nextInt(255 - 189 + 1)) / 255.0f;
 			default -> (64 + rand.nextInt(255 - 64 + 1)) / 255.0f;
 		};
-	}
-
-	private static void renderQuadCentered(GuiGraphics graphics, ResourceLocation texture, int gridSize, int frame,
-			float scale, float r, float g, float b, float alpha, boolean additive) {
-		if (scale <= 0.0f) return;
-		int fx = frame % gridSize;
-		int fy = frame / gridSize;
-		float u0 = fx / (float) gridSize;
-		float u1 = u0 + 1.0f / gridSize;
-		float v0 = fy / (float) gridSize;
-		float v1 = v0 + 1.0f / gridSize;
-		float h = scale / 2.0f;
-
-		RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
-		RenderSystem.setShaderTexture(0, texture);
-		RenderSystem.enableBlend();
-		if (additive) {
-			RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA, com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
-		} else {
-			RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA, com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-		}
-		PoseStack.Pose pose = graphics.pose().last();
-		BufferBuilder buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-		buffer.addVertex(pose, -h, h, 0).setUv(u0, v1).setColor(r, g, b, alpha);
-		buffer.addVertex(pose, h, h, 0).setUv(u1, v1).setColor(r, g, b, alpha);
-		buffer.addVertex(pose, h, -h, 0).setUv(u1, v0).setColor(r, g, b, alpha);
-		buffer.addVertex(pose, -h, -h, 0).setUv(u0, v0).setColor(r, g, b, alpha);
-		BufferUploader.drawWithShader(buffer.buildOrThrow());
-		RenderSystem.defaultBlendFunc();
-		RenderSystem.disableBlend();
 	}
 
 	private static final class Tracker {

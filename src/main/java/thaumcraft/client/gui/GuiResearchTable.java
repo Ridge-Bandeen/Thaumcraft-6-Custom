@@ -1,14 +1,17 @@
 package thaumcraft.client.gui;
 
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Inventory;
 import thaumcraft.api.research.ResearchCategories;
 import thaumcraft.api.research.ResearchCategory;
@@ -39,10 +42,10 @@ import thaumcraft.common.container.ResearchTableMenu;
  * already fully tracked server-side and synced via {@link ClientResearchTableCache} well before this chunk -
  * this was purely a missing rendering feature, not a missing mechanic, once actually checked directly (a much
  * smaller real gap than an earlier scoping pass assumed from the true original's own overall 762-line size).
- * Real, disclosed simplification, matching {@link thaumcraft.client.gui.KnowledgeGainOverlay}'s own identical
- * disclosed gap: the true original's own real sparkle-particle trail tied to this same live-counting animation
- * isn't wired - that's {@code FXGenericGui}'s own real particle system, still separately-scoped future work
- * (see TODO.md), not something either of this session's 2 prerequisite chunks needed to include.
+ * Real sparkle-particle trail ({@link FXGenericGui#spawn}, restored 2026-09-24 alongside that class itself) -
+ * this is the true original's own ONLY genuinely live {@code drawSimpleSparkleGui} caller (see {@link
+ * KnowledgeGainOverlay}'s own doc comment for why its own apparent sparkle tie-in is real, confirmed dead
+ * code in the true original instead).
  */
 public class GuiResearchTable extends AbstractContainerScreen<ResearchTableMenu> {
 
@@ -60,6 +63,11 @@ public class GuiResearchTable extends AbstractContainerScreen<ResearchTableMenu>
 	 * 1%/tick toward the real synced value, matching the true original's own real {@code tempCatTotals}. */
 	private final Map<String, Integer> tempCatTotals = new LinkedHashMap<>();
 	private long nextCatCheck;
+
+	/** Real per-tick "which categories just counted up" set, matching the true original's own real {@code
+	 * sparkle} list - drives {@link FXGenericGui#spawn} in {@link #renderCategorySidebar}. Rebuilt fresh every
+	 * time {@link #tickCategorySidebar} actually advances (not every render frame). */
+	private final Set<String> justIncremented = new HashSet<>();
 
 	public GuiResearchTable(ResearchTableMenu menu, Inventory playerInventory, Component title) {
 		super(menu, playerInventory, title);
@@ -107,8 +115,8 @@ public class GuiResearchTable extends AbstractContainerScreen<ResearchTableMenu>
 
 		ResearchTableData data = ClientResearchTableCache.getData();
 		if (data != null) {
-			tickCategorySidebar(data);
-			renderCategorySidebar(graphics, data, mouseX, mouseY);
+			boolean advanced = tickCategorySidebar(data);
+			renderCategorySidebar(graphics, data, mouseX, mouseY, advanced);
 		} else {
 			tempCatTotals.clear();
 		}
@@ -117,11 +125,15 @@ public class GuiResearchTable extends AbstractContainerScreen<ResearchTableMenu>
 	/** Real per-tick count-up/down toward the real synced {@code categoryTotals}, throttled to once per real
 	 * game tick (matches the true original's own real {@code nexCatCheck} throttle - this method runs once per
 	 * render FRAME, not once per tick, so without the throttle the animation would run at render framerate
-	 * rather than a real, consistent 1%/tick pace). */
-	private void tickCategorySidebar(ResearchTableData data) {
-		if (minecraft == null || minecraft.player == null) return;
+	 * rather than a real, consistent 1%/tick pace). Returns whether the tick actually advanced this frame -
+	 * {@link #justIncremented} (and the real sparkle trail it drives) is only meaningful on that same frame,
+	 * matching the true original's own real {@code sparkle} list being rebuilt fresh every frame but only ever
+	 * populated inside its own real throttled block. */
+	private boolean tickCategorySidebar(ResearchTableData data) {
+		if (minecraft == null || minecraft.player == null) return false;
 		long now = minecraft.player.tickCount;
-		if (nextCatCheck > now) return;
+		if (nextCatCheck > now) return false;
+		justIncremented.clear();
 		for (String cat : ResearchCategories.researchCategories.keySet()) {
 			int real = data.categoryTotals.getOrDefault(cat, 0);
 			int shown = tempCatTotals.getOrDefault(cat, 0);
@@ -130,22 +142,27 @@ public class GuiResearchTable extends AbstractContainerScreen<ResearchTableMenu>
 				continue;
 			}
 			if (shown > real) shown--;
-			if (shown < real) shown++;
+			if (shown < real) {
+				shown++;
+				justIncremented.add(cat);
+			}
 			tempCatTotals.put(cat, shown);
 		}
 		nextCatCheck = now + 1;
+		return true;
 	}
 
 	/** Real sorted (highest-first) icon+percentage list, positioned off the right edge of the shared 255-wide
 	 * GUI panel - matches the true original's own real layout/color-coding exactly (past {@code penaltyStart}:
 	 * a real "(-N)" penalty suffix and a 4px extra row gap; {@code categoriesBlocked}: a real muted-red tint
 	 * instead of the normal gold/white). See the class doc comment for the real, disclosed sparkle-trail gap. */
-	private void renderCategorySidebar(GuiGraphics graphics, ResearchTableData data, int mouseX, int mouseY) {
+	private void renderCategorySidebar(GuiGraphics graphics, ResearchTableData data, int mouseX, int mouseY, boolean advanced) {
 		List<Map.Entry<String, Integer>> sorted = tempCatTotals.entrySet().stream()
 				.filter(e -> e.getValue() != 0)
 				.sorted((a, b) -> b.getValue() - a.getValue())
 				.toList();
 
+		RandomSource random = minecraft != null && minecraft.level != null ? minecraft.level.random : RandomSource.create();
 		int i = 0;
 		for (Map.Entry<String, Integer> entry : sorted) {
 			String field = entry.getKey();
@@ -166,7 +183,20 @@ public class GuiResearchTable extends AbstractContainerScreen<ResearchTableMenu>
 				text += " (-" + (percent / 3) + ")";
 			}
 			int color = data.categoriesBlocked.contains(field) ? 6316128 : (pastPenalty ? 16777215 : 57536);
-			graphics.drawString(font, text, iconX + 23, rowY + 4, color, true);
+			int textX = iconX + 23;
+			int textY = rowY + 4;
+			graphics.drawString(font, text, textX, textY, color, true);
+
+			if (advanced && justIncremented.contains(field)) {
+				int width = font.width(text);
+				for (int q = 0; q < 2; q++) {
+					float rr = 1.0f;
+					float gg = (189 + random.nextInt(255 - 189 + 1)) / 255.0f;
+					float bb = (64 + random.nextInt(255 - 64 + 1)) / 255.0f;
+					FXGenericGui.spawn(random, textX + random.nextFloat() * width, textY + random.nextFloat() * 8.0f,
+							random.nextGaussian() * 0.5, random.nextGaussian() * 0.5, 24.0f, rr, gg, bb, 0, 0.9f, -1.0f);
+				}
+			}
 
 			if (mouseX >= iconX && mouseX < iconX + 16 && mouseY >= rowY && mouseY < rowY + 16) {
 				graphics.renderTooltip(font, ResearchCategories.getCategoryName(field), mouseX, mouseY);

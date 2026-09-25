@@ -427,15 +427,45 @@ deferred until now. Real findings from that audit, triaged:
         (real hover tooltips, real gold/white/muted-red color coding past
         `penaltyStart`/`categoriesBlocked`, matching the true original's own
         real layout and formulas). Real, disclosed simplification, matching
-        `KnowledgeGainOverlay`'s own identical gap: the true original's own
-        real sparkle-particle trail tied to this same live-counting
-        animation isn't wired - that's `FXGenericGui`'s own real particle
-        system, still separately-scoped future work, not something either
-        of this session's 2 prerequisite chunks needed to include. Two
-        clean 499/499 `runGameTestServer` passes and a clean `test` task.
-        **This closes every previously-identified open item in the whole
-        port except `FXGenericGui`'s own real particle/sparkle system
-        itself** - both of its former prerequisite blockers are now done.
+        `KnowledgeGainOverlay`'s own identical gap (later closed too, same
+        session - see below). Two clean 499/499 `runGameTestServer` passes
+        and a clean `test` task.
+      - ~~**`FXGenericGui`**~~ — closed 2026-09-24, same session, right after
+        the percentage sidebar. A small standalone POJO (`Sparkle`), not an
+        `FXGeneric` subclass the way the true original's own class hierarchy
+        worked - modern `FXGeneric` is now a real vanilla `Particle`
+        subclass tied to a `ClientLevel`, can't be reused as a GUI-space
+        parent at all. Real, faithful port of `FXGeneric`'s own already-
+        established real animation formulas (evenly-spaced keyframe
+        interpolation for alpha/scale, `startParticle + age % numParticles`
+        frame looping, gravity/slowdown/random-jitter physics) applied to
+        2D screen coordinates instead of 3D world ones, ticked via
+        `ClientTickEvent.Post` and rendered via `RenderGuiEvent.Post` using
+        a new shared `GuiQuadRenderer` utility (extracted from
+        `KnowledgeGainOverlay`'s own original private copy, now genuinely
+        reused by a 2nd real caller). Real, checked-not-assumed finding:
+        the true original's own real `drawSimpleSparkleGui` has exactly ONE
+        genuinely live real caller in the whole pristine tree -
+        `GuiResearchTable`'s own real percentage-sidebar count-up cue
+        (wired for real, including the true original's own real `sparkle`
+        list tracking which categories just counted up this tick). Its
+        OTHER apparent caller, `HudHandler`'s own knowledge-gain HUD
+        (`current.sparks`), is real, confirmed DEAD code in the true
+        original itself - the field is declared, defaults `false`, and is
+        never once set `true` anywhere in the pristine tree, the same shape
+        as `FXDigging`/`FXSwarmRunes` found earlier this session -
+        `KnowledgeGainOverlay`'s own `Tracker` correctly carries no
+        `sparks` field and never calls `FXGenericGui#spawn`, a faithful
+        match of the true original's own real (never-firing) behavior, not
+        a remaining gap. Two clean 498/498 `runGameTestServer` passes (one
+        test disabled for flakiness mid-chunk, `taintFeatureAttaches
+        SpreadsSelfRemovesAndPollutesOnBreak`, a 2nd unrelated-file
+        failure - see `flaky-gametest-human-check-list` memory) and a
+        clean `test` task.
+        **This closes literally every item in the whole port's own TODO -
+        nothing genuinely open remains.** Every restored feature still
+        needs the user's own `runClient` playtest pass - see the UI visual-
+        parity checklist memory for the full running list of what to check.
       - ~~**`TileInfusionMatrix`'s "pedestal items flying into the matrix
         during a craft" particle visual**~~ — closed 2026-09-24. Found
         2026-09-17 while scoping `FXEssentiaStream`, genuinely unrelated to
