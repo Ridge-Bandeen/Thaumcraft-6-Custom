@@ -217,7 +217,7 @@ public class EntityTaintSwarm extends FlyingMob implements ITaintedMob {
 	}
 
 	private LivingEntity findAttackTarget() {
-		return isSummoned() ? null : level().getNearestPlayer(this, 8.0);
+		return isSummoned() ? null : thaumcraft.common.entities.PlayerTargeting.nearestTargetable(level(), this, 8.0);
 	}
 
 	private void attack(LivingEntity target, float distance) {

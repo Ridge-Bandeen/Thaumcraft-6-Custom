@@ -98,6 +98,7 @@ public class Thaumcraft {
         thaumcraft.common.registry.ThaumcraftFeatures.FEATURES.register(modEventBus);
         thaumcraft.common.registry.ThaumcraftSounds.SOUNDS.register(modEventBus);
         thaumcraft.common.registry.ThaumcraftCreativeTabs.TABS.register(modEventBus);
+        thaumcraft.common.registry.ThaumcraftParticleTypes.PARTICLE_TYPES.register(modEventBus);
         ThaumcraftGameTests.register(modEventBus);
 
         // Installs the real IInternalMethodHandler over ThaumcraftApi's DummyInternalMethodHandler default -

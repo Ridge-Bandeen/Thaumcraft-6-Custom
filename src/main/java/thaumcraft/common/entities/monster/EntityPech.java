@@ -114,17 +114,11 @@ import thaumcraft.common.items.casters.foci.FocusMediumProjectile;
  * <li>No natural biome-based spawning - matches the session-wide precedent every other custom hostile mob
  * in this port already established (see {@code EntityCultist}'s own doc comment): no {@code
  * SpawnPlacements}/biome-tag wiring exists for any of them yet. Spawnable via spawn egg/summon only.</li>
- * <li>No custom model geometry - the original's own {@code ModelPech} was a {@code ModelBiped} with two
- * extra decorative cuboids (a jowl/jaw piece and a back-mounted "pack"); this port reuses vanilla's own
- * {@code HumanoidModel} baked from {@code ModelLayers.PLAYER}, the exact same "plain humanoid, real bundled
- * texture, no custom geometry" technique {@code RenderCultistKnight} already established - see {@code
- * thaumcraft.client.render.RenderPech}. The mouth-flap ("mumble") animation this dropped geometry would
- * have driven is gone, but the real particle/sound cues it accompanied (trading chime, anger alert) are
- * kept via {@link #handleEntityEvent}.</li>
- * <li>No custom {@code SoundEvent}s - like every sound-emitting entity in this port so far, no Thaumcraft-
- * specific {@code SoundEvent} registry exists yet (the original's own {@code pech_idle}/{@code pech_hit}/
- * {@code pech_death}/{@code pech_charge}/{@code pech_trade} .ogg files are still sitting unused in the
- * asset tree). Substituted with thematically close vanilla villager sounds.</li>
+ * <li>Model and sounds restored 2026-09-25 (first playtest: "looks entirely wrong, makes villager noises"): the
+ * real {@code ModelPech} geometry and animation (see {@link thaumcraft.client.render.ModelPech}, including the
+ * {@link #mumble} jaw flap) and the original's own {@code pech_idle}/{@code pech_hit}/{@code pech_death}/
+ * {@code pech_charge}/{@code pech_trade} sounds. Still not reproduced: the original's small held-item offset
+ * ({@code LayerHeldItemPech}).</li>
  * </ul>
  */
 public class EntityPech extends Monster implements RangedAttackMob {
@@ -206,6 +200,9 @@ public class EntityPech extends Monster implements RangedAttackMob {
 		}
 	};
 
+	/** The jaw-flap animation phase read by {@link thaumcraft.client.render.ModelPech} - set on the chatter/anger
+	 * events, decays by 25% per tick (the original's own public {@code mumble} field, restored 2026-09-25). */
+	public float mumble;
 	private int chargeCount;
 
 	public EntityPech(EntityType<? extends EntityPech> type, Level level) {
@@ -402,13 +399,14 @@ public class EntityPech extends Monster implements RangedAttackMob {
 	@Override
 	public void handleEntityEvent(byte id) {
 		if (id == 16) {
-			// idle mumble - no geometry to animate, nothing to do client-side
+			mumble = (float) Math.PI;
 		} else if (id == 17) {
-			// trade/anger chatter - no geometry to animate, nothing to do client-side
+			mumble = (float) (Math.PI * 2.0);
 		} else if (id == 18) {
 			spawnHappyParticles();
 		} else if (id == 19) {
 			spawnAngryParticles();
+			mumble = (float) (Math.PI * 2.0);
 		} else {
 			super.handleEntityEvent(id);
 		}
@@ -449,7 +447,7 @@ public class EntityPech extends Monster implements RangedAttackMob {
 		if (entity instanceof Player player && player.isCreative()) return;
 		if (getAnger() <= 0) {
 			level().broadcastEntityEvent(this, (byte) 19);
-			playSound(SoundEvents.VILLAGER_NO, getSoundVolume(), getVoicePitch());
+			playSound(thaumcraft.common.registry.ThaumcraftSounds.PECH_CHARGE.get(), getSoundVolume(), getVoicePitch());
 		}
 		if (entity instanceof LivingEntity living) setTarget(living);
 		setAnger(400 + random.nextInt(400));
@@ -472,6 +470,9 @@ public class EntityPech extends Monster implements RangedAttackMob {
 
 	@Override
 	public void aiStep() {
+		if (mumble > 0.0f) {
+			mumble *= 0.75f;
+		}
 		if (getAnger() > 0) {
 			setAnger(getAnger() - 1);
 		}
@@ -479,7 +480,7 @@ public class EntityPech extends Monster implements RangedAttackMob {
 			if (chargeCount > 0) chargeCount--;
 			if (chargeCount == 0) {
 				chargeCount = 100;
-				playSound(SoundEvents.VILLAGER_NO, getSoundVolume(), getVoicePitch());
+				playSound(thaumcraft.common.registry.ThaumcraftSounds.PECH_CHARGE.get(), getSoundVolume(), getVoicePitch());
 			}
 			level().broadcastEntityEvent(this, (byte) 17);
 		}
@@ -536,6 +537,12 @@ public class EntityPech extends Monster implements RangedAttackMob {
 	}
 
 	public boolean isValued(ItemStack stack) {
+		return isValuedItem(stack);
+	}
+
+	/** Static form of {@link #isValued} - it uses no instance state, and the trade screen needs it client-side,
+	 * where the menu has no {@code EntityPech} to ask. */
+	public static boolean isValuedItem(ItemStack stack) {
 		if (stack.isEmpty()) return false;
 		if (VALUED_ITEMS.containsKey(stack.getItem())) return true;
 		thaumcraft.api.aspects.AspectList tags = thaumcraft.api.aspects.AspectHelper.getObjectAspects(stack);
@@ -592,7 +599,7 @@ public class EntityPech extends Monster implements RangedAttackMob {
 		if (random.nextInt(100) <= value / 2) {
 			setTamed(false);
 			setCombatTask();
-			playSound(SoundEvents.VILLAGER_YES, getSoundVolume(), getVoicePitch());
+			playSound(thaumcraft.common.registry.ThaumcraftSounds.PECH_TRADE.get(), getSoundVolume(), getVoicePitch());
 		}
 		if (random.nextInt(5) == 0) {
 			value += random.nextInt(3);
@@ -676,17 +683,17 @@ public class EntityPech extends Monster implements RangedAttackMob {
 
 	@Override
 	protected SoundEvent getAmbientSound() {
-		return SoundEvents.VILLAGER_AMBIENT;
+		return thaumcraft.common.registry.ThaumcraftSounds.PECH_IDLE.get();
 	}
 
 	@Override
 	protected SoundEvent getHurtSound(DamageSource damageSource) {
-		return SoundEvents.VILLAGER_HURT;
+		return thaumcraft.common.registry.ThaumcraftSounds.PECH_HIT.get();
 	}
 
 	@Override
 	protected SoundEvent getDeathSound() {
-		return SoundEvents.VILLAGER_DEATH;
+		return thaumcraft.common.registry.ThaumcraftSounds.PECH_DEATH.get();
 	}
 
 	/** Pauses movement while a (not yet built) trading menu has this Pech open - real port of the original's

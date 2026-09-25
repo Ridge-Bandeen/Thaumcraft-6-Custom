@@ -16,14 +16,14 @@ import thaumcraft.common.entities.monster.EntityPech;
  * established. Three real bundled textures, one per {@link EntityPech#getPechType()} (0 = forage/melee,
  * 1 = thaum/wand, 2 = stalker/bow) - matching the original's own three skins exactly.
  */
-public class RenderPech extends HumanoidMobRenderer<EntityPech, HumanoidModel<EntityPech>> {
+public class RenderPech extends HumanoidMobRenderer<EntityPech, ModelPech> {
 
 	private static final ResourceLocation FORAGE = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/pech_forage.png");
 	private static final ResourceLocation THAUM = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/pech_thaum.png");
 	private static final ResourceLocation STALKER = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/pech_stalker.png");
 
 	public RenderPech(EntityRendererProvider.Context context) {
-		super(context, new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER)), 0.4f);
+		super(context, new ModelPech(ModelPech.createBodyLayer().bakeRoot()), 0.4f);
 		addLayer(new HumanoidArmorLayer<>(this,
 				new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
 				new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)),

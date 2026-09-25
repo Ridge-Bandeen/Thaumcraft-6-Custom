@@ -142,13 +142,13 @@ public class EntityCultistPortalLesser extends Monster {
 			return;
 		}
 		if (!isActive()) {
-			if (tickCount % 10 == 0 && level().getNearestPlayer(this, 32.0) != null) {
+			if (tickCount % 10 == 0 && thaumcraft.common.entities.PlayerTargeting.nearestTargetable(level(), this, 32.0) != null) {
 				setActive(true);
 				playSound(ThaumcraftSounds.CRAFTSTART.get(), 1.0f, 1.0f);
 			}
 		}
 		else if (stageCounter-- <= 0) {
-			Player nearest = level().getNearestPlayer(this, 32.0);
+			Player nearest = thaumcraft.common.entities.PlayerTargeting.nearestTargetable(level(), this, 32.0);
 			if (nearest != null && hasLineOfSight(nearest)) {
 				Difficulty diff = level().getCurrentDifficultyAt(blockPosition()).getDifficulty();
 				int count = diff == Difficulty.HARD ? 6 : diff == Difficulty.NORMAL ? 4 : 2;

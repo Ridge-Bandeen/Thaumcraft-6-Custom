@@ -186,7 +186,7 @@ public class EntityCultistPortalGreater extends Monster {
 				placeLootCrate();
 			}
 		}
-		else if (level().getNearestPlayer(this, 48.0) != null) {
+		else if (thaumcraft.common.entities.PlayerTargeting.nearestTargetable(level(), this, 48.0) != null) {
 			level().broadcastEntityEvent(this, (byte) 16);
 			switch (stage) {
 				case 0, 1, 2, 3, 4 -> {

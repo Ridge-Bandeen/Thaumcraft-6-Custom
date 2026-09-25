@@ -158,7 +158,7 @@ public class EntityWisp extends FlyingMob implements Enemy {
 
 		aggroCooldown--;
 		if (level.random.nextInt(1000) == 0 && (getTarget() == null || aggroCooldown-- <= 0)) {
-			Player nearest = level.getNearestPlayer(this, 16.0);
+			Player nearest = thaumcraft.common.entities.PlayerTargeting.nearestTargetable(level, this, 16.0);
 			setTarget(nearest);
 			if (nearest != null) {
 				aggroCooldown = 50;

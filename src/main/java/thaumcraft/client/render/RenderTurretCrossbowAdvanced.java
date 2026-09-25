@@ -68,7 +68,7 @@ public class RenderTurretCrossbowAdvanced extends EntityRenderer<EntityTurretCro
 	public RenderTurretCrossbowAdvanced(EntityRendererProvider.Context context) {
 		super(context);
 		ObjModel model = ObjLoader.INSTANCE.loadModel(new ObjModel.ModelSettings(MODEL, true, true, false, true, MTL_OVERRIDE.toString()));
-		var bakingContext = StandaloneGeometryBakingContext.create(Map.of("Material__25", TEXTURE));
+		var bakingContext = StandaloneGeometryBakingContext.create(Map.of("#Material__25", TEXTURE));
 		renderable = model.bakeRenderable(bakingContext);
 	}
 

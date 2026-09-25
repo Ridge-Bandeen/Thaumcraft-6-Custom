@@ -50,6 +50,16 @@ public class EntityThaumicSlime extends Slime implements ITaintedMob {
 		super(type, level);
 	}
 
+	/** Vanilla's {@code Slime#tick} spawns {@code size*8} of this particle on every landing. The original avoided
+	 * it by pre-setting its own {@code wasOnGround} before calling {@code super.onUpdate()}; that field is private now,
+	 * so instead the burst is pointed at a provider-less particle type, i.e. nothing - the purple
+	 * {@link thaumcraft.client.fx.ClientFxHandlers#spawnSlimeJump} splat below is this mob's only landing effect.
+	 * (Found 2026-09-25: green vanilla slime particles on every jump.) */
+	@Override
+	protected net.minecraft.core.particles.ParticleOptions getParticleType() {
+		return thaumcraft.common.registry.ThaumcraftParticleTypes.NONE.get();
+	}
+
 	/** Real client-only landing-splat cue restored 2026-09-17 (was dropped under this port's old blanket "no
 	 * client FX" rule) - a real faithful port of the true original's own real "just touched down" detection,
 	 * routed through {@link thaumcraft.client.fx.ClientFxHandlers#spawnSlimeJump} for the same real

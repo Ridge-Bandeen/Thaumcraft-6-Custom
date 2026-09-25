@@ -141,7 +141,7 @@ public class EntityFireBat extends FlyingMob implements Enemy {
 				if (random.nextInt(200) == 0) {
 					setYHeadRot(random.nextInt(360));
 				}
-				if (level.getNearestPlayer(this, 4.0) != null) {
+				if (thaumcraft.common.entities.PlayerTargeting.nearestTargetable(level, this, 4.0) != null) {
 					setHanging(false);
 				}
 			}
@@ -169,7 +169,7 @@ public class EntityFireBat extends FlyingMob implements Enemy {
 			setTarget(null);
 		}
 		if (getTarget() == null) {
-			setTarget(level.getNearestPlayer(this, 12.0));
+			setTarget(thaumcraft.common.entities.PlayerTargeting.nearestTargetable(level, this, 12.0));
 		} else if (isAlive() && hasLineOfSight(getTarget())) {
 			touchAttack(getTarget());
 		}

@@ -81,6 +81,7 @@ public class GuiGolemBuilder extends AbstractContainerScreen<GolemBuilderMenu> {
 			Component progress = Component.literal(cost + " / " + maxCost);
 			graphics.drawCenteredString(font, progress, leftPos + imageWidth / 2, topPos + 140, 0xFFFFFF);
 		}
+		renderTooltip(graphics, mouseX, mouseY);
 	}
 
 	private void updateWidgetState() {

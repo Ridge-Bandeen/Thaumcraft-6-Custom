@@ -193,9 +193,9 @@ public class ThaumcraftClient {
         event.registerEntityRenderer(ThaumcraftEntities.THAUMIC_SLIME.get(), thaumcraft.client.render.RenderThaumicSlime::new);
         event.registerEntityRenderer(ThaumcraftEntities.BRAINY_ZOMBIE.get(), thaumcraft.client.render.RenderBrainyZombie::new);
         event.registerEntityRenderer(ThaumcraftEntities.GIANT_BRAINY_ZOMBIE.get(), thaumcraft.client.render.RenderGiantBrainyZombie::new);
-        // Real vanilla spider texture/model reused directly (SpiderRenderer<T extends Spider> is generic,
-        // no subclass needed) - see ThaumcraftEntities.MIND_SPIDER's own doc comment for why.
-        event.registerEntityRenderer(ThaumcraftEntities.MIND_SPIDER.get(), net.minecraft.client.renderer.entity.SpiderRenderer::new);
+        // Vanilla spider texture/model, but drawn as the original's scaled-down translucent ghost visible only to
+        // its viewer - see RenderMindSpider (a plain SpiderRenderer here looked like a normal spider).
+        event.registerEntityRenderer(ThaumcraftEntities.MIND_SPIDER.get(), thaumcraft.client.render.RenderMindSpider::new);
         event.registerEntityRenderer(ThaumcraftEntities.CULTIST_KNIGHT.get(), thaumcraft.client.render.RenderCultistKnight::new);
         // Shared renderer, see RenderCultistKnight's own doc comment for why the class name predates this reuse.
         event.registerEntityRenderer(ThaumcraftEntities.CULTIST_CLERIC.get(), thaumcraft.client.render.RenderCultistKnight::new);

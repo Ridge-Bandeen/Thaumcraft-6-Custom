@@ -371,7 +371,7 @@ public class EntityFluxRift extends Entity {
 				}
 			}
 			case 2 -> {
-				Player target2 = level.getNearestPlayer(this, 16.0);
+				Player target2 = thaumcraft.common.entities.PlayerTargeting.nearestTargetable(level, this, 16.0);
 				if (target2 != null) {
 					FocusPackage p = new FocusPackage(target2);
 					FocusMediumRoot root = new FocusMediumRoot();

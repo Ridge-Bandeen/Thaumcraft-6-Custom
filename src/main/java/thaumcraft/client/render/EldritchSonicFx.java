@@ -65,7 +65,7 @@ final class EldritchSonicFx {
 		return RENDERABLES.computeIfAbsent(frame, f -> {
 			ObjModel model = ObjLoader.INSTANCE.loadModel(new ObjModel.ModelSettings(MODEL, true, true, false, true, MTL_OVERRIDE.toString()));
 			ResourceLocation texture = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/models/ripple" + f + ".png");
-			return model.bakeRenderable(StandaloneGeometryBakingContext.create(Map.of("Material__25", texture)));
+			return model.bakeRenderable(StandaloneGeometryBakingContext.create(Map.of("#Material__25", texture)));
 		});
 	}
 

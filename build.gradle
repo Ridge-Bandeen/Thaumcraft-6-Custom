@@ -736,8 +736,12 @@ sourceSets {
 
             include 'thaumcraft/common/registry/ThaumcraftSounds.java'
             include 'thaumcraft/common/registry/ThaumcraftCreativeTabs.java'
+            include 'thaumcraft/common/registry/ThaumcraftParticleTypes.java'
+            include 'thaumcraft/common/entities/PlayerTargeting.java'
             include 'thaumcraft/client/render/CustomArmorMeshes.java'
             include 'thaumcraft/client/render/CustomArmorModel.java'
+            include 'thaumcraft/client/render/RenderMindSpider.java'
+            include 'thaumcraft/client/render/ModelPech.java'
 
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }

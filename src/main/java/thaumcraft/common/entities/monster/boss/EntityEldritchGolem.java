@@ -181,8 +181,25 @@ public class EntityEldritchGolem extends EntityThaumcraftBoss implements RangedA
 		return hit;
 	}
 
+	/** Real 100-tick materialising window on initial spawn (invulnerable, see {@link EntityThaumcraftBoss#isInvulnerableTo}) -
+	 * the original set {@code spawnTimer = 100} in its own {@code onInitialSpawn}. Added 2026-09-25 alongside the
+	 * matching spawn-window heal in {@link #aiStep}; both were missing. */
+	@Override
+	public net.minecraft.world.entity.SpawnGroupData finalizeSpawn(net.minecraft.world.level.ServerLevelAccessor level,
+			net.minecraft.world.DifficultyInstance difficulty, net.minecraft.world.entity.MobSpawnType spawnType,
+			@org.jetbrains.annotations.Nullable net.minecraft.world.entity.SpawnGroupData spawnGroupData) {
+		setSpawnTimer(100);
+		return super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
+	}
+
 	@Override
 	public void aiStep() {
+		// Real original behaviour (its own onUpdate): +2 HP every tick for as long as the spawn timer runs - the
+		// materialising window on spawn AND the 100-tick regrowth after losing its head. Missing before
+		// 2026-09-25, which left the post-"death" recovery at the base boss trickle (+1 HP per 30 ticks).
+		if (!level().isClientSide && getSpawnTimer() > 0) {
+			heal(2.0f);
+		}
 		super.aiStep();
 		if (hurtTimer > 0) {
 			hurtTimer--;

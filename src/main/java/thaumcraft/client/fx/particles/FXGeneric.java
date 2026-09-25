@@ -39,8 +39,8 @@ import thaumcraft.Thaumcraft;
  * instance in that frame, all addressing their own sub-region of the one shared sheet via {@link
  * #gridSize}/frame index. Two real blend modes are supported via {@link #setLayer} (a real, simplified stand-in
  * for the true original's own real dual particle-bucket-array mechanism, itself half GUI-overlay-specific
- * plumbing not relevant to a real world-space particle): {@code 0} = normal alpha blend, non-zero =
- * additive/glowing - matches the two real blend functions the true original's own {@code ParticleEngine}
+ * plumbing not relevant to a real world-space particle): even layers (0, the default) = additive/glowing,
+ * odd layers = normal alpha blend - matches the two real blend functions the true original's own {@code ParticleEngine}
  * used ({@code [770,1]} additive, {@code [770,771]} normal), not the literal bucket-array mechanism itself.
  *
  * <p>Real, documented simplification: the true original's own "angled" mode ({@link #setAngles}, a fixed
@@ -87,7 +87,8 @@ public class FXGeneric extends SingleQuadParticle {
 	private int particleInc = 1;
 	private boolean loop;
 	private int[] finalFrames;
-	private boolean additive;
+	/** Original default layer 0 = additive - see {@link #setLayer}. */
+	private boolean additive = true;
 
 	private float[] alphaKeys = { 1.0f };
 	private float[] scaleKeys = { 1.0f };
@@ -340,9 +341,13 @@ public class FXGeneric extends SingleQuadParticle {
 	}
 
 	/** Real simplified stand-in for the true original's own real dual particle-bucket-array mechanism - see
-	 * the class doc comment. {@code 0} = normal alpha blend, non-zero = additive/glowing. */
+	 * the class doc comment. Even layers = additive/glowing (0 is the default), odd = normal alpha blend. */
 	public FXGeneric setLayer(int layer) {
-		this.additive = layer != 0;
+		// The true original's ParticleEngine: layer 0 = blendFunc(770,1) ADDITIVE, 1 = (770,771) normal, 2 = additive
+		// with depth test off, 3 = normal with depth test off. So even layers glow, odd layers are plain alpha.
+		// (Depth-off layers 2/3 are not distinguished here.) An earlier version had this inverted - layer 0, the
+		// default, drew as dim normal blend - found 2026-09-25 when the Sapping Field sparks looked very faint.
+		this.additive = (layer & 1) == 0;
 		return this;
 	}
 

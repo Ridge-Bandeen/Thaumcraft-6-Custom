@@ -2,6 +2,6 @@
 # NeoForge's ObjLoader needs the mtllib to exist, AND takes each material's texture from its map_Kd line:
 # a material with no map_Kd resolves to the missing-texture placeholder (magenta/black) no matter what
 # StandaloneGeometryBakingContext is given. "#NAME" is a texture variable, bound by the renderer's own
-# texture map (found in the first playtest: the Eldritch Warden's sonic-scream dome drew as a magenta cube).
+# texture map - whose KEYS must include the leading "#", e.g. Map.of("#Material__25", tex) (found in the first playtest: the Eldritch Warden's sonic-scream dome drew as a magenta cube).
 newmtl Material__25
 	map_Kd #Material__25

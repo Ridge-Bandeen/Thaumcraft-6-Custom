@@ -63,7 +63,7 @@ public class TileGolemBuilderRenderer implements BlockEntityRenderer<TileGolemBu
 
 	public TileGolemBuilderRenderer(BlockEntityRendererProvider.Context context) {
 		ObjModel model = ObjLoader.INSTANCE.loadModel(new ObjModel.ModelSettings(MODEL, true, true, false, true, MTL_OVERRIDE.toString()));
-		var bakingContext = StandaloneGeometryBakingContext.create(Map.of("texture", TEXTURE));
+		var bakingContext = StandaloneGeometryBakingContext.create(Map.of("#texture", TEXTURE));
 		renderable = model.bakeRenderable(bakingContext);
 	}
 

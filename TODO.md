@@ -41,6 +41,27 @@ running the client - GameTest/JUnit never render anything):
 - Stub `.mtl`s without `map_Kd` render as the missing texture (sonic dome, advanced crossbow, golem
   builder) - fixed; needs a restart to verify (renderables are cached per session).
 
+**Also closed later the same session (mobs pass):**
+
+- Eldritch Warden sap fields were missing-model cubes (unconverted `forge_marker` blockstate): now invisible
+  with the original's purple spark shimmer; `FXGeneric`'s layer->blend mapping was INVERTED (default layer 0 is
+  ADDITIVE in the original) - every default-layer particle (arcs, most foci) was drawn too dim.
+- Stub `.mtl` texture maps need `#`-prefixed keys in `StandaloneGeometryBakingContext` (scream dome, crossbow
+  turret, golem builder were all missing-texture).
+- Eldritch Golem lacked the original's spawn-window heal (+2 HP/tick while its 100-tick spawn timer runs) and
+  initial 100-tick spawn timer; a matching GameTest premise was updated.
+- 1.21's `Level#getNearestPlayer(Entity,double)` INCLUDES creative players (1.12's `getClosestPlayerToEntity`
+  excluded them): fire bat homed on creative players; fixed for wisp/bat/swarm/rift/both portals via
+  `PlayerTargeting` (+ survival mock-player test helper and a regression test).
+- Thaumic slime's vanilla green landing burst suppressed (provider-less `thaumcraft:none` particle type).
+- Mob-effect icons (`textures/mob_effect/`, sliced from the legacy `misc/potions.png`).
+- Mind spider now the original's 0.6-scale translucent ghost visible only to its viewer; Pech now uses the
+  real `ModelPech` (jaw "mumble" restored) and its own sounds instead of villager noises.
+- Pech trade screen: the trade control is the "?" swirl in the panel art (restored), not a plain Button.
+- `AbstractContainerScreen` no longer draws tooltips itself in 1.21: 7 container screens (arcane workbench,
+  focal manipulator, focus pouch, golem builder, hand mirror, spa, turret config, pech) now call `renderTooltip`.
+- Taintacle off-taint decay, Spell Bat self-removal without a focus payload, "Angry Zombie" naming: all faithful.
+
 **New backlog from that session:**
 
 - Register a recipe-book category finder for every Thaumcraft recipe type (`RegisterRecipeBookCategoriesEvent`)
@@ -53,6 +74,8 @@ running the client - GameTest/JUnit never render anything):
 - Deferred colour-handler gaps: focus items / caster focus layer / jar liquid tint / golem placer colour;
   leaves/grass block-item tints unchecked.
 - Audit every remaining stub `.mtl` (golem_*) for the same missing-`map_Kd` problem once golems are played.
+- Pech: the original's small held-item offset (`LayerHeldItemPech`, bows especially) is not reproduced.
+- Verify other `getNearestPlayer`-style 1.12 -> 1.21 API traps (e.g. other `getClosest*`/`canAttack` lookups) in files not yet playtested.
 - The Eldritch Warden/bosses cap any hit at 35 damage and buff themselves on larger hits (faithful to the
   original) - `/kill` does NOT kill them; use `/data merge entity <sel> {Health:0f}`.
 

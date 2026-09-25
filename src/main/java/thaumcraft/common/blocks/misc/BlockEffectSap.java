@@ -70,6 +70,31 @@ public class BlockEffectSap extends Block {
 		return CODEC;
 	}
 
+	/** Invisible - the original returned {@code EnumBlockRenderType.INVISIBLE} and drew only sparks (see
+	 * {@link #animateTick}). The port's blockstate was an unconverted 1.12 {@code forge_marker} file pointing at a
+	 * model that never resolved, so the field rendered as the missing-model cube (found in the first playtest: a
+	 * dead Warden's fields littered the ground as magenta/black cubes). */
+	@Override
+	protected net.minecraft.world.level.block.RenderShape getRenderShape(BlockState state) {
+		return net.minecraft.world.level.block.RenderShape.INVISIBLE;
+	}
+
+	/** The original's own shimmer: a purple spark drifting up from the field every display tick, plus an
+	 * occasional crackle (1 in 50). Same spark as the original's (see {@link thaumcraft.client.fx.ClientFxHandlers#spawnSpark};
+	 * dedicated {@code FXDispatcher#spark} has no port equivalent). */
+	@Override
+	public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
+		float h = random.nextFloat() * 0.33f;
+		double x = pos.getX() + random.nextFloat();
+		double y = pos.getY() + 0.1515 + h / 2.0;
+		double z = pos.getZ() + random.nextFloat();
+		thaumcraft.client.fx.ClientFxHandlers.spawnSpark(level, x, y, z, 3.0f + h * 6.0f, 0.3f - random.nextFloat() * 0.1f, 0.0f, 0.5f + random.nextFloat() * 0.2f, 1.0f);
+		if (random.nextInt(50) == 0) {
+			level.playLocalSound(pos.getX(), pos.getY(), pos.getZ(), thaumcraft.common.registry.ThaumcraftSounds.JACOBS.get(),
+					net.minecraft.sounds.SoundSource.AMBIENT, 0.25f, 1.0f + (random.nextFloat() - random.nextFloat()) * 0.2f, false);
+		}
+	}
+
 	@Override
 	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
 		return Shapes.empty();

@@ -290,6 +290,21 @@ public final class ClientFxHandlers {
 		Minecraft.getInstance().particleEngine.add(fb);
 	}
 
+	/** Real port of the true original's own {@code FXDispatcher#spark}: a short-lived (5-9 tick) glowing spark from
+	 * the 16-grid particle sheet - a random row of the 8-frame animation starting at column 8. Used by the
+	 * Warden's sapping fields ({@code BlockEffectSap}). The original's random horizontal mirroring is dropped. */
+	public static void spawnSpark(net.minecraft.world.level.Level level, double x, double y, double z, float size, float r, float g, float b, float a) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, 0.0, 0.0, 0.0);
+		fb.setMaxAge(5 + level.random.nextInt(5));
+		fb.setAlphaF(a);
+		fb.setRBGColorF(r, g, b);
+		fb.setGridSize(16);
+		fb.setParticles(8 + level.random.nextInt(3) * 16, 8, 1);
+		fb.setScale(size);
+		addDelayed(fb, 0);
+	}
+
 	/** Real {@link thaumcraft.client.fx.particles.FXSmokeSpiral} spawn. */
 	public static void spawnSmokeSpiral(net.minecraft.world.level.Level level, double x, double y, double z, float radius, int start, int minY, int color) {
 		if (!(level instanceof ClientLevel clientLevel)) return;

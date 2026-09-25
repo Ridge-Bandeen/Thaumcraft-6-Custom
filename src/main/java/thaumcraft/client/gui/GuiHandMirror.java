@@ -23,6 +23,15 @@ public class GuiHandMirror extends AbstractContainerScreen<HandMirrorMenu> {
 		imageHeight = 166;
 	}
 
+	/** {@code AbstractContainerScreen#render} doesn't draw item tooltips by itself in 1.21 - vanilla's own container
+	 * screens call {@code renderTooltip} at the end of their own {@code render}. Missing here until the 2026-09-25
+	 * playtest found no tooltips on this screen. */
+	@Override
+	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+		super.render(graphics, mouseX, mouseY, partialTick);
+		renderTooltip(graphics, mouseX, mouseY);
+	}
+
 	@Override
 	protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
 		graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight);
