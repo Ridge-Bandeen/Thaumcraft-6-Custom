@@ -126,7 +126,13 @@ public final class ThaumcraftEntities {
 	 * Same matching {@code EntityAttributeCreationEvent} entry requirement as {@link #WISP}/{@link #GOLEM}. */
 	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.EntityThaumicSlime>> THAUMIC_SLIME = ENTITY_TYPES.register("thaumic_slime",
 			() -> EntityType.Builder.<thaumcraft.common.entities.monster.EntityThaumicSlime>of(thaumcraft.common.entities.monster.EntityThaumicSlime::new, MobCategory.MONSTER)
-					.sized(2.04f, 2.04f)
+					// Base box PER SIZE UNIT: vanilla's Slime#getDefaultDimensions scales this by getSize(), and the original
+					// used 0.51 * size. This used to be 2.04 (the original's size-4 box), which vanilla then multiplied by the size
+					// again - a size-4 slime had an 8-block-tall hitbox (found 2026-09-25: its landing particles spawned at the
+					// middle of that box, far above the slime).
+					.sized(0.51000005f, 0.51000005f)
+					.eyeHeight(0.319f)
+					.spawnDimensionsScale(4.0f)
 					.clientTrackingRange(64)
 					.build("thaumic_slime"));
 
