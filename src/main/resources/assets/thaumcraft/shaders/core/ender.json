@@ -1,6 +1,6 @@
 {
-    "vertex": "ender",
-    "fragment": "ender",
+    "vertex": "thaumcraft:ender",
+    "fragment": "thaumcraft:ender",
     "samplers": [
         { "name": "Sampler0" }
     ],

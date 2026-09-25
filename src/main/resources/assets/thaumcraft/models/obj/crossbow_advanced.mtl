@@ -1,7 +1,8 @@
-# Minimal synthetic material-library stub, added 2026-09-16 - NOT recovered original data (the true
-# original never shipped a .mtl for this model either; its own bespoke 1.12.2-era OBJ loader never needed
-# material-driven texture resolution, since it just binds one texture manually). NeoForge's own modern
-# ObjLoader DOES eagerly resolve any `mtllib` directive it finds and throws if the referenced file is
-# missing, so this exists purely to satisfy that real parse-time requirement - the actual texture is
-# supplied separately via StandaloneGeometryBakingContext at bake time, not read from here.
+# Synthetic material-library stub, rewritten 2026-09-25 - NOT recovered original data.
+# NeoForge's ObjLoader needs the mtllib to exist, AND takes each material's texture from its map_Kd line:
+# a material with no map_Kd resolves to the missing-texture placeholder (magenta/black) no matter what
+# StandaloneGeometryBakingContext is given. "#NAME" is a texture variable, bound by the renderer's own
+# texture map (found in the first playtest: the Eldritch Warden's sonic-scream dome drew as a magenta cube).
+# (The true original never shipped a .mtl for this model - its own bespoke loader bound one texture manually.)
 newmtl Material__25
+	map_Kd #Material__25

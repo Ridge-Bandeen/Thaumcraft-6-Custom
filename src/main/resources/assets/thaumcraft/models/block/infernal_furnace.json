@@ -1,10 +1,11 @@
 {
+    "render_type": "minecraft:cutout_mipped",
     "__createdwith": "opl's Model Creator",
     "ambientocclusion": false,
     "textures": {
         "side": "thaumcraft:blocks/infernal_furnace",
-        "core": "blocks/lava_still",
-        "fire": "blocks/fire_layer_0"
+        "core": "block/lava_still",
+        "fire": "block/fire_0"
     },
     "elements": [
         

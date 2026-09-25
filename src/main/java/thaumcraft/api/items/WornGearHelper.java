@@ -27,4 +27,23 @@ public final class WornGearHelper {
 		if (!offhand.isEmpty()) worn.add(offhand);
 		return worn;
 	}
+
+	/** Modern port of the original's {@code EntityUtils#hasGoggles}: true if any held item, worn armor piece,
+	 * or (standing in for the original's Baubles slots) hotbar item is an {@link IGoggles} that is currently
+	 * showing its in-game popups. Used, for example, to let a Flux Rift's outer glow show through walls. */
+	public static boolean hasGoggles(Player player) {
+		if (player == null) return false;
+		for (net.minecraft.world.entity.EquipmentSlot slot : net.minecraft.world.entity.EquipmentSlot.values()) {
+			if (slot.getType() != net.minecraft.world.entity.EquipmentSlot.Type.HUMANOID_ARMOR && slot != net.minecraft.world.entity.EquipmentSlot.MAINHAND) continue;
+			if (providesGoggles(player.getItemBySlot(slot), player)) return true;
+		}
+		for (ItemStack stack : getWornItems(player)) {
+			if (providesGoggles(stack, player)) return true;
+		}
+		return false;
+	}
+
+	private static boolean providesGoggles(ItemStack stack, Player player) {
+		return !stack.isEmpty() && stack.getItem() instanceof IGoggles goggles && goggles.showIngamePopups(stack, player);
+	}
 }

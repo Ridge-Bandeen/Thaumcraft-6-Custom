@@ -1,0 +1,7 @@
+# Minimal synthetic material-library stub, added 2026-09-25 - NOT recovered original data (the true original
+# never shipped a .mtl for these models either; its own bespoke 1.12.2-era OBJ loader never needed material-
+# driven texture resolution). NeoForge's own modern ObjLoader eagerly resolves any `mtllib` directive it finds
+# and throws if the referenced file is missing, so this exists purely to satisfy that real parse-time
+# requirement - the actual texture is supplied per-part by the model JSON's own "textures" map, not read from
+# here. Shared by golem_base.obj and golem_base_flag.obj (both reference this exact file name).
+newmtl Material__25

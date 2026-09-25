@@ -100,6 +100,30 @@ public class ThaumcraftClient {
                 return TEXTURE;
             }
         }, thaumcraft.common.registry.ThaumcraftFluids.LIQUID_DEATH_TYPE);
+
+        // The original's own custom armor meshes (see CustomArmorModel's doc comment) - before 2026-09-25 all
+        // of these were drawn on the vanilla biped with a texture laid out for the custom mesh.
+        registerArmorModel(event, thaumcraft.client.render.CustomArmorModel.Kind.FORTRESS,
+                ItemsTC.fortressHelm.get(), ItemsTC.fortressChest.get(), ItemsTC.fortressLegs.get());
+        registerArmorModel(event, thaumcraft.client.render.CustomArmorModel.Kind.KNIGHT,
+                ItemsTC.crimsonPlateHelm.get(), ItemsTC.crimsonPlateChest.get(), ItemsTC.crimsonPlateLegs.get());
+        registerArmorModel(event, thaumcraft.client.render.CustomArmorModel.Kind.LEADER,
+                ItemsTC.crimsonPraetorHelm.get(), ItemsTC.crimsonPraetorChest.get(), ItemsTC.crimsonPraetorLegs.get());
+        registerArmorModel(event, thaumcraft.client.render.CustomArmorModel.Kind.ROBE,
+                ItemsTC.crimsonRobeHelm.get(), ItemsTC.crimsonRobeChest.get(), ItemsTC.crimsonRobeLegs.get(),
+                ItemsTC.voidRobeHelm.get(), ItemsTC.voidRobeChest.get(), ItemsTC.voidRobeLegs.get());
+    }
+
+    private static void registerArmorModel(net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent event,
+            thaumcraft.client.render.CustomArmorModel.Kind kind, net.minecraft.world.item.Item... items) {
+        event.registerItem(new net.neoforged.neoforge.client.extensions.common.IClientItemExtensions() {
+            @Override
+            public net.minecraft.client.model.HumanoidModel<?> getHumanoidArmorModel(net.minecraft.world.entity.LivingEntity entity,
+                    net.minecraft.world.item.ItemStack stack, net.minecraft.world.entity.EquipmentSlot slot,
+                    net.minecraft.client.model.HumanoidModel<?> original) {
+                return thaumcraft.client.render.CustomArmorModel.get(kind, entity, stack, slot, original);
+            }
+        }, items);
     }
 
     @SubscribeEvent
@@ -357,6 +381,11 @@ public class ThaumcraftClient {
                 .toArray(net.minecraft.world.level.block.Block[]::new));
     }
 
+    /** IMPORTANT: 1.21's item renderer reads the ALPHA byte of an item tint (unlike block tints, which ignore
+     * it) - a bare 0xRRGGBB has alpha 0 and renders the item fully transparent. Vanilla wraps every RGB-only
+     * value in {@code FastColor.ARGB32.opaque}; so must any handler returning an Aspect color or a hard-coded
+     * RGB constant. {@code DyeColor#getTextureDiffuseColor} and {@code DyedItemColor#getOrDefault} (when
+     * dyed) are already opaque. Found 2026-09-25 in the first real playtest (invisible crystal essences). */
     @SubscribeEvent
     static void onRegisterItemColors(RegisterColorHandlersEvent.Item event) {
         event.register((stack, tintIndex) -> {
@@ -373,9 +402,17 @@ public class ThaumcraftClient {
 
         event.register((stack, tintIndex) -> {
             net.minecraft.world.level.block.Block block = net.minecraft.world.level.block.Block.byItem(stack.getItem());
-            return block instanceof thaumcraft.common.blocks.world.ore.BlockCrystal crystal ? crystal.aspect.getColor() : -1;
+            return block instanceof thaumcraft.common.blocks.world.ore.BlockCrystal crystal ? net.minecraft.util.FastColor.ARGB32.opaque(crystal.aspect.getColor()) : -1;
         }, ItemsTC.crystals.values().stream().map(net.neoforged.neoforge.registries.DeferredItem::get)
                 .toArray(net.minecraft.world.item.Item[]::new));
+
+        // Crystal essence: one shared white crystal texture, tinted by the aspect it holds - matches the
+        // original's own real itemEssentiaColourHandler (first aspect's color, white if it holds none). Found
+        // 2026-09-25 in the first real client playtest: every essence rendered plain white without this.
+        event.register((stack, tintIndex) -> {
+            thaumcraft.api.aspects.AspectList aspects = stack.get(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get());
+            return aspects != null && aspects.size() > 0 ? net.minecraft.util.FastColor.ARGB32.opaque(aspects.getAspects()[0].getColor()) : -1;
+        }, ItemsTC.crystalEssence.get());
 
         // phial_filled.json's layer1 (the liquid) is tinted per-instance off the phial's own held aspect,
         // same "one shared texture, tinted by data" idea as the candles above. layer0 (the glass) stays
@@ -383,7 +420,7 @@ public class ThaumcraftClient {
         net.minecraft.client.color.item.ItemColor aspectTint = (stack, tintIndex) -> {
             if (tintIndex != 1) return -1;
             thaumcraft.api.aspects.AspectList aspects = stack.get(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get());
-            return aspects != null && aspects.size() > 0 ? aspects.getAspects()[0].getColor() : -1;
+            return aspects != null && aspects.size() > 0 ? net.minecraft.util.FastColor.ARGB32.opaque(aspects.getAspects()[0].getColor()) : -1;
         };
         event.register(aspectTint, ItemsTC.phial.get());
         event.register(aspectTint, ItemsTC.label.get());
@@ -394,7 +431,7 @@ public class ThaumcraftClient {
         // (0x6A3880, the classic purple robe) when undyed. See ItemRobeArmor's own doc comment.
         net.minecraft.client.color.item.ItemColor robeTint = (stack, tintIndex) -> tintIndex > 0 ? -1
                 : net.minecraft.world.item.component.DyedItemColor.getOrDefault(stack,
-                        thaumcraft.common.items.armor.ItemRobeArmor.DEFAULT_ROBE_COLOR);
+                        net.minecraft.util.FastColor.ARGB32.opaque(thaumcraft.common.items.armor.ItemRobeArmor.DEFAULT_ROBE_COLOR));
         event.register(robeTint, ItemsTC.clothChest.get(), ItemsTC.clothLegs.get(), ItemsTC.clothBoots.get(),
                 ItemsTC.voidRobeHelm.get(), ItemsTC.voidRobeChest.get(), ItemsTC.voidRobeLegs.get());
 

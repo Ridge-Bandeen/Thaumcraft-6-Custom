@@ -1,16 +1,26 @@
 # 3ds Max Wavefront OBJ Exporter v0.97b - (c)2007 guruware
 # File Created: 01.10.2015 14:06:11
+#
+# Edited 2026-09-25 for NeoForge's modern OBJ loader (the original data, kept, minus these changes):
+#  - map_Ka/map_Kd pointed at the original author's absolute Windows path (C:\Thaumcraft\...), which the
+#    modern loader can't resolve - now the standard "#Material__25" texture-variable form, bound by the model
+#    JSON's own "textures" map.
+#  - Ka/Kd raised from 0.588 to 1.0: the loader multiplies vertex colour by Kd, which would darken every
+#    crystal to 59% on top of its aspect tint. The 1.12 pipeline this mesh was authored for didn't do that.
+#  - neoforge_TintIndex 0: the real aspect colour tint (crystal_aer etc. each tint by their own aspect), same
+#    tint index the previous placeholder box used.
 
 newmtl Material__25
 	Ns 10.0000
 	Ni 1.5000
 	d 1.0000
 	Tr 0.0000
-	Tf 1.0000 1.0000 1.0000 
+	Tf 1.0000 1.0000 1.0000
 	illum 2
-	Ka 0.5880 0.5880 0.5880
-	Kd 0.5880 0.5880 0.5880
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
 	Ks 0.0000 0.0000 0.0000
 	Ke 0.0000 0.0000 0.0000
-	map_Ka C:\Thaumcraft\thaumcraft18\src\main\resources\assets\thaumcraft\textures\blocks\crystal.png
-	map_Kd C:\Thaumcraft\thaumcraft18\src\main\resources\assets\thaumcraft\textures\blocks\crystal.png
+	map_Ka #Material__25
+	map_Kd #Material__25
+	neoforge_TintIndex 0

@@ -67,6 +67,17 @@ public final class EnderShader {
 	 * failure, or too early in startup) - callers should skip drawing entirely in that case. */
 	@Nullable
 	static BufferBuilder begin(VertexFormat.Mode mode) {
+		return begin(mode, false);
+	}
+
+	/** As {@link #begin(VertexFormat.Mode)}, choosing the true original's own blend function: {@code additive}
+	 * is its {@code glBlendFunc(GL_SRC_ALPHA, GL_ONE)} (the shader's output alpha is always 1, so that is
+	 * dst+src - a soft glow that never hides what is behind it), otherwise its default
+	 * {@code (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)} (with alpha 1, a plain opaque replace). The two look
+	 * completely different here, which is what makes a Flux Rift's outer layers read as a glow around its
+	 * solid core. */
+	@Nullable
+	static BufferBuilder begin(VertexFormat.Mode mode, boolean additive) {
 		if (instance == null) return null;
 		var player = Minecraft.getInstance().player;
 		if (player == null) return null;
@@ -85,12 +96,36 @@ public final class EnderShader {
 		// respect whatever the ambient cull state happened to be left at by unrelated rendering just before.
 		RenderSystem.disableCull();
 
+		// Vanilla's own render types each enable depth testing for themselves and DISABLE it again on clear
+		// (DepthTestStateShard), so by the time a block-entity/entity renderer runs, the ambient state is
+		// "depth test off" - an immediate-mode draw like this one must turn it on itself, or it paints over
+		// everything already in the world (found 2026-09-25: the void siphon's panels drew on top of its own
+		// brass arches and base plate). Same LEQUAL function the true original's fixed-function pipeline used.
+		RenderSystem.enableDepthTest();
+		RenderSystem.depthFunc(515); // GL_LEQUAL - the literal vanilla itself uses
+
+		RenderSystem.enableBlend();
+		if (additive) {
+			RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA, com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
+		} else {
+			RenderSystem.defaultBlendFunc();
+		}
+
 		return Tesselator.getInstance().begin(mode, DefaultVertexFormat.POSITION);
 	}
 
 	static void end(BufferBuilder builder) {
-		BufferUploader.drawWithShader(builder.buildOrThrow());
+		// build() (not buildOrThrow()) - a caller can legitimately emit zero vertices (e.g. a hole with no
+		// solid neighbour on any side has nothing to draw), and buildOrThrow() on an empty buffer crashes the
+		// whole client. Found 2026-09-25 in the first real playtest.
+		var mesh = builder.build();
+		if (mesh != null) {
+			BufferUploader.drawWithShader(mesh);
+		}
 		RenderSystem.enableCull();
+		RenderSystem.disableDepthTest();
+		RenderSystem.disableBlend();
+		RenderSystem.defaultBlendFunc();
 	}
 
 	private static void setUniform(String name, float value) {

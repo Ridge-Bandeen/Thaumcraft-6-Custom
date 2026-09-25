@@ -1,4 +1,5 @@
 {
+    "render_type": "minecraft:translucent",
     "parent": "thaumcraft:block/inlay_side",
     "textures": {
         "over": "thaumcraft:blocks/inlay_rune1"

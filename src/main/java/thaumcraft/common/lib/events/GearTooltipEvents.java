@@ -65,14 +65,16 @@ public class GearTooltipEvents {
 			tooltip.add(Component.translatable("item.runic.charge").append(" +" + runicCharge).withStyle(ChatFormatting.GOLD));
 		}
 
-		if (stack.getItem() instanceof IWarpingGear warpingGear) {
+		// NeoForge documents ItemTooltipEvent#getEntity() as nullable (e.g. the creative-search tooltip index
+		// builds tooltips at resource-reload time with no player) - both of these need the player's capabilities.
+		if (player != null && stack.getItem() instanceof IWarpingGear warpingGear) {
 			int warp = warpingGear.getWarp(stack, player);
 			if (warp > 0) {
 				tooltip.add(Component.translatable("item.warping").append(" " + warp).withStyle(ChatFormatting.DARK_PURPLE));
 			}
 		}
 
-		if (stack.getItem() instanceof IVisDiscountGear discountGear) {
+		if (player != null && stack.getItem() instanceof IVisDiscountGear discountGear) {
 			int discount = discountGear.getVisDiscount(stack, player);
 			if (discount > 0) {
 				tooltip.add(Component.translatable("tc.visdiscount").append(": " + discount + "%").withStyle(ChatFormatting.DARK_PURPLE));

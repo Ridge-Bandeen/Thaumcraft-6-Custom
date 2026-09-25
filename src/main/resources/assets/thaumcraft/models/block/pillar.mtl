@@ -11,5 +11,5 @@ newmtl texture
 	Kd 0.5880 0.5880 0.5880
 	Ks 0.0000 0.0000 0.0000
 	Ke 0.0000 0.0000 0.0000
-	map_Ka minecraft:blocks/redstone_block
-	map_Kd minecraft:blocks/redstone_block
+	map_Ka minecraft:block/redstone_block
+	map_Kd minecraft:block/redstone_block

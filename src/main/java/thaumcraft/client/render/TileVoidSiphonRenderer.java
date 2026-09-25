@@ -20,11 +20,10 @@ import thaumcraft.common.tiles.crafting.TileVoidSiphon;
  * {@link EnderShader} as {@link TileHoleRenderer}/{@code RenderFluxRift}.
  *
  * <p>Real, checked-not-guessed simplification: the true original's own real per-face in-plane roll is dropped
- * (a real no-op - see {@link TileHoleRenderer}'s own doc comment for why) and its own real per-layer
- * blend-function difference (additive for the small ring, normal alpha for the large one) is also dropped -
- * the shader's own real fragment output is unconditionally opaque (alpha always 1.0), so blend function
- * choice has zero real visual effect either way. Depth-write IS still disabled for both rings (a real, visible
- * behavioural difference, not a no-op), matching the original's own real {@code depthMask(false)} exactly.
+ * (a real no-op - see {@link TileHoleRenderer}'s own doc comment for why). The per-layer blend function is
+ * kept (additive for the small top ring, normal alpha for the large one) - it is NOT a no-op even though the
+ * shader's output alpha is always 1, since additive is dst+src while normal blend at alpha 1 is an opaque
+ * replace. Depth-write is disabled for both rings, matching the original's own real {@code depthMask(false)}.
  * The large ring's own real anisotropic scale (0.25/0.5/0.25 - flatter on 2 axes than the third) is applied
  * per-face against whichever 2 world axes are actually tangent to that face, not against a naive local-frame
  * guess - checked directly by re-deriving the true original's own real matrix composition order (its own
@@ -46,12 +45,12 @@ public class TileVoidSiphonRenderer implements BlockEntityRenderer<TileVoidSipho
 
 		poseStack.pushPose();
 		poseStack.translate(0.5, 0.875, 0.5);
-		drawRing(poseStack, 0.126f, 0.2f, 0.2f, 0.2f);
+		drawRing(poseStack, true, 0.126f, 0.2f, 0.2f, 0.2f);
 		poseStack.popPose();
 
 		poseStack.pushPose();
 		poseStack.translate(0.5, 0.3125, 0.5);
-		drawRing(poseStack, 0.26f, 0.25f, 0.5f, 0.25f);
+		drawRing(poseStack, false, 0.26f, 0.25f, 0.5f, 0.25f);
 		poseStack.popPose();
 
 		RenderSystem.depthMask(true);
@@ -60,8 +59,8 @@ public class TileVoidSiphonRenderer implements BlockEntityRenderer<TileVoidSipho
 	/** One ring of 6 quads, one per {@link Direction}, {@code offset} units out from the current origin
 	 * (unscaled - matches the true original's own real translate-before-scale order), each sized against
 	 * whichever 2 of {@code scaleX}/{@code scaleY}/{@code scaleZ} are actually tangent to that face. */
-	private static void drawRing(PoseStack poseStack, float offset, float scaleX, float scaleY, float scaleZ) {
-		BufferBuilder builder = EnderShader.begin(VertexFormat.Mode.QUADS);
+	private static void drawRing(PoseStack poseStack, boolean additive, float offset, float scaleX, float scaleY, float scaleZ) {
+		BufferBuilder builder = EnderShader.begin(VertexFormat.Mode.QUADS, additive);
 		if (builder == null) return;
 		PoseStack.Pose pose = poseStack.last();
 		for (Direction face : Direction.values()) {

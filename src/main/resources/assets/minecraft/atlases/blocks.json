@@ -1,0 +1,9 @@
+{
+    "sources": [
+        { "type": "minecraft:directory", "source": "blocks", "prefix": "blocks/" },
+        { "type": "minecraft:directory", "source": "items", "prefix": "items/" },
+        { "type": "minecraft:directory", "source": "entity/golems", "prefix": "entity/golems/" },
+        { "type": "minecraft:directory", "source": "entity/armor", "prefix": "entity/armor/" },
+        { "type": "minecraft:single", "resource": "thaumcraft:models/chesthungry" }
+    ]
+}

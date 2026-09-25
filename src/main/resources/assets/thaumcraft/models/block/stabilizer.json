@@ -1,4 +1,5 @@
 {
+    "render_type": "minecraft:cutout",
     "__createdwith": "opl's Model Creator",
     "ambientocclusion": false,
     "textures": {

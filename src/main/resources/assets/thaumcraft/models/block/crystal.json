@@ -1,19 +1,9 @@
 {
-    "elements": [
-        {   "from": [ 4, 0, 4 ],
-            "to": [ 12, 10, 12 ],
-            "faces": {
-                "down":  { "texture": "#all", "cullface": "down", "tintindex": 0 },
-                "up":    { "texture": "#all", "tintindex": 0 },
-                "north": { "texture": "#all", "tintindex": 0 },
-                "south": { "texture": "#all", "tintindex": 0 },
-                "west":  { "texture": "#all", "tintindex": 0 },
-                "east":  { "texture": "#all", "tintindex": 0 }
-            }
-        }
-    ],
+    "loader": "neoforge:obj",
+    "model": "thaumcraft:models/obj/crystal.obj",
+    "flip_v": true,
     "textures": {
-        "all": "thaumcraft:blocks/crystal",
+        "Material__25": "thaumcraft:blocks/crystal",
         "particle": "thaumcraft:blocks/crystal"
     }
 }

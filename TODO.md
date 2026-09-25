@@ -12,6 +12,50 @@ Full narrative history/rationale for everything below lives in the project
 memory file (`thaumcraft-1211-port.md`); this file is the compact, actionable
 index.
 
+## First joint human playtest, 2026-09-25 (runClient, creative test world)
+
+The first real client session with the user; the code-complete port was played through the
+`thaumcraft-ui-visual-parity-checklist` memory. **Closed this session** (all found only by actually
+running the client - GameTest/JUnit never render anything):
+
+- Ender shader never loaded (unnamespaced `vertex`/`fragment` in `ender.json`).
+- 58 golem/OBJ model load failures (missing `mtllib`/materials) -> stub `.mtl`s.
+- ~370 missing textures: 1.21's block atlas only stitches `textures/block`+`item`; legacy `blocks/`,
+  `items/`, `entity/golems`, `entity/armor` folders need the `assets/minecraft/atlases/blocks.json` override.
+- Item colour handlers returned bare RGB - 1.21 item tints read the ALPHA byte, so alpha 0 = invisible
+  item (crystal essences, and 3 latent siblings). Wrap with `FastColor.ARGB32.opaque`.
+- Custom immediate-mode draws (`EnderShader`) ran with depth test off (vanilla render types disable it on
+  clear) - void siphon/hole/rift painted over the world. Also `BufferBuilder.build()` null on empty mesh
+  (hole with no solid neighbour crashed the client).
+- Flux Rift / siphon blend modes: additive vs replace matters even though the shader's alpha is 1.
+- Crystal clusters: real 8-shard OBJ mesh per size with weighted per-position variant (was a placeholder box).
+- Goggles/void/void-robe/fortress/traveller armor had no `*_layer_N.png` (magenta head).
+- **Custom armor meshes**: fortress, crimson plate/praetor/robe and void robe were drawn on the vanilla
+  biped. `CustomArmorMeshes` (generated from the originals' constructors) + `CustomArmorModel`.
+- Thaumometer had no item model (OBJ + converted Forge hand transforms; note Forge composes rotation
+  lists in the opposite order to vanilla's XYZ Euler).
+- Models without a `render_type` draw transparent pixels opaque: 42 models fixed (plants, taint fibre/
+  growth/orbs, stabilizer, relay, infernal furnace, leaves, jars, inlays).
+- No creative tab existed at all -> `ThaumcraftCreativeTabs` (+ aspect/phial/golem-placer variants).
+- 75 registered objects had no English name -> filled from the original lang; `LangCoverageTest` guards it.
+- Stub `.mtl`s without `map_Kd` render as the missing texture (sonic dome, advanced crossbow, golem
+  builder) - fixed; needs a restart to verify (renderables are cached per session).
+
+**New backlog from that session:**
+
+- Register a recipe-book category finder for every Thaumcraft recipe type (`RegisterRecipeBookCategoriesEvent`)
+  - the client logs 135 "Unknown recipe category" warnings; harmless but noisy.
+- Research recipe references use legacy CamelCase ids (`thaumcraft:Filter`, `BottleTaint`, `Alembic`...):
+  logged as "Skipping unparseable research recipe reference" - those Thaumonomicon recipe pages may be empty.
+  Trace where the names come from and map them to real recipe ids.
+- Stale 1.12 `forge_marker` blockstates for fluids/effects (`liquid_death`, `effect_sap`, ...) - log noise only.
+- Non-English lang files are old-format `.lang` (1.21 ignores them); only `en_us.json` works.
+- Deferred colour-handler gaps: focus items / caster focus layer / jar liquid tint / golem placer colour;
+  leaves/grass block-item tints unchecked.
+- Audit every remaining stub `.mtl` (golem_*) for the same missing-`map_Kd` problem once golems are played.
+- The Eldritch Warden/bosses cap any hit at 35 damage and buff themselves on larger hits (faithful to the
+  original) - `/kill` does NOT kill them; use `/data merge entity <sel> {Health:0f}`.
+
 ## Confirmed real gaps (actionable)
 
 ~~**Real crash-risk bug fixed 2026-09-16**: `EntityTaintacleGiant` (the Taint

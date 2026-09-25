@@ -1,8 +1,9 @@
 {
+    "render_type": "minecraft:cutout",
     "textures": {
         "particle": "thaumcraft:blocks/redstone_relay_on",
-        "torch": "blocks/redstone_torch_on",
-        "slab": "blocks/stone_slab_top",
+        "torch": "block/redstone_torch",
+        "slab": "block/smooth_stone",
         "top": "thaumcraft:blocks/redstone_relay_on",
         "side": "thaumcraft:blocks/levitator_side_on"
     },

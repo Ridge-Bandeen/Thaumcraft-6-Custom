@@ -735,6 +735,9 @@ sourceSets {
             include 'thaumcraft/client/gui/KnowledgeGainOverlay.java'
 
             include 'thaumcraft/common/registry/ThaumcraftSounds.java'
+            include 'thaumcraft/common/registry/ThaumcraftCreativeTabs.java'
+            include 'thaumcraft/client/render/CustomArmorMeshes.java'
+            include 'thaumcraft/client/render/CustomArmorModel.java'
 
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }

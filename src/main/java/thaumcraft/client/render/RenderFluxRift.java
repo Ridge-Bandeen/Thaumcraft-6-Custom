@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
+import thaumcraft.api.items.WornGearHelper;
 import thaumcraft.common.entities.EntityFluxRift;
 
 /**
@@ -34,9 +35,11 @@ import thaumcraft.common.entities.EntityFluxRift;
  * at increasing radius with depth-write disabled, one "core" pass at the tendril's own real width with
  * depth-write enabled) for the same real soft-glow look.
  *
- * <p>Real, disclosed simplification: the true original's own real per-pass blend-function difference is
- * dropped, same real reasoning as {@link TileVoidSiphonRenderer}'s own doc comment (the shader's own real
- * fragment output is unconditionally opaque, so blend function choice has zero real visual effect).
+ * <p>Blend functions match the original too: the 3 glow passes are ADDITIVE ({@code SRC_ALPHA, ONE}), only the
+ * core is plain alpha blend. That difference matters even though the shader's output alpha is always 1
+ * (found 2026-09-25 - an earlier note here called it a no-op): additive is dst+src, a glow that never hides
+ * what is behind it, whereas plain blend at alpha 1 is an opaque replace - so with goggles' depth-test-off
+ * outer pass the whole tube showed as a solid shape through terrain instead of a faint halo.
  */
 public class RenderFluxRift extends EntityRenderer<EntityFluxRift> {
 
@@ -80,13 +83,21 @@ public class RenderFluxRift extends EntityRenderer<EntityFluxRift> {
 		Vec3[] tangents = computeTangents(wobbled);
 		Vec3[] rights = computeRights(tangents);
 
+		// Real original behaviour: with Goggles of Revealing (or anything else IGoggles) the OUTERMOST glow pass
+		// is drawn with depth testing off, so the rift shows through walls; without goggles it's hidden by
+		// terrain like anything else. Only that first pass - the inner passes and the core stay depth-tested.
+		boolean goggles = WornGearHelper.hasGoggles(net.minecraft.client.Minecraft.getInstance().player);
+
 		PoseStack.Pose pose = poseStack.last();
 		for (int pass = 0; pass < PASS_RADIUS_SCALE.length; pass++) {
 			boolean core = pass == PASS_RADIUS_SCALE.length - 1;
 			RenderSystem.depthMask(core);
 
-			BufferBuilder builder = EnderShader.begin(VertexFormat.Mode.QUADS);
+			BufferBuilder builder = EnderShader.begin(VertexFormat.Mode.QUADS, !core);
 			if (builder == null) break;
+			if (pass == 0 && goggles) {
+				RenderSystem.disableDepthTest();
+			}
 
 			for (int i = 0; i < wobbled.length - 1; i++) {
 				float w0 = widths.get(i) * PASS_RADIUS_SCALE[pass];

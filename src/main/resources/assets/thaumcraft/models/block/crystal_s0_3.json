@@ -1,0 +1,18 @@
+{
+    "loader": "neoforge:obj",
+    "model": "thaumcraft:models/obj/crystal.obj",
+    "flip_v": true,
+    "textures": {
+        "Material__25": "thaumcraft:blocks/crystal",
+        "particle": "thaumcraft:blocks/crystal"
+    },
+    "visibility": {
+        "s014": false,
+        "s015": false,
+        "s016": false,
+        "s018": false,
+        "s019": false,
+        "s024": false,
+        "s026": false
+    }
+}

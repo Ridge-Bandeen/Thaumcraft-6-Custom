@@ -1,0 +1,4 @@
+# Minimal synthetic material-library stub, added 2026-09-25 - see golem_base.mtl for why this exists.
+# Shared by every golem part OBJ that uses `usemtl main` (the true original's own exporter never wrote an
+# `mtllib` line for these at all - added at the top of each OBJ alongside this file).
+newmtl main

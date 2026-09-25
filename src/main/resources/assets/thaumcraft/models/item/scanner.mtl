@@ -1,3 +1,8 @@
+# Edited 2026-09-25 for NeoForge's modern OBJ loader (same changes as models/obj/crystal.mtl):
+#  - map_Ka/map_Kd used the 1.12 "thaumcraft:items/name.png" form; now "#body"/"#pane" texture variables, bound
+#    by models/item/thaumometer.json's "textures" map.
+#  - Ka/Kd raised from 0.588 to 1.0 - the modern loader multiplies vertex colour by Kd (would darken to 59%).
+
 # 3ds Max Wavefront OBJ Exporter v0.97b - (c)2007 guruware
 # File Created: 25.11.2016 10:01:23
 newmtl body
@@ -7,12 +12,12 @@ newmtl body
 	Tr 0.0000
 	Tf 1.0000 1.0000 1.0000 
 	illum 2
-	Ka 0.5880 0.5880 0.5880
-	Kd 0.5880 0.5880 0.5880
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
 	Ks 0.0000 0.0000 0.0000
 	Ke 0.0000 0.0000 0.0000
-	map_Ka thaumcraft:items\scanner.png
-	map_Kd thaumcraft:items\scanner.png
+	map_Ka #body
+	map_Kd #body
 newmtl pane
 	Ns 10.0000
 	Ni 1.5000
@@ -20,9 +25,9 @@ newmtl pane
 	Tr 0.0000
 	Tf 1.0000 1.0000 1.0000 
 	illum 2
-	Ka 0.5880 0.5880 0.5880
-	Kd 0.5880 0.5880 0.5880
+	Ka 1.0000 1.0000 1.0000
+	Kd 1.0000 1.0000 1.0000
 	Ks 0.0000 0.0000 0.0000
 	Ke 0.0000 0.0000 0.0000
-	map_Ka thaumcraft:items\scanscreen.png
-	map_Kd thaumcraft:items\scanscreen.png
+	map_Ka #pane
+	map_Kd #pane
