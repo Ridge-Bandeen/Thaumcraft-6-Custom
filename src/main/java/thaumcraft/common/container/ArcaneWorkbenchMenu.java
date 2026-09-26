@@ -9,6 +9,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.ResultContainer;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -34,6 +35,13 @@ import thaumcraft.common.world.aura.AuraHandler;
  * {@code BlockArcaneWorkbenchCharger} and {@code AuraHandler#getWideVis}/{@code #drainWideVis}), matching
  * the original's own wider-area draw exactly.
  *
+ * Vis cost is {@code recipe vis * the player's total modifier} (see {@link #visCost}) - discount gear makes crafts
+ * cheaper, Vis Exhaust dearer. The original computed {@code vis *= (int)(1.0f - discount)}, which truncates to 0 for
+ * ANY positive discount (free crafts) and ignores the exhaust penalty; the intended percentage is implemented here
+ * instead (2026-09-25). Each crystal-ring slot only takes its own primal aspect's crystal (air, fire, water, earth,
+ * order, entropy - as the original's SlotCrystal did). The available vis, cost and discount % are synced to the
+ * client through data slots for the screen's readout, and the result re-evaluates when the vis level crosses the cost.
+ *
  * Simplifications still remaining versus the original for this pass (see TileArcaneWorkbench):
  * - No fallback to plain vanilla 3x3 crafting-table recipes if no arcane recipe matches.
  * - No vanilla recipe-book integration (extends AbstractContainerMenu directly, not RecipeBookMenu).
@@ -55,6 +63,14 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 	private final Player player;
 	@Nullable
 	private RecipeHolder<ArcaneRecipe> currentRecipe;
+	private final DataSlot availableVis = DataSlot.standalone();
+	private final DataSlot shownCost = DataSlot.standalone();
+	private final DataSlot shownDiscount = DataSlot.standalone();
+	private boolean refreshing;
+	private boolean lastHadVis = true;
+
+	/** The primal aspect each crystal-ring slot takes, in ring order. */
+	public static final Aspect[] RING_ASPECTS = {Aspect.AIR, Aspect.FIRE, Aspect.WATER, Aspect.EARTH, Aspect.ORDER, Aspect.ENTROPY};
 
 	public ArcaneWorkbenchMenu(int containerId, Inventory playerInventory) {
 		this(containerId, playerInventory, new SimpleContainer(TileArcaneWorkbench.SLOT_COUNT), ContainerLevelAccess.NULL);
@@ -70,7 +86,7 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 		this.access = access;
 		this.player = playerInventory.player;
 
-		addSlot(new Slot(resultContainer, 0, 129, 65) {
+		addSlot(new Slot(resultContainer, 0, 160, 64) { // the texture's own socket for it, as in the original
 			@Override
 			public boolean mayPlace(ItemStack stack) {
 				return false;
@@ -92,8 +108,11 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 		int[] crystalX = {64, 17, 112, 17, 112, 64};
 		int[] crystalY = {13, 35, 35, 93, 93, 115};
 		for (int i = 0; i < TileArcaneWorkbench.CRYSTAL_SIZE; i++) {
-			addSlot(new CrystalSlot(container, TileArcaneWorkbench.GRID_SIZE + i, crystalX[i], crystalY[i]));
+			addSlot(new CrystalSlot(RING_ASPECTS[i], container, TileArcaneWorkbench.GRID_SIZE + i, crystalX[i], crystalY[i]));
 		}
+		addDataSlot(availableVis);
+		addDataSlot(shownCost);
+		addDataSlot(shownDiscount);
 
 		for (int row = 0; row < 3; row++) {
 			for (int col = 0; col < 9; col++) {
@@ -107,16 +126,84 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 		slotsChanged(container);
 	}
 
-	/** Restricts a crystal-ring slot to essentia-container items (crystal essence, etc). */
+	/** Restricts a crystal-ring slot to the crystal essence of its own primal aspect. */
 	private static class CrystalSlot extends Slot {
-		CrystalSlot(Container container, int slot, int x, int y) {
+		private final Aspect aspect;
+
+		CrystalSlot(Aspect aspect, Container container, int slot, int x, int y) {
 			super(container, slot, x, y);
+			this.aspect = aspect;
 		}
 
 		@Override
 		public boolean mayPlace(ItemStack stack) {
-			return stack.getItem() instanceof thaumcraft.api.aspects.IEssentiaContainerItem;
+			if (!(stack.getItem() instanceof thaumcraft.api.aspects.IEssentiaContainerItem c)) return false;
+			AspectList aspects = c.getAspects(stack);
+			return aspects != null && aspects.size() == 1 && aspects.getAmount(aspect) > 0;
 		}
+	}
+
+	/** What the recipe really costs this player: its vis times their modifier, never free while the recipe has a cost. */
+	public static int visCost(ArcaneRecipe recipe, Player player) {
+		int base = recipe.getVis();
+		if (base <= 0) return 0;
+		return Math.max(1, Math.round(base * thaumcraft.common.items.casters.ItemCaster.totalVisModifier(player)));
+	}
+
+	public int getAvailableVis() {
+		return availableVis.get();
+	}
+
+	public int getShownCost() {
+		return shownCost.get();
+	}
+
+	/** The discount as a whole percent; negative while vis-exhausted. */
+	public int getShownDiscount() {
+		return shownDiscount.get();
+	}
+
+	/** The crystals the recipe in the grid asks for, or null (client and server: worked out from the synced slots). */
+	@Nullable
+	public AspectList findCrystalNeeds(Level level) {
+		return level.getRecipeManager().getRecipeFor(ThaumcraftRecipeTypes.ARCANE_TYPE.get(), buildInput(), level)
+				.map(h -> h.value().getCrystals()).orElse(null);
+	}
+
+	/** What the grid would make if the vis were there - the screen draws it greyed out when it is not. */
+	public ItemStack previewResult(Level level) {
+		ArcaneCraftingInput input = buildInput();
+		return level.getRecipeManager().getRecipeFor(ThaumcraftRecipeTypes.ARCANE_TYPE.get(), input, level)
+				.map(h -> h.value().assemble(input, level.registryAccess())).orElse(ItemStack.EMPTY);
+	}
+
+	private float availableVisAt(Level level, net.minecraft.core.BlockPos pos) {
+		return hasCharger(level, pos) ? AuraHandler.getWideVis(level, pos) : AuraHandler.getVis(level, pos);
+	}
+
+	/** Keeps the synced vis readout current and re-evaluates the result when the vis crosses the recipe's cost. */
+	@Override
+	public void broadcastChanges() {
+		if (!refreshing && !player.level().isClientSide) {
+			refreshing = true;
+			try {
+				access.execute((level, pos) -> {
+					availableVis.set((int) availableVisAt(level, pos));
+					if (currentRecipe == null) {
+						shownCost.set(0);
+						shownDiscount.set(0);
+					} else {
+						shownCost.set(visCost(currentRecipe.value(), player));
+						shownDiscount.set(Math.round((1.0f - thaumcraft.common.items.casters.ItemCaster.totalVisModifier(player)) * 100.0f));
+						boolean hasVis = availableVisAt(level, pos) >= shownCost.get();
+						if (hasVis != lastHadVis) updateResult(level, pos);
+					}
+				});
+			} finally {
+				refreshing = false;
+			}
+		}
+		super.broadcastChanges();
 	}
 
 	@Override
@@ -127,8 +214,8 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 	private void updateResult(Level level, net.minecraft.core.BlockPos pos) {
 		ArcaneCraftingInput input = buildInput();
 		currentRecipe = level.getRecipeManager().getRecipeFor(ThaumcraftRecipeTypes.ARCANE_TYPE.get(), input, level).orElse(null);
-		float availableVis = hasCharger(level, pos) ? AuraHandler.getWideVis(level, pos) : AuraHandler.getVis(level, pos);
-		boolean hasVis = currentRecipe == null || availableVis >= currentRecipe.value().getVis();
+		boolean hasVis = currentRecipe == null || availableVisAt(level, pos) >= visCost(currentRecipe.value(), player);
+		lastHadVis = hasVis;
 		boolean known = currentRecipe == null || thaumcraft.api.capabilities.ThaumcraftCapabilities.knowsResearchStrict(player, currentRecipe.value().getResearch());
 		ItemStack result = currentRecipe != null && hasVis && known ? currentRecipe.value().assemble(input, level.registryAccess()) : ItemStack.EMPTY;
 		resultContainer.setItem(0, result);
@@ -156,11 +243,12 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 			if (!container.getItem(i).isEmpty()) container.removeItem(i, 1);
 		}
 		if (currentRecipe != null) {
+				int cost = visCost(currentRecipe.value(), player);
 			access.execute((level, pos) -> {
 				if (hasCharger(level, pos)) {
-					AuraHandler.drainWideVis(level, pos, currentRecipe.value().getVis());
+					AuraHandler.drainWideVis(level, pos, cost);
 				} else {
-					AuraHandler.drainVis(level, pos, currentRecipe.value().getVis(), false);
+					AuraHandler.drainVis(level, pos, cost, false);
 				}
 			});
 			AspectList crystals = currentRecipe.value().getCrystals();

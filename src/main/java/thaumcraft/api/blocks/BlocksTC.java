@@ -570,7 +570,7 @@ public final class BlocksTC {
 	 * textures instead of reconstructing the original's real {@code .obj} mesh" simplification for
 	 * {@link #thaumatorium} applies here too, for the same reason). */
 	public static final DeferredBlock<Block> thaumatoriumTop = BLOCKS.registerBlock("thaumatorium_top",
-			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).explosionResistance(5.0f).sound(SoundType.STONE));
+			thaumcraft.common.blocks.crafting.BlockThaumatoriumTop::new, BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f).explosionResistance(5.0f).sound(SoundType.STONE).noOcclusion());
 
 	/** A real crafting component for the real {@link #thaumatorium}/{@link #thaumatoriumTop} multiblock
 	 * ritual, and for the Centrifuge/Thaumium+Void Essentia Smelter tiers/Potion Sprayer/Smelter Aux+Vent/

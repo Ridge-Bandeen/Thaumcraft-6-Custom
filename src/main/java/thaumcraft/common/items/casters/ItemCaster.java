@@ -49,12 +49,19 @@ public class ItemCaster extends Item implements ICaster {
 	 * Replaces the original's {@code CasterManager#getTotalVisDiscount}. Sums {@link IVisDiscountGear}'s
 	 * discount off worn armor plus the player's hotbar/offhand (the original scanned Baubles slots for this -
 	 * see {@link thaumcraft.api.items.WornGearHelper}'s own doc comment for why a plain inventory scan
-	 * stands in for that here) and the potion-based Vis Exhaust penalty the original applied on top - that
-	 * potion isn't built yet, so this omits it, capped at the interface's own documented 50% max (the
-	 * original never actually enforced that cap in code despite documenting it - enforced here for real).
+	 * stands in for that here) and the Vis Exhaust penalty the original applied on top (10% more per level of
+	 * whichever of the plain / infectious effects is stronger; wired 2026-09-25 - the effects exist now),
+	 * with the discount side capped at the interface's own documented 50% max (the original never actually
+	 * enforced that cap in code despite documenting it - enforced here for real).
 	 */
 	@Override
 	public float getConsumptionModifier(ItemStack is, Player player, boolean crafting) {
+		return totalVisModifier(player);
+	}
+
+	/** The multiplier applied to every vis cost this player pays: below 1 with discount gear, above 1 when vis-exhausted. */
+	public static float totalVisModifier(Player player) {
+		if (player == null) return 1.0f;
 		int discount = 0;
 		for (EquipmentSlot slot : new EquipmentSlot[] { EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET }) {
 			ItemStack armor = player.getItemBySlot(slot);
@@ -68,6 +75,12 @@ public class ItemCaster extends Item implements ICaster {
 			}
 		}
 		discount = Math.min(discount, 50);
+		net.minecraft.world.effect.MobEffectInstance plain = player.getEffect(thaumcraft.common.registry.ThaumcraftMobEffects.VIS_EXHAUST);
+		net.minecraft.world.effect.MobEffectInstance infectious = player.getEffect(thaumcraft.common.registry.ThaumcraftMobEffects.INFECTIOUS_VIS_EXHAUST);
+		if (plain != null || infectious != null) {
+			int level = Math.max(plain != null ? plain.getAmplifier() : 0, infectious != null ? infectious.getAmplifier() : 0);
+			discount -= (level + 1) * 10;
+		}
 		return 1.0f - discount / 100.0f;
 	}
 

@@ -49,6 +49,8 @@ public class ThaumcraftClient {
 
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
+        // Recipe tracing for item aspects needs a level to read recipes from when no integrated server is running.
+        thaumcraft.common.lib.crafting.ThaumcraftObjectTags.setClientLevelSupplier(() -> net.minecraft.client.Minecraft.getInstance().level);
         Thaumcraft.LOGGER.info("Thaumcraft {} client setup", Thaumcraft.VERSION);
 
         // caster_basic.json's item model switches on this ("predicate": {"focus": 0|1}) - reused
@@ -124,6 +126,12 @@ public class ThaumcraftClient {
                 return thaumcraft.client.render.CustomArmorModel.get(kind, entity, stack, slot, original);
             }
         }, items);
+    }
+
+    /** Recipes were (re)synced: item aspects derived from the old ones are stale. */
+    @SubscribeEvent
+    static void onRecipesUpdated(net.neoforged.neoforge.client.event.RecipesUpdatedEvent event) {
+        thaumcraft.common.lib.crafting.ThaumcraftObjectTags.clearDerived();
     }
 
     @SubscribeEvent

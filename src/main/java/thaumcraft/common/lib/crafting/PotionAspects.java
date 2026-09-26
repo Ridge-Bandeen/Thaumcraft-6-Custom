@@ -46,6 +46,10 @@ public final class PotionAspects {
 	}
 
 	public static AspectList of(Level level, ItemStack stack) {
+		return of(level.potionBrewing(), stack);
+	}
+
+	public static AspectList of(PotionBrewing brewing, ItemStack stack) {
 		AspectList result = new AspectList();
 		PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
 		Optional<Holder<net.minecraft.world.item.alchemy.Potion>> potion = contents == null ? Optional.empty() : contents.potion();
@@ -55,7 +59,7 @@ public final class PotionAspects {
 		}
 
 		List<Item> reagents = new ArrayList<>();
-		potion.ifPresent(p -> collectReagents(level.potionBrewing(), p, reagents, new HashSet<>()));
+		potion.ifPresent(p -> collectReagents(brewing, p, reagents, new HashSet<>()));
 
 		boolean traced = false;
 		for (Item reagent : reagents) {

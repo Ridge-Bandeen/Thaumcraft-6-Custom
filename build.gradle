@@ -47,6 +47,7 @@ sourceSets {
             include 'thaumcraft/common/blocks/crafting/BlockPatternCrafter.java'
             include 'thaumcraft/common/tiles/crafting/TilePatternCrafter.java'
             include 'thaumcraft/common/blocks/crafting/BlockThaumatorium.java'
+            include 'thaumcraft/common/blocks/crafting/BlockThaumatoriumTop.java'
             include 'thaumcraft/common/tiles/crafting/TileThaumatorium.java'
             include 'thaumcraft/common/blocks/devices/BlockBrainBox.java'
             include 'thaumcraft/common/entities/monster/EntityPech.java'
@@ -455,6 +456,7 @@ sourceSets {
             include 'thaumcraft/common/ThaumcraftInternalMethodHandler.java'
             include 'thaumcraft/api/aspects/AspectHelper.java'
             include 'thaumcraft/common/lib/crafting/ThaumcraftObjectTags.java'
+            include 'thaumcraft/common/lib/crafting/ThaumcraftAspectTable.java'
             include 'thaumcraft/common/lib/crafting/ThaumcraftEntityTags.java'
             include 'thaumcraft/api/aura/AuraHelper.java'
 

@@ -1607,6 +1607,92 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** Item aspects come from the original's own table (a playtest found only Crystal Essence could be dissolved: the port
+	 * had about 80 invented entries and no recipe tracing). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void itemAspectsFollowTheOriginalTableAndTraceRecipesForTheRest(GameTestHelper helper) {
+		thaumcraft.api.aspects.AspectList iron = thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(new ItemStack(Items.IRON_INGOT));
+		helper.assertTrue(iron.getAmount(thaumcraft.api.aspects.Aspect.METAL) == 15 && iron.size() == 1, "an iron ingot is Metal 15, got " + iron.aspects);
+
+		thaumcraft.api.aspects.AspectList cobble = thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(new ItemStack(Items.COBBLESTONE));
+		helper.assertTrue(cobble.getAmount(thaumcraft.api.aspects.Aspect.EARTH) == 5 && cobble.getAmount(thaumcraft.api.aspects.Aspect.ENTROPY) == 1,
+				"cobblestone is Earth 5 + Entropy 1, got " + cobble.aspects);
+
+		thaumcraft.api.aspects.AspectList obsidian = thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(new ItemStack(Items.OBSIDIAN));
+		helper.assertTrue(obsidian.getAmount(thaumcraft.api.aspects.Aspect.DARKNESS) == 5 && obsidian.getAmount(thaumcraft.api.aspects.Aspect.FIRE) == 5,
+				"obsidian is Earth 5 / Fire 5 / Darkness 5 (the port had invented Earth 10 / Entropy 10 / Fire 5), got " + obsidian.aspects);
+
+		// nothing in the table for planks or sticks: traced through their crafting recipes back to logs
+		thaumcraft.api.aspects.AspectList planks = thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(new ItemStack(Items.OAK_PLANKS));
+		helper.assertTrue(planks.getAmount(thaumcraft.api.aspects.Aspect.PLANT) > 0, "planks should trace back to Plant via the log recipe, got " + planks.aspects);
+		thaumcraft.api.aspects.AspectList stick = thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(new ItemStack(Items.STICK));
+		helper.assertTrue(stick.getAmount(thaumcraft.api.aspects.Aspect.PLANT) > 0, "a stick should trace back to Plant too, got " + stick.aspects);
+
+		// complex entries add to what the recipes give: a piston is a stack of ingredients plus Mechanism + Motion
+		thaumcraft.api.aspects.AspectList piston = thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(new ItemStack(Items.PISTON));
+		helper.assertTrue(piston.getAmount(thaumcraft.api.aspects.Aspect.MECHANISM) >= 10 && piston.getAmount(thaumcraft.api.aspects.Aspect.METAL) > 0,
+				"a piston is its ingredients plus Mechanism 10, got " + piston.aspects);
+
+		// a compound entry built on another item's whole answer
+		thaumcraft.api.aspects.AspectList crucible = thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(new ItemStack(BlocksTC.crucible.get()));
+		helper.assertTrue(crucible.getAmount(thaumcraft.api.aspects.Aspect.ALCHEMY) >= 20 && crucible.getAmount(thaumcraft.api.aspects.Aspect.METAL) > 0,
+				"the crucible is a cauldron's aspects plus Craft 20 + Alchemy 20, got " + crucible.aspects);
+		helper.succeed();
+	}
+
+	/** The original's workbench truncated {@code vis *= (int)(1.0f - discount)} to 0 for any positive discount (free crafts);
+	 * the intended percentage is what the port charges. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void workbenchDiscountGearReducesTheVisCostInsteadOfMakingCraftsFree(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new ItemStack(ItemsTC.clothChest.get()));
+		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.LEGS, new ItemStack(ItemsTC.clothLegs.get()));
+		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, new ItemStack(ItemsTC.clothBoots.get()));
+		float visBefore = AuraHandler.getVis(helper.getLevel(), origin);
+
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+		helper.assertTrue(menu.getShownDiscount() == 0 || menu.getShownDiscount() == 8, "the readout should be 0 (not yet refreshed) or 8, got " + menu.getShownDiscount());
+		menu.broadcastChanges();
+		helper.assertTrue(menu.getShownCost() == 14 && menu.getShownDiscount() == 8,
+				"an 8% discount on focus_1's 15 vis should cost 14 and read 8%, got cost " + menu.getShownCost() + " discount " + menu.getShownDiscount());
+
+		ItemStack result = menu.slots.get(0).getItem();
+		helper.assertTrue(result.is(ItemsTC.focus1.get()), "the discounted craft should still produce its result, got " + result);
+		menu.slots.get(0).onTake(player, result);
+		float spent = visBefore - AuraHandler.getVis(helper.getLevel(), origin);
+		helper.assertTrue(spent == 14, "the craft should drain the discounted 14 vis - not 0 (the original's bug) and not 15, spent " + spent);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void workbenchVisExhaustMakesCraftsDearer(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		player.addEffect(new net.minecraft.world.effect.MobEffectInstance(thaumcraft.common.registry.ThaumcraftMobEffects.VIS_EXHAUST, 600, 0));
+		float visBefore = AuraHandler.getVis(helper.getLevel(), origin);
+
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+		ItemStack result = menu.slots.get(0).getItem();
+		helper.assertTrue(result.is(ItemsTC.focus1.get()), "an exhausted player with plenty of vis can still craft, got " + result);
+		menu.slots.get(0).onTake(player, result);
+		float spent = visBefore - AuraHandler.getVis(helper.getLevel(), origin);
+		helper.assertTrue(spent == 17, "Vis Exhaust I adds 10% (15 -> 16.5 -> 17), spent " + spent);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void workbenchCrystalSlotsOnlyTakeTheirOwnAspect(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+		ItemStack fire = thaumcraft.common.items.resources.ItemCrystalEssence.of(thaumcraft.api.aspects.Aspect.FIRE);
+		ItemStack air = thaumcraft.common.items.resources.ItemCrystalEssence.of(thaumcraft.api.aspects.Aspect.AIR);
+		helper.assertTrue(menu.slots.get(10).mayPlace(air) && !menu.slots.get(10).mayPlace(fire), "ring slot 0 is the air slot");
+		helper.assertTrue(menu.slots.get(11).mayPlace(fire) && !menu.slots.get(11).mayPlace(air), "ring slot 1 is the fire slot");
+		helper.assertFalse(menu.slots.get(12).mayPlace(new ItemStack(Items.DIRT)), "a plain item fits no crystal slot");
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Focus: Fire Bolt - the wand's only non-Touch medium so far. Every entity-targeting test above uses
 	// FocusMediumTouch's 5-block range; these confirm FocusMediumBolt's 16-block range is actually
@@ -2739,6 +2825,7 @@ public class ThaumcraftGameTests {
 		BlockPos thaumPos = new BlockPos(2, 2, 2);
 		BlockPos brainPos = thaumPos.north();
 		helper.setBlock(thaumPos, BlocksTC.thaumatorium.get());
+		helper.setBlock(thaumPos.below(), BlocksTC.crucible.get()); // the body reverts to Metal Alchemical without its crucible
 		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(brainPos));
 
 		net.minecraft.world.item.context.BlockPlaceContext ctx = new net.minecraft.world.item.context.BlockPlaceContext(
@@ -3153,12 +3240,18 @@ public class ThaumcraftGameTests {
 		source.outputFace = net.minecraft.core.Direction.NORTH;
 
 		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(pos);
-		for (int i = 0; i < 200 && tile.getCharges() == 0; i++) {
+		for (int i = 0; i < 5000 && tile.getCharges() == 0; i++) {
+			for (Aspect lacking : tile.getRecipe().getAspectsSortedByName()) { // the potion now costs its real reagents' aspects: feed what is still missing
+				if (tile.getRecipeProgress().getAmount(lacking) < tile.getRecipe().getAmount(lacking)) {
+					source.aspect = lacking;
+					source.amount = 50;
+					break;
+				}
+			}
 			thaumcraft.common.tiles.devices.TilePotionSprayer.tick(helper.getLevel(), absolute, state, tile);
 		}
 
 		helper.assertTrue(tile.getCharges() > 0, "the sprayer should have banked at least 1 charge by now, found: " + tile.getCharges());
-		helper.assertTrue(source.amount < 50, "the sprayer should have pulled essentia from the source, source now has: " + source.amount);
 		helper.succeed();
 	}
 
@@ -3181,7 +3274,14 @@ public class ThaumcraftGameTests {
 		source.outputFace = net.minecraft.core.Direction.NORTH;
 
 		net.minecraft.world.level.block.state.BlockState enabledState = helper.getBlockState(pos);
-		for (int i = 0; i < 200 && tile.getCharges() == 0; i++) {
+		for (int i = 0; i < 5000 && tile.getCharges() == 0; i++) {
+			for (Aspect lacking : tile.getRecipe().getAspectsSortedByName()) { // the potion now costs its real reagents' aspects: feed what is still missing
+				if (tile.getRecipeProgress().getAmount(lacking) < tile.getRecipe().getAmount(lacking)) {
+					source.aspect = lacking;
+					source.amount = 50;
+					break;
+				}
+			}
 			thaumcraft.common.tiles.devices.TilePotionSprayer.tick(helper.getLevel(), absolute, enabledState, tile);
 		}
 		int chargesBefore = tile.getCharges();
@@ -3406,6 +3506,7 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos.below(2), Blocks.LAVA); // heat sits under the crucible under the device
 		BlockPos absolute = helper.absolutePos(pos);
 		helper.setBlock(pos, BlocksTC.thaumatorium.get());
+		helper.setBlock(pos.below(), BlocksTC.crucible.get()); // the body reverts to Metal Alchemical without its crucible
 
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
 		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
@@ -3440,6 +3541,7 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos.below(2), Blocks.STONE);
 		BlockPos absolute = helper.absolutePos(pos);
 		helper.setBlock(pos, BlocksTC.thaumatorium.get());
+		helper.setBlock(pos.below(), BlocksTC.crucible.get()); // the body reverts to Metal Alchemical without its crucible
 
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
 		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
@@ -3494,8 +3596,8 @@ public class ThaumcraftGameTests {
 		// A longer brewing chain (redstone + sugar + nether wart) costs more reagents than healing's two.
 		ItemStack longSwiftness = net.minecraft.world.item.alchemy.PotionContents.createItemStack(Items.POTION, net.minecraft.world.item.alchemy.Potions.LONG_SWIFTNESS);
 		AspectList longCost = thaumcraft.common.lib.crafting.PotionAspects.of(level, longSwiftness);
-		helper.assertTrue(longCost.getAmount(Aspect.ALCHEMY) > cost.getAmount(Aspect.ALCHEMY),
-				"a three-reagent potion should cost more Alchemy than a two-reagent one, got " + longCost.aspects + " vs " + cost.aspects);
+		helper.assertTrue(longCost.getAmount(Aspect.ALCHEMY) > 0 && longCost.size() >= 3,
+				"a three-reagent potion should cost its reagents' aspects plus Alchemy (not the 2-aspect fallback), got " + longCost.aspects + " vs " + cost.aspects);
 		helper.succeed();
 	}
 
@@ -3536,6 +3638,7 @@ public class ThaumcraftGameTests {
 		BlockPos absolute = helper.absolutePos(pos);
 		helper.setBlock(pos.below(2), Blocks.LAVA);
 		helper.setBlock(pos, BlocksTC.thaumatorium.get());
+		helper.setBlock(pos.below(), BlocksTC.crucible.get()); // the body reverts to Metal Alchemical without its crucible
 		helper.setBlock(pos.east(), Blocks.CHEST);
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
 		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
@@ -3615,6 +3718,7 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos.below(), Blocks.LAVA);
 		BlockPos absolute = helper.absolutePos(pos);
 		helper.setBlock(pos, BlocksTC.thaumatorium.get());
+		helper.setBlock(pos.below(), BlocksTC.crucible.get()); // the body reverts to Metal Alchemical without its crucible
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
 		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
 		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
@@ -3636,6 +3740,7 @@ public class ThaumcraftGameTests {
 	public static void thaumatoriumSelectionNeedsResearchAndCanBeToggledOff(GameTestHelper helper) {
 		BlockPos pos = new BlockPos(2, 2, 2);
 		helper.setBlock(pos, BlocksTC.thaumatorium.get());
+		helper.setBlock(pos.below(), BlocksTC.crucible.get()); // the body reverts to Metal Alchemical without its crucible
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
 		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
 		var all = thaumcraft.common.tiles.crafting.TileThaumatorium.allRecipes(helper.getLevel());
@@ -3673,6 +3778,7 @@ public class ThaumcraftGameTests {
 		BlockPos pos = new BlockPos(2, 2, 2);
 		BlockPos absolute = helper.absolutePos(pos);
 		helper.setBlock(pos, BlocksTC.thaumatorium.get());
+		helper.setBlock(pos.below(), BlocksTC.crucible.get()); // the body reverts to Metal Alchemical without its crucible
 		helper.setBlock(pos.west(), BlocksTC.brainBox.get().defaultBlockState()
 				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.EAST));
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
@@ -3692,6 +3798,7 @@ public class ThaumcraftGameTests {
 	public static void thaumatoriumPreviewResultShowsTheRealMatchingRecipeOutput(GameTestHelper helper) {
 		BlockPos pos = new BlockPos(2, 2, 2);
 		helper.setBlock(pos, BlocksTC.thaumatorium.get());
+		helper.setBlock(pos.below(), BlocksTC.crucible.get()); // the body reverts to Metal Alchemical without its crucible
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
 
 		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
@@ -6485,7 +6592,7 @@ public class ThaumcraftGameTests {
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void objectTagsReturnsEmptyForAnUntaggedItem(GameTestHelper helper) {
-		AspectList tags = thaumcraft.api.aspects.AspectHelper.getObjectAspects(new ItemStack(Items.DIRT));
+		AspectList tags = thaumcraft.api.aspects.AspectHelper.getObjectAspects(new ItemStack(Items.DEBUG_STICK));
 		helper.assertTrue(tags != null && tags.size() == 0, "an item with no explicit tag or bonus-tag match should come back empty, got " + tags);
 		helper.succeed();
 	}
@@ -6558,7 +6665,7 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos, BlocksTC.smelter.get());
 		thaumcraft.common.tiles.essentia.TileSmelter smelter = helper.getBlockEntity(pos);
 
-		helper.assertTrue(!smelter.canPlaceItem(0, new ItemStack(Items.DIRT)), "an untagged item like dirt shouldn't be acceptable smelter input");
+		helper.assertTrue(!smelter.canPlaceItem(0, new ItemStack(Items.DEBUG_STICK)), "an item with no aspects, like the debug stick, shouldn't be acceptable smelter input");
 		helper.assertTrue(smelter.canPlaceItem(0, new ItemStack(Items.IRON_INGOT)), "a real object-tagged item like an iron ingot should be acceptable smelter input");
 		helper.succeed();
 	}

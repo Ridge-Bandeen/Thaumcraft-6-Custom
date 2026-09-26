@@ -87,8 +87,10 @@ public final class GogglesReadout {
 		boolean above = dir == net.minecraft.core.Direction.UP;
 		double baseY = pos.getY() + (above ? 0.4 : 0.0);
 
+		// Camera-relative positions only: by AFTER_PARTICLES the view rotation is already in RenderSystem's model-view
+		// matrix (the shader applies it), so baking it into this pose stack too - as the first version did - applied it
+		// twice and threw every icon off-screen ("nothing different with the goggles on", 2026-09-25 playtest).
 		PoseStack poseStack = new PoseStack();
-		poseStack.mulPose(event.getModelViewMatrix());
 
 		RenderSystem.disableDepthTest();
 		RenderSystem.depthMask(false);
