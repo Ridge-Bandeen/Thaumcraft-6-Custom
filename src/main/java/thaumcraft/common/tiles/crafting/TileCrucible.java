@@ -102,6 +102,15 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 		if (heat > ACTIVE_HEAT) {
 			thaumcraft.client.fx.ClientFxHandlers.spawnCrucibleFroth(level, pos.getX() + 0.2f + r.nextFloat() * 0.6f, pos.getY() + getFluidHeight(), pos.getZ() + 0.2f + r.nextFloat() * 0.6f);
 		}
+		if (heat > ACTIVE_HEAT && aspects.visSize() > MAX_ASPECTS) {
+			// over-full: froth spills down all four sides
+			for (int a = 0; a < 2; a++) {
+				thaumcraft.client.fx.ClientFxHandlers.spawnCrucibleFrothDown(level, pos.getX(), pos.getY() + 1, pos.getZ() + r.nextFloat());
+				thaumcraft.client.fx.ClientFxHandlers.spawnCrucibleFrothDown(level, pos.getX() + 1, pos.getY() + 1, pos.getZ() + r.nextFloat());
+				thaumcraft.client.fx.ClientFxHandlers.spawnCrucibleFrothDown(level, pos.getX() + r.nextFloat(), pos.getY() + 1, pos.getZ());
+				thaumcraft.client.fx.ClientFxHandlers.spawnCrucibleFrothDown(level, pos.getX() + r.nextFloat(), pos.getY() + 1, pos.getZ() + 1);
+			}
+		}
 		if (r.nextInt(6) == 0 && aspects.size() > 0) {
 			int color = aspects.getAspects()[r.nextInt(aspects.size())].getColor();
 			thaumcraft.client.fx.ClientFxHandlers.spawnCrucibleBubble(level,

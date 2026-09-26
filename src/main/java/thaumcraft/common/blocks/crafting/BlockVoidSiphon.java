@@ -91,14 +91,10 @@ public class BlockVoidSiphon extends Block implements EntityBlock {
 		if (level.isClientSide) return InteractionResult.SUCCESS;
 		if (!(level.getBlockEntity(pos) instanceof TileVoidSiphon tile)) return InteractionResult.PASS;
 
-		ItemStack held = tile.getItem();
-		if (held.isEmpty()) return InteractionResult.PASS;
-		tile.getItemHandler().extractItem(0, held.getCount(), false);
-		if (!player.getInventory().add(held)) {
-			player.drop(held, false);
-		}
-		level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.2f,
-				((level.random.nextFloat() - level.random.nextFloat()) * 0.7f + 1.0f) * 1.6f);
+		// Opens the output screen, like the original (the port's stand-in emptied the slot into your inventory).
+		player.openMenu(new net.minecraft.world.SimpleMenuProvider(
+				(id, inv, p) -> new thaumcraft.common.container.VoidSiphonMenu(id, inv, tile),
+				net.minecraft.network.chat.Component.translatable(getDescriptionId())), buf -> buf.writeBlockPos(pos));
 		return InteractionResult.SUCCESS;
 	}
 }

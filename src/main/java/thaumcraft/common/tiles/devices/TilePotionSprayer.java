@@ -118,9 +118,36 @@ public class TilePotionSprayer extends BlockEntity implements IEssentiaTransport
 		return charges;
 	}
 
+	/** The loaded potion's colour, for the screen's charge column (the original's {@code color}). */
+	private int color = 0x333333;
+
+	public int getColor() {
+		return color;
+	}
+
+	public AspectList getRecipe() {
+		return recipe;
+	}
+
+	public AspectList getRecipeProgress() {
+		return recipeProgress;
+	}
+
+	/** The essentia one charge costs is the loaded potion's real cost (its brewing reagents' aspects, see
+	 * {@link thaumcraft.common.lib.crafting.PotionAspects}), culled to 10 kinds - it was a flat 10 Alchemy for every
+	 * potion before 2026-09-25. */
 	private void recalcRecipe() {
 		ItemStack stack = items.getStackInSlot(0);
-		recipe = stack.isEmpty() ? new AspectList() : new AspectList().add(Aspect.ALCHEMY, 10);
+		if (level == null) {
+			recipe = stack.isEmpty() ? new AspectList() : new AspectList().add(Aspect.ALCHEMY, 10);
+		} else if (stack.isEmpty()) {
+			recipe = new AspectList();
+			color = 0x333333;
+		} else {
+			recipe = thaumcraft.api.aspects.AspectHelper.cullTags(thaumcraft.common.lib.crafting.PotionAspects.of(level, stack), 10);
+			PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);
+			color = contents != null ? contents.getColor() : 0x333333;
+		}
 		recipeProgress = new AspectList();
 		charges = 0;
 		currentSuction = null;
@@ -320,6 +347,7 @@ public class TilePotionSprayer extends BlockEntity implements IEssentiaTransport
 		recipe.writeToNBT(tag, "recipe");
 		recipeProgress.writeToNBT(tag, "progress");
 		tag.putInt("charges", charges);
+		tag.putInt("color", color);
 	}
 
 	@Override
@@ -329,6 +357,7 @@ public class TilePotionSprayer extends BlockEntity implements IEssentiaTransport
 		(recipe = new AspectList()).readFromNBT(tag, "recipe");
 		(recipeProgress = new AspectList()).readFromNBT(tag, "progress");
 		charges = tag.getInt("charges");
+		color = tag.contains("color") ? tag.getInt("color") : 0x333333;
 	}
 
 	@Override
@@ -339,5 +368,14 @@ public class TilePotionSprayer extends BlockEntity implements IEssentiaTransport
 	@Override
 	public Packet<ClientGamePacketListener> getUpdatePacket() {
 		return ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	/** Pushes recipe progress and charges to clients for the screen - same fix as {@code TilePedestal#setChanged}. */
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+		}
 	}
 }

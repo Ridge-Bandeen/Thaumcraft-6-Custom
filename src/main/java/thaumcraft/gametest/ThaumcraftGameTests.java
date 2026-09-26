@@ -3479,6 +3479,83 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** A potion costs the aspects of the reagents it is brewed from (nether wart -> awkward -> glistering melon ->
+	 * healing), 66% off, plus Alchemy - not the flat "10 Alchemy" every potion used to cost. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void potionCostsComeFromTheirBrewingReagents(GameTestHelper helper) {
+		var level = helper.getLevel();
+		ItemStack healing = net.minecraft.world.item.alchemy.PotionContents.createItemStack(Items.POTION, net.minecraft.world.item.alchemy.Potions.HEALING);
+		AspectList cost = thaumcraft.common.lib.crafting.PotionAspects.of(level, healing);
+		helper.assertTrue(cost.size() > 0 && cost.getAmount(Aspect.ALCHEMY) > 0, "a healing potion should cost aspects including Alchemy, got " + cost.aspects);
+		helper.assertTrue(!(cost.size() == 2 && cost.getAmount(Aspect.MAGIC) == 5 && cost.getAmount(Aspect.ALCHEMY) == 5),
+				"healing has a known brewing chain, so it must not get the unknown-potion fallback");
+		ItemStack water = net.minecraft.world.item.alchemy.PotionContents.createItemStack(Items.POTION, net.minecraft.world.item.alchemy.Potions.WATER);
+		helper.assertTrue(thaumcraft.common.lib.crafting.PotionAspects.of(level, water).getAmount(Aspect.WATER) == 5, "a water bottle costs 5 Water");
+		// A longer brewing chain (redstone + sugar + nether wart) costs more reagents than healing's two.
+		ItemStack longSwiftness = net.minecraft.world.item.alchemy.PotionContents.createItemStack(Items.POTION, net.minecraft.world.item.alchemy.Potions.LONG_SWIFTNESS);
+		AspectList longCost = thaumcraft.common.lib.crafting.PotionAspects.of(level, longSwiftness);
+		helper.assertTrue(longCost.getAmount(Aspect.ALCHEMY) > cost.getAmount(Aspect.ALCHEMY),
+				"a three-reagent potion should cost more Alchemy than a two-reagent one, got " + longCost.aspects + " vs " + cost.aspects);
+		helper.succeed();
+	}
+
+	/** Loading a potion into the sprayer sets its real cost, the menu's slot takes only potions. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void potionSprayerUsesTheRealPotionCostAndItsMenuTakesOnlyPotions(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.potionSprayer.get());
+		thaumcraft.common.tiles.devices.TilePotionSprayer tile = helper.getBlockEntity(pos);
+		ItemStack healing = net.minecraft.world.item.alchemy.PotionContents.createItemStack(Items.POTION, net.minecraft.world.item.alchemy.Potions.HEALING);
+		tile.setItem(healing);
+		helper.assertTrue(tile.getRecipe().size() > 0, "the loaded potion should set a recipe");
+		helper.assertFalse(tile.getRecipe().size() == 1 && tile.getRecipe().getAmount(Aspect.ALCHEMY) == 10, "the cost must not be the old flat 10 Alchemy");
+
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(pos).above());
+		thaumcraft.common.container.PotionSprayerMenu menu = new thaumcraft.common.container.PotionSprayerMenu(1, player.getInventory(), tile);
+		helper.assertTrue(menu.getSlot(0).mayPlace(healing), "the potion slot takes a potion");
+		helper.assertFalse(menu.getSlot(0).mayPlace(new ItemStack(Items.STICK)), "the potion slot refuses other items");
+		helper.succeed();
+	}
+
+	/** The siphon's screen slot is output-only. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void voidSiphonMenuSlotIsOutputOnly(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.voidSiphon.get());
+		thaumcraft.common.tiles.crafting.TileVoidSiphon tile = helper.getBlockEntity(pos);
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(pos).above());
+		thaumcraft.common.container.VoidSiphonMenu menu = new thaumcraft.common.container.VoidSiphonMenu(1, player.getInventory(), tile);
+		helper.assertFalse(menu.getSlot(0).mayPlace(new ItemStack(Items.IRON_INGOT)), "nothing can be put into the siphon output slot");
+		helper.succeed();
+	}
+
+	/** A finished Thaumatorium craft goes into a chest beside it before it drops anything. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumatoriumFillsANeighbouringChestWithItsResult(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos.below(2), Blocks.LAVA);
+		helper.setBlock(pos, BlocksTC.thaumatorium.get());
+		helper.setBlock(pos.east(), Blocks.CHEST);
+		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
+		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
+		tile.setItem(new ItemStack(Items.FEATHER));
+		// pre-stock the essentia so the craft completes on the first cycle
+		tile.setAspects(new AspectList().add(Aspect.CRYSTAL, 5).add(Aspect.MAGIC, 3).add(Aspect.AIR, 3));
+		var state = helper.getBlockState(pos);
+		for (int i = 0; i < 60 && !tile.getItem().isEmpty(); i++) {
+			thaumcraft.common.tiles.crafting.TileThaumatorium.tick(helper.getLevel(), absolute, state, tile);
+		}
+		helper.assertTrue(tile.getItem().isEmpty(), "the craft should have completed");
+		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(pos.east());
+		boolean inChest = false;
+		for (int i = 0; i < chest.getContainerSize(); i++) {
+			if (chest.getItem(i).is(thaumcraft.api.items.ItemsTC.focusAir.get())) inChest = true;
+		}
+		helper.assertTrue(inChest, "the result should have been put into the neighbouring chest");
+		helper.succeed();
+	}
+
 	/** The heat source belongs under the CRUCIBLE under the device - lava directly below the device (where the
 	 * crucible stands) must not count. The port checked one block down, so a real build never ran. */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
@@ -12367,7 +12444,7 @@ public class ThaumcraftGameTests {
 	}
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
-	public static void arcaneBoreSwapsItsPickaxeViaInteractAndSneakPickupReturnsThePlacer(GameTestHelper helper) {
+	public static void arcaneBoreScreenSlotIsItsPickaxeAndSneakPickupReturnsThePlacer(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 		BlockPos borePos = new BlockPos(2, 2, 2);
 		BlockPos boreAbs = helper.absolutePos(borePos);
@@ -12383,14 +12460,15 @@ public class ThaumcraftGameTests {
 		bore.tame(owner);
 		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
 
-		// Real pickaxe-for-empty-hand swap: the owner hands over a real pickaxe, the bore's own (empty)
-		// hand comes back to them.
+		// The bore's screen (right-click opens it - a mock player cannot receive the open-screen packet, so drive the
+		// menu directly): its one slot IS the bore's main-hand item and only takes pickaxes.
+		thaumcraft.common.container.ArcaneBoreMenu menu = new thaumcraft.common.container.ArcaneBoreMenu(1, owner.getInventory(), bore);
 		ItemStack pickaxe = new ItemStack(net.minecraft.world.item.Items.IRON_PICKAXE);
-		owner.setItemInHand(hand, pickaxe);
-		net.minecraft.world.InteractionResult swapResult = bore.mobInteract(owner, hand);
-		helper.assertTrue(swapResult == net.minecraft.world.InteractionResult.SUCCESS, "offering a real pickaxe should really succeed, got: " + swapResult);
-		helper.assertTrue(bore.getMainHandItem().is(net.minecraft.world.item.Items.IRON_PICKAXE), "the bore's own main hand should really now hold the real offered pickaxe");
-		helper.assertTrue(owner.getItemInHand(hand).isEmpty(), "the owner's own hand should really now be empty (the bore had nothing to hand back yet)");
+		helper.assertFalse(menu.getSlot(0).mayPlace(new ItemStack(net.minecraft.world.item.Items.STICK)), "the bore slot must refuse a non-pickaxe");
+		helper.assertTrue(menu.getSlot(0).mayPlace(pickaxe), "the bore slot takes a pickaxe");
+		menu.getSlot(0).set(pickaxe);
+		helper.assertTrue(bore.getMainHandItem().is(net.minecraft.world.item.Items.IRON_PICKAXE), "placing a pickaxe in the screen slot should put it in the bore's main hand");
+		helper.assertTrue(menu.getSlot(0).getItem().is(net.minecraft.world.item.Items.IRON_PICKAXE), "the slot reads back the bore's main hand");
 
 		// Real sneak-pickup: drops the held pickaxe and a real bore placer item, then discards itself.
 		owner.setShiftKeyDown(true);

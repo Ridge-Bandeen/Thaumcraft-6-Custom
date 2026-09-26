@@ -294,8 +294,16 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 		}
 	}
 
+	/** The original pushed the result into the inventory on the device's facing side (a chest, hopper...) before
+	 * dropping it. This device has no facing, so any horizontal neighbour that will take it does; the rest drops above. */
 	private void ejectItem(Level level, BlockPos pos, ItemStack stack) {
 		if (stack.isEmpty()) return;
+		for (Direction dir : Direction.Plane.HORIZONTAL) {
+			IItemHandler handler = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, pos.relative(dir), dir.getOpposite());
+			if (handler == null) continue;
+			stack = net.neoforged.neoforge.items.ItemHandlerHelper.insertItem(handler, stack, false);
+			if (stack.isEmpty()) return;
+		}
 		ItemEntity out = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 1.1, pos.getZ() + 0.5, stack);
 		out.setDeltaMovement(0, 0.075, 0);
 		level.addFreshEntity(out);

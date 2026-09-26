@@ -295,6 +295,23 @@ public final class ClientFxHandlers {
 		addDelayed(fb, 0);
 	}
 
+	/** The original's {@code FXDispatcher#crucibleFrothDown}: purple froth running down the side of an over-full crucible. */
+	public static void spawnCrucibleFrothDown(net.minecraft.world.level.Level level, double x, double y, double z) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, 0.0, 0.0, 0.0);
+		fb.setMaxAge(12 + level.random.nextInt(12));
+		fb.setScale(level.random.nextFloat() * 0.2f + 0.4f);
+		fb.setRBGColorF(0.25f, 0.0f, 0.75f);
+		fb.setAlphaF(0.8f);
+		fb.setRandomMovementScale(0.001f, 0.001f, 0.001f);
+		fb.setGravity(0.05f);
+		fb.setNoClip(false);
+		fb.setParticle(73);
+		fb.setFinalFrames(65, 66);
+		fb.setLayer(1);
+		addDelayed(fb, 0);
+	}
+
 	/** The original's {@code FXDispatcher#crucibleBubble}: a bubble coloured by a dissolved aspect, drifting up. */
 	public static void spawnCrucibleBubble(net.minecraft.world.level.Level level, double x, double y, double z, float r, float g, float b) {
 		if (!(level instanceof ClientLevel clientLevel)) return;

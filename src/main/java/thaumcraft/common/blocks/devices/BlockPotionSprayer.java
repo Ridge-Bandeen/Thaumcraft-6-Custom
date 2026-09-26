@@ -123,22 +123,10 @@ public class BlockPotionSprayer extends Block implements EntityBlock {
 		if (level.isClientSide) return InteractionResult.SUCCESS;
 		if (!(level.getBlockEntity(pos) instanceof TilePotionSprayer tile)) return InteractionResult.PASS;
 
-		if (tile.getItem().isEmpty() && tile.accepts(held)) {
-			ItemStack single = held.copyWithCount(1);
-			tile.setItem(single);
-			held.shrink(1);
-			level.playSound(null, pos, SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 0.4f, 1.0f);
-			return InteractionResult.SUCCESS;
-		}
-		if (!tile.getItem().isEmpty()) {
-			ItemStack returned = tile.getItem();
-			tile.setItem(ItemStack.EMPTY);
-			if (!player.getInventory().add(returned)) {
-				player.drop(returned, false);
-			}
-			level.playSound(null, pos, SoundEvents.BOTTLE_EMPTY, SoundSource.BLOCKS, 0.4f, 1.0f);
-			return InteractionResult.SUCCESS;
-		}
-		return InteractionResult.PASS;
+		// Opens the sprayer screen, like the original (the port's stand-in inserted/removed the potion on right-click).
+		player.openMenu(new net.minecraft.world.SimpleMenuProvider(
+				(id, inv, p) -> new thaumcraft.common.container.PotionSprayerMenu(id, inv, tile),
+				net.minecraft.network.chat.Component.translatable(getDescriptionId())), buf -> buf.writeBlockPos(pos));
+		return InteractionResult.SUCCESS;
 	}
 }

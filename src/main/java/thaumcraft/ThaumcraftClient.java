@@ -139,6 +139,9 @@ public class ThaumcraftClient {
         event.register(ThaumcraftMenus.SPA.get(), thaumcraft.client.gui.GuiSpa::new);
         event.register(ThaumcraftMenus.THAUMATORIUM.get(), thaumcraft.client.gui.ThaumatoriumScreen::new);
         event.register(ThaumcraftMenus.SMELTER.get(), thaumcraft.client.gui.SmelterScreen::new);
+        event.register(ThaumcraftMenus.VOID_SIPHON.get(), thaumcraft.client.gui.VoidSiphonScreen::new);
+        event.register(ThaumcraftMenus.ARCANE_BORE.get(), thaumcraft.client.gui.ArcaneBoreScreen::new);
+        event.register(ThaumcraftMenus.POTION_SPRAYER.get(), thaumcraft.client.gui.PotionSprayerScreen::new);
         event.register(ThaumcraftMenus.FOCUS_POUCH.get(), thaumcraft.client.gui.GuiFocusPouch::new);
         event.register(ThaumcraftMenus.HAND_MIRROR.get(), thaumcraft.client.gui.GuiHandMirror::new);
     }

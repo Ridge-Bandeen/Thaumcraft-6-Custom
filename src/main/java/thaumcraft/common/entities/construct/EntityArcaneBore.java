@@ -513,14 +513,14 @@ public class EntityArcaneBore extends EntityOwnedConstruct {
 				player.swing(hand);
 				return InteractionResult.SUCCESS;
 			}
-			ItemStack offered = player.getItemInHand(hand);
-			if (offered.isEmpty() || offered.is(ItemTags.PICKAXES)) {
-				ItemStack current = getMainHandItem();
-				setItemInHand(InteractionHand.MAIN_HAND, offered.copy());
-				player.setItemInHand(hand, current);
-				playSound(SoundEvents.ARMOR_EQUIP_GENERIC.value(), 1.0f, 1.0f);
-				return InteractionResult.SUCCESS;
+			// The original opened a screen (pickaxe slot, health, dig stats) - restored 2026-09-25; the port's stand-in
+			// swapped the held item with the bore on right-click.
+			if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+				serverPlayer.openMenu(new net.minecraft.world.SimpleMenuProvider(
+						(id, inv, p) -> new thaumcraft.common.container.ArcaneBoreMenu(id, inv, this),
+						getDisplayName()), buf -> buf.writeVarInt(getId()));
 			}
+			return InteractionResult.SUCCESS;
 		}
 		return super.mobInteract(player, hand);
 	}

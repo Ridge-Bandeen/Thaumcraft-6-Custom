@@ -54,6 +54,18 @@ public final class ThaumcraftMenus {
 	public static final Supplier<MenuType<thaumcraft.common.container.SmelterMenu>> SMELTER = MENUS.register("smelter",
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.SmelterMenu(windowId, inv)));
 
+	/** Needs the block position from the extra data, like {@link #THAUMATORIUM}. */
+	public static final Supplier<MenuType<thaumcraft.common.container.VoidSiphonMenu>> VOID_SIPHON = MENUS.register("void_siphon",
+			() -> IMenuTypeExtension.create(thaumcraft.common.container.VoidSiphonMenu::new));
+
+	/** Entity-bound: the client constructor reads the bore's entity id from the extra data. */
+	public static final Supplier<MenuType<thaumcraft.common.container.ArcaneBoreMenu>> ARCANE_BORE = MENUS.register("arcane_bore",
+			() -> IMenuTypeExtension.create(thaumcraft.common.container.ArcaneBoreMenu::new));
+
+	/** Needs the block position from the extra data, like {@link #THAUMATORIUM}. */
+	public static final Supplier<MenuType<thaumcraft.common.container.PotionSprayerMenu>> POTION_SPRAYER = MENUS.register("potion_sprayer",
+			() -> IMenuTypeExtension.create(thaumcraft.common.container.PotionSprayerMenu::new));
+
 	public static final Supplier<MenuType<thaumcraft.common.container.SpaMenu>> SPA = MENUS.register("spa",
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.SpaMenu(windowId, inv)));
 
