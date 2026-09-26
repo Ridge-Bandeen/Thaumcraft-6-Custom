@@ -151,7 +151,7 @@ public final class GogglesReadout {
 		BufferUploader.drawWithShader(buffer.buildOrThrow());
 	}
 
-	/** The amount, bottom-right of the icon: white with the game's own drop shadow (the original drew a dark copy offset behind it). */
+	/** The amount, bottom-right of the icon: white over a dark copy offset behind it, as the original drew it. */
 	private static void drawAmount(Minecraft mc, PoseStack poseStack, String text) {
 		Font font = mc.font;
 		poseStack.pushPose();
@@ -161,7 +161,11 @@ public final class GogglesReadout {
 		poseStack.scale(0.05f, -0.05f, 0.05f);
 		float x = -font.width(text);
 		MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
-		font.drawInBatch(text, x, -8.0f, 0xFFFFFF, true, poseStack.last().pose(), buffers, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
+		// The dark copy is flushed before the white one is queued, so the order is explicit: vanilla's own drop shadow shares the
+		// buffer with the text and, drawn without depth here, sometimes landed over the white digits (playtest 2026-09-25).
+		font.drawInBatch(text, x + 1.0f, -8.0f + 1.0f, 0x222222, false, poseStack.last().pose(), buffers, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
+		buffers.endBatch();
+		font.drawInBatch(text, x, -8.0f, 0xFFFFFF, false, poseStack.last().pose(), buffers, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
 		buffers.endBatch();
 		poseStack.popPose();
 	}
