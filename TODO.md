@@ -121,6 +121,12 @@ goggles readout double-matrix bug fixed. Still open from it: Thaumatorium GUI-it
 port has not built (eldritch blocks, runed tablet, celestial notes, Eldritch Eye, ambient grass, Pure bucket); Curio variants share one item; the
 original's shield-banner and per-colour potion loops are covered by generic bonuses only.
 
+**Round 3 (same day, end of session):** goggles readout tuned (upright digits, icons then numbers, explicit shadow order), Salis Mundus sparkles + dust sound,
+Thaumatorium preview height, Nitor core/glow ordering (random render-type order fixed), arcane workbench menu notification/result packet fix (it never
+produced a result in a real client before), Thaumatorium ejects out its front. User-verified: workbench focus + bellows recipes (discount from goggles), goggles
+numerals, Thaumatorium mesh and preview. Still unverified: Thaumatorium ejection/brain box, Golem Logistics screen, Thaumometer/research with the new aspect table,
+Alembic/Furnace with ordinary items, crucible over-full froth. Planned next: golem-system comparison (original vs port).
+
 **(Superseded list) Known device gaps that were open:** Potion Sprayer (flat Alchemy-10 cost for every potion + no
 GUI - original derived the cost from the potion's brewing reagents via object tags: reagents chain -> sum object tags + Alchemy 3 each, minus 66%,
 culled to 10; needs a reagent lookup over `PotionBrewing`), Void Siphon screen, Arcane Bore screen, Golem Logistics screen, crucible over-full
