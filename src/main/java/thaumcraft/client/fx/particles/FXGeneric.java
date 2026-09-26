@@ -54,8 +54,22 @@ public class FXGeneric extends SingleQuadParticle {
 
 	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/misc/particles.png");
 
-	private static final ParticleRenderType RENDER_TYPE_NORMAL = renderType(false);
-	private static final ParticleRenderType RENDER_TYPE_ADDITIVE = renderType(true);
+	private static final ParticleRenderType RENDER_TYPE_NORMAL;
+	private static final ParticleRenderType RENDER_TYPE_ADDITIVE;
+
+	static {
+		// NeoForge draws custom particle render types in System.identityHashCode order (ClientHooks#makeParticleRenderTypeComparator),
+		// i.e. randomly per run. The original always drew its normal-blend layers before its additive ones (layers 3, 2, 1, 0), so
+		// a Nitor's white core sat BEHIND its glow; with a random order it was in front about half the time (playtest 2026-09-25).
+		// Re-create the normal type until its hash sorts first - cheap, and deterministic in effect.
+		ParticleRenderType normal = renderType(false);
+		ParticleRenderType additive = renderType(true);
+		for (int tries = 0; tries < 1000 && System.identityHashCode(normal) >= System.identityHashCode(additive); tries++) {
+			normal = renderType(false);
+		}
+		RENDER_TYPE_NORMAL = normal;
+		RENDER_TYPE_ADDITIVE = additive;
+	}
 
 	private static ParticleRenderType renderType(boolean additive) {
 		return new ParticleRenderType() {
