@@ -7730,6 +7730,39 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** A dropped item's own hitbox is a quarter of a block; the original widened every entity by 0.8 for targeting so it could be aimed at. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumometerCanAimAtADroppedItemNotQuitePreciselyOnIt(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(2, 2, 2)));
+		net.minecraft.world.phys.Vec3 eye = player.getEyePosition();
+		net.minecraft.world.phys.Vec3 look = player.getLookAngle();
+		net.minecraft.world.phys.Vec3 at = eye.add(look.scale(4.0)).add(0.0, -0.5, 0.0);
+		net.minecraft.world.entity.item.ItemEntity item = new net.minecraft.world.entity.item.ItemEntity(helper.getLevel(), at.x, at.y, at.z, new ItemStack(Items.IRON_INGOT));
+		helper.getLevel().addFreshEntity(item);
+		net.minecraft.world.entity.Entity found = thaumcraft.common.items.tools.ItemThaumometer.pointedEntity(helper.getLevel(), player, 9.0, 0.0f);
+		helper.assertTrue(found == item, "an item half a block below the line of sight should still be the pointed-at entity, got " + found);
+		helper.assertTrue(thaumcraft.api.research.ScanningManager.isThingStillScannable(player, item), "an unscanned dropped item is scannable");
+		thaumcraft.api.research.ScanningManager.scanTheThing(player, item);
+		helper.assertFalse(thaumcraft.api.research.ScanningManager.isThingStillScannable(player, item), "and not any more once scanned");
+		helper.succeed();
+	}
+
+	/** The original's /thaumcraft command - the port had no commands at all, so research could not be handed out for testing. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumcraftCommandGrantsAndRevokesResearch(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(2, 2, 2)));
+		var source = player.createCommandSourceStack().withPermission(4);
+		var commands = helper.getLevel().getServer().getCommands();
+		helper.assertFalse(thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).isResearchComplete("CELESTIALSCANNING"), "not known to start with");
+		commands.performPrefixedCommand(source, "thaumcraft research @s CELESTIALSCANNING");
+		helper.assertTrue(thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).isResearchComplete("CELESTIALSCANNING"), "the command should have given it");
+		commands.performPrefixedCommand(source, "tc research @s revoke CELESTIALSCANNING");
+		helper.assertFalse(thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).isResearchComplete("CELESTIALSCANNING"), "and revoke should take it back");
+		commands.performPrefixedCommand(source, "thaumcraft warp @s add 5");
+		helper.assertTrue(thaumcraft.api.capabilities.ThaumcraftCapabilities.getWarp(player).get(thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.NORMAL) == 5, "warp add should work");
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void scanningARegisteredEntityGrantsItsResearch(GameTestHelper helper) {
 		thaumcraft.api.research.ScanningManager.addScannableThing(new thaumcraft.api.research.IScanThing() {

@@ -42,7 +42,25 @@ public class ScanSky implements IScanThing {
 
 	@Override
 	public boolean checkThing(Player player, Object obj) {
-		return obj == null && isRealLookingAtOpenSky(player);
+		if (obj != null || !isRealLookingAtOpenSky(player)) return false;
+		// The original only matched when you were aimed at the sun / moon, or at any time at night (a star quadrant) - not for any
+		// glance at a daytime sky, which had this returning true and doing nothing.
+		Level level = player.level();
+		int yaw = (int) (player.getYRot() + 90.0f) % 360;
+		int pitch = (int) Math.abs(player.getXRot());
+		int celestialAngle = (int) ((level.getTimeOfDay(0.0f) + 0.25f) * 360.0f) % 360;
+		boolean night = celestialAngle > 180;
+		if (night) celestialAngle -= 180;
+		boolean inRangeYaw;
+		boolean inRangePitch;
+		if (celestialAngle > 90) {
+			inRangeYaw = Math.abs(Math.abs(yaw) - 180) < 10;
+			inRangePitch = Math.abs(180 - celestialAngle - pitch) < 7;
+		} else {
+			inRangeYaw = Math.abs(yaw) < 10;
+			inRangePitch = Math.abs(celestialAngle - pitch) < 7;
+		}
+		return (inRangeYaw && inRangePitch) || night;
 	}
 
 	@Override

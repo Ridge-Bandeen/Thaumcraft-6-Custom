@@ -76,18 +76,41 @@ public class ItemThaumometer extends Item {
 		}
 	}
 
-	/** The nearest living-or-not entity along the player's view within {@code range}, unless a block is in the way. */
+	/**
+	 * The original's {@code EntityUtils#getPointedEntity}: the nearest entity along the player's view within {@code range}, unless a block is in
+	 * the way. Each entity's box is widened by at least 0.8 blocks for the test, which is what makes small things - a dropped item, an
+	 * experience orb - possible to aim at (the exact hitbox of an item is a quarter of a block, and aiming at it that precisely is not).
+	 */
 	@javax.annotation.Nullable
-	static Entity pointedEntity(Level level, Player player, double range, float padding) {
+	public static Entity pointedEntity(Level level, Player player, double range, float padding) {
 		Vec3 eye = player.getEyePosition();
 		Vec3 look = player.getLookAngle();
 		Vec3 end = eye.add(look.scale(range));
-		AABB box = player.getBoundingBox().expandTowards(look.scale(range)).inflate(1.0 + padding);
-		EntityHitResult hit = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(player, eye, end, box,
-				e -> e != player && !e.isSpectator(), range * range);
-		if (hit == null) return null;
-		BlockHitResult block = level.clip(new ClipContext(eye, hit.getLocation(), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-		return block.getType() == HitResult.Type.MISS ? hit.getEntity() : null;
+		AABB search = new AABB(eye, eye).inflate(0.5).expandTowards(look.scale(range)).inflate(padding);
+		Entity best = null;
+		double bestDistance = -1.0;
+		for (Entity entity : level.getEntities(player, search, e -> !e.isSpectator())) {
+			if (eye.distanceTo(entity.position()) < 1.0) continue;
+			Vec3 entityEye = new Vec3(entity.getX(), entity.getY() + entity.getEyeHeight(), entity.getZ());
+			if (level.clip(new ClipContext(eye, entityEye, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player)).getType() != HitResult.Type.MISS) continue;
+			AABB box = entity.getBoundingBox().inflate(Math.max(0.8f, entity.getPickRadius()));
+			if (box.contains(eye)) {
+				if (bestDistance < 0.0 || bestDistance > 0.0) {
+					best = entity;
+					bestDistance = 0.0;
+				}
+			} else {
+				var hit = box.clip(eye, end);
+				if (hit.isPresent()) {
+					double distance = eye.distanceTo(hit.get());
+					if (bestDistance < 0.0 || distance < bestDistance) {
+						best = entity;
+						bestDistance = distance;
+					}
+				}
+			}
+		}
+		return best;
 	}
 
 	@Override

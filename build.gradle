@@ -457,6 +457,7 @@ sourceSets {
             include 'thaumcraft/api/aspects/AspectHelper.java'
             include 'thaumcraft/common/lib/crafting/ThaumcraftObjectTags.java'
             include 'thaumcraft/common/lib/crafting/ThaumcraftAspectTable.java'
+            include 'thaumcraft/common/lib/ThaumcraftCommands.java'
             include 'thaumcraft/common/lib/crafting/ThaumcraftEntityTags.java'
             include 'thaumcraft/api/aura/AuraHelper.java'
 
