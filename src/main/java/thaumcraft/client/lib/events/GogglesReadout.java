@@ -99,32 +99,39 @@ public final class GogglesReadout {
 		RenderSystem.disableCull();
 
 		Aspect[] all = tags.getAspects();
-		int left = all.length;
-		int current = 0;
-		float shiftY = 0.0f;
-		for (Aspect tag : all) {
-			int div = Math.min(left, ROW_SIZE);
-			if (current >= ROW_SIZE) {
-				current = 0;
-				shiftY -= tagScale * 1.05f;
-				left -= ROW_SIZE;
-				if (left < ROW_SIZE) div = left % ROW_SIZE;
+		// Two passes: every icon first, then every amount on top - drawn one tag at a time, the next icon painted over the
+		// previous amount ("clipping", playtest 2026-09-25).
+		for (int pass = 0; pass < 2; pass++) {
+			int left = all.length;
+			int current = 0;
+			float shiftY = 0.0f;
+			for (Aspect tag : all) {
+				int div = Math.min(left, ROW_SIZE);
+				if (current >= ROW_SIZE) {
+					current = 0;
+					shiftY -= tagScale * 1.05f;
+					left -= ROW_SIZE;
+					if (left < ROW_SIZE) div = left % ROW_SIZE;
+				}
+				float shift = (current - div / 2.0f + 0.5f) * tagScale * 4.0f * tagScale;
+
+				poseStack.pushPose();
+				poseStack.translate(pos.getX() + 0.5 - cam.x + tagScale * 2.0f * dir.getStepX(),
+						baseY - shiftY + 0.5 - cam.y + tagScale * 2.0f * dir.getStepY(),
+						pos.getZ() + 0.5 - cam.z + tagScale * 2.0f * dir.getStepZ());
+				poseStack.mulPose(camera.rotation());
+				poseStack.translate(shift, 0.0, 0.0);
+				poseStack.scale(tagScale, tagScale, tagScale);
+
+				if (pass == 0) {
+					int color = tag.getColor();
+					drawIcon(poseStack.last().pose(), tag, ((color >> 16) & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, (color & 255) / 255.0f);
+				} else {
+					drawAmount(mc, poseStack, Integer.toString(tags.getAmount(tag)));
+				}
+				poseStack.popPose();
+				current++;
 			}
-			float shift = (current - div / 2.0f + 0.5f) * tagScale * 4.0f * tagScale;
-
-			poseStack.pushPose();
-			poseStack.translate(pos.getX() + 0.5 - cam.x + tagScale * 2.0f * dir.getStepX(),
-					baseY - shiftY + 0.5 - cam.y + tagScale * 2.0f * dir.getStepY(),
-					pos.getZ() + 0.5 - cam.z + tagScale * 2.0f * dir.getStepZ());
-			poseStack.mulPose(camera.rotation());
-			poseStack.translate(shift, 0.0, 0.0);
-			poseStack.scale(tagScale, tagScale, tagScale);
-
-			int color = tag.getColor();
-			drawIcon(poseStack.last().pose(), tag, ((color >> 16) & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, (color & 255) / 255.0f);
-			drawAmount(mc, poseStack, Integer.toString(tags.getAmount(tag)));
-			poseStack.popPose();
-			current++;
 		}
 
 		RenderSystem.enableCull();
@@ -144,19 +151,17 @@ public final class GogglesReadout {
 		BufferUploader.drawWithShader(buffer.buildOrThrow());
 	}
 
-	/** The amount, bottom-right of the icon, white over a dark copy (the original drew it twice, offset). */
+	/** The amount, bottom-right of the icon: white with the game's own drop shadow (the original drew a dark copy offset behind it). */
 	private static void drawAmount(Minecraft mc, PoseStack poseStack, String text) {
 		Font font = mc.font;
 		poseStack.pushPose();
 		poseStack.translate(0.5f, -0.5f, -0.01f);
 		// Text space runs right/down; the billboard runs right/up. Only y flips - the original flipped x too, but its pose had
 		// already been turned half way round, and the same flip here drew the digits upside down (playtest 2026-09-25).
-		poseStack.scale(0.04f, -0.04f, 0.04f);
+		poseStack.scale(0.05f, -0.05f, 0.05f);
 		float x = -font.width(text);
 		MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
-		font.drawInBatch(text, x + 1.0f, -8.0f + 1.0f, 0x111111, false, poseStack.last().pose(), buffers, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
-		poseStack.translate(0.0f, 0.0f, -0.1f);
-		font.drawInBatch(text, x, -8.0f, 0xFFFFFF, false, poseStack.last().pose(), buffers, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
+		font.drawInBatch(text, x, -8.0f, 0xFFFFFF, true, poseStack.last().pose(), buffers, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);
 		buffers.endBatch();
 		poseStack.popPose();
 	}
