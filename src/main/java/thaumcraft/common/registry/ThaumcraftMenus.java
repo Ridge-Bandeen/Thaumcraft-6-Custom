@@ -46,6 +46,11 @@ public final class ThaumcraftMenus {
 	public static final Supplier<MenuType<thaumcraft.common.container.PechMenu>> PECH_TRADE = MENUS.register("pech_trade",
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.PechMenu(windowId, inv)));
 
+	/** Unlike most menus here this one needs the extra-data buffer: the client constructor reads the block position
+	 * to find the Thaumatorium's tile (its recipe selection is tile state). */
+	public static final Supplier<MenuType<thaumcraft.common.container.ThaumatoriumMenu>> THAUMATORIUM = MENUS.register("thaumatorium",
+			() -> IMenuTypeExtension.create(thaumcraft.common.container.ThaumatoriumMenu::new));
+
 	public static final Supplier<MenuType<thaumcraft.common.container.SpaMenu>> SPA = MENUS.register("spa",
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.SpaMenu(windowId, inv)));
 

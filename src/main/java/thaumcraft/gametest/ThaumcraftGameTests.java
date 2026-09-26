@@ -3389,14 +3389,26 @@ public class ThaumcraftGameTests {
 	// "test the real entry point" precedent as every other ticking device above.
 	// --------------------------------------------------------------------------------------------------
 
+	/** Selects (as the curating player would in the GUI) the crucible recipe that makes {@code output}. */
+	private static void selectThaumatoriumRecipe(GameTestHelper helper, thaumcraft.common.tiles.crafting.TileThaumatorium tile, net.minecraft.world.item.Item output) {
+		for (var holder : thaumcraft.common.tiles.crafting.TileThaumatorium.allRecipes(helper.getLevel())) {
+			if (holder.value().getRecipeOutput().is(output)) {
+				tile.getSelected().add(holder.id());
+				return;
+			}
+		}
+		throw new AssertionError("no crucible recipe makes " + output);
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void thaumatoriumAutoCraftsAFocusFromACrucibleRecipeWhenHeatedWithMatchingCatalystAndEssentia(GameTestHelper helper) {
 		BlockPos pos = new BlockPos(2, 2, 2);
-		helper.setBlock(pos.below(), Blocks.LAVA);
+		helper.setBlock(pos.below(2), Blocks.LAVA); // heat sits under the crucible under the device
 		BlockPos absolute = helper.absolutePos(pos);
 		helper.setBlock(pos, BlocksTC.thaumatorium.get());
 
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
+		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
 		// focus_air_crucible.json: catalyst feather, aspects vitreus:5/praecantatio:3/aer:3, result Focus: Air.
 		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
 		helper.assertFalse(tile.getItem().isEmpty(), "the feather catalyst should have been accepted");
@@ -3425,11 +3437,12 @@ public class ThaumcraftGameTests {
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void thaumatoriumDoesNothingWithoutHeatEvenWithAMatchingCatalystAndEssentiaAvailable(GameTestHelper helper) {
 		BlockPos pos = new BlockPos(2, 2, 2);
-		helper.setBlock(pos.below(), Blocks.STONE);
+		helper.setBlock(pos.below(2), Blocks.STONE);
 		BlockPos absolute = helper.absolutePos(pos);
 		helper.setBlock(pos, BlocksTC.thaumatorium.get());
 
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
+		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
 		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
 
 		helper.setBlock(pos.north(), TEST_ESSENTIA_SOURCE_BLOCK.get());
@@ -3448,6 +3461,82 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** The heat source belongs under the CRUCIBLE under the device - lava directly below the device (where the
+	 * crucible stands) must not count. The port checked one block down, so a real build never ran. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumatoriumHeatComesFromTwoBlocksDownNotFromTheCrucibleBelow(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos.below(2), Blocks.STONE);
+		helper.setBlock(pos.below(), Blocks.LAVA);
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.thaumatorium.get());
+		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
+		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
+		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
+		helper.setBlock(pos.north(), TEST_ESSENTIA_SOURCE_BLOCK.get());
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(pos.north());
+		source.aspect = Aspect.EARTH;
+		source.amount = 200;
+		source.outputFace = net.minecraft.core.Direction.SOUTH;
+		var state = helper.getBlockState(pos);
+		for (int i = 0; i < 100; i++) {
+			thaumcraft.common.tiles.crafting.TileThaumatorium.tick(helper.getLevel(), absolute, state, tile);
+		}
+		helper.assertTrue(tile.getAspects().size() == 0, "lava one block down (where the crucible is) is not the heat source of the device");
+		helper.succeed();
+	}
+
+	/** Curation rules: only recipes whose research the player knows can be selected, and clicking again deselects. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumatoriumSelectionNeedsResearchAndCanBeToggledOff(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.thaumatorium.get());
+		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
+		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
+		var all = thaumcraft.common.tiles.crafting.TileThaumatorium.allRecipes(helper.getLevel());
+		int air = -1;
+		for (int i = 0; i < all.size(); i++) {
+			if (all.get(i).value().getRecipeOutput().is(thaumcraft.api.items.ItemsTC.focusAir.get())) air = i;
+		}
+		helper.assertTrue(air >= 0, "the focus_air crucible recipe should exist");
+
+		// New players start with the basics (FIRSTSTEPS) - find a recipe that is genuinely gated behind other research.
+		ServerPlayer novice = spawnCasterAt(helper, helper.absolutePos(pos).above());
+		int gated = -1;
+		for (int i = 0; i < all.size() && gated < 0; i++) {
+			String research = all.get(i).value().getResearch();
+			if (research != null && !research.isEmpty()
+					&& !thaumcraft.api.capabilities.ThaumcraftCapabilities.knowsResearchStrict(novice, research)) gated = i;
+		}
+		if (gated >= 0) {
+			tile.setItem(all.get(gated).value().getCatalyst().getItems().length > 0 ? all.get(gated).value().getCatalyst().getItems()[0] : ItemStack.EMPTY);
+			tile.toggleSelection(novice, gated);
+			helper.assertTrue(tile.getSelected().isEmpty(), "a player without the research must not be able to select the recipe");
+			tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
+		}
+		ServerPlayer scholar = researchingPlayerAt(helper, pos);
+		tile.toggleSelection(scholar, air);
+		helper.assertTrue(tile.getSelected().size() == 1, "a player with the research should be able to select the recipe");
+		tile.toggleSelection(scholar, air);
+		helper.assertTrue(tile.getSelected().isEmpty(), "clicking a selected recipe again should deselect it");
+		helper.succeed();
+	}
+
+	/** Brain in a Jar boxes mounted against the column each add two recipe slots. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumatoriumBrainBoxesAddRecipeSlots(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.thaumatorium.get());
+		helper.setBlock(pos.west(), BlocksTC.brainBox.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.EAST));
+		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
+		helper.assertTrue(tile.getMaxRecipes() == 1, "a device with no upgrades holds one recipe");
+		thaumcraft.common.tiles.crafting.TileThaumatorium.tick(helper.getLevel(), absolute, helper.getBlockState(pos), tile);
+		helper.assertTrue(tile.getMaxRecipes() == 3, "one mounted brain box should raise the limit to 3, got " + tile.getMaxRecipes());
+		helper.succeed();
+	}
+
 	/**
 	 * Real coverage for {@link thaumcraft.common.tiles.crafting.TileThaumatorium#getPreviewResult()} - the
 	 * real accessor added for {@link thaumcraft.client.render.TileThaumatoriumRenderer}'s own real floating
@@ -3460,6 +3549,7 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos, BlocksTC.thaumatorium.get());
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
 
+		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
 		helper.assertTrue(tile.getPreviewResult().isEmpty(), "with no real catalyst inserted, the real preview should really be empty");
 
 		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK));

@@ -1,17 +1,24 @@
 package thaumcraft.common.tiles.crafting;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
@@ -24,56 +31,55 @@ import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.aspects.IAspectContainer;
 import thaumcraft.api.aspects.IEssentiaTransport;
+import thaumcraft.api.blocks.BlocksTC;
+import thaumcraft.api.capabilities.ThaumcraftCapabilities;
 import thaumcraft.api.crafting.CrucibleRecipe;
 import thaumcraft.api.crafting.CrucibleRecipeInput;
 import thaumcraft.api.crafting.ThaumcraftRecipeTypes;
 import thaumcraft.common.registry.ThaumcraftBlockEntities;
 
 /**
- * Replaces the old (1.12.2) {@code TileThaumatorium}. The original was an auto-crafting altar built on the
- * same {@link CrucibleRecipe} type as {@link TileCrucible}: a 3-tall structure ({@code BlocksTC.crucible}
- * required below it, a thin cosmetic "top" block above), gated on the player curating up to N (Brain-in-a-Jar
- * upgradeable) recipes through a dedicated GUI, then sucking essentia from connected jars/tubes toward
- * whichever selected recipe's aspect requirement matched the currently inserted catalyst.
+ * Replaces the old (1.12.2) {@code TileThaumatorium}: an auto-crafting altar built on the same
+ * {@link CrucibleRecipe} type as {@link TileCrucible}. It stands on a crucible (a real crucible below, a thin
+ * cosmetic "top" block above), which itself stands on a heat source - so the heat is checked TWO blocks down.
  *
- * <b>The real structure is restored</b> (see {@code BlockThaumatorium}'s own doc comment) - a real crucible
- * below and a real cosmetic top block are both back, via the real multiblock ritual. What's still simplified,
- * following {@code BlockInfernalFurnace}'s own "drop the GUI, keep the function" precedent (see its doc
- * comment): no GUI (matching {@link thaumcraft.common.tiles.devices.TilePotionSprayer}/{@link TileVoidSiphon}'s
- * no-menu convention - right-click inserts/removes the catalyst item directly), no Brain-in-a-Jar upgrade
- * (nothing left to upgrade - see below), and this tile's own runtime operation still doesn't actually read
- * essentia from the real crucible below it (self-contained sourcing instead, same as before) - the crucible
- * is a real structural placement requirement again, just not a real ongoing essentia-supply dependency yet.
+ * <p>Rebuilt 2026-09-25 (the port had a first-match, GUI-less stand-in that ignored research, and looked for its
+ * heat source one block down - where the crucible always is, so a legitimately built Thaumatorium never ran):
+ * <ul>
+ * <li>The player curates a list of recipes in the GUI ({@link thaumcraft.common.container.ThaumatoriumMenu}) - only
+ * recipes whose research they know and whose catalyst matches the item in the slot are offered. The list holds
+ * {@link #getMaxRecipes()} entries: 1, plus 2 for every Brain in a Jar mounted against the column.</li>
+ * <li>Every 5 ticks, while heated (heat source two blocks down) and not powered by redstone, it takes the selected
+ * recipe whose catalyst matches the slot, sucks essentia from connected jars/tubes toward that recipe's aspects
+ * until they are met, then crafts, consuming one catalyst and clearing the stored essentia.</li>
+ * </ul>
+ * Not ported: crafting-event firing for the curating player, and ejecting into an adjacent inventory (the result
+ * drops above the device).
  *
- * The automation this device actually adds over the plain {@link TileCrucible} - the entire point of it - is
- * preserved: instead of a player manually feeding essentia crystals in one at a time until a recipe's aspect
- * cost happens to be met, this tile looks at whatever catalyst item is inserted, finds the first registered
- * {@code CRUCIBLE_TYPE} recipe whose catalyst {@link net.minecraft.world.item.crafting.Ingredient} matches it
- * (deterministic registration order stands in for the original's player-curated selection - a real
- * simplification if two recipes ever share a catalyst but need different aspects, though no shipped recipe
- * collides today; see the port-tracking memory), and actively sucks essentia from every connected
- * {@link IEssentiaTransport} neighbor (any side but down, which is reserved for the heat source) toward
- * exactly that recipe's requirement - same suction-and-fill shape as
- * {@link thaumcraft.common.tiles.devices.TilePotionSprayer#fill} - until it's met, then crafts and ejects
- * the result, consuming one catalyst.
- *
- * {@link #setChanged()} is overridden below for the same real reason
- * {@link thaumcraft.common.tiles.crafting.TilePedestal#setChanged()} is - {@code TileThaumatoriumRenderer}'s
- * floating preview item needs the catalyst swap to actually push to nearby clients, not just show up after a
- * chunk reload.
+ * <p>{@link #setChanged()} is overridden below for the same real reason {@link TilePedestal#setChanged()} is - the
+ * renderer's floating preview and the GUI both read this tile's state on the client.
  */
 public class TileThaumatorium extends BlockEntity implements IAspectContainer, IEssentiaTransport {
 
 	private final ItemStackHandler catalyst = new ItemStackHandler(1) {
 		@Override
 		public boolean isItemValid(int slot, ItemStack stack) {
-			return level != null && findMatchingRecipe(level, stack).isPresent();
+			return level != null && anyRecipeUses(level, stack);
+		}
+
+		@Override
+		protected void onContentsChanged(int slot) {
+			setChanged();
 		}
 	};
 
 	private AspectList aspects = new AspectList();
 	private Aspect currentSuction;
 	private int counter;
+	private boolean heated;
+	private int maxRecipes = 1;
+	/** The recipes the player curated, by recipe id. */
+	private final List<ResourceLocation> selected = new ArrayList<>();
 
 	public TileThaumatorium(BlockPos pos, BlockState state) {
 		super(ThaumcraftBlockEntities.THAUMATORIUM.get(), pos, state);
@@ -99,44 +105,142 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 		return currentSuction;
 	}
 
-	/** Real accessor for {@link thaumcraft.client.render.TileThaumatoriumRenderer} - the real output the
-	 * currently-inserted catalyst will craft into, or empty if there's no catalyst or no real matching
-	 * recipe. Unlike the original's own real {@code recipeHash} list (cycling through every recipe the
-	 * player had curated for this device), this only ever has at most one real candidate - see this class's
-	 * own doc comment for why (deterministic first-match instead of player curation) - so there's nothing to
-	 * cycle through, just a real static preview. Not gated on {@link #isHot}, matching the original's own
-	 * real renderer (which showed the preview regardless of current heat). Safe to call client-side - real
-	 * recipes are synced to the client, and {@link #getItem} reads the already-synced real catalyst stack. */
-	public ItemStack getPreviewResult() {
-		if (level == null) return ItemStack.EMPTY;
-		return findMatchingRecipe(level, getItem()).map(holder -> holder.value().getRecipeOutput()).orElse(ItemStack.EMPTY);
+	public int getMaxRecipes() {
+		return maxRecipes;
 	}
 
-	private static boolean isHot(Level level, BlockPos pos) {
-		BlockState below = level.getBlockState(pos.below());
-		return below.is(Blocks.LAVA) || below.is(Blocks.FIRE) || below.is(Blocks.MAGMA_BLOCK) || below.is(Blocks.SOUL_FIRE);
+	public List<ResourceLocation> getSelected() {
+		return selected;
 	}
 
-	private static Optional<RecipeHolder<CrucibleRecipe>> findMatchingRecipe(Level level, ItemStack held) {
+	// ---- recipe curation ---------------------------------------------------------------------------------
+
+	/** Every crucible recipe in a stable order (by id), so the GUI and the server agree on what a menu-button index
+	 * means. */
+	public static List<RecipeHolder<CrucibleRecipe>> allRecipes(Level level) {
+		List<RecipeHolder<CrucibleRecipe>> all = new ArrayList<>(level.getRecipeManager().getAllRecipesFor(ThaumcraftRecipeTypes.CRUCIBLE_TYPE.get()));
+		all.sort(Comparator.comparing(h -> h.id().toString()));
+		return all;
+	}
+
+	/** The recipes the GUI lists for {@code player}: those they know the research for whose catalyst matches the item
+	 * in the slot, plus everything already selected - sorted by output name like the original. */
+	public List<RecipeHolder<CrucibleRecipe>> listedRecipes(Level level, Player player) {
+		List<RecipeHolder<CrucibleRecipe>> out = new ArrayList<>();
+		ItemStack held = getItem();
+		for (RecipeHolder<CrucibleRecipe> holder : allRecipes(level)) {
+			boolean chosen = selected.contains(holder.id());
+			boolean offered = !held.isEmpty() && knows(player, holder.value()) && holder.value().catalystMatches(held);
+			if (chosen || offered) out.add(holder);
+		}
+		out.sort(Comparator.comparing(h -> h.value().getRecipeOutput().getHoverName().getString()));
+		return out;
+	}
+
+	private static boolean knows(Player player, CrucibleRecipe recipe) {
+		String research = recipe.getResearch();
+		return research == null || research.isEmpty() || ThaumcraftCapabilities.knowsResearchStrict(player, research);
+	}
+
+	/** Server side of a click on a recipe icon: deselects it if selected, else selects it (room permitting, and only
+	 * for a recipe the player may use with the current catalyst). */
+	public void toggleSelection(Player player, int recipeIndex) {
+		if (level == null) return;
+		List<RecipeHolder<CrucibleRecipe>> all = allRecipes(level);
+		if (recipeIndex < 0 || recipeIndex >= all.size()) return;
+		RecipeHolder<CrucibleRecipe> holder = all.get(recipeIndex);
+		if (selected.remove(holder.id())) {
+			setChanged();
+			return;
+		}
+		if (selected.size() >= maxRecipes) return;
+		if (!knows(player, holder.value()) || !holder.value().catalystMatches(getItem())) return;
+		selected.add(holder.id());
+		setChanged();
+	}
+
+	private Optional<RecipeHolder<CrucibleRecipe>> selectedRecipeFor(Level level, ItemStack held) {
 		if (held.isEmpty()) return Optional.empty();
-		for (RecipeHolder<CrucibleRecipe> holder : level.getRecipeManager().getAllRecipesFor(ThaumcraftRecipeTypes.CRUCIBLE_TYPE.get())) {
-			if (holder.value().catalystMatches(held)) return Optional.of(holder);
+		for (ResourceLocation id : selected) {
+			Optional<RecipeHolder<?>> holder = level.getRecipeManager().byKey(id);
+			if (holder.isPresent() && holder.get().value() instanceof CrucibleRecipe recipe && recipe.catalystMatches(held)) {
+				@SuppressWarnings("unchecked")
+				RecipeHolder<CrucibleRecipe> typed = (RecipeHolder<CrucibleRecipe>) holder.get();
+				return Optional.of(typed);
+			}
 		}
 		return Optional.empty();
 	}
 
+	private static boolean anyRecipeUses(Level level, ItemStack stack) {
+		if (stack.isEmpty()) return false;
+		for (RecipeHolder<CrucibleRecipe> holder : allRecipes(level)) {
+			if (holder.value().catalystMatches(stack)) return true;
+		}
+		return false;
+	}
+
+	/** What the floating preview above the device shows: the output of the selected recipe the current catalyst would
+	 * craft (the original cycled through its curated list; this shows the one that will actually run). Safe
+	 * client-side - recipes and this tile's selection are synced. */
+	public ItemStack getPreviewResult() {
+		if (level == null) return ItemStack.EMPTY;
+		return selectedRecipeFor(level, getItem()).map(holder -> holder.value().getRecipeOutput()).orElse(ItemStack.EMPTY);
+	}
+
+	// ---- operation ---------------------------------------------------------------------------------------
+
+	/** The heat source sits under the crucible under this block. Lava, fire, magma - and, as for the crucible,
+	 * nitor. */
+	private static boolean isHot(Level level, BlockPos pos) {
+		BlockState heat = level.getBlockState(pos.below(2));
+		return heat.is(Blocks.LAVA) || heat.is(Blocks.FIRE) || heat.is(Blocks.MAGMA_BLOCK) || heat.is(Blocks.SOUL_FIRE)
+				|| heat.getBlock() instanceof thaumcraft.common.blocks.misc.BlockNitor;
+	}
+
+	private static boolean isPowered(Level level, BlockPos pos) {
+		return level.hasNeighborSignal(pos) || level.hasNeighborSignal(pos.below()) || level.hasNeighborSignal(pos.above());
+	}
+
+	/** Brain in a Jar boxes mounted against the column add two recipe slots each (the device has one to start with). */
+	private static int countUpgrades(Level level, BlockPos pos) {
+		int slots = 1;
+		for (int yy = 0; yy <= 1; yy++) {
+			for (Direction dir : Direction.values()) {
+				if (dir == Direction.DOWN) continue;
+				BlockPos bp = pos.offset(dir.getStepX(), yy + dir.getStepY(), dir.getStepZ());
+				BlockState state = level.getBlockState(bp);
+				if (state.is(BlocksTC.brainBox.get())
+						&& state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING) == dir.getOpposite()) {
+					slots += 2;
+				}
+			}
+		}
+		return slots;
+	}
+
 	public static void tick(Level level, BlockPos pos, BlockState state, TileThaumatorium tile) {
 		if (level.isClientSide) return;
+		if (tile.counter == 0 || tile.counter % 40 == 0) {
+			tile.heated = isHot(level, pos);
+			int slots = countUpgrades(level, pos);
+			if (slots != tile.maxRecipes) {
+				tile.maxRecipes = slots;
+				while (tile.selected.size() > slots) tile.selected.remove(tile.selected.size() - 1);
+				tile.setChanged();
+			}
+		}
 		tile.counter++;
 		if (tile.counter % 5 != 0) return;
+		if (!tile.heated || isPowered(level, pos) || tile.selected.isEmpty()) return;
 
 		ItemStack held = tile.catalyst.getStackInSlot(0);
-		if (held.isEmpty() || !isHot(level, pos)) {
+		if (held.isEmpty()) {
 			tile.currentSuction = null;
 			return;
 		}
 
-		Optional<RecipeHolder<CrucibleRecipe>> match = findMatchingRecipe(level, held);
+		Optional<RecipeHolder<CrucibleRecipe>> match = tile.selectedRecipeFor(level, held);
 		if (match.isEmpty()) {
 			tile.currentSuction = null;
 			return;
@@ -145,7 +249,7 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 		CrucibleRecipe recipe = match.get().value();
 		AspectList target = recipe.getAspects();
 		Aspect missing = null;
-		for (Aspect tag : target.getAspects()) {
+		for (Aspect tag : target.getAspectsSortedByName()) {
 			if (tile.aspects.getAmount(tag) < target.getAmount(tag)) {
 				missing = tag;
 				break;
@@ -154,12 +258,13 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 
 		if (missing == null) {
 			CrucibleRecipeInput input = new CrucibleRecipeInput(held, tile.aspects);
+			if (!recipe.matches(tile.aspects, held)) return;
 			ItemStack out = recipe.assemble(input, level.registryAccess());
-			tile.aspects = recipe.removeMatching(tile.aspects);
+			tile.aspects = new AspectList(); // the original wiped the whole store, not just the recipe's share
 			tile.catalyst.extractItem(0, 1, false);
 			tile.ejectItem(level, pos, out);
 			tile.currentSuction = null;
-			level.playSound(null, pos, SoundEvents.BREWING_STAND_BREW, SoundSource.BLOCKS, 0.6f, 1.0f);
+			level.playSound(null, pos, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.25f, 2.6f + (level.random.nextFloat() - level.random.nextFloat()) * 0.8f);
 			tile.setChanged();
 		} else {
 			tile.currentSuction = missing;
@@ -167,19 +272,24 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 		}
 	}
 
+	/** Pulls one essentia from a connected jar or tube - scanning both this block's neighbours and the top block's
+	 * (the device is two blocks tall), never straight down. */
 	private void fill(Level level, BlockPos pos) {
-		for (Direction dir : Direction.values()) {
-			if (dir == Direction.DOWN) continue;
-			if (!(level.getBlockEntity(pos.relative(dir)) instanceof IEssentiaTransport neighbor)) continue;
-			if (!neighbor.isConnectable(dir.getOpposite()) || !neighbor.canOutputTo(dir.getOpposite())) continue;
-			if (neighbor.getEssentiaAmount(dir.getOpposite()) <= 0) continue;
-			if (neighbor.getSuctionAmount(dir.getOpposite()) >= getSuctionAmount(dir)) continue;
-			if (getSuctionAmount(dir) < neighbor.getMinimumSuction()) continue;
-			int taken = neighbor.takeEssentia(currentSuction, 1, dir.getOpposite());
-			if (taken > 0) {
-				aspects.add(currentSuction, taken);
-				setChanged();
-				return;
+		for (int y = 0; y <= 1; y++) {
+			BlockPos base = pos.above(y);
+			for (Direction dir : Direction.values()) {
+				if (dir == Direction.DOWN || (y == 0 && dir == Direction.UP)) continue;
+				if (!(level.getBlockEntity(base.relative(dir)) instanceof IEssentiaTransport neighbor)) continue;
+				if (!neighbor.isConnectable(dir.getOpposite()) || !neighbor.canOutputTo(dir.getOpposite())) continue;
+				if (neighbor.getEssentiaAmount(dir.getOpposite()) <= 0) continue;
+				if (neighbor.getSuctionAmount(dir.getOpposite()) >= getSuctionAmount(dir)) continue;
+				if (getSuctionAmount(dir) < neighbor.getMinimumSuction()) continue;
+				int taken = neighbor.takeEssentia(currentSuction, 1, dir.getOpposite());
+				if (taken > 0) {
+					aspects.add(currentSuction, taken);
+					setChanged();
+					return;
+				}
 			}
 		}
 	}
@@ -190,6 +300,8 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 		out.setDeltaMovement(0, 0.075, 0);
 		level.addFreshEntity(out);
 	}
+
+	// ---- IAspectContainer / IEssentiaTransport -------------------------------------------------------------
 
 	@Override
 	public AspectList getAspects() {
@@ -301,6 +413,10 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 		super.saveAdditional(tag, registries);
 		tag.put("Items", catalyst.serializeNBT(registries));
 		aspects.writeToNBT(tag);
+		tag.putInt("MaxRecipes", maxRecipes);
+		ListTag list = new ListTag();
+		for (ResourceLocation id : selected) list.add(StringTag.valueOf(id.toString()));
+		tag.put("Selected", list);
 	}
 
 	@Override
@@ -309,6 +425,12 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 		catalyst.deserializeNBT(registries, tag.getCompound("Items"));
 		aspects = new AspectList();
 		aspects.readFromNBT(tag);
+		maxRecipes = tag.contains("MaxRecipes") ? tag.getInt("MaxRecipes") : 1;
+		selected.clear();
+		for (int i = 0; i < tag.getList("Selected", 8).size(); i++) {
+			ResourceLocation id = ResourceLocation.tryParse(tag.getList("Selected", 8).getString(i));
+			if (id != null) selected.add(id);
+		}
 	}
 
 	@Override

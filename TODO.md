@@ -93,6 +93,20 @@ running the client - GameTest/JUnit never render anything):
   wearing goggles (crucible, jars, alembic...). Extended text lines (IGogglesDisplayExtended) and note readouts not ported.
 - Not done: over-full froth down the crucible sides, bottle/phial fill from the crucible, crucible sounds beyond the above.
 
+**Thaumatorium rebuild (autonomous, same session):**
+
+- Heat was checked one block down - where the crucible stands - so a legitimately built device NEVER ran; now two blocks
+  down (under the crucible), nitor counts, redstone power stops it.
+- Recipe curation GUI restored (`ThaumatoriumMenu`/`ThaumatoriumScreen`, gui_thaumatorium.png restored): only recipes whose
+  research you know and whose catalyst matches the slot are offered; the port had used first-match with NO research check.
+- Brain in a Jar boxes mounted against the column add 2 recipe slots each; essentia is drawn from neighbours of both the
+  device and its top block; crafting clears all stored essentia like the original.
+- Not ported: crafting-event for the curating player; ejecting into an adjacent inventory (drops above).
+
+**Open design question (original bug):** the original applied vis discounts in the arcane workbench as
+`vis *= (int)(1.0f - discount)`, which is 0 for ANY discount - so with goggles/gauntlet discounts crafts cost no vis at all.
+The port applies no discount. Decide: replicate (free), implement the intended percentage, or leave.
+
 **New backlog from that session:**
 
 - Register a recipe-book category finder for every Thaumcraft recipe type (`RegisterRecipeBookCategoriesEvent`)
