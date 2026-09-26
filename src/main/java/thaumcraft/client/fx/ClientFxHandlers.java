@@ -407,6 +407,35 @@ public final class ClientFxHandlers {
 		addDelayed(fb, delay);
 	}
 
+	/** The original's {@code FXDispatcher#scanHighlight}: blue sparkles clustered around something the Thaumometer could still
+	 * teach the player about. The original's offsets are kept as they were (relative to the box centre, clamped to its half-size). */
+	public static void scanHighlight(net.minecraft.world.level.Level level, net.minecraft.world.phys.AABB bb) {
+		if (!(level instanceof ClientLevel)) return;
+		double avgEdge = (bb.getXsize() + bb.getYsize() + bb.getZsize()) / 3.0;
+		int num = Mth.ceil(avgEdge * 2.0);
+		double ax = (bb.minX + bb.maxX) / 2.0;
+		double ay = (bb.minY + bb.maxY) / 2.0;
+		double az = (bb.minZ + bb.maxZ) / 2.0;
+		for (net.minecraft.core.Direction face : net.minecraft.core.Direction.values()) {
+			double mx = 0.5 + face.getStepX() * 0.51;
+			double my = 0.5 + face.getStepY() * 0.51;
+			double mz = 0.5 + face.getStepZ() * 0.51;
+			for (int a = 0; a < num * 2; ++a) {
+				double x = mx + level.random.nextGaussian() * (bb.maxX - bb.minX);
+				double y = my + level.random.nextGaussian() * (bb.maxY - bb.minY);
+				double z = mz + level.random.nextGaussian() * (bb.maxZ - bb.minZ);
+				x = Mth.clamp(x, bb.minX - ax, bb.maxX - ax);
+				y = Mth.clamp(y, bb.minY - ay, bb.maxY - ay);
+				z = Mth.clamp(z, bb.minZ - az, bb.maxZ - az);
+				float r = Mth.randomBetweenInclusive(level.random, 16, 32) / 255.0f;
+				float g = Mth.randomBetweenInclusive(level.random, 132, 165) / 255.0f;
+				float b = Mth.randomBetweenInclusive(level.random, 223, 239) / 255.0f;
+				spawnSimpleSparkle(level, ax + x, ay + y, az + z, 0.0, 0.0, 0.0, 0.4f + (float) level.random.nextGaussian() * 0.1f, r, g, b,
+						level.random.nextInt(10), 1.0f, 0.0f, 4);
+			}
+		}
+	}
+
 	/** The original's {@code FXDispatcher#drawBlockSparkles}: dust sparkles across the exposed faces of a block, starting near
 	 * {@code start} and spreading out (delay grows with distance from it). */
 	public static void spawnBlockSparkles(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos p, net.minecraft.world.phys.Vec3 start) {

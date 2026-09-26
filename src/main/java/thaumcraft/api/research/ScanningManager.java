@@ -38,12 +38,10 @@ import thaumcraft.api.capabilities.ThaumcraftCapabilities;
  * {@code ScanEnchantment}, {@code ScanPotion}) actually reachable at all - nothing in this port ever passed
  * a real {@code ItemStack} to a scan handler before.
  *
- * Simplified vs the original, a deliberately "headless" slice (no research-tree browser/book UI):
- * <ul>
- * <li>Chat feedback simplified to a single status line per scan attempt instead of the original's
- * suppress/found/unknown three-way branching (the original suppressed its own message entirely whenever a
- * matched thing returned an empty research key).</li>
- * </ul>
+ * The action-bar feedback is the original's three-way branch again (2026-09-25 - a playtest found it said "You have
+ * learned something new" on every scan): a match with an empty research key (the generic aspect scans) suppresses the
+ * message entirely, a match that really progressed research says "learned something new" in green italics, and no
+ * match - including research already known - says "nothing new can be learned" in purple italics.
  */
 public class ScanningManager {
 
@@ -67,15 +65,20 @@ public class ScanningManager {
 	 */
 	public static boolean scanTheThing(Player player, Object object) {
 		boolean found = false;
+		boolean suppress = false;
 		for (IScanThing thing : things) {
 			if (!thing.checkThing(player, object)) continue;
 			String key = thing.getResearchKey(player, object);
 			if (key == null || key.isEmpty() || ThaumcraftApi.internalMethods.progressResearch(player, key)) {
+				if (key == null || key.isEmpty()) suppress = true;
 				found = true;
 				thing.onSuccess(player, object);
 			}
 		}
-		player.displayClientMessage(Component.translatable(found ? "tc.knownobject" : "tc.unknownobject"), true);
+		if (!suppress) {
+			player.displayClientMessage(Component.translatable(found ? "tc.knownobject" : "tc.unknownobject")
+					.withStyle(found ? net.minecraft.ChatFormatting.GREEN : net.minecraft.ChatFormatting.DARK_PURPLE, net.minecraft.ChatFormatting.ITALIC), true);
+		}
 
 		// Real inventory recursion, matching the original exactly: scanning a real container also scans
 		// everything really inside it, capped at 100 real items so a huge modded inventory can't lag the
