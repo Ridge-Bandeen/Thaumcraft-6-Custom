@@ -96,19 +96,28 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 			public void onTake(Player p, ItemStack stack) {
 				consumeIngredients();
 				super.onTake(p, stack);
+				slotsChanged(container); // the grid changed: work out what it makes now (or clear the result)
 			}
 		});
 
 		for (int row = 0; row < 3; row++) {
 			for (int col = 0; col < 3; col++) {
-				addSlot(new Slot(container, col + row * 3, 40 + col * 24, 40 + row * 24));
+				addSlot(new Slot(container, col + row * 3, 40 + col * 24, 40 + row * 24) {
+					/** The tile is a plain container: nothing tells the menu when a player puts an item in or takes one out, so the
+					 * result never updated in a real client (found in the 2026-09-25 playtest - the GameTests call slotsChanged by hand). */
+					@Override
+					public void setChanged() {
+						super.setChanged();
+						ArcaneWorkbenchMenu.this.slotsChanged(ArcaneWorkbenchMenu.this.container);
+					}
+				});
 			}
 		}
 
 		int[] crystalX = {64, 17, 112, 17, 112, 64};
 		int[] crystalY = {13, 35, 35, 93, 93, 115};
 		for (int i = 0; i < TileArcaneWorkbench.CRYSTAL_SIZE; i++) {
-			addSlot(new CrystalSlot(RING_ASPECTS[i], container, TileArcaneWorkbench.GRID_SIZE + i, crystalX[i], crystalY[i]));
+			addSlot(new CrystalSlot(RING_ASPECTS[i], container, TileArcaneWorkbench.GRID_SIZE + i, crystalX[i], crystalY[i], this));
 		}
 		addDataSlot(availableVis);
 		addDataSlot(shownCost);
@@ -129,10 +138,18 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 	/** Restricts a crystal-ring slot to the crystal essence of its own primal aspect. */
 	private static class CrystalSlot extends Slot {
 		private final Aspect aspect;
+		private final ArcaneWorkbenchMenu menu;
 
-		CrystalSlot(Aspect aspect, Container container, int slot, int x, int y) {
+		CrystalSlot(Aspect aspect, Container container, int slot, int x, int y, ArcaneWorkbenchMenu menu) {
 			super(container, slot, x, y);
 			this.aspect = aspect;
+			this.menu = menu;
+		}
+
+		@Override
+		public void setChanged() {
+			super.setChanged();
+			menu.slotsChanged(container); // crystals count towards whether the recipe can be made
 		}
 
 		@Override
@@ -220,6 +237,11 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 		ItemStack result = currentRecipe != null && hasVis && known ? currentRecipe.value().assemble(input, level.registryAccess()) : ItemStack.EMPTY;
 		resultContainer.setItem(0, result);
 		setRemoteSlot(RESULT_SLOT, result);
+		// setRemoteSlot only records that the client "already has" this stack, so it has to be sent explicitly - as vanilla's
+		// crafting menu does - or the result never appears on the client.
+		if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer && serverPlayer.connection != null) {
+			serverPlayer.connection.send(new net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket(containerId, incrementStateId(), RESULT_SLOT, result));
+		}
 		broadcastChanges();
 	}
 

@@ -294,18 +294,22 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 		}
 	}
 
-	/** The original pushed the result into the inventory on the device's facing side (a chest, hopper...) before
-	 * dropping it. This device has no facing, so any horizontal neighbour that will take it does; the rest drops above. */
+	/** The original's {@code InventoryUtils#ejectStackAt}: the result goes out the FRONT (the side the device faces) - into an
+	 * inventory there (a chest, hopper...) if it takes it, otherwise dropped in front of the device with a push outward
+	 * (from behind the front block instead when that one is solid). It had been going into any side neighbour or straight up. */
 	private void ejectItem(Level level, BlockPos pos, ItemStack stack) {
 		if (stack.isEmpty()) return;
-		for (Direction dir : Direction.Plane.HORIZONTAL) {
-			IItemHandler handler = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, pos.relative(dir), dir.getOpposite());
-			if (handler == null) continue;
+		Direction facing = getBlockState().hasProperty(thaumcraft.common.blocks.crafting.BlockThaumatorium.FACING)
+				? getBlockState().getValue(thaumcraft.common.blocks.crafting.BlockThaumatorium.FACING) : Direction.NORTH;
+		BlockPos front = pos.relative(facing);
+		IItemHandler handler = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, front, facing.getOpposite());
+		if (handler != null) {
 			stack = net.neoforged.neoforge.items.ItemHandlerHelper.insertItem(handler, stack, false);
 			if (stack.isEmpty()) return;
 		}
-		ItemEntity out = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 1.1, pos.getZ() + 0.5, stack);
-		out.setDeltaMovement(0, 0.075, 0);
+		BlockPos base = level.getBlockState(front).isCollisionShapeFullBlock(level, front) ? pos.relative(facing.getOpposite()) : pos;
+		ItemEntity out = new ItemEntity(level, base.getX() + 0.5 + facing.getStepX(), base.getY(), base.getZ() + 0.5 + facing.getStepZ(), stack);
+		out.setDeltaMovement(0.3 * facing.getStepX(), 0.0, 0.3 * facing.getStepZ());
 		level.addFreshEntity(out);
 	}
 

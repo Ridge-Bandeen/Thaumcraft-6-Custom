@@ -3649,7 +3649,7 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos.below(2), Blocks.LAVA);
 		helper.setBlock(pos, BlocksTC.thaumatorium.get());
 		helper.setBlock(pos.below(), BlocksTC.crucible.get()); // the body reverts to Metal Alchemical without its crucible
-		helper.setBlock(pos.east(), Blocks.CHEST);
+		helper.setBlock(pos.north(), Blocks.CHEST); // it faces north by default: the front is where the result goes
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
 		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
 		tile.setItem(new ItemStack(Items.FEATHER));
@@ -3660,12 +3660,38 @@ public class ThaumcraftGameTests {
 			thaumcraft.common.tiles.crafting.TileThaumatorium.tick(helper.getLevel(), absolute, state, tile);
 		}
 		helper.assertTrue(tile.getItem().isEmpty(), "the craft should have completed");
-		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(pos.east());
+		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(pos.north());
 		boolean inChest = false;
 		for (int i = 0; i < chest.getContainerSize(); i++) {
 			if (chest.getItem(i).is(thaumcraft.api.items.ItemsTC.focusAir.get())) inChest = true;
 		}
 		helper.assertTrue(inChest, "the result should have been put into the neighbouring chest");
+		helper.succeed();
+	}
+
+	/** With nothing in front of it to take the result, the Thaumatorium drops it out the front (north by default), not the back or up. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumatoriumDropsItsResultOutTheFrontWhenNothingTakesIt(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		BlockPos absolute = helper.absolutePos(pos);
+		helper.setBlock(pos.below(2), Blocks.LAVA);
+		helper.setBlock(pos, BlocksTC.thaumatorium.get());
+		helper.setBlock(pos.below(), BlocksTC.crucible.get());
+		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
+		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
+		tile.setItem(new ItemStack(Items.FEATHER));
+		tile.setAspects(new AspectList().add(Aspect.CRYSTAL, 5).add(Aspect.MAGIC, 3).add(Aspect.AIR, 3));
+		var state = helper.getBlockState(pos);
+		for (int i = 0; i < 60 && !tile.getItem().isEmpty(); i++) {
+			thaumcraft.common.tiles.crafting.TileThaumatorium.tick(helper.getLevel(), absolute, state, tile);
+		}
+		helper.assertTrue(tile.getItem().isEmpty(), "the craft should have completed");
+		java.util.List<net.minecraft.world.entity.item.ItemEntity> drops = helper.getLevel().getEntitiesOfClass(
+				net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(absolute).inflate(3));
+		net.minecraft.world.entity.item.ItemEntity focus = drops.stream().filter(e -> e.getItem().is(thaumcraft.api.items.ItemsTC.focusAir.get())).findFirst().orElse(null);
+		helper.assertTrue(focus != null, "the focus should have been dropped");
+		helper.assertTrue(focus.getZ() < absolute.getZ() && focus.getDeltaMovement().z < 0, "it should come out the north (front) side, moving away from the device, at z=" + focus.getZ()
+				+ " (device z=" + absolute.getZ() + ")");
 		helper.succeed();
 	}
 
