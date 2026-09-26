@@ -16,8 +16,8 @@ import thaumcraft.api.crafting.IDustTrigger;
  * runs before the clicked block's own interaction handler, letting this preempt (e.g.) the crafting
  * table's GUI the same way the original did.
  *
- * Simplified: no sparkle particle trail / custom dust sound on use, same "no client FX" precedent as every
- * other item this session - just a plain sound cue confirming the swap happened.
+ * Restored 2026-09-25 (a playtest noticed the missing effects): the client throws the original sparkle stream from the
+ * player hand toward the target plus block sparkles over the structure, and the dust sound plays.
  */
 public class ItemMagicDust extends Item {
 
@@ -34,13 +34,18 @@ public class ItemMagicDust extends Item {
 			IDustTrigger.Placement place = trigger.getValidFace(context.getLevel(), context.getPlayer(), context.getClickedPos(), context.getClickedFace());
 			if (place == null) continue;
 
-			if (!context.getLevel().isClientSide) {
+			if (context.getLevel().isClientSide) {
+				// the original threw its sparkles from the client copy of the use (see ClientFxHandlers#spawnDustSparkles)
+				thaumcraft.client.fx.ClientFxHandlers.spawnDustSparkles(context.getLevel(), context.getPlayer(), context.getHand(),
+						context.getClickedPos(), context.getClickLocation(), trigger, place);
+			} else {
 				ItemStack stack = context.getItemInHand();
 				if (context.getPlayer() != null && !context.getPlayer().getAbilities().instabuild) {
 					stack.shrink(1);
 				}
 				trigger.execute(context.getLevel(), context.getPlayer(), context.getClickedPos(), place, context.getClickedFace());
-				context.getLevel().playSound(null, context.getClickedPos(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 0.5f, 1.0f);
+				context.getLevel().playSound(null, context.getClickedPos(), thaumcraft.common.registry.ThaumcraftSounds.DUST.get(), SoundSource.PLAYERS,
+						0.33f, 1.0f + (float) context.getLevel().random.nextGaussian() * 0.05f);
 			}
 			return InteractionResult.SUCCESS;
 		}

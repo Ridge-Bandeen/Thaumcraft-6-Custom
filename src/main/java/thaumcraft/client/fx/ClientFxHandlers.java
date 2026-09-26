@@ -382,6 +382,100 @@ public final class ClientFxHandlers {
 		addDelayed(fb, 0);
 	}
 
+	/** The original's {@code FXDispatcher#drawSimpleSparkle}: a glowing, twinkling grid-sheet sparkle that drifts and slows. */
+	public static void spawnSimpleSparkle(net.minecraft.world.level.Level level, double x, double y, double z, double xd, double yd, double zd,
+			float scale, float r, float g, float b, int delay, float decay, float grav, int baseAge) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		boolean sp = level.random.nextFloat() < 0.2;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, xd, yd, zd);
+		int age = baseAge * 4 + level.random.nextInt(baseAge);
+		fb.setMaxAge(age);
+		fb.setRBGColorF(r, g, b);
+		float[] alphas = new float[6 + level.random.nextInt(Math.max(1, age / 3))];
+		for (int a = 1; a < alphas.length - 1; ++a) {
+			alphas[a] = level.random.nextFloat();
+		}
+		fb.setAlphaF(alphas);
+		fb.setParticles(sp ? 320 : 512, 16, 1);
+		fb.setLoop(true);
+		fb.setGravity(grav);
+		fb.setScale(scale, scale * 2.0f);
+		fb.setLayer(0);
+		fb.setSlowDown(decay);
+		fb.setRandomMovementScale(5.0E-4f, 0.001f, 5.0E-4f);
+		fb.setWind(5.0E-4);
+		addDelayed(fb, delay);
+	}
+
+	/** The original's {@code FXDispatcher#drawBlockSparkles}: dust sparkles across the exposed faces of a block, starting near
+	 * {@code start} and spreading out (delay grows with distance from it). */
+	public static void spawnBlockSparkles(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos p, net.minecraft.world.phys.Vec3 start) {
+		if (!(level instanceof ClientLevel)) return;
+		net.minecraft.world.phys.AABB bs = level.getBlockState(p).getShape(level, p).isEmpty()
+				? new net.minecraft.world.phys.AABB(0, 0, 0, 1, 1, 1) : level.getBlockState(p).getShape(level, p).bounds();
+		int num = (int) (((bs.getXsize() + bs.getYsize() + bs.getZsize()) / 3.0) * 20.0);
+		for (net.minecraft.core.Direction face : net.minecraft.core.Direction.values()) {
+			net.minecraft.core.BlockPos np = p.relative(face);
+			net.minecraft.world.level.block.state.BlockState state = level.getBlockState(np);
+			if (state.isSolidRender(level, np) || state.isFaceSturdy(level, np, face.getOpposite())) continue;
+			boolean rx = face.getStepX() == 0;
+			boolean ry = face.getStepY() == 0;
+			boolean rz = face.getStepZ() == 0;
+			double mx = 0.5 + face.getStepX() * 0.51;
+			double my = 0.5 + face.getStepY() * 0.51;
+			double mz = 0.5 + face.getStepZ() * 0.51;
+			for (int a = 0; a < num * 2; ++a) {
+				double x = mx;
+				double y = my;
+				double z = mz;
+				if (rx) x += level.random.nextGaussian() * 0.6;
+				if (ry) y += level.random.nextGaussian() * 0.6;
+				if (rz) z += level.random.nextGaussian() * 0.6;
+				x = net.minecraft.util.Mth.clamp(x, bs.minX, bs.maxX);
+				y = net.minecraft.util.Mth.clamp(y, bs.minY, bs.maxY);
+				z = net.minecraft.util.Mth.clamp(z, bs.minZ, bs.maxZ);
+				float g = net.minecraft.util.Mth.randomBetweenInclusive(level.random, 189, 255) / 255.0f;
+				float b = net.minecraft.util.Mth.randomBetweenInclusive(level.random, 64, 255) / 255.0f;
+				net.minecraft.world.phys.Vec3 v1 = new net.minecraft.world.phys.Vec3(p.getX() + x, p.getY() + y, p.getZ() + z);
+				double delay = level.random.nextInt(5) + v1.distanceTo(start) * 16.0;
+				spawnSimpleSparkle(level, p.getX() + x, p.getY() + y, p.getZ() + z, 0.0, 0.0025, 0.0,
+						0.4f + (float) level.random.nextGaussian() * 0.1f, 1.0f, g, b, (int) delay, 1.0f, 0.01f, 16);
+			}
+		}
+	}
+
+	/** Salis Mundus client-side flourish ({@code ItemMagicDust#doSparkles}): fifty sparkles thrown from the player's hand
+	 * toward the target (a third of them floaty), then the trigger's own block sparkles where it will act. */
+	public static void spawnDustSparkles(net.minecraft.world.level.Level level, net.minecraft.world.entity.player.Player player,
+			net.minecraft.world.InteractionHand hand, net.minecraft.core.BlockPos pos, net.minecraft.world.phys.Vec3 hit,
+			thaumcraft.api.crafting.IDustTrigger trigger, thaumcraft.api.crafting.IDustTrigger.Placement place) {
+		if (!(level instanceof ClientLevel)) return;
+		double yawRad = (player.getYRot() + (hand == net.minecraft.world.InteractionHand.MAIN_HAND ? 0.0f : 180.0f)) / 180.0 * Math.PI;
+		net.minecraft.world.phys.Vec3 look = player.getLookAngle();
+		net.minecraft.world.phys.Vec3 v1 = new net.minecraft.world.phys.Vec3(
+				player.getX() - Math.cos(yawRad) * 0.3 + look.x * 0.3,
+				player.getBoundingBox().minY + player.getBbHeight() / 2.0 + 0.25 + look.y * 0.3,
+				player.getZ() - Math.sin(yawRad) * 0.3 + look.z * 0.3);
+		net.minecraft.world.phys.Vec3 v2 = new net.minecraft.world.phys.Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5).subtract(v1);
+		int count = 50;
+		for (int a = 0; a < count; ++a) {
+			boolean floaty = a < count / 3;
+			float g = net.minecraft.util.Mth.randomBetweenInclusive(level.random, 189, 255) / 255.0f;
+			float b = net.minecraft.util.Mth.randomBetweenInclusive(level.random, 64, 255) / 255.0f;
+			spawnSimpleSparkle(level, v1.x, v1.y, v1.z,
+					v2.x / 6.0 + level.random.nextGaussian() * 0.05,
+					v2.y / 6.0 + level.random.nextGaussian() * 0.05 + (floaty ? 0.05 : 0.15),
+					v2.z / 6.0 + level.random.nextGaussian() * 0.05,
+					0.5f, 1.0f, g, b, level.random.nextInt(5), floaty ? (0.3f + level.random.nextFloat() * 0.5f) : 0.85f, floaty ? 0.2f : 0.5f, 16);
+		}
+		java.util.List<net.minecraft.core.BlockPos> sparkles = trigger.sparkle(level, player, pos, place);
+		if (sparkles != null) {
+			for (net.minecraft.core.BlockPos p : sparkles) {
+				spawnBlockSparkles(level, p, hit);
+			}
+		}
+	}
+
 	/** Real {@link thaumcraft.client.fx.particles.FXSmokeSpiral} spawn. */
 	public static void spawnSmokeSpiral(net.minecraft.world.level.Level level, double x, double y, double z, float radius, int start, int minY, int color) {
 		if (!(level instanceof ClientLevel clientLevel)) return;

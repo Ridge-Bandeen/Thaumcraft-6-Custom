@@ -41,7 +41,9 @@ public class TileThaumatoriumRenderer implements BlockEntityRenderer<TileThaumat
 
 		Direction facing = tile.getBlockState().hasProperty(BlockThaumatorium.FACING) ? tile.getBlockState().getValue(BlockThaumatorium.FACING) : Direction.NORTH;
 		poseStack.pushPose();
-		poseStack.translate(0.5 + facing.getStepX() / 1.99, 1.125, 0.5 + facing.getStepZ() / 1.99);
+		// 1.125 is the original height, but it drew the item through the old entity-item renderer, which lifted it by its ground
+		// offset plus a hover bob (about 0.25); renderStatic does neither, so the lift is added here (playtest 2026-09-25).
+		poseStack.translate(0.5 + facing.getStepX() / 1.99, 1.125 + 0.25, 0.5 + facing.getStepZ() / 1.99);
 		switch (facing) {
 			case EAST -> poseStack.mulPose(Axis.YP.rotationDegrees(90.0f));
 			case WEST -> poseStack.mulPose(Axis.YP.rotationDegrees(270.0f));
