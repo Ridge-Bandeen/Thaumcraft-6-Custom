@@ -106,7 +106,14 @@ running the client - GameTest/JUnit never render anything):
 **Alchemical Furnace screen (autonomous):** `SmelterMenu`/`SmelterScreen` restore the fuel/cook/vis gauges; right-click opens it
 (the port had used right-click item routing).
 
-**Known device gaps still open (from a GUI-class comparison, original vs port):** Potion Sprayer (flat Alchemy-10 cost for every potion + no
+**Later the same session (autonomous, at the user's request - the "low-impact" gaps):** Void Siphon, Arcane Bore and Potion Sprayer screens
+restored (`VoidSiphonMenu/Screen`, `ArcaneBoreMenu/Screen`, `PotionSprayerMenu/Screen`); the sprayer now charges the real potion cost
+(`PotionAspects`: brewing reagents' object aspects + 3 Alchemy each, -66%, culled to 10 - via a reverse map over vanilla `PotionBrewing`)
+instead of a flat 10 Alchemy; Golem Logistics screen restored (`LogisticsMenu/Screen` + two C2S packets, opened by the Golem Bell's
+sneak-click once GOLEMLOGISTICS is known); crucible over-full froth; Thaumatorium ejects into a neighbouring chest. NONE of these has been
+seen in a client yet.
+
+**(Superseded list) Known device gaps that were open:** Potion Sprayer (flat Alchemy-10 cost for every potion + no
 GUI - original derived the cost from the potion's brewing reagents via object tags: reagents chain -> sum object tags + Alchemy 3 each, minus 66%,
 culled to 10; needs a reagent lookup over `PotionBrewing`), Void Siphon screen, Arcane Bore screen, Golem Logistics screen, crucible over-full
 side froth, Thaumatorium adjacent-inventory ejection.

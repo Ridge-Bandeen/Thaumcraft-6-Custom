@@ -66,6 +66,10 @@ public final class ThaumcraftMenus {
 	public static final Supplier<MenuType<thaumcraft.common.container.PotionSprayerMenu>> POTION_SPRAYER = MENUS.register("potion_sprayer",
 			() -> IMenuTypeExtension.create(thaumcraft.common.container.PotionSprayerMenu::new));
 
+	/** Needs the optional delivery target from the extra data (see {@code LogisticsMenu#writeTarget}). */
+	public static final Supplier<MenuType<thaumcraft.common.container.LogisticsMenu>> LOGISTICS = MENUS.register("logistics",
+			() -> IMenuTypeExtension.create(thaumcraft.common.container.LogisticsMenu::new));
+
 	public static final Supplier<MenuType<thaumcraft.common.container.SpaMenu>> SPA = MENUS.register("spa",
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.SpaMenu(windowId, inv)));
 

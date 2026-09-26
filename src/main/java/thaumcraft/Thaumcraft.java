@@ -404,6 +404,12 @@ public class Thaumcraft {
 
         // The real focus-radial HUD's own selection packet - see ServerboundChangeCasterFocusPacket's own
         // doc comment.
+        registrar.playToServer(thaumcraft.common.lib.network.ServerboundLogisticsPackets.Search.TYPE,
+                thaumcraft.common.lib.network.ServerboundLogisticsPackets.Search.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> payload.handle((net.minecraft.server.level.ServerPlayer) context.player())));
+        registrar.playToServer(thaumcraft.common.lib.network.ServerboundLogisticsPackets.Request.TYPE,
+                thaumcraft.common.lib.network.ServerboundLogisticsPackets.Request.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> payload.handle((net.minecraft.server.level.ServerPlayer) context.player())));
         registrar.playToServer(thaumcraft.common.lib.network.ServerboundChangeCasterFocusPacket.TYPE,
                 thaumcraft.common.lib.network.ServerboundChangeCasterFocusPacket.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> thaumcraft.common.items.casters.CasterFocusHelper

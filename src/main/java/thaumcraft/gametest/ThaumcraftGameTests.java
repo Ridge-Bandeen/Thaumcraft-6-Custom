@@ -3556,6 +3556,56 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** The golem Logistics screen lists what the player's own Provide seals in range can supply, merged and sorted,
+	 * and the search box narrows it. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void logisticsMenuListsWhatOwnedProvideSealsCanSupplyAndSearchNarrowsIt(GameTestHelper helper) {
+		BlockPos chestPos = new BlockPos(2, 2, 2);
+		BlockPos chestAbs = helper.absolutePos(chestPos);
+		helper.setBlock(chestPos, Blocks.CHEST);
+		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(chestPos);
+		chest.setItem(0, new ItemStack(Items.COBBLESTONE, 5));
+		chest.setItem(1, new ItemStack(Items.IRON_INGOT, 3));
+		chest.setItem(2, new ItemStack(Items.COBBLESTONE, 4)); // a second stack of the same item merges
+
+		ServerPlayer owner = spawnCasterAt(helper, chestAbs.above(2));
+		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), chestAbs, net.minecraft.core.Direction.UP,
+				new thaumcraft.common.golems.seals.SealProvide(), owner), "placing the provide seal should succeed");
+
+		thaumcraft.common.container.LogisticsMenu menu = new thaumcraft.common.container.LogisticsMenu(1, owner.getInventory(), null, null);
+		int listed = 0;
+		int cobble = 0;
+		for (int i = 0; i < thaumcraft.common.container.LogisticsMenu.SLOTS; i++) {
+			ItemStack stack = menu.getSlot(i).getItem();
+			if (stack.isEmpty()) continue;
+			listed++;
+			if (stack.is(Items.COBBLESTONE)) cobble = stack.getCount();
+		}
+		helper.assertTrue(listed == 2, "two different items are stocked, so two entries should be listed, got " + listed);
+		helper.assertTrue(cobble == 9, "the two cobblestone stacks should merge into one entry of 9, got " + cobble);
+
+		menu.setSearchText("iron");
+		int narrowed = 0;
+		boolean ironOnly = true;
+		for (int i = 0; i < thaumcraft.common.container.LogisticsMenu.SLOTS; i++) {
+			ItemStack stack = menu.getSlot(i).getItem();
+			if (stack.isEmpty()) continue;
+			narrowed++;
+			ironOnly &= stack.is(Items.IRON_INGOT);
+		}
+		helper.assertTrue(narrowed == 1 && ironOnly, "searching for iron should leave only the iron ingots, got " + narrowed + " entries");
+
+		// a seal that belongs to somebody else is not listed
+		ServerPlayer stranger = spawnCasterAt(helper, chestAbs.above(2));
+		thaumcraft.common.container.LogisticsMenu strangerMenu = new thaumcraft.common.container.LogisticsMenu(2, stranger.getInventory(), null, null);
+		boolean any = false;
+		for (int i = 0; i < thaumcraft.common.container.LogisticsMenu.SLOTS; i++) any |= !strangerMenu.getSlot(i).getItem().isEmpty();
+		helper.assertFalse(any, "another player's Provide seals must not be listed");
+
+		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), new thaumcraft.api.golems.seals.SealPos(chestAbs, net.minecraft.core.Direction.UP));
+		helper.succeed();
+	}
+
 	/** The heat source belongs under the CRUCIBLE under the device - lava directly below the device (where the
 	 * crucible stands) must not count. The port checked one block down, so a real build never ran. */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")

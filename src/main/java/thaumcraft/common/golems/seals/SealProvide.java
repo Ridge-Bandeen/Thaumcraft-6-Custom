@@ -65,7 +65,7 @@ public class SealProvide extends SealFiltered {
 		if (inv == null) return;
 		for (ProvisionRequest pr : requests) {
 			if (pr.isInvalid() || pr.getLinkedTask() != null || pr.getPos() == null) continue;
-			if (!matches(pr.getStack())) continue;
+			if (!matchesFilters(pr.getStack())) continue;
 			if (SealStock.countMatching(inv, pr.getStack().getItem()) <= 0) continue;
 			Task task = new Task(seal.getSealPos(), seal.getSealPos().pos);
 			task.setPriority(seal.getPriority());
@@ -80,7 +80,7 @@ public class SealProvide extends SealFiltered {
 	/** Whether this seal's real filter (blacklist or whitelist, see {@code SealFiltered}'s own doc comment)
 	 * allows fulfilling a request for the given stack's item - same "respect blacklist/whitelist mode"
 	 * matching {@code SealBreaker}/{@code SealPickup} already use, not just raw filter-list membership. */
-	private boolean matches(ItemStack stack) {
+	public boolean matchesFilters(ItemStack stack) {
 		boolean m = matchesFilter(stack.getItem());
 		return isBlacklist() ? !m : m;
 	}
