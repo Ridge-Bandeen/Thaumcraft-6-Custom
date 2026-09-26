@@ -149,7 +149,9 @@ public final class GogglesReadout {
 		Font font = mc.font;
 		poseStack.pushPose();
 		poseStack.translate(0.5f, -0.5f, -0.01f);
-		poseStack.scale(-0.04f, -0.04f, 0.04f);
+		// Text space runs right/down; the billboard runs right/up. Only y flips - the original flipped x too, but its pose had
+		// already been turned half way round, and the same flip here drew the digits upside down (playtest 2026-09-25).
+		poseStack.scale(0.04f, -0.04f, 0.04f);
 		float x = -font.width(text);
 		MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
 		font.drawInBatch(text, x + 1.0f, -8.0f + 1.0f, 0x111111, false, poseStack.last().pose(), buffers, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT);

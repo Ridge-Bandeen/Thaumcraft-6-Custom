@@ -1690,6 +1690,16 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(menu.slots.get(10).mayPlace(air) && !menu.slots.get(10).mayPlace(fire), "ring slot 0 is the air slot");
 		helper.assertTrue(menu.slots.get(11).mayPlace(fire) && !menu.slots.get(11).mayPlace(air), "ring slot 1 is the fire slot");
 		helper.assertFalse(menu.slots.get(12).mayPlace(new ItemStack(Items.DIRT)), "a plain item fits no crystal slot");
+
+		// shift-click: a crystal goes to its own ring slot, anything else stays out of the crafting grid
+		player.getInventory().setItem(9, fire.copy());
+		menu.quickMoveStack(player, 16);
+		helper.assertTrue(menu.slots.get(11).getItem().is(fire.getItem()), "a shift-clicked fire crystal should land in the fire slot");
+		player.getInventory().setItem(10, new ItemStack(Items.DIRT));
+		menu.quickMoveStack(player, 17);
+		boolean gridEmpty = true;
+		for (int i = 1; i <= 9; i++) if (menu.slots.get(i).getItem().is(Items.DIRT)) gridEmpty = false;
+		helper.assertTrue(gridEmpty, "a shift-clicked plain item must not jump into the crafting grid");
 		helper.succeed();
 	}
 

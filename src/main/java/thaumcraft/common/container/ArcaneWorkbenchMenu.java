@@ -291,8 +291,21 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 					return ItemStack.EMPTY;
 				}
 			} else if (index >= PLAYER_INV_START && index < HOTBAR_END) {
-				if (!moveItemStackTo(stack, GRID_START, PLAYER_INV_START, false)) {
-					return ItemStack.EMPTY;
+				// As in the original: a crystal goes to the ring slot for its own aspect; anything else just shuffles between
+				// the inventory and the hotbar (it does not jump into the crafting grid).
+				for (int ring = 0; ring < RING_ASPECTS.length && !stack.isEmpty(); ring++) {
+					Slot target = slots.get(CRYSTAL_START + ring);
+					if (target.mayPlace(stack) && !moveItemStackTo(stack, CRYSTAL_START + ring, CRYSTAL_START + ring + 1, false)) {
+						return ItemStack.EMPTY;
+					}
+				}
+				if (!stack.isEmpty()) {
+					boolean moved = index < PLAYER_INV_END
+							? moveItemStackTo(stack, PLAYER_INV_END, HOTBAR_END, false)
+							: moveItemStackTo(stack, PLAYER_INV_START, PLAYER_INV_END, false);
+					if (!moved) {
+						return ItemStack.EMPTY;
+					}
 				}
 			} else if (!moveItemStackTo(stack, PLAYER_INV_START, HOTBAR_END, false)) {
 				return ItemStack.EMPTY;

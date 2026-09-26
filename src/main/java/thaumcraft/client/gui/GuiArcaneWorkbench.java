@@ -39,6 +39,11 @@ public class GuiArcaneWorkbench extends AbstractContainerScreen<ArcaneWorkbenchM
 		renderTooltip(graphics, mouseX, mouseY);
 	}
 
+	/** The original drew no title or "Inventory" label - the texture has no room for them. */
+	@Override
+	protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+	}
+
 	@Override
 	protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
 		graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight);

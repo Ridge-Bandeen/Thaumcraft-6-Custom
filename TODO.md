@@ -113,6 +113,14 @@ instead of a flat 10 Alchemy; Golem Logistics screen restored (`LogisticsMenu/Sc
 sneak-click once GOLEMLOGISTICS is known); crucible over-full froth; Thaumatorium ejects into a neighbouring chest. NONE of these has been
 seen in a client yet.
 
+**Round 2 (same day, from the user's playtest of the above):** the crucible only dissolved crystals because the item-aspect database had ~80
+invented entries and no recipe tracing - rebuilt from the original (`ThaumcraftAspectTable` = its whole `ConfigAspects`, `ThaumcraftObjectTags` =
+engine + `generateTags`). Workbench vis discount fixed (original bug made discounted crafts free), Vis Exhaust wired into vis costs, workbench readout/
+glow/preview + per-aspect crystal slots + result slot position restored; Thaumatorium got its real OBJ mesh, facing, invisible top cap, crucible guard;
+goggles readout double-matrix bug fixed. Still open from it: Thaumatorium GUI-item transform is best-effort; `getObjectTags` entries for content the
+port has not built (eldritch blocks, runed tablet, celestial notes, Eldritch Eye, ambient grass, Pure bucket); Curio variants share one item; the
+original's shield-banner and per-colour potion loops are covered by generic bonuses only.
+
 **(Superseded list) Known device gaps that were open:** Potion Sprayer (flat Alchemy-10 cost for every potion + no
 GUI - original derived the cost from the potion's brewing reagents via object tags: reagents chain -> sum object tags + Alchemy 3 each, minus 66%,
 culled to 10; needs a reagent lookup over `PotionBrewing`), Void Siphon screen, Arcane Bore screen, Golem Logistics screen, crucible over-full
