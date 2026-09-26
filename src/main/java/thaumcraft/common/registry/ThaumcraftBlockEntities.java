@@ -145,6 +145,11 @@ public final class ThaumcraftBlockEntities {
 			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.crafting.TilePedestal::new,
 					BlocksTC.pedestal.get(), BlocksTC.pedestalEldritch.get(), BlocksTC.pedestalAncient.get(), BlocksTC.cultistRitualAltar.get()).build(null));
 
+	/** See {@link thaumcraft.common.tiles.misc.TileNitor}'s own doc comment. */
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.misc.TileNitor>> NITOR = BLOCK_ENTITIES.register("nitor",
+			() -> BlockEntityType.Builder.of(thaumcraft.common.tiles.misc.TileNitor::new,
+					BlocksTC.nitor.values().stream().map(b -> b.get()).toArray(net.minecraft.world.level.block.Block[]::new)).build(null));
+
 	/** See {@link thaumcraft.common.tiles.misc.TileBanner}'s own doc comment. */
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<thaumcraft.common.tiles.misc.TileBanner>> BANNER = BLOCK_ENTITIES.register("banner",
 			() -> {

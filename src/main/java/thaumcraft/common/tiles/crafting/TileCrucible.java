@@ -43,8 +43,8 @@ import thaumcraft.common.world.aura.AuraHandler;
  * aspects. The original looked up aspects for *any* item via a global object-tag database
  * ({@code ThaumcraftCraftingManager.getObjectTags}, backed by the still-deferred
  * {@code AspectHelper}/{@code ThaumcraftApi.internalMethods} - see the port-tracking memory notes).</li>
- * <li>No particle effects (bubbling, froth) or custom crucible sounds - both need the not-ported client FX
- * dispatcher / sound registry.</li>
+ * <li>Boil froth and aspect bubbles are restored (client tick, see {@link #drawEffects}); the over-full froth
+ * down the sides and the crucible sounds are not.</li>
  * <li>Collision shape is a plain approximation of the original's legs+walls, not an exact match.</li>
  * </ul>
  *
@@ -68,18 +68,50 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 		super(ThaumcraftBlockEntities.CRUCIBLE.get(), pos, state);
 	}
 
+	/** The surface height the original drew the water at: 0.8 for a full cauldron (0.3 + 0.5 * fill), rising toward
+	 * the rim as vis accumulates. Was a fixed 0.75 that ignored vis, so the fill looked low. */
+	public float getFluidHeight() {
+		float base = hasWater ? 0.8f : 0.3f;
+		float out = base + aspects.visSize() / (float) MAX_ASPECTS * (1.0f - base);
+		if (out > 1.0f) out = 1.001f;
+		if (out == 1.0f) out = 0.9999f;
+		return out;
+	}
+
+	/** Client-only boil effects, the original's {@code TileCrucible#drawEffects}: froth on the surface once hot
+	 * (heat above 150), overflow froth down the sides when over-full, and a coloured bubble now and then for each
+	 * dissolved aspect. */
+	private void drawEffects(Level level, BlockPos pos) {
+		var r = level.random;
+		if (heat > ACTIVE_HEAT) {
+			thaumcraft.client.fx.ClientFxHandlers.spawnCrucibleFroth(level, pos.getX() + 0.2f + r.nextFloat() * 0.6f, pos.getY() + getFluidHeight(), pos.getZ() + 0.2f + r.nextFloat() * 0.6f);
+		}
+		if (r.nextInt(6) == 0 && aspects.size() > 0) {
+			int color = aspects.getAspects()[r.nextInt(aspects.size())].getColor();
+			thaumcraft.client.fx.ClientFxHandlers.spawnCrucibleBubble(level,
+					pos.getX() + (5 + r.nextInt(22)) / 32.0f + 0.015625f, pos.getY() + 0.05f + getFluidHeight(), pos.getZ() + (5 + r.nextInt(22)) / 32.0f + 0.015625f,
+					((color >> 16) & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, (color & 255) / 255.0f);
+		}
+	}
+
 	public boolean isActive() {
 		return hasWater && heat > ACTIVE_HEAT;
 	}
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TileCrucible tile) {
 		tile.idleTicks++;
-		if (level.isClientSide) return;
+		if (level.isClientSide) {
+			if (tile.hasWater) tile.drawEffects(level, pos);
+			return;
+		}
 
 		if (tile.hasWater) {
 			BlockState below = level.getBlockState(pos.below());
 			boolean hot = below.is(net.minecraft.world.level.block.Blocks.LAVA) || below.is(net.minecraft.world.level.block.Blocks.FIRE)
-					|| below.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK) || below.is(net.minecraft.world.level.block.Blocks.SOUL_FIRE);
+					|| below.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK) || below.is(net.minecraft.world.level.block.Blocks.SOUL_FIRE)
+					// The original also counted any Nitor below as a heat source (found in the first devices playtest,
+					// 2026-09-25: a nitor under a crucible did nothing).
+					|| below.getBlock() instanceof thaumcraft.common.blocks.misc.BlockNitor;
 			if (hot && tile.heat < MAX_HEAT) {
 				tile.heat++;
 				tile.setChanged();

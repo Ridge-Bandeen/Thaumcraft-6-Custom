@@ -29,16 +29,11 @@ import thaumcraft.common.tiles.crafting.TileCrucible;
  * {@link Minecraft#getBlockRenderer()}-looked-up {@link TextureAtlasSprite} for {@link Blocks#WATER}, and
  * explicit {@link VertexConsumer#addVertex(PoseStack.Pose, float, float, float)} calls.
  *
- * <b>Real, deliberate simplification:</b> {@link TileCrucible#hasWater} is a plain boolean (see that class's
- * own doc comment on why - no real fluid-handler tank), not a fill amount, so unlike the original (which
- * positioned the quad at the tank's own real fluid height) this always sits at a fixed, near-full height -
- * there's no real fill-level data left to vary it by.
+ * The surface sits at {@link TileCrucible#getFluidHeight()} - the original's 0.8 for a full cauldron, rising toward
+ * the rim as vis accumulates - and is tinted by the biome's water colour (1.21's water sprite is white).
+ * {@link TileCrucible#hasWater} is still a plain boolean, so partial fills don't exist.
  */
 public class TileCrucibleRenderer implements BlockEntityRenderer<TileCrucible> {
-
-	/** Pixel-space height (of 16) the water surface sits at - see this class's own doc comment on why it's
-	 * fixed instead of fill-level-driven. */
-	private static final float WATER_HEIGHT = 12.0f / 16.0f;
 
 	public TileCrucibleRenderer(BlockEntityRendererProvider.Context context) {
 	}
@@ -52,10 +47,16 @@ public class TileCrucibleRenderer implements BlockEntityRenderer<TileCrucible> {
 		float recolor = tile.aspects.visSize() / (float) TileCrucible.MAX_ASPECTS;
 		if (recolor > 0.0f) recolor = 0.5f + recolor / 2.0f;
 		recolor = Mth.clamp(recolor, 0.0f, 1.0f);
-		int color = FastColor.ARGB32.color(255, 255, (int) (255 * (1.0f - recolor / 3.0f)), (int) (255 * (1.0f - recolor)));
+		// 1.21's water sprite is white (the blue is a biome tint applied by the block renderer), so tint it by the biome's
+		// water colour here - the 1.12 sprite was already blue. Then the original's vis-driven recolour on top.
+		int water = tile.getLevel() != null ? net.minecraft.client.renderer.BiomeColors.getAverageWaterColor(tile.getLevel(), tile.getBlockPos()) : 0x3F76E4;
+		int color = FastColor.ARGB32.color(255,
+				(int) (((water >> 16) & 255) * 1.0f),
+				(int) (((water >> 8) & 255) * (1.0f - recolor / 3.0f)),
+				(int) ((water & 255) * (1.0f - recolor)));
 
 		poseStack.pushPose();
-		poseStack.translate(0.0, WATER_HEIGHT, 1.0);
+		poseStack.translate(0.0, tile.getFluidHeight(), 1.0);
 		poseStack.mulPose(Axis.XP.rotationDegrees(-90.0f));
 
 		VertexConsumer vc = bufferSource.getBuffer(RenderType.translucent());

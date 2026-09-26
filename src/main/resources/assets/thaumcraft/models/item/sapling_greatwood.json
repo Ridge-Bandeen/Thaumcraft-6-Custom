@@ -1,3 +1,6 @@
 {
-  "parent": "thaumcraft:block/sapling_greatwood"
+    "parent": "minecraft:item/generated",
+    "textures": {
+        "layer0": "thaumcraft:blocks/sapling_greatwood"
+    }
 }

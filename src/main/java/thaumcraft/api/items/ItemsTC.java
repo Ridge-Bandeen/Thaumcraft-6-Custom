@@ -900,13 +900,15 @@ public final class ItemsTC {
 			ITEMS.registerSimpleBlockItem("cultist_ritual_altar", BlocksTC.cultistRitualAltar);
 
 	/** See {@link BlocksTC#bannerCrimsonCult}'s own doc comment. */
-	public static final DeferredItem<BlockItem> bannerCrimsonCult =
-			ITEMS.registerSimpleBlockItem("banner_crimson_cult", BlocksTC.bannerCrimsonCult);
+	public static final DeferredItem<thaumcraft.common.blocks.misc.BannerBlockItem> bannerCrimsonCult =
+			ITEMS.register("banner_crimson_cult", () -> new thaumcraft.common.blocks.misc.BannerBlockItem(BlocksTC.bannerCrimsonCult.get(), new Item.Properties()));
 
-	/** See {@link BlocksTC#banners}'s own doc comment. */
-	public static final java.util.Map<net.minecraft.world.item.DyeColor, DeferredItem<BlockItem>> banners = new java.util.EnumMap<>(net.minecraft.world.item.DyeColor.class);
+	/** See {@link BlocksTC#banners}'s own doc comment. Placed through {@code BannerBlockItem} so they orient
+	 * (floor: to the player's yaw, wall: to the wall) as the original's banner item did. */
+	public static final java.util.Map<net.minecraft.world.item.DyeColor, DeferredItem<thaumcraft.common.blocks.misc.BannerBlockItem>> banners = new java.util.EnumMap<>(net.minecraft.world.item.DyeColor.class);
 	static {
-		BlocksTC.banners.forEach((dye, block) -> banners.put(dye, ITEMS.registerSimpleBlockItem("banner_" + BlocksTC.candleDyeName(dye), block)));
+		BlocksTC.banners.forEach((dye, block) -> banners.put(dye, ITEMS.register("banner_" + BlocksTC.candleDyeName(dye),
+				() -> new thaumcraft.common.blocks.misc.BannerBlockItem(block.get(), new Item.Properties()))));
 	}
 
 	/** See {@link BlocksTC#lootCrateCommon}/{@link thaumcraft.common.blocks.misc.BlockLoot}'s own doc

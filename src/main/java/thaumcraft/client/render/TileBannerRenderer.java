@@ -35,11 +35,11 @@ import thaumcraft.common.tiles.misc.TileBanner;
  * overload instead since block/item color handlers can't reach a {@code RenderShape.INVISIBLE} block's
  * geometry at all).
  *
- * Real, documented cuts: no per-frame cloth-sway animation (the original's own small sine-wave tilt on the
- * banner cloth part) and no aspect-icon overlay drawn on the cloth once tagged (the original's own {@code
- * UtilsFX.drawTag} call, which needs a whole separate icon-atlas texture system this port doesn't have
- * wired up for blocks) - both real, minor, purely cosmetic simplifications on top of an otherwise faithful
- * render; the banner's own real state (facing, wall/floor, tagged aspect) is unaffected.
+ * The cloth sways (the original's small sine-wave tilt, restored 2026-09-25). Real, documented cut: no
+ * aspect-icon overlay drawn on the cloth once tagged (the original's own {@code UtilsFX.drawTag} call, which
+ * needs a whole separate icon-atlas texture system this port doesn't have wired up for blocks) - a minor,
+ * purely cosmetic simplification; the banner's own real state (facing, wall/floor, tagged aspect) is
+ * unaffected.
  */
 public class TileBannerRenderer implements BlockEntityRenderer<TileBanner> {
 
@@ -94,6 +94,12 @@ public class TileBannerRenderer implements BlockEntityRenderer<TileBanner> {
 		beam.render(poseStack, vertexConsumer, packedLight, packedOverlay, tint);
 		tab1.render(poseStack, vertexConsumer, packedLight, packedOverlay, tint);
 		tab2.render(poseStack, vertexConsumer, packedLight, packedOverlay, tint);
+		// Cloth sway, restored 2026-09-25: the original tilted the cloth by 0.02 - sin(t / 11) * 0.02 rad, phase-offset
+		// per position (x*7 + y*9 + z*13) so neighbouring banners don't move in step.
+		var pos = tile.getBlockPos();
+		float t = pos.getX() * 7 + pos.getY() * 9 + pos.getZ() * 13
+				+ (tile.getLevel() != null ? tile.getLevel().getGameTime() : 0L) + partialTick;
+		banner.xRot = 0.02f - net.minecraft.util.Mth.sin(t / 11.0f) * 0.02f;
 		banner.render(poseStack, vertexConsumer, packedLight, packedOverlay, tint);
 
 		poseStack.popPose();

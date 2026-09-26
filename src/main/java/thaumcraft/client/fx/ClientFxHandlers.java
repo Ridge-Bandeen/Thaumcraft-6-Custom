@@ -281,6 +281,66 @@ public final class ClientFxHandlers {
 		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXFireMote(clientLevel, x, y, z, mx, my, mz, r, g, b, scale));
 	}
 
+	/** The original's {@code FXDispatcher#crucibleFroth}: short-lived pale froth on a hot crucible's surface. */
+	public static void spawnCrucibleFroth(net.minecraft.world.level.Level level, double x, double y, double z) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, 0.0, 0.0, 0.0);
+		fb.setMaxAge(4 + level.random.nextInt(3));
+		fb.setScale(level.random.nextFloat() * 0.2f + 0.2f);
+		fb.setRBGColorF(0.5f, 0.5f, 0.7f);
+		fb.setRandomMovementScale(0.001f, 0.001f, 0.001f);
+		fb.setGravity(0.1f);
+		fb.setParticle(64);
+		fb.setFinalFrames(65, 66);
+		addDelayed(fb, 0);
+	}
+
+	/** The original's {@code FXDispatcher#crucibleBubble}: a bubble coloured by a dissolved aspect, drifting up. */
+	public static void spawnCrucibleBubble(net.minecraft.world.level.Level level, double x, double y, double z, float r, float g, float b) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, 0.0, 0.0, 0.0);
+		fb.setMaxAge(15 + level.random.nextInt(10));
+		fb.setScale(level.random.nextFloat() * 0.3f + 0.3f);
+		fb.setRBGColorF(r, g, b);
+		fb.setRandomMovementScale(0.002f, 0.002f, 0.002f);
+		fb.setGravity(-0.001f);
+		fb.setParticle(64);
+		fb.setFinalFrames(65, 66, 66);
+		addDelayed(fb, 0);
+	}
+
+	/** The original's {@code FXDispatcher#drawNitorFlames}: a translucent, looping 8-frame flame tinted by the nitor's dye. */
+	public static void spawnNitorFlame(net.minecraft.world.level.Level level, double x, double y, double z, double mx, double my, double mz, int color) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, mx, my, mz);
+		fb.setMaxAge(10 + level.random.nextInt(5));
+		fb.setRBGColorF(((color >> 16) & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, (color & 255) / 255.0f);
+		fb.setAlphaF(0.66f);
+		fb.setLoop(true);
+		fb.setGridSize(64);
+		fb.setParticles(264, 8, 1);
+		fb.setScale(3.0f + level.random.nextFloat(), 0.05f);
+		fb.setGravity(0.0f); // the original's nitor particles hover; FXGeneric's port default (1.0) made the core fall
+		fb.setRandomMovementScale(0.0025f, 0.0f, 0.0025f);
+		addDelayed(fb, 0);
+	}
+
+	/** The original's {@code FXDispatcher#drawNitorCore}: the small white core (particle 457), normal-blended. */
+	public static void spawnNitorCore(net.minecraft.world.level.Level level, double x, double y, double z) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, 0.0, 0.0, 0.0);
+		fb.setMaxAge(10);
+		fb.setRBGColorF(1.0f, 1.0f, 1.0f);
+		fb.setAlphaF(1.0f);
+		fb.setGridSize(64);
+		fb.setParticles(457, 1, 1);
+		fb.setGravity(0.0f);
+		fb.setScale(1.0f, 1.0f + (float) level.random.nextGaussian() * 0.1f, 1.0f);
+		fb.setLayer(1);
+		fb.setRandomMovementScale(2.0E-4f, 2.0E-4f, 2.0E-4f);
+		addDelayed(fb, 0);
+	}
+
 	/** Real {@link thaumcraft.client.fx.particles.FXVisSparkle} spawn. */
 	public static void spawnVisSparkle(net.minecraft.world.level.Level level, double x, double y, double z, double tx, double ty, double tz, int color) {
 		if (!(level instanceof ClientLevel clientLevel)) return;

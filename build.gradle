@@ -70,6 +70,8 @@ sourceSets {
             include 'thaumcraft/common/tiles/misc/TileBarrierStone.java'
             include 'thaumcraft/common/blocks/basic/BlockCandle.java'
             include 'thaumcraft/common/blocks/misc/BlockNitor.java'
+            include 'thaumcraft/common/blocks/misc/BannerBlockItem.java'
+            include 'thaumcraft/common/tiles/misc/TileNitor.java'
             include 'thaumcraft/common/items/consumables/ItemPhial.java'
             include 'thaumcraft/common/items/resources/ItemCrystalEssence.java'
             include 'thaumcraft/common/items/consumables/ItemLabel.java'

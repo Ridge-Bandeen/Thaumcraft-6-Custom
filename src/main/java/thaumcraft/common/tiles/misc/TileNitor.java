@@ -1,32 +1,36 @@
 package thaumcraft.common.tiles.misc;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.ITickable;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import thaumcraft.client.fx.FXDispatcher;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import thaumcraft.client.fx.ClientFxHandlers;
+import thaumcraft.common.blocks.misc.BlockNitor;
+import thaumcraft.common.registry.ThaumcraftBlockEntities;
 
-public class TileNitor extends TileEntity implements ITickable
-{
-    int count;
-    
-    public TileNitor() {
-        count = 0;
-    }
-    
-    public boolean shouldRefresh(World world, BlockPos pos, IBlockState oldState, IBlockState newState) {
-        return oldState.getBlock() != newState.getBlock();
-    }
-    
-    public void update() {
-        if (world.isRemote) {
-            IBlockState state = world.getBlockState(getPos());
-            FXDispatcher.INSTANCE.drawNitorFlames(pos.getX() + 0.5f + world.rand.nextGaussian() * 0.025, pos.getY() + 0.45f + world.rand.nextGaussian() * 0.025, pos.getZ() + 0.5f + world.rand.nextGaussian() * 0.025, world.rand.nextGaussian() * 0.0025, world.rand.nextFloat() * 0.06, world.rand.nextGaussian() * 0.0025, state.getBlock().getMapColor(state, world, getPos()).colorValue, 0);
-            if (count++ % 10 == 0) {
-                FXDispatcher.INSTANCE.drawNitorCore(pos.getX() + 0.5f, pos.getY() + 0.49f, pos.getZ() + 0.5f, 0.0, 0.0, 0.0);
-            }
-        }
-    }
+/**
+ * Nitor's client-side flame. The block itself is invisible (as in the original); this tile's per-tick client
+ * update draws a tinted flame every tick and the white core every 10 ticks, exactly as the original's
+ * {@code TileNitor#update}. It exists because vanilla's random {@code animateTick} fires far too rarely (about
+ * once per 40 ticks per block) for a 10-15 tick flame - the port's earlier version, which dropped the tile, showed
+ * a stretched cross-model plus a barely-flickering vanilla flame.
+ */
+public class TileNitor extends BlockEntity {
+
+	private int count;
+
+	public TileNitor(BlockPos pos, BlockState state) {
+		super(ThaumcraftBlockEntities.NITOR.get(), pos, state);
+	}
+
+	public static void clientTick(Level level, BlockPos pos, BlockState state, TileNitor tile) {
+		if (!(state.getBlock() instanceof BlockNitor nitor)) return;
+		var r = level.random;
+		ClientFxHandlers.spawnNitorFlame(level,
+				pos.getX() + 0.5 + r.nextGaussian() * 0.025, pos.getY() + 0.45 + r.nextGaussian() * 0.025, pos.getZ() + 0.5 + r.nextGaussian() * 0.025,
+				r.nextGaussian() * 0.0025, r.nextFloat() * 0.06, r.nextGaussian() * 0.0025, nitor.dye.getTextureDiffuseColor() & 0xFFFFFF);
+		if (tile.count++ % 10 == 0) {
+			ClientFxHandlers.spawnNitorCore(level, pos.getX() + 0.5, pos.getY() + 0.49, pos.getZ() + 0.5);
+		}
+	}
 }

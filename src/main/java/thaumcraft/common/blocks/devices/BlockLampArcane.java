@@ -45,7 +45,8 @@ public class BlockLampArcane extends Block implements EntityBlock {
 
 	public BlockLampArcane(BlockBehaviour.Properties properties) {
 		super(properties);
-		registerDefaultState(getStateDefinition().any().setValue(BlockStateProperties.ENABLED, true));
+		registerDefaultState(getStateDefinition().any().setValue(BlockStateProperties.ENABLED, true)
+				.setValue(BlockStateProperties.FACING, net.minecraft.core.Direction.DOWN));
 	}
 
 	@Override
@@ -55,7 +56,14 @@ public class BlockLampArcane extends Block implements EntityBlock {
 
 	@Override
 	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-		builder.add(BlockStateProperties.ENABLED);
+		builder.add(BlockStateProperties.ENABLED, BlockStateProperties.FACING);
+	}
+
+	/** The lamp's stand goes on the face it was placed against, like the original's {@code BlockLamp} (which had a
+	 * {@code FACING} property the port had dropped, so every arcane lamp stood the same way). */
+	@Override
+	public net.minecraft.world.level.block.state.BlockState getStateForPlacement(net.minecraft.world.item.context.BlockPlaceContext context) {
+		return defaultBlockState().setValue(BlockStateProperties.FACING, context.getClickedFace().getOpposite());
 	}
 
 	@Override

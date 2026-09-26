@@ -1,3 +1,6 @@
 {
-  "parent": "thaumcraft:block/sapling_silverwood"
+    "parent": "minecraft:item/generated",
+    "textures": {
+        "layer0": "thaumcraft:blocks/sapling_silverwood"
+    }
 }

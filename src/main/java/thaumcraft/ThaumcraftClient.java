@@ -396,7 +396,9 @@ public class ThaumcraftClient {
 
         event.register((stack, tintIndex) -> {
             net.minecraft.world.level.block.Block block = net.minecraft.world.level.block.Block.byItem(stack.getItem());
-            return block instanceof thaumcraft.common.blocks.misc.BlockNitor nitor ? nitor.dye.getTextureDiffuseColor() : -1;
+            // layer0 = the flame ring (tinted by dye); layer1 = nitor_core, the white centre that fills the ring's hole
+            // (the original's item/generated model had both layers; without a tintIndex check the core got tinted too)
+            return tintIndex == 0 && block instanceof thaumcraft.common.blocks.misc.BlockNitor nitor ? nitor.dye.getTextureDiffuseColor() : -1;
         }, ItemsTC.nitor.values().stream().map(net.neoforged.neoforge.registries.DeferredItem::get)
                 .toArray(net.minecraft.world.item.Item[]::new));
 

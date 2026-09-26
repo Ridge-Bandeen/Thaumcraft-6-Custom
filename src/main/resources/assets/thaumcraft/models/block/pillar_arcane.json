@@ -1,22 +1,10 @@
 {
-  "__comment": "Simplified box substitute for the true original's own pillar.obj (a full custom carved-column model) - same 'skip the OBJ, keep the function' precedent as the Thaumometer this whole port.",
-  "ambientocclusion": false,
-  "textures": {
-    "particle": "thaumcraft:blocks/pillar_normal",
-    "all": "thaumcraft:blocks/pillar_normal"
-  },
-  "elements": [
-    {
-      "from": [0, 0, 0],
-      "to": [16, 8, 16],
-      "faces": {
-        "down":  { "uv": [0, 0, 16, 16], "texture": "#all", "cullface": "down" },
-        "up":    { "uv": [0, 0, 16, 16], "texture": "#all" },
-        "north": { "uv": [0, 0, 16, 8],  "texture": "#all", "cullface": "north" },
-        "south": { "uv": [0, 0, 16, 8],  "texture": "#all", "cullface": "south" },
-        "west":  { "uv": [0, 0, 16, 8],  "texture": "#all", "cullface": "west" },
-        "east":  { "uv": [0, 0, 16, 8],  "texture": "#all", "cullface": "east" }
-      }
+    "parent": "minecraft:block/block",
+    "loader": "neoforge:obj",
+    "model": "thaumcraft:models/block/pillar.obj",
+    "flip_v": false,
+    "textures": {
+        "texture": "thaumcraft:blocks/pillar_normal",
+        "particle": "thaumcraft:blocks/pillar_normal"
     }
-  ]
 }

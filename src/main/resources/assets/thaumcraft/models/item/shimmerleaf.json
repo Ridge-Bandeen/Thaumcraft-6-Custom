@@ -1,3 +1,6 @@
 {
-  "parent": "thaumcraft:block/shimmerleaf"
+    "parent": "minecraft:item/generated",
+    "textures": {
+        "layer0": "thaumcraft:blocks/shimmerleaf"
+    }
 }

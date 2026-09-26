@@ -19,14 +19,11 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * {@code thaumcraft.common.blocks.basic.BlockCandle}'s own real port already established). Small non-solid
  * collision box, no block below required (unlike Candle it just floats), full light level.
  *
- * Real, documented simplification: the original's tile entity ({@code TileNitor}) had exactly one real
- * job - driving a custom particle "flame" effect via the still-deferred {@code client/fx} dispatcher (see
- * {@code BlockCandle}'s own doc comment, which already named Nitor as one of the custom-TESR-style effects
- * this session keeps deferring). Dropped the tile entity outright and reused vanilla's own real
- * {@link #animateTick} particle hook instead - same real substitution {@code BlockCandle} itself already
- * uses for its own flame/smoke effect.
+ * Invisible, like the original: the visible flame and core are particles drawn by
+ * {@link thaumcraft.common.tiles.misc.TileNitor} every client tick (restored 2026-09-25 - the port had dropped the
+ * tile, so the block drew a stretched cross model plus a sparse vanilla flame).
  */
-public class BlockNitor extends Block {
+public class BlockNitor extends Block implements net.minecraft.world.level.block.EntityBlock {
 
 	private static final VoxelShape SHAPE = Shapes.box(0.33, 0.33, 0.33, 0.66, 0.66, 0.66);
 
@@ -48,10 +45,21 @@ public class BlockNitor extends Block {
 	}
 
 	@Override
-	public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
-		double x = pos.getX() + 0.5 + random.nextGaussian() * 0.025;
-		double y = pos.getY() + 0.45 + random.nextGaussian() * 0.025;
-		double z = pos.getZ() + 0.5 + random.nextGaussian() * 0.025;
-		level.addParticle(ParticleTypes.FLAME, x, y, z, random.nextGaussian() * 0.0025, random.nextFloat() * 0.06, random.nextGaussian() * 0.0025);
+	protected net.minecraft.world.level.block.RenderShape getRenderShape(BlockState state) {
+		return net.minecraft.world.level.block.RenderShape.INVISIBLE;
+	}
+
+	@org.jetbrains.annotations.Nullable
+	@Override
+	public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+		return new thaumcraft.common.tiles.misc.TileNitor(pos, state);
+	}
+
+	@org.jetbrains.annotations.Nullable
+	@Override
+	public <T extends net.minecraft.world.level.block.entity.BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(Level level, BlockState state, net.minecraft.world.level.block.entity.BlockEntityType<T> type) {
+		return level.isClientSide && type == thaumcraft.common.registry.ThaumcraftBlockEntities.NITOR.get()
+				? (lvl, pos, st, be) -> thaumcraft.common.tiles.misc.TileNitor.clientTick(lvl, pos, st, (thaumcraft.common.tiles.misc.TileNitor) be)
+				: null;
 	}
 }

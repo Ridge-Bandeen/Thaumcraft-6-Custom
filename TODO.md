@@ -62,6 +62,24 @@ running the client - GameTest/JUnit never render anything):
   focal manipulator, focus pouch, golem builder, hand mirror, spa, turret config, pech) now call `renderTooltip`.
 - Taintacle off-taint decay, Spell Bat self-removal without a focus payload, "Angry Zombie" naming: all faithful.
 
+**Devices pass, same session (creative-menu + block checks):**
+
+- 64 standalone block models had no `parent`, so their inventory/hand/GUI display was unrotated and full-size
+  (Forge's `default-block` transform) -> `minecraft:block/block` parent on all of them.
+- 38 English names re-aligned to the original ("Wand of the Apprentice" was a stale placeholder for the Caster's
+  Gauntlet, "Magic Mirror", "Flux Condenser Lattice", ...); placeholder-block and fire-focus names kept.
+- Lamps (arcane/growth/fertility) were plain cubes: real glass+stand composite models, arcane lamp gained FACING.
+  Infusion pillars and workbench charger were box stand-ins: real OBJ models (NO flip_v - only the Thaumometer and
+  crystal need it).
+- Cross-shaped plant blocks (cinderpearl, shimmerleaf, vishroom, saplings, nitor) now have flat item icons; nitor
+  regained its core layer (only layer 0 is dye-tinted).
+- Nitor: invisible block + client-ticking `TileNitor` drawing the original's flame/core particles (zero gravity).
+- Banners: `BannerBlockItem` restores placement orientation (floor: player yaw, wall: wall side, no underside) and the
+  cloth sway.
+- Crucible: water tinted by biome (1.21's water sprite is white), surface height 0.8 rising with vis, Nitor counts as
+  a heat source, boil froth and aspect bubbles restored.
+- `hungryChestAutoConsumesADroppedItem` disabled (2nd failure, see the flaky list).
+
 **New backlog from that session:**
 
 - Register a recipe-book category finder for every Thaumcraft recipe type (`RegisterRecipeBookCategoriesEvent`)
@@ -75,6 +93,7 @@ running the client - GameTest/JUnit never render anything):
   leaves/grass block-item tints unchecked.
 - Audit every remaining stub `.mtl` (golem_*) for the same missing-`map_Kd` problem once golems are played.
 - Pech: the original's small held-item offset (`LayerHeldItemPech`, bows especially) is not reproduced.
+- `FXGeneric` defaults gravity to 1.0 (a comment claims that matches 1.12's Particle); the original's nitor particles hover, so it may be wrong for other default-gravity effects - check when playtesting particles.
 - Verify other `getNearestPlayer`-style 1.12 -> 1.21 API traps (e.g. other `getClosest*`/`canAttack` lookups) in files not yet playtested.
 - The Eldritch Warden/bosses cap any hit at 35 damage and buff themselves on larger hits (faithful to the
   original) - `/kill` does NOT kill them; use `/data merge entity <sel> {Health:0f}`.
