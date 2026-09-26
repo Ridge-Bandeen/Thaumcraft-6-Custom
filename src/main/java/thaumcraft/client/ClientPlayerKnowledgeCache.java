@@ -29,6 +29,12 @@ public final class ClientPlayerKnowledgeCache {
 		// it would be on the server, just without a real HolderLookup.Provider on hand client-side to pass.
 		snapshot.deserializeNBT(null, payload.data());
 		data = snapshot;
+		// Also make it the local player's own knowledge: ThaumcraftCapabilities.getKnowledge(player) reads the attachment, and on the client that
+		// stayed at its empty default - so client-side checks (the Thaumometer glow on unscanned things) never saw a scan's result.
+		net.minecraft.client.player.LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
+		if (player != null) {
+			player.setData(thaumcraft.api.capabilities.ThaumcraftCapabilities.KNOWLEDGE, snapshot);
+		}
 	}
 
 	/** The most recently synced knowledge for the local player, or an empty default if none has arrived yet
