@@ -80,6 +80,19 @@ running the client - GameTest/JUnit never render anything):
   a heat source, boil froth and aspect bubbles restored.
 - `hungryChestAutoConsumesADroppedItem` disabled (2nd failure, see the flaky list).
 
+**Crucible functionality pass (autonomous, same session):**
+
+- Water is a real amount (bucket = 1000, each craft drains 50) instead of a boolean; old saves load as a full cauldron.
+- Spill timer matches the original (-150 after a dissolve, -250 after a craft, spill 1 aspect per 100 ticks): freshly
+  added aspects used to spill 2.5x too fast, so a dissolved essence coloured the water only briefly.
+- ANY item dissolves through the object-tag database (was: crystal essences only), a whole stack per throw.
+- Recipes are research-gated per thrower and the highest-cost matching recipe wins (was: first match, no research).
+- Crucible output is marked so it does not fall back in and dissolve; a hot crucible burns living entities;
+  bubble/spill sounds, bamf puff on dissolve/craft, ambient pop sound.
+- Goggles readout (`GogglesReadout`): aspect icons + amounts float over any IAspectContainer tile you look at while
+  wearing goggles (crucible, jars, alembic...). Extended text lines (IGogglesDisplayExtended) and note readouts not ported.
+- Not done: over-full froth down the crucible sides, bottle/phial fill from the crucible, crucible sounds beyond the above.
+
 **New backlog from that session:**
 
 - Register a recipe-book category finder for every Thaumcraft recipe type (`RegisterRecipeBookCategoriesEvent`)

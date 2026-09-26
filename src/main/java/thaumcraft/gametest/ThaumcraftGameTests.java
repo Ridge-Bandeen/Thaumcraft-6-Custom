@@ -1159,9 +1159,26 @@ public class ThaumcraftGameTests {
 	private static TileCrucible placeActiveCrucible(GameTestHelper helper, BlockPos pos) {
 		helper.setBlock(pos, BlocksTC.crucible.get());
 		TileCrucible tile = helper.getBlockEntity(pos);
-		tile.hasWater = true;
+		tile.waterAmount = thaumcraft.common.tiles.crafting.TileCrucible.WATER_CAPACITY;
 		tile.heat = 200; // above ACTIVE_HEAT (150) so isActive() is true without waiting on the tick-based heat-up
 		return tile;
+	}
+
+	/** A mock player who has completed the research behind every crucible recipe (recipes are research-gated,
+	 * as in the original - and need a player at all: nobody thrown it means no recipe). */
+	private static ServerPlayer researchingPlayerAt(GameTestHelper helper, BlockPos relPos) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(relPos).above());
+		var knowledge = thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player);
+		for (var holder : helper.getLevel().getRecipeManager().getAllRecipesFor(thaumcraft.api.crafting.ThaumcraftRecipeTypes.CRUCIBLE_TYPE.get())) {
+			String research = holder.value().getResearch();
+			if (research == null) continue;
+			for (String key : research.split("&&|\\|\\|")) {
+				if (key.isEmpty()) continue;
+				knowledge.addResearch(key);
+				knowledge.setResearchStage(key, 99);
+			}
+		}
+		return player;
 	}
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
@@ -1172,11 +1189,13 @@ public class ThaumcraftGameTests {
 		ItemStack crystal = new ItemStack(ItemsTC.crystalEssence.get(), 3);
 		((ItemGenericEssentiaContainer) crystal.getItem()).setAspects(crystal, new AspectList().add(Aspect.FIRE, 1));
 
-		ItemStack remainder = crucible.attemptSmelt(crystal, helper.getLevel());
+		ItemStack remainder = crucible.attemptSmelt(crystal, null, helper.getLevel());
 
-		helper.assertTrue(crucible.getAspects().getAmount(Aspect.FIRE) == 1, "dissolving one essentia item should add exactly its aspect amount to the pool, got "
+		// The original fed a whole stack in at once (its attemptSmelt loops over the stack size): 3 crystals of 1 fire
+		// each dissolve completely in one go, leaving nothing.
+		helper.assertTrue(crucible.getAspects().getAmount(Aspect.FIRE) == 3, "dissolving a stack of 3 one-fire essentia items should add 3 fire to the pool, got "
 				+ crucible.getAspects().getAmount(Aspect.FIRE));
-		helper.assertTrue(remainder.getCount() == 2, "attemptSmelt should shrink the input stack by 1 per dissolved item, got count " + remainder.getCount());
+		helper.assertTrue(remainder.isEmpty(), "the whole stack should have been dissolved, got count " + remainder.getCount());
 		helper.succeed();
 	}
 
@@ -1190,7 +1209,7 @@ public class ThaumcraftGameTests {
 		ItemStack crystal = new ItemStack(ItemsTC.crystalEssence.get(), 1);
 		((ItemGenericEssentiaContainer) crystal.getItem()).setAspects(crystal, new AspectList().add(Aspect.FIRE, 1));
 
-		ItemStack remainder = crucible.attemptSmelt(crystal, helper.getLevel());
+		ItemStack remainder = crucible.attemptSmelt(crystal, null, helper.getLevel());
 
 		helper.assertTrue(crucible.getAspects().size() == 0, "an inactive crucible (no heat/water) should not dissolve anything");
 		helper.assertTrue(remainder.getCount() == 1, "an inactive crucible should return the item untouched");
@@ -1208,7 +1227,7 @@ public class ThaumcraftGameTests {
 		crucible.setAspects(new AspectList().add(Aspect.CRYSTAL, 5).add(Aspect.MAGIC, 3).add(Aspect.AURA, 2));
 
 		ItemStack catalyst = new ItemStack(Items.QUARTZ);
-		ItemStack remainder = crucible.attemptSmelt(catalyst, helper.getLevel());
+		ItemStack remainder = crucible.attemptSmelt(catalyst, researchingPlayerAt(helper, pos), helper.getLevel());
 
 		helper.assertTrue(remainder.getCount() == 0, "the catalyst item should have been fully consumed (shrunk from 1 to 0)");
 		helper.assertTrue(crucible.getAspects().getAmount(Aspect.CRYSTAL) == 0, "a completed recipe should remove exactly the aspects it consumed");
@@ -1235,15 +1254,46 @@ public class ThaumcraftGameTests {
 		crucible.setAspects(new AspectList().add(Aspect.MAGIC, 5).add(Aspect.EARTH, 5));
 
 		ItemStack catalyst = new ItemStack(Items.IRON_INGOT);
-		ItemStack remainder = crucible.attemptSmelt(catalyst, helper.getLevel());
+		ItemStack remainder = crucible.attemptSmelt(catalyst, researchingPlayerAt(helper, pos), helper.getLevel());
 
 		helper.assertTrue(remainder.getCount() == 0, "the iron ingot catalyst should have been fully consumed");
+		helper.assertTrue(crucible.waterAmount == TileCrucible.WATER_CAPACITY - TileCrucible.CRAFT_WATER_COST,
+				"a completed craft should really use up 50 of the cauldron's 1000 water, found " + crucible.waterAmount);
 
 		BlockPos absolute = helper.absolutePos(pos);
 		List<ItemEntity> ejected = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0));
 		boolean foundThaumium = ejected.stream().anyMatch(e -> e.getItem().is(ItemsTC.ingotThaumium.get()));
 		helper.assertTrue(foundThaumium, "completing ingot_thaumium should have ejected a thaumcraft:ingot_thaumium item near the crucible, found: "
 				+ ejected.stream().map(e -> e.getItem().toString()).toList());
+		helper.assertTrue(ejected.stream().filter(e -> e.getItem().is(ItemsTC.ingotThaumium.get()))
+				.allMatch(e -> e.getPersistentData().getBoolean(TileCrucible.EJECTED_TAG)),
+				"the crucible's own output must be marked so it isn't dissolved again when it falls back in");
+		helper.succeed();
+	}
+
+	/** The original dissolved ANY item with object tags (an iron ingot, a cobblestone...), not only essentia
+	 * containers - the port's crucible had ignored everything but crystal essences. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleDissolvesOrdinaryItemsThroughTheObjectTagDatabase(GameTestHelper helper) {
+		TileCrucible crucible = placeActiveCrucible(helper, BlockPos.ZERO);
+		ItemStack remainder = crucible.attemptSmelt(new ItemStack(Items.IRON_INGOT, 2), null, helper.getLevel());
+		helper.assertTrue(crucible.getAspects().size() > 0, "an iron ingot should really dissolve into aspects, pool is empty");
+		helper.assertTrue(remainder.isEmpty(), "both ingots of the stack should have dissolved in one go, left " + remainder.getCount());
+		helper.succeed();
+	}
+
+	/** Recipes are research-gated: a player without the research (or nobody at all) gets a dissolve, not a craft. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleRecipesNeedAPlayerWhoKnowsTheResearch(GameTestHelper helper) {
+		BlockPos pos = BlockPos.ZERO;
+		TileCrucible crucible = placeActiveCrucible(helper, pos);
+		crucible.setAspects(new AspectList().add(Aspect.MAGIC, 5).add(Aspect.EARTH, 5));
+		crucible.attemptSmelt(new ItemStack(Items.IRON_INGOT), null, helper.getLevel());
+		BlockPos absolute = helper.absolutePos(pos);
+		boolean crafted = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0)).stream()
+				.anyMatch(e -> e.getItem().is(ItemsTC.ingotThaumium.get()));
+		helper.assertTrue(!crafted, "with no player, the thaumium recipe must not fire");
+		helper.assertTrue(crucible.waterAmount == TileCrucible.WATER_CAPACITY, "no craft should have used any water");
 		helper.succeed();
 	}
 
@@ -1261,7 +1311,7 @@ public class ThaumcraftGameTests {
 		crucible.setAspects(new AspectList().add(Aspect.TOOL, 5));
 
 		ItemStack catalyst = new ItemStack(Items.IRON_INGOT);
-		ItemStack remainder = crucible.attemptSmelt(catalyst, helper.getLevel());
+		ItemStack remainder = crucible.attemptSmelt(catalyst, researchingPlayerAt(helper, pos), helper.getLevel());
 
 		helper.assertTrue(remainder.getCount() == 0, "the iron ingot catalyst should have been fully consumed");
 
@@ -1618,13 +1668,13 @@ public class ThaumcraftGameTests {
 		helper.getBlockState(relPos).useItemOn(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND), helper.getLevel(), player,
 				net.minecraft.world.InteractionHand.MAIN_HAND, hit);
 
-		helper.assertTrue(tile.hasWater, "right-clicking with a water bucket should have filled the crucible");
+		helper.assertTrue(tile.hasWater(), "right-clicking with a water bucket should have filled the crucible");
 		helper.assertTrue(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).is(Items.BUCKET), "the water bucket should have been swapped for an empty one");
 
 		helper.getBlockState(relPos).useItemOn(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND), helper.getLevel(), player,
 				net.minecraft.world.InteractionHand.MAIN_HAND, hit);
 
-		helper.assertTrue(!tile.hasWater, "right-clicking a watered, empty (no aspects) crucible with an empty bucket should have emptied it");
+		helper.assertTrue(!tile.hasWater(), "right-clicking a watered, empty (no aspects) crucible with an empty bucket should have emptied it");
 		helper.assertTrue(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).is(Items.WATER_BUCKET), "the empty bucket should have been swapped back for a full one");
 		helper.succeed();
 	}
@@ -7058,7 +7108,7 @@ public class ThaumcraftGameTests {
 		crucible.setAspects(new AspectList().add(Aspect.METAL, 5).add(Aspect.ORDER, 5));
 
 		ItemStack catalyst = new ItemStack(Items.IRON_ORE);
-		ItemStack remainder = crucible.attemptSmelt(catalyst, helper.getLevel());
+		ItemStack remainder = crucible.attemptSmelt(catalyst, researchingPlayerAt(helper, pos), helper.getLevel());
 
 		helper.assertTrue(remainder.getCount() == 0, "the iron ore catalyst should have been fully consumed");
 		helper.assertTrue(crucible.getAspects().getAmount(Aspect.METAL) == 0, "a completed recipe should remove exactly the aspects it consumed");
@@ -7089,7 +7139,7 @@ public class ThaumcraftGameTests {
 		crucible.setAspects(new AspectList().add(Aspect.METAL, 5).add(Aspect.ORDER, 5));
 
 		ItemStack catalyst = new ItemStack(BlocksTC.oreCinnabar.get());
-		ItemStack remainder = crucible.attemptSmelt(catalyst, helper.getLevel());
+		ItemStack remainder = crucible.attemptSmelt(catalyst, researchingPlayerAt(helper, pos), helper.getLevel());
 
 		helper.assertTrue(remainder.getCount() == 0, "the cinnabar ore catalyst should have been fully consumed");
 
@@ -7119,7 +7169,7 @@ public class ThaumcraftGameTests {
 		crucible.setAspects(new AspectList().add(Aspect.METAL, 5).add(Aspect.ORDER, 5));
 
 		ItemStack catalyst = new ItemStack(Items.GOLD_ORE);
-		ItemStack remainder = crucible.attemptSmelt(catalyst, helper.getLevel());
+		ItemStack remainder = crucible.attemptSmelt(catalyst, researchingPlayerAt(helper, pos), helper.getLevel());
 
 		helper.assertTrue(remainder.getCount() == 0, "the gold ore catalyst should have been fully consumed");
 

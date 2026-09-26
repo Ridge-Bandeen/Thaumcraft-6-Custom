@@ -82,9 +82,23 @@ public class BlockCrucible extends Block implements EntityBlock {
 
 	@Override
 	protected void entityInside(BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.Entity entity) {
-		if (!level.isClientSide && entity instanceof ItemEntity itemEntity
-				&& level.getBlockEntity(pos) instanceof TileCrucible tile && tile.isActive()) {
-			tile.tryConsume(itemEntity);
+		if (level.isClientSide || !(level.getBlockEntity(pos) instanceof TileCrucible tile) || !tile.isActive()) return;
+		if (entity instanceof ItemEntity itemEntity) {
+			// Items the crucible itself ejected (the original's EntitySpecialItem) must not fall back in and dissolve.
+			if (!itemEntity.getPersistentData().getBoolean(TileCrucible.EJECTED_TAG)) {
+				tile.tryConsume(itemEntity);
+			}
+		} else if (entity instanceof net.minecraft.world.entity.LivingEntity && level.getGameTime() % 10 == 0) {
+			// A hot, full crucible burns whatever stands in it (the original: 1 fire damage every 10 ticks).
+			entity.hurt(level.damageSources().inFire(), 1.0f);
+			level.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.4f, 2.0f + level.random.nextFloat() * 0.4f);
+		}
+	}
+
+	@Override
+	public void animateTick(BlockState state, Level level, BlockPos pos, net.minecraft.util.RandomSource random) {
+		if (random.nextInt(10) == 0 && level.getBlockEntity(pos) instanceof TileCrucible tile && tile.hasWater() && tile.heat > 150) {
+			level.playLocalSound(pos.getX(), pos.getY(), pos.getZ(), SoundEvents.LAVA_POP, SoundSource.BLOCKS, 0.1f + random.nextFloat() * 0.1f, 1.2f + random.nextFloat() * 0.2f, false);
 		}
 	}
 
@@ -93,8 +107,8 @@ public class BlockCrucible extends Block implements EntityBlock {
 		if (level.isClientSide) return ItemInteractionResult.sidedSuccess(true);
 		if (!(level.getBlockEntity(pos) instanceof TileCrucible tile)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
-		if (stack.is(Items.WATER_BUCKET) && !tile.hasWater) {
-			tile.hasWater = true;
+		if (stack.is(Items.WATER_BUCKET) && tile.waterAmount + 1000 <= TileCrucible.WATER_CAPACITY) {
+			tile.waterAmount += 1000;
 			tile.setChanged();
 			if (!player.getAbilities().instabuild) {
 				player.setItemInHand(hand, new ItemStack(Items.BUCKET));
@@ -103,8 +117,8 @@ public class BlockCrucible extends Block implements EntityBlock {
 			return ItemInteractionResult.SUCCESS;
 		}
 
-		if (stack.is(Items.BUCKET) && tile.hasWater && tile.aspects.size() == 0) {
-			tile.hasWater = false;
+		if (stack.is(Items.BUCKET) && tile.waterAmount >= 1000 && tile.aspects.size() == 0) {
+			tile.waterAmount -= 1000;
 			tile.setChanged();
 			if (!player.getAbilities().instabuild) {
 				player.setItemInHand(hand, new ItemStack(Items.WATER_BUCKET));
@@ -115,7 +129,7 @@ public class BlockCrucible extends Block implements EntityBlock {
 
 		if (!stack.isEmpty() && hitResult.getDirection() == Direction.UP && tile.isActive()) {
 			ItemStack single = stack.copyWithCount(1);
-			ItemStack leftover = tile.attemptSmelt(single, level);
+			ItemStack leftover = tile.attemptSmelt(single, player, level);
 			if (leftover.isEmpty()) {
 				stack.shrink(1);
 				return ItemInteractionResult.SUCCESS;

@@ -31,7 +31,7 @@ import thaumcraft.common.tiles.crafting.TileCrucible;
  *
  * The surface sits at {@link TileCrucible#getFluidHeight()} - the original's 0.8 for a full cauldron, rising toward
  * the rim as vis accumulates - and is tinted by the biome's water colour (1.21's water sprite is white).
- * {@link TileCrucible#hasWater} is still a plain boolean, so partial fills don't exist.
+ * the water amount drives the base height (0.3 + 0.5 * fill).
  */
 public class TileCrucibleRenderer implements BlockEntityRenderer<TileCrucible> {
 
@@ -40,7 +40,7 @@ public class TileCrucibleRenderer implements BlockEntityRenderer<TileCrucible> {
 
 	@Override
 	public void render(TileCrucible tile, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
-		if (!tile.hasWater) return;
+		if (!tile.hasWater()) return;
 
 		TextureAtlasSprite sprite = Minecraft.getInstance().getBlockRenderer().getBlockModelShaper().getParticleIcon(Blocks.WATER.defaultBlockState());
 

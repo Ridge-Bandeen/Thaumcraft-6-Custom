@@ -744,6 +744,7 @@ sourceSets {
             include 'thaumcraft/client/render/CustomArmorModel.java'
             include 'thaumcraft/client/render/RenderMindSpider.java'
             include 'thaumcraft/client/render/ModelPech.java'
+            include 'thaumcraft/client/lib/events/GogglesReadout.java'
 
             include 'thaumcraft/gametest/ThaumcraftGameTests.java'
         }
