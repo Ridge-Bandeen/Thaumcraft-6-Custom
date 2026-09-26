@@ -3461,6 +3461,24 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** The furnace screen reads its gauges (stored vis, cook progress, fuel) straight from the tile through the menu. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void smelterMenuGaugesReadLiveFromTheTile(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.smelter.get());
+		thaumcraft.common.tiles.essentia.TileSmelter tile = helper.getBlockEntity(pos);
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(pos).above());
+		thaumcraft.common.container.SmelterMenu menu = new thaumcraft.common.container.SmelterMenu(1, player.getInventory(), tile);
+		helper.assertTrue(menu.getVisScaled(48) == 0, "an empty furnace shows no vis");
+		tile.aspects.add(Aspect.FIRE, 128); // half of the 256 vis cap
+		helper.assertTrue(menu.getVisScaled(48) == 24, "128 of 256 vis should fill half of the 48px vial, got " + menu.getVisScaled(48));
+		helper.assertTrue(menu.getCookProgressScaled(46) == 0 && menu.getBurnTimeScaled(20) == 0, "an idle furnace has no cook or burn progress");
+		helper.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(Items.IRON_INGOT)), "the input slot takes items that have aspects");
+		helper.assertFalse(menu.getSlot(1).mayPlace(new ItemStack(Items.IRON_INGOT)), "the fuel slot refuses non-fuel");
+		helper.assertTrue(menu.getSlot(1).mayPlace(new ItemStack(Items.COAL)), "the fuel slot takes fuel");
+		helper.succeed();
+	}
+
 	/** The heat source belongs under the CRUCIBLE under the device - lava directly below the device (where the
 	 * crucible stands) must not count. The port checked one block down, so a real build never ran. */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")

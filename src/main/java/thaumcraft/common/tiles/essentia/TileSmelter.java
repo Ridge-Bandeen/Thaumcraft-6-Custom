@@ -85,6 +85,25 @@ public class TileSmelter extends BlockEntity implements Container {
 		return burnTime > 0;
 	}
 
+	// Gauge values for the furnace GUI (the original's getBurnTimeRemainingScaled / getCookProgressScaled / getVisScaled).
+	public static final int MAX_VIS_GAUGE = MAX_VIS;
+
+	public int getBurnTime() {
+		return burnTime;
+	}
+
+	public int getFuelBurnTime() {
+		return fuelBurnTime;
+	}
+
+	public int getCookTime() {
+		return cookTime;
+	}
+
+	public int getSmeltTime() {
+		return smeltTime;
+	}
+
 	public static void tick(Level level, BlockPos pos, BlockState state, TileSmelter tile) {
 		boolean wasLit = tile.isLit();
 		if (tile.burnTime > 0) tile.burnTime--;
@@ -315,6 +334,11 @@ public class TileSmelter extends BlockEntity implements Container {
 
 	@Override
 	public boolean canPlaceItem(int slot, ItemStack stack) {
+		return accepts(slot, stack);
+	}
+
+	/** Slot rule shared with the menu's client-side stand-in container: fuel in slot 1, anything with object aspects in 0. */
+	public static boolean accepts(int slot, ItemStack stack) {
 		if (slot == 1) return AbstractFurnaceBlockEntity.isFuel(stack);
 		AspectList tags = AspectHelper.getObjectAspects(stack);
 		return tags != null && tags.size() > 0;

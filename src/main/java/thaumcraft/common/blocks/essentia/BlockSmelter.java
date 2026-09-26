@@ -85,18 +85,25 @@ public class BlockSmelter extends Block implements EntityBlock {
 
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-		if (level.getBlockEntity(pos) instanceof TileSmelter tile && tile.interact(level, player, net.minecraft.world.item.ItemStack.EMPTY)) {
-			return InteractionResult.SUCCESS;
-		}
-		return InteractionResult.PASS;
+		return openMenu(level, pos, player);
 	}
 
 	@Override
 	protected net.minecraft.world.ItemInteractionResult useItemOn(net.minecraft.world.item.ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, net.minecraft.world.InteractionHand hand, BlockHitResult hitResult) {
-		if (level.getBlockEntity(pos) instanceof TileSmelter tile && tile.interact(level, player, stack)) {
-			return net.minecraft.world.ItemInteractionResult.sidedSuccess(level.isClientSide);
-		}
-		return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+		return openMenu(level, pos, player) == InteractionResult.SUCCESS
+				? net.minecraft.world.ItemInteractionResult.SUCCESS
+				: net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+	}
+
+	/** The furnace screen (fuel/cook/vis gauges) opens on right-click, as in the original - the port had used
+	 * right-click item routing instead, which lost the gauges. */
+	private InteractionResult openMenu(Level level, BlockPos pos, Player player) {
+		if (level.isClientSide) return InteractionResult.SUCCESS;
+		if (!(level.getBlockEntity(pos) instanceof TileSmelter tile)) return InteractionResult.PASS;
+		player.openMenu(new net.minecraft.world.SimpleMenuProvider(
+				(id, inv, p) -> new thaumcraft.common.container.SmelterMenu(id, inv, tile),
+				net.minecraft.network.chat.Component.translatable(getDescriptionId())));
+		return InteractionResult.SUCCESS;
 	}
 
 	@Override

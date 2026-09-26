@@ -51,6 +51,9 @@ public final class ThaumcraftMenus {
 	public static final Supplier<MenuType<thaumcraft.common.container.ThaumatoriumMenu>> THAUMATORIUM = MENUS.register("thaumatorium",
 			() -> IMenuTypeExtension.create(thaumcraft.common.container.ThaumatoriumMenu::new));
 
+	public static final Supplier<MenuType<thaumcraft.common.container.SmelterMenu>> SMELTER = MENUS.register("smelter",
+			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.SmelterMenu(windowId, inv)));
+
 	public static final Supplier<MenuType<thaumcraft.common.container.SpaMenu>> SPA = MENUS.register("spa",
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.SpaMenu(windowId, inv)));
 
