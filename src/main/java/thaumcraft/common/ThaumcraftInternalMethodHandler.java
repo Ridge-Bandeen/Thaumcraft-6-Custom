@@ -80,9 +80,26 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 
 	@Override
 	public boolean progressResearch(Player player, String researchkey) {
+		return progressResearch(player, researchkey, true);
+	}
+
+	/** {@code sync}: push the player's knowledge to their client afterwards - the original did ({@code syncResearch}); without it the
+	 * client never learned of a scan's result, so the Thaumometer glow on already-scanned things never went away. */
+	private boolean progressResearch(Player player, String researchkey, boolean sync) {
+		boolean progressed = progressResearchNoSync(player, researchkey);
+		if (progressed && sync && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+			ThaumcraftCapabilities.getKnowledge(player).sync(serverPlayer);
+		}
+		return progressed;
+	}
+
+	private boolean progressResearchNoSync(Player player, String researchkey) {
 		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
 		ResearchEntry entry = ResearchCategories.getResearch(researchkey);
 		ResearchStage[] stages = entry != null ? entry.getStages() : null;
+		// A key with no research entry at all - the per-item/per-mob "!..." scan keys - is a one-shot flag: known means done. (Nothing
+		// capped it, so scanning the same thing forever said "learned something new" and kept handing out knowledge.)
+		if (stages == null && researchkey != null && researchkey.startsWith("!") && knowledge.isResearchKnown(researchkey)) return false;
 		// Only a real, loaded multi-stage entry has an actual cap to refuse progressing past - an
 		// entry-less key (a "!virtualFlag", or an ad-hoc test/reference key with no ResearchEntry at all)
 		// has no such cap, matching the old placeholder implementation's fully unconditional increment for
@@ -130,7 +147,10 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 			return progressResearch(player, researchkey);
 		}
 		boolean any = false;
-		while (progressResearch(player, researchkey)) any = true;
+		while (progressResearch(player, researchkey, false)) any = true;
+		if (any && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+			ThaumcraftCapabilities.getKnowledge(player).sync(serverPlayer);
+		}
 		return any;
 	}
 

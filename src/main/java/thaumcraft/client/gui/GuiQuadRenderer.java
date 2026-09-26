@@ -25,8 +25,21 @@ final class GuiQuadRenderer {
 	private GuiQuadRenderer() {
 	}
 
+	/** The original's {@code UtilsFX#renderQuadCentered} does not map the texture upright: its vertex order turns it a quarter turn
+	 * (u follows y, v follows x). The flying knowledge-gain icons were designed against that, and drawn upright here they came out
+	 * sideways (playtest 2026-09-26). */
+	static void renderQuadCenteredQuarterTurned(GuiGraphics graphics, ResourceLocation texture, int gridSize, int frame,
+			float scale, float r, float g, float b, float alpha, boolean additive) {
+		renderQuadCentered(graphics, texture, gridSize, frame, scale, r, g, b, alpha, additive, true);
+	}
+
 	static void renderQuadCentered(GuiGraphics graphics, ResourceLocation texture, int gridSize, int frame,
 			float scale, float r, float g, float b, float alpha, boolean additive) {
+		renderQuadCentered(graphics, texture, gridSize, frame, scale, r, g, b, alpha, additive, false);
+	}
+
+	private static void renderQuadCentered(GuiGraphics graphics, ResourceLocation texture, int gridSize, int frame,
+			float scale, float r, float g, float b, float alpha, boolean additive, boolean quarterTurn) {
 		if (scale <= 0.0f) return;
 		int fx = frame % gridSize;
 		int fy = frame / gridSize;
@@ -46,10 +59,17 @@ final class GuiQuadRenderer {
 		}
 		PoseStack.Pose pose = graphics.pose().last();
 		BufferBuilder buffer = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-		buffer.addVertex(pose, -h, h, 0).setUv(u0, v1).setColor(r, g, b, alpha);
-		buffer.addVertex(pose, h, h, 0).setUv(u1, v1).setColor(r, g, b, alpha);
-		buffer.addVertex(pose, h, -h, 0).setUv(u1, v0).setColor(r, g, b, alpha);
-		buffer.addVertex(pose, -h, -h, 0).setUv(u0, v0).setColor(r, g, b, alpha);
+		if (quarterTurn) {
+			buffer.addVertex(pose, -h, h, 0).setUv(u1, v1).setColor(r, g, b, alpha);
+			buffer.addVertex(pose, h, h, 0).setUv(u1, v0).setColor(r, g, b, alpha);
+			buffer.addVertex(pose, h, -h, 0).setUv(u0, v0).setColor(r, g, b, alpha);
+			buffer.addVertex(pose, -h, -h, 0).setUv(u0, v1).setColor(r, g, b, alpha);
+		} else {
+			buffer.addVertex(pose, -h, h, 0).setUv(u0, v1).setColor(r, g, b, alpha);
+			buffer.addVertex(pose, h, h, 0).setUv(u1, v1).setColor(r, g, b, alpha);
+			buffer.addVertex(pose, h, -h, 0).setUv(u1, v0).setColor(r, g, b, alpha);
+			buffer.addVertex(pose, -h, -h, 0).setUv(u0, v0).setColor(r, g, b, alpha);
+		}
 		BufferUploader.drawWithShader(buffer.buildOrThrow());
 		RenderSystem.defaultBlendFunc();
 		RenderSystem.disableBlend();

@@ -145,10 +145,10 @@ public class KnowledgeGainOverlay {
 		graphics.pose().translate(xx, yy, 0);
 		// the original rotated about -Z (glRotatef(a, 0, 0, -1)); +Z here turned the flying icon the other way, a quarter-turn-ish off
 		graphics.pose().mulPose(Axis.ZP.rotationDegrees(-(84 + rand.nextInt(12))));
-		GuiQuadRenderer.renderQuadCentered(graphics, KNOW_TYPE[t.type.ordinal()], 1, 0, s, 1.0f, 1.0f, 1.0f, 1.0f, false);
+		GuiQuadRenderer.renderQuadCenteredQuarterTurned(graphics, KNOW_TYPE[t.type.ordinal()], 1, 0, s, 1.0f, 1.0f, 1.0f, 1.0f, false);
 
 		if (t.category != null) {
-			GuiQuadRenderer.renderQuadCentered(graphics, t.category.icon, 1, 0, s * 0.75f, 1.0f, 1.0f, 1.0f, 1.0f, false);
+			GuiQuadRenderer.renderQuadCenteredQuarterTurned(graphics, t.category.icon, 1, 0, s * 0.75f, 1.0f, 1.0f, 1.0f, 1.0f, false);
 		}
 
 		if (t.progress > t.max * 0.9f) {

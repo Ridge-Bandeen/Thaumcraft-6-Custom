@@ -7714,6 +7714,22 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** A block scanned once teaches its generic (per-item) knowledge once: a second scan finds nothing new, and the result reaches the client's
+	 * copy of the knowledge (a playtest found the same block "learned something new" every time). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void scanningTheSameBlockTwiceOnlyTeachesOnce(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, Blocks.COBBLESTONE);
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(pos).above(2));
+		BlockPos absolute = helper.absolutePos(pos);
+		boolean first = thaumcraft.api.research.ScanningManager.scanTheThing(player, absolute);
+		boolean second = thaumcraft.api.research.ScanningManager.scanTheThing(player, absolute);
+		helper.assertTrue(first, "the first scan of cobblestone should learn something");
+		helper.assertFalse(second, "scanning the same cobblestone again should find nothing new");
+		helper.assertFalse(thaumcraft.api.research.ScanningManager.isThingStillScannable(player, absolute), "it should no longer glow as scannable");
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void scanningARegisteredEntityGrantsItsResearch(GameTestHelper helper) {
 		thaumcraft.api.research.ScanningManager.addScannableThing(new thaumcraft.api.research.IScanThing() {
