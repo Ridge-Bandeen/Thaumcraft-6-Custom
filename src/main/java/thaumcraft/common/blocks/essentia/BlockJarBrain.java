@@ -36,9 +36,8 @@ import thaumcraft.common.tiles.essentia.TileJarFillable;
  * port has followed since {@code BlockMirrorEssentia} split off from the plain {@code BlockMirror}. See
  * {@link TileJarBrain}'s own doc comment for the real mechanic and what's simplified.
  *
- * <p>Real, documented cut, matching {@link TileJarFillable}'s own established precedent for the plain
- * essentia jar: breaking a brain jar drops a plain empty one, not one preserving its accumulated XP - a
- * real but minor loss, same already-accepted simplification, not a new one.
+ * <p>Restored 2026-09-27: breaking a brain jar now keeps its accumulated XP on the dropped item (see
+ * {@link #onRemove}/{@link JarBrainBlockItem}), matching the original's own item-tag round trip.
  */
 public class BlockJarBrain extends Block implements EntityBlock {
 
@@ -81,6 +80,18 @@ public class BlockJarBrain extends Block implements EntityBlock {
 		if (!(level.getBlockEntity(pos) instanceof TileJarBrain tile)) return 0;
 		float fraction = tile.getXp() / (float) TileJarBrain.XP_MAX;
 		return Math.min(15, Mth.floor(fraction * 14.0f) + (tile.getXp() > 0 ? 1 : 0));
+	}
+
+	@Override
+	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+		if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TileJarBrain tile) {
+			net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(this);
+			if (tile.getXp() > 0) stack.set(thaumcraft.api.items.ThaumcraftDataComponents.JAR_XP.get(), tile.getXp());
+			net.minecraft.world.entity.item.ItemEntity out = new net.minecraft.world.entity.item.ItemEntity(level,
+					pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);
+			level.addFreshEntity(out);
+		}
+		super.onRemove(state, level, pos, newState, movedByPiston);
 	}
 
 	@Nullable

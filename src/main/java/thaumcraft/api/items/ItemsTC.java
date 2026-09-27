@@ -559,14 +559,18 @@ public final class ItemsTC {
 	public static final DeferredItem<BlockItem> arcaneEarToggle =
 			ITEMS.registerSimpleBlockItem("arcane_ear_toggle", BlocksTC.arcaneEarToggle);
 
-	public static final DeferredItem<BlockItem> jarNormal =
-			ITEMS.registerSimpleBlockItem("jar_normal", BlocksTC.jarNormal);
+	/** Placed through {@code JarBlockItem} so a broken jar keeps its held essentia and label - see that class's
+	 * own doc comment. */
+	public static final DeferredItem<thaumcraft.common.blocks.essentia.JarBlockItem> jarNormal =
+			ITEMS.register("jar_normal", () -> new thaumcraft.common.blocks.essentia.JarBlockItem(BlocksTC.jarNormal.get(), new Item.Properties()));
 
-	public static final DeferredItem<BlockItem> jarVoid =
-			ITEMS.registerSimpleBlockItem("jar_void", BlocksTC.jarVoid);
+	public static final DeferredItem<thaumcraft.common.blocks.essentia.JarBlockItem> jarVoid =
+			ITEMS.register("jar_void", () -> new thaumcraft.common.blocks.essentia.JarBlockItem(BlocksTC.jarVoid.get(), new Item.Properties()));
 
-	public static final DeferredItem<BlockItem> jarBrain =
-			ITEMS.registerSimpleBlockItem("jar_brain", BlocksTC.jarBrain);
+	/** Placed through {@code JarBrainBlockItem} so a broken jar keeps its stored XP - see that class's own doc
+	 * comment. */
+	public static final DeferredItem<thaumcraft.common.blocks.essentia.JarBrainBlockItem> jarBrain =
+			ITEMS.register("jar_brain", () -> new thaumcraft.common.blocks.essentia.JarBrainBlockItem(BlocksTC.jarBrain.get(), new Item.Properties()));
 
 	/** See {@link thaumcraft.common.blocks.essentia.BlockJar}'s own doc comment - locks a jar out of
 	 * pull-based {@code IAspectSource} scans via {@link thaumcraft.common.tiles.essentia.TileJarFillable#applyBrace}.

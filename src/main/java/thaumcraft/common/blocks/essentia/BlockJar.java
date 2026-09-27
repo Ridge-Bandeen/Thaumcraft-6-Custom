@@ -136,6 +136,24 @@ public class BlockJar extends Block implements EntityBlock, ILabelable {
 		return true;
 	}
 
+	/** Restored 2026-09-27: a broken jar keeps what it was holding and any label, matching the original's own
+	 * item-tag round trip (see {@link JarBlockItem}). The loot table for this block is empty - this is its only
+	 * drop, so nothing is duplicated. */
+	@Override
+	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+		if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TileJarFillable tile) {
+			ItemStack stack = new ItemStack(this);
+			AspectList aspects = tile.getAspects();
+			if (aspects != null && aspects.size() > 0) stack.set(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get(), aspects.copy());
+			Aspect filter = tile.getAspectFilter();
+			if (filter != null) stack.set(thaumcraft.api.items.ThaumcraftDataComponents.ASPECT_FILTER.get(), filter);
+			net.minecraft.world.entity.item.ItemEntity out = new net.minecraft.world.entity.item.ItemEntity(level,
+					pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);
+			level.addFreshEntity(out);
+		}
+		super.onRemove(state, level, pos, newState, movedByPiston);
+	}
+
 	@Nullable
 	@Override
 	public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {

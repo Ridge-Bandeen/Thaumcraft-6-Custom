@@ -1,11 +1,19 @@
 package thaumcraft.common.blocks.misc;
 
+import java.util.List;
+
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.items.ThaumcraftDataComponents;
 import thaumcraft.common.tiles.misc.TileBanner;
@@ -53,5 +61,17 @@ public class BannerBlockItem extends BlockItem {
 			}
 		}
 		return result;
+	}
+
+	/** Restored 2026-09-27: the original's own "§5&lt;aspect&gt;" tooltip line - see {@link BlockBannerTC#onRemove}
+	 * for where a broken banner's aspect now lands back on the dropped item. */
+	@Override
+	public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+		AspectList aspects = stack.get(ThaumcraftDataComponents.ASPECTS.get());
+		if (aspects != null && aspects.getAspects().length > 0) {
+			Aspect aspect = aspects.getAspects()[0];
+			tooltip.add(Component.literal(aspect.getName()).withStyle(ChatFormatting.DARK_PURPLE));
+		}
+		super.appendHoverText(stack, context, tooltip, flag);
 	}
 }

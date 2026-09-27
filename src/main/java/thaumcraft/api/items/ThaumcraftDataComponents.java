@@ -17,6 +17,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.AspectList;
 import thaumcraft.api.casters.FocusPackage;
 
@@ -223,6 +224,23 @@ public final class ThaumcraftDataComponents {
 			() -> DataComponentType.<Boolean>builder()
 					.persistent(Codec.BOOL)
 					.networkSynchronized(ByteBufCodecs.BOOL)
+					.build());
+
+	/** A jar's label - restored 2026-09-27 - was the {@code "AspectFilter"} NBT string tag on the original's
+	 * {@code BlockJarItem}: which single aspect a picked-up jar is locked to (via {@link
+	 * thaumcraft.api.blocks.ILabelable}), carried onto the dropped item so replacing it keeps the lock. */
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<Aspect>> ASPECT_FILTER = DATA_COMPONENTS.register("aspect_filter",
+			() -> DataComponentType.<Aspect>builder()
+					.persistent(Aspect.CODEC)
+					.networkSynchronized(ByteBufCodecs.fromCodec(Aspect.CODEC))
+					.build());
+
+	/** A Brain in a Jar's stored XP - restored 2026-09-27 - was the {@code "xp"} NBT int tag on the original's
+	 * {@code BlockJarBrainItem}: a broken jar keeps what it was holding. */
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> JAR_XP = DATA_COMPONENTS.register("jar_xp",
+			() -> DataComponentType.<Integer>builder()
+					.persistent(Codec.INT)
+					.networkSynchronized(ByteBufCodecs.VAR_INT)
 					.build());
 
 	private ThaumcraftDataComponents() {

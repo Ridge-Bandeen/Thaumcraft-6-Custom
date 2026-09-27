@@ -68,4 +68,17 @@ public class BlockMirrorEssentiaItem extends BlockItem {
 		}
 		return result;
 	}
+
+	/** Restored 2026-09-27 - see {@link BlockMirrorItem#appendHoverText}. */
+	@Override
+	public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context,
+			java.util.List<Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
+		MirrorLink link = stack.get(ThaumcraftDataComponents.MIRROR_LINK.get());
+		if (link != null) {
+			net.minecraft.core.BlockPos pos = link.pos();
+			String dim = link.dimension().location().toString();
+			tooltip.add(Component.literal("Linked to " + pos.getX() + "," + pos.getY() + "," + pos.getZ() + " in " + dim));
+		}
+		super.appendHoverText(stack, context, tooltip, flag);
+	}
 }

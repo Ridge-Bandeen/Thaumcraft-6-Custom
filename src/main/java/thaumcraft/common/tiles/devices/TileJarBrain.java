@@ -75,6 +75,11 @@ public class TileJarBrain extends BlockEntity {
 		return xp;
 	}
 
+	/** Restores XP a broken jar carried on its item (see {@code JarBrainBlockItem#place}). */
+	public void setXp(int xp) {
+		this.xp = Math.max(0, Math.min(XP_MAX, xp));
+	}
+
 	public float getRota() {
 		return rota;
 	}

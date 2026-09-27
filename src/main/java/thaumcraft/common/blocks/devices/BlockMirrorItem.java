@@ -60,6 +60,20 @@ public class BlockMirrorItem extends BlockItem {
 		return InteractionResult.CONSUME;
 	}
 
+	/** Restored 2026-09-27: the original's own "Linked to X,Y,Z in &lt;dim&gt;" tooltip line, read off the real
+	 * {@link ThaumcraftDataComponents#MIRROR_LINK} component this port already carries. */
+	@Override
+	public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context,
+			java.util.List<Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
+		MirrorLink link = stack.get(ThaumcraftDataComponents.MIRROR_LINK.get());
+		if (link != null) {
+			net.minecraft.core.BlockPos pos = link.pos();
+			String dim = link.dimension().location().toString();
+			tooltip.add(Component.literal("Linked to " + pos.getX() + "," + pos.getY() + "," + pos.getZ() + " in " + dim));
+		}
+		super.appendHoverText(stack, context, tooltip, flag);
+	}
+
 	@Override
 	public InteractionResult place(BlockPlaceContext context) {
 		MirrorLink link = context.getItemInHand().get(ThaumcraftDataComponents.MIRROR_LINK.get());

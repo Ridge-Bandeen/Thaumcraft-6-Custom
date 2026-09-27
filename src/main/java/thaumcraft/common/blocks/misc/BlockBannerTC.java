@@ -118,15 +118,18 @@ public class BlockBannerTC extends Block implements EntityBlock {
 		return InteractionResult.SUCCESS;
 	}
 
-	/** Real, minor simplification vs the original: drops a plain {@code ItemStack}, not one carrying the
-	 * tile's own stored aspect tag forward (the original preserved that via NBT on the dropped item) - a
-	 * real, small flavor loss, not a functional one (the block itself still works identically once
-	 * replaced). */
+	/** Restored 2026-09-27: the dropped item now carries the tile's stored aspect forward (the original preserved
+	 * that via NBT on the dropped item), via {@link thaumcraft.api.items.ThaumcraftDataComponents#ASPECTS} - the
+	 * same component {@link BannerBlockItem#place} already reads back onto a newly placed banner. */
 	@Override
 	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
 		if (!state.is(newState.getBlock())) {
+			ItemStack stack = new ItemStack(this);
+			if (level.getBlockEntity(pos) instanceof TileBanner banner && banner.getAspect() != null) {
+				stack.set(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get(), new AspectList().add(banner.getAspect(), 1));
+			}
 			net.minecraft.world.entity.item.ItemEntity out = new net.minecraft.world.entity.item.ItemEntity(level,
-					pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, new net.minecraft.world.item.ItemStack(this));
+					pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);
 			level.addFreshEntity(out);
 		}
 		super.onRemove(state, level, pos, newState, movedByPiston);

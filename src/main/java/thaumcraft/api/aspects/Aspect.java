@@ -111,6 +111,20 @@ public class Aspect {
 		return tag;
 	}
 
+	/** Restored 2026-09-27: NeoForge's DataComponentType requires its payload type to implement real equals/hashCode
+	 * (for patch-diffing an ItemStack's components) - found putting a bare Aspect on one directly (a jar's label),
+	 * the first thing in this port to do so. Every real Aspect is a singleton keyed by its own tag (see the
+	 * constructor above, and {@link #CODEC}), so tag equality is exactly reference equality for any two real aspects. */
+	@Override
+	public boolean equals(Object other) {
+		return this == other || (other instanceof Aspect a && tag.equals(a.tag));
+	}
+
+	@Override
+	public int hashCode() {
+		return tag.hashCode();
+	}
+
 	public void setTag(String tag) {
 		this.tag = tag;
 	}
