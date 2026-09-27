@@ -59,4 +59,12 @@ public class ItemLootBag extends Item {
 		stack.shrink(1);
 		return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
 	}
+
+	/** The original: "Click to open, or keep to trade." */
+	@Override
+	public void appendHoverText(net.minecraft.world.item.ItemStack stack, net.minecraft.world.item.Item.TooltipContext context,
+			java.util.List<net.minecraft.network.chat.Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
+		tooltip.add(net.minecraft.network.chat.Component.translatable("tc.lootbag"));
+		super.appendHoverText(stack, context, tooltip, flag);
+	}
 }

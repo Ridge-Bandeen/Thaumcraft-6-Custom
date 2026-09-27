@@ -50,4 +50,12 @@ public class ItemVoidSword extends SwordItem implements IWarpingGear {
 	public int getWarp(ItemStack itemstack, Player player) {
 		return 1;
 	}
+
+	/** The original named its Lesser Sapping in gold. */
+	@Override
+	public void appendHoverText(net.minecraft.world.item.ItemStack stack, net.minecraft.world.item.Item.TooltipContext context,
+			java.util.List<net.minecraft.network.chat.Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
+		tooltip.add(net.minecraft.network.chat.Component.translatable("enchantment.special.sapless").withStyle(net.minecraft.ChatFormatting.GOLD));
+		super.appendHoverText(stack, context, tooltip, flag);
+	}
 }

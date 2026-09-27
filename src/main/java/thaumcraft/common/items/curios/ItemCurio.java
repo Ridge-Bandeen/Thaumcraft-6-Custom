@@ -62,4 +62,12 @@ public class ItemCurio extends Item {
 		}
 		return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
 	}
+
+	/** The original listed "What knowledge does this hold?" under the name. */
+	@Override
+	public void appendHoverText(net.minecraft.world.item.ItemStack stack, net.minecraft.world.item.Item.TooltipContext context,
+			java.util.List<net.minecraft.network.chat.Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
+		tooltip.add(net.minecraft.network.chat.Component.translatable("item.curio.text"));
+		super.appendHoverText(stack, context, tooltip, flag);
+	}
 }
