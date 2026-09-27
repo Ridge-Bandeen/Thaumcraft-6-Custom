@@ -113,14 +113,28 @@ public class ItemThaumometer extends Item {
 		return best;
 	}
 
-	@Override
-	public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
-		if (player.level().isClientSide) {
-			Level level = player.level();
+	/** Client half of a scan: the scan sound, and the rune burst on whatever is being scanned. */
+	private static void scanEffects(Level level, Player player, @javax.annotation.Nullable Entity target, @javax.annotation.Nullable net.minecraft.core.BlockPos block) {
+		level.playLocalSound(player.getX(), player.getY(), player.getZ(), thaumcraft.common.registry.ThaumcraftSounds.SCAN.get(), SoundSource.PLAYERS, 0.5f, 1.0f, false);
+		if (target != null) {
 			for (int a = 0; a < 10; a++) {
 				thaumcraft.client.fx.ClientFxHandlers.spawnBlockRunes(level, target.getX() - 0.5, target.getY() + target.getEyeHeight() / 2.0f, target.getZ() - 0.5,
 						0.3f + level.random.nextFloat() * 0.7f, 0.0f, 0.3f + level.random.nextFloat() * 0.7f, (int) (target.getBbHeight() * 15.0f), 0.03f);
 			}
+		} else if (block != null) {
+			for (int a = 0; a < 10; a++) {
+				thaumcraft.client.fx.ClientFxHandlers.spawnBlockRunes(level, block.getX(), block.getY() + 0.25, block.getZ(),
+						0.3f + level.random.nextFloat() * 0.7f, 0.0f, 0.3f + level.random.nextFloat() * 0.7f, 15, 0.03f);
+			}
+		}
+	}
+
+	/** An entity being pointed at takes priority over the block it happens to be in front of (a dropped item lies ON a block, so a crosshair
+	 * on it hits the floor - scanning the block instead was why an item could only be scanned by aiming above it, 2026-09-26). */
+	@Override
+	public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
+		if (player.level().isClientSide) {
+			scanEffects(player.level(), player, target, null);
 			return InteractionResult.SUCCESS;
 		}
 		ScanningManager.scanTheThing(player, target);
@@ -132,15 +146,16 @@ public class ItemThaumometer extends Item {
 		Player player = context.getPlayer();
 		Level level = context.getLevel();
 		if (player == null) return InteractionResult.PASS;
+		Entity pointed = pointedEntity(level, player, 9.0, 0.0f);
 		if (level.isClientSide) {
-			var pos = context.getClickedPos();
-			for (int a = 0; a < 10; a++) {
-				thaumcraft.client.fx.ClientFxHandlers.spawnBlockRunes(level, pos.getX(), pos.getY() + 0.25, pos.getZ(),
-						0.3f + level.random.nextFloat() * 0.7f, 0.0f, 0.3f + level.random.nextFloat() * 0.7f, 15, 0.03f);
-			}
+			scanEffects(level, player, pointed, pointed == null ? context.getClickedPos() : null);
 			return InteractionResult.SUCCESS;
 		}
-		ScanningManager.scanTheThing(player, context.getClickedPos());
+		if (pointed != null) {
+			ScanningManager.scanTheThing(player, pointed);
+		} else {
+			ScanningManager.scanTheThing(player, context.getClickedPos());
+		}
 		return InteractionResult.SUCCESS;
 	}
 
@@ -152,18 +167,7 @@ public class ItemThaumometer extends Item {
 		Entity target = pointedEntity(level, player, 9.0, 0.0f);
 		BlockHitResult block = getPlayerPOVHitResult(level, player, ClipContext.Fluid.ANY);
 		if (level.isClientSide) {
-			level.playLocalSound(player.getX(), player.getY(), player.getZ(), thaumcraft.common.registry.ThaumcraftSounds.SCAN.get(), SoundSource.PLAYERS, 0.5f, 1.0f, false);
-			if (target != null) {
-				for (int a = 0; a < 10; a++) {
-					thaumcraft.client.fx.ClientFxHandlers.spawnBlockRunes(level, target.getX() - 0.5, target.getY() + target.getEyeHeight() / 2.0f, target.getZ() - 0.5,
-							0.3f + level.random.nextFloat() * 0.7f, 0.0f, 0.3f + level.random.nextFloat() * 0.7f, (int) (target.getBbHeight() * 15.0f), 0.03f);
-				}
-			} else if (block.getType() == HitResult.Type.BLOCK) {
-				for (int a = 0; a < 10; a++) {
-					thaumcraft.client.fx.ClientFxHandlers.spawnBlockRunes(level, block.getBlockPos().getX(), block.getBlockPos().getY() + 0.25, block.getBlockPos().getZ(),
-							0.3f + level.random.nextFloat() * 0.7f, 0.0f, 0.3f + level.random.nextFloat() * 0.7f, 15, 0.03f);
-				}
-			}
+			scanEffects(level, player, target, target == null && block.getType() == HitResult.Type.BLOCK ? block.getBlockPos() : null);
 			return net.minecraft.world.InteractionResultHolder.success(stack);
 		}
 		if (target != null) {

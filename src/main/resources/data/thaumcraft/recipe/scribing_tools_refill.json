@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "thaumcraft:inkwell",
+  "ingredients": [
+    { "item": "thaumcraft:scribing_tools" },
+    [ { "item": "minecraft:ink_sac" }, { "item": "minecraft:black_dye" } ]
+  ],
+  "result": { "id": "thaumcraft:scribing_tools" }
+}

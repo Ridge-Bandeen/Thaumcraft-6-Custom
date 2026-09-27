@@ -7730,6 +7730,38 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** Daytime celestial scan: aimed at where the sun really is (east and low in the morning, straight up at noon, west and low in the afternoon)
+	 * the scan matches; aimed away from it, it does not. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void skyScanMatchesWhereTheSunReallyIs(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(2, 2, 2)));
+		thaumcraft.common.lib.ThaumcraftCommands.giveRecursiveResearch(player, "CELESTIALSCANNING");
+		var level = helper.getLevel();
+		long originalTime = level.getDayTime();
+		thaumcraft.common.lib.research.ScanSky sky = new thaumcraft.common.lib.research.ScanSky();
+		StringBuilder report = new StringBuilder();
+		boolean ok = true;
+		for (long time : new long[] { 1000L, 3000L, 6000L, 9000L, 11000L }) {
+			level.setDayTime(time);
+			// where the vanilla sun is: elevation and side, worked out from the sun angle the sky is drawn with
+			float sunAngle = level.getSunAngle(0.0f); // radians, 0 at noon growing towards the afternoon
+			double turn = Math.toDegrees(sunAngle);
+			double elevation = 90.0 - Math.abs(((turn + 180.0) % 360.0) - 180.0);
+			// at exactly noon the original's branch is the "east" one (you must face east even looking straight up), so count noon with the morning
+			boolean morning = ((turn % 360.0) + 360.0) % 360.0 > 180.0 || elevation > 89.5;
+			player.setYRot(morning ? -90.0f : 90.0f); // the sun rises in the east (yaw -90) and sets in the west (yaw 90)
+			player.setXRot((float) -elevation);
+			boolean aimedAtSun = sky.checkThing(player, null);
+			player.setYRot(morning ? 90.0f : -90.0f); // the opposite side of the sky
+			boolean aimedAway = sky.checkThing(player, null);
+			report.append(" t=").append(time).append(" elev=").append((int) elevation).append(morning ? "E" : "W").append(" hit=").append(aimedAtSun).append(" away=").append(aimedAway).append(";");
+			if (!aimedAtSun || aimedAway) ok = false;
+		}
+		level.setDayTime(originalTime);
+		helper.assertTrue(ok, "aiming at the real sun should match and aiming away should not:" + report);
+		helper.succeed();
+	}
+
 	/** A dropped item's own hitbox is a quarter of a block; the original widened every entity by 0.8 for targeting so it could be aimed at. */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void thaumometerCanAimAtADroppedItemNotQuitePreciselyOnIt(GameTestHelper helper) {
