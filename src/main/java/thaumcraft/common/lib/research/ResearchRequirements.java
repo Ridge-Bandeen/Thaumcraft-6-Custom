@@ -117,6 +117,28 @@ public class ResearchRequirements {
 			Map.entry("thaumcraft:nugget;10", "thaumcraft:nugget_rareearth"),
 			Map.entry("thaumcraft:plate;2", "thaumcraft:plate_thaumium"),
 			Map.entry("thaumcraft:plate;3", "thaumcraft:plate_void"),
+			// ItemTCBase("plate", {brass, iron, thaumium, void}), ("mind", {clockwork, biothaumic}),
+			// ("module", {vision, aggression}); ItemTurretPlacer("turret", {basic, advanced, bore});
+			// ItemAmuletVis("amulet_vis", {found, crafted}); ItemSealPlacer "seal" meta 0 is the blank seal.
+			// A bare id with no metadata is meta 0, same as the original's own parseJSONtoItemStack.
+			Map.entry("thaumcraft:plate", "thaumcraft:plate_brass"),
+			Map.entry("thaumcraft:plate;0", "thaumcraft:plate_brass"),
+			Map.entry("thaumcraft:plate;1", "thaumcraft:plate_iron"),
+			Map.entry("thaumcraft:mind", "thaumcraft:mind_clockwork"),
+			Map.entry("thaumcraft:mind;0", "thaumcraft:mind_clockwork"),
+			Map.entry("thaumcraft:mind;1", "thaumcraft:mind_biothaumic"),
+			Map.entry("thaumcraft:module", "thaumcraft:module_vision"),
+			Map.entry("thaumcraft:module;0", "thaumcraft:module_vision"),
+			Map.entry("thaumcraft:module;1", "thaumcraft:module_aggression"),
+			Map.entry("thaumcraft:turret", "thaumcraft:turret_placer_basic"),
+			Map.entry("thaumcraft:turret;0", "thaumcraft:turret_placer_basic"),
+			Map.entry("thaumcraft:turret;1", "thaumcraft:turret_placer_advanced"),
+			Map.entry("thaumcraft:turret;2", "thaumcraft:turret_placer_bore"),
+			Map.entry("thaumcraft:amulet_vis", "thaumcraft:amulet_vis_stone"),
+			Map.entry("thaumcraft:amulet_vis;0", "thaumcraft:amulet_vis_stone"),
+			Map.entry("thaumcraft:amulet_vis;1", "thaumcraft:amulet_vis"),
+			Map.entry("thaumcraft:seal", "thaumcraft:seal_blank"),
+			Map.entry("minecraft:hardened_clay", "minecraft:terracotta"),
 			Map.entry("thaumcraft:smelter_basic", "thaumcraft:smelter"),
 			Map.entry("thaumcraft:wand_workbench", "thaumcraft:focal_manipulator"),
 			Map.entry("thaumcraft:arcane_stone", "thaumcraft:stone_arcane"),
@@ -147,6 +169,14 @@ public class ResearchRequirements {
 	public record EnchantSpec(Map<ResourceKey<Enchantment>, Integer> required) {
 	}
 
+	/** An aspect-tagged {@code required_item} ({@code crystal_essence;1;0;{Aspects:[{amount:1,key:'aer'}]}}, the
+	 * vitium/aer/... phials): the original matched these with relaxed NBT, so an Aer crystal is wanted, not any
+	 * crystal. Satisfied by a stack of that item holding at least each listed aspect amount. */
+	public record AspectItemSpec(Item item, thaumcraft.api.aspects.AspectList aspects) {
+	}
+
+	private static final Pattern ASPECT_NBT_ENTRY = Pattern.compile("\\{amount:(\\d+),\\s*key:'([a-z]+)'\\}");
+
 	/** Called by {@code ThaumcraftResearchLoader} at the start of every real datapack reload. */
 	public static void clear() {
 		CRAFT_REFERENCES.clear();
@@ -156,13 +186,10 @@ public class ResearchRequirements {
 	 * Resolves one real legacy research item spec into either an {@link Item} or a {@link TagKey}.
 	 *
 	 * <p>Metadata is honoured wherever the original's own subtype arrays give it a real meaning (see
-	 * {@link #LEGACY_ITEM_ALIASES}); the legacy NBT blob never is. That last one is real, documented
-	 * lossiness with real gameplay consequences worth naming: 21 of the shipped {@code required_item} specs
-	 * are aspect-tagged ({@code crystal_essence} with {@code {Aspects:[{key:'aer'}]}}, {@code phial} with
-	 * {@code {Aspects:[{amount:10,key:'vitium'}]}}), and dropping the tag widens those from "an Aer essence
-	 * crystal" to "any essence crystal". The aspect data itself lives in a real modern data component here,
-	 * so honouring it is genuinely possible - it just needs a real legacy-NBT→component translator, which is
-	 * its own chunk and is only worth writing once something actually consumes these gates.
+	 * {@link #LEGACY_ITEM_ALIASES}). Of the legacy NBT blob, the two shapes the shipped data actually uses are
+	 * honoured: the enchantment list on {@code enchanted_placeholder} ({@link EnchantSpec}) and the aspect list on
+	 * {@code crystal_essence}/{@code phial} ({@link AspectItemSpec}, since 2026-09-27 - "an Aer crystal", not any
+	 * crystal, as the original's relaxed-NBT match required).
 	 *
 	 * <p>Real finding worth recording, from reading the original's own registrations rather than assuming:
 	 * a handful of the shipped specs are <b>already dead in the true original</b> - no {@code thaumcraft:metal},
@@ -210,7 +237,48 @@ public class ResearchRequirements {
 
 		ResourceLocation id = ResourceLocation.tryParse(resolved != null ? resolved : head);
 		if (id == null) return null;
-		return BuiltInRegistries.ITEM.getOptional(id).orElse(null);
+		Item item = BuiltInRegistries.ITEM.getOptional(id).orElse(null);
+		if (item != null && parts.length > 3 && spec.contains("Aspects:")) {
+			thaumcraft.api.aspects.AspectList aspects = new thaumcraft.api.aspects.AspectList();
+			Matcher m = ASPECT_NBT_ENTRY.matcher(spec);
+			while (m.find()) {
+				thaumcraft.api.aspects.Aspect aspect = thaumcraft.api.aspects.Aspect.getAspect(m.group(2));
+				if (aspect != null) aspects.add(aspect, Integer.parseInt(m.group(1)));
+			}
+			if (aspects.size() > 0) return new AspectItemSpec(item, aspects);
+		}
+		return item;
+	}
+
+	/** One stack standing for a resolved requirement target, for the Thaumonomicon's requirement row: the item itself,
+	 * the {@code index}-th... cycling member of a tag (the original's {@code InventoryUtils#cycleItemStack}, one step a
+	 * second), the tagged crystal/phial, or an Enchanted Placeholder carrying the wanted enchantments. */
+	public static ItemStack displayStack(Object target, int index, net.minecraft.core.HolderLookup.Provider registries) {
+		if (target instanceof Item item) return new ItemStack(item);
+		if (target instanceof TagKey<?> tag) {
+			@SuppressWarnings("unchecked")
+			List<Holder<Item>> items = new ArrayList<>();
+			for (Holder<Item> h : BuiltInRegistries.ITEM.getTagOrEmpty((TagKey<Item>) tag)) items.add(h);
+			if (items.isEmpty()) return ItemStack.EMPTY;
+			int i = (int) ((System.currentTimeMillis() / 1000L + index) % items.size());
+			return new ItemStack(items.get(i));
+		}
+		if (target instanceof AspectItemSpec spec) {
+			ItemStack stack = new ItemStack(spec.item());
+			if (spec.item() instanceof thaumcraft.api.aspects.IEssentiaContainerItem container) container.setAspects(stack, spec.aspects().copy());
+			return stack;
+		}
+		if (target instanceof EnchantSpec spec) {
+			ItemStack stack = new ItemStack(thaumcraft.api.items.ItemsTC.enchantedPlaceholder.get());
+			if (registries != null) {
+				var lookup = registries.lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT);
+				for (Map.Entry<ResourceKey<Enchantment>, Integer> e : spec.required().entrySet()) {
+					lookup.get(e.getKey()).ifPresent(h -> stack.enchant(h, e.getValue()));
+				}
+			}
+			return stack;
+		}
+		return ItemStack.EMPTY;
 	}
 
 	/** The real code a resolved target's virtual {@code "[#]"} research key is built from - see this class's
@@ -319,12 +387,15 @@ public class ResearchRequirements {
 		}
 	}
 
+	/** Whether the player carries one of this resolved {@code required_item} target - the per-item tick of the book's
+	 * requirement row, and the check {@link #isStageSatisfied} runs for every entry. */
 	@SuppressWarnings("unchecked")
-	private static boolean isCarrying(Player player, Object target) {
+	public static boolean isCarrying(Player player, Object target) {
 		if (target instanceof EnchantSpec spec) return findEnchanted(player, spec) != null;
 		Predicate<ItemStack> matches;
 		if (target instanceof Item item) matches = stack -> stack.is(item);
 		else if (target instanceof TagKey<?> tag) matches = stack -> stack.is((TagKey<Item>) tag);
+		else if (target instanceof AspectItemSpec spec) matches = stack -> matchesAspects(stack, spec);
 		else return false;
 		// maxCount 0 means "count only, don't remove" - the same real accessor ScanSky/ResearchTableMenu
 		// already use for this port's own inventory checks.
@@ -341,8 +412,19 @@ public class ResearchRequirements {
 		Predicate<ItemStack> matches;
 		if (target instanceof Item item) matches = stack -> stack.is(item);
 		else if (target instanceof TagKey<?> tag) matches = stack -> stack.is((TagKey<Item>) tag);
+		else if (target instanceof AspectItemSpec spec) matches = stack -> matchesAspects(stack, spec);
 		else return;
 		player.getInventory().clearOrCountMatchingItems(matches, 1, player.getInventory());
+	}
+
+	private static boolean matchesAspects(ItemStack stack, AspectItemSpec spec) {
+		if (!stack.is(spec.item()) || !(stack.getItem() instanceof thaumcraft.api.aspects.IEssentiaContainerItem container)) return false;
+		thaumcraft.api.aspects.AspectList have = container.getAspects(stack);
+		if (have == null) return false;
+		for (thaumcraft.api.aspects.Aspect aspect : spec.aspects().getAspects()) {
+			if (have.getAmount(aspect) < spec.aspects().getAmount(aspect)) return false;
+		}
+		return true;
 	}
 
 	/** The original's own {@code InventoryUtils#checkEnchantedPlaceholder}: the first main-inventory stack (hotbar

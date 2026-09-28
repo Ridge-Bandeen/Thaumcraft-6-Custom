@@ -27,7 +27,7 @@ public class ResearchToast implements Toast {
 	@Override
 	public Visibility render(GuiGraphics graphics, ToastComponent toastComponent, long timeSinceLastVisible) {
 		graphics.blit(TEX, 0, 0, 0, 224, 160, 32);
-		ThaumonomiconScreen.renderEntryIcon(graphics, entry, 6 + 8, 8 + 8, false);
+		ThaumonomiconScreen.drawResearchIcon(graphics, entry, 6, 8, false);
 		Font font = toastComponent.getMinecraft().font;
 		graphics.drawString(font, Component.translatable("research.complete"), 30, 7, 10631665, false);
 		String name = entry.getLocalizedName().getString();

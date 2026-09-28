@@ -265,8 +265,12 @@ public class ThaumcraftResearchLoader extends SimpleJsonResourceReloadListener {
 				continue;
 			}
 			String id = s.contains(";") ? s.substring(0, s.indexOf(';')) : s;
-			ItemStack stack = parseItemStack(id);
-			if (stack != null) {
+			// Legacy metadata ids ("thaumcraft:plate;1;1", "thaumcraft:mind", "thaumcraft:smelter_basic") go through
+			// the same 1.12 -> modern alias table the stage requirements use, so they show the right item rather than
+			// falling through to a (missing) texture path.
+			Object resolved = ResearchRequirements.resolveSpec(s);
+			ItemStack stack = resolved instanceof net.minecraft.world.item.Item item ? new ItemStack(item) : parseItemStack(id);
+			if (stack != null && !stack.isEmpty()) {
 				out.add(stack);
 			} else {
 				try {
@@ -306,7 +310,9 @@ public class ThaumcraftResearchLoader extends SimpleJsonResourceReloadListener {
 		for (JsonElement el : array) {
 			String s = el.getAsString();
 			try {
-				out.add(ResourceLocation.parse(s));
+				// The original's catalog keys are CamelCase ("thaumcraft:Bellows"), which a modern ResourceLocation refuses;
+				// they're matched case-insensitively (see ResearchRecipeCatalog), so carry them lower-cased.
+				out.add(ResourceLocation.parse(s.toLowerCase(java.util.Locale.ROOT)));
 			} catch (Exception ex) {
 				Thaumcraft.LOGGER.debug("Skipping unparseable research recipe reference [{}]: {}", s, ex.toString());
 			}

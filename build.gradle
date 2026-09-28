@@ -216,6 +216,8 @@ sourceSets {
             include 'thaumcraft/client/ClientResearchTableCache.java'
             include 'thaumcraft/common/container/ThaumonomiconMenu.java'
             include 'thaumcraft/client/gui/ThaumonomiconScreen.java'
+            include 'thaumcraft/client/gui/ResearchPageView.java'
+            include 'thaumcraft/client/gui/ResearchTooltip.java'
             include 'thaumcraft/common/lib/network/ClientboundPlayerKnowledgePacket.java'
             include 'thaumcraft/client/ClientPlayerKnowledgeCache.java'
             include 'thaumcraft/common/items/curios/ItemThaumonomicon.java'
@@ -536,6 +538,8 @@ sourceSets {
             include 'thaumcraft/common/lib/research/PlayerWarp.java'
             include 'thaumcraft/common/lib/research/ThaumcraftResearchLoader.java'
             include 'thaumcraft/common/lib/research/ResearchRequirements.java'
+            include 'thaumcraft/common/lib/research/ResearchRecipeCatalog.java'
+            include 'thaumcraft/common/lib/research/LegacyRecipeKeys.java'
 
             include 'thaumcraft/common/blocks/crafting/BlockCrucible.java'
             include 'thaumcraft/common/tiles/crafting/TileCrucible.java'
@@ -762,6 +766,7 @@ sourceSets {
             include 'thaumcraft/client/gui/ClientAspectsTooltip.java'
             include 'thaumcraft/client/gui/AspectTooltipEvents.java'
             include 'thaumcraft/client/gui/ResearchToast.java'
+            include 'thaumcraft/client/dev/ScreenshotHarness.java'
             include 'thaumcraft/common/container/LogisticsMenu.java'
             include 'thaumcraft/common/lib/network/ServerboundLogisticsPackets.java'
             include 'thaumcraft/common/container/PotionSprayerMenu.java'
@@ -812,6 +817,15 @@ neoForge {
         client {
             client()
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        // Dev-only visual check: auto-joins the "Thaum Shots" save (a copy of the test world) and runs the scripted
+        // screenshot plan in thaumcraft.client.dev.ScreenshotHarness. Pass the plan with -Pshots=... .
+        screenshotClient {
+            client()
+            gameDirectory = file('run')
+            programArguments.addAll '--quickPlaySingleplayer', 'Thaum Shots'
+            systemProperty 'thaumcraft.screenshots', project.findProperty('shots') ?: 'book,shot:browser'
         }
 
         server {

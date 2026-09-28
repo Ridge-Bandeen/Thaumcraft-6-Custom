@@ -14307,18 +14307,23 @@ public class ThaumcraftGameTests {
 			ServerPlayer player = helper.makeMockServerPlayerInLevel();
 			IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
 			thaumcraft.common.container.ThaumonomiconMenu menu = new thaumcraft.common.container.ThaumonomiconMenu(0, player.getInventory());
-			int id = "TEST_STUDY_GATE".hashCode();
+			int id = thaumcraft.common.container.ThaumonomiconMenu.buttonId(thaumcraft.common.container.ThaumonomiconMenu.ACTION_OPEN, "TEST_STUDY_GATE");
+			int study = thaumcraft.common.container.ThaumonomiconMenu.buttonId(thaumcraft.common.container.ThaumonomiconMenu.ACTION_COMPLETE_STAGE, "TEST_STUDY_GATE");
 
 			helper.assertTrue(menu.clickMenuButton(player, id), "the first (open) click should succeed unconditionally");
 			helper.assertTrue(knowledge.isResearchKnown("TEST_STUDY_GATE") && !knowledge.isResearchComplete("TEST_STUDY_GATE"),
 					"opening it should reveal stage 1 without completing the entry");
 			helper.assertTrue(knowledge.getResearchStage("TEST_STUDY_GATE") == 1, "exactly stage 1 should be marked reached");
 
-			helper.assertFalse(menu.clickMenuButton(player, id), "studying without the required nether star should fail");
+			helper.assertFalse(menu.clickMenuButton(player, study), "studying without the required nether star should fail");
 			helper.assertTrue(knowledge.getResearchStage("TEST_STUDY_GATE") == 1, "and not advance the stage count");
 
 			player.getInventory().add(new ItemStack(Items.NETHER_STAR));
-			helper.assertTrue(menu.clickMenuButton(player, id), "studying with the nether star present should succeed");
+			// re-opening an entry still on its first of two stages only clears badges - like the original's node click, it
+			// never runs the stage check (that's the in-book "complete stage" click)
+			menu.clickMenuButton(player, id);
+			helper.assertTrue(knowledge.getResearchStage("TEST_STUDY_GATE") == 1, "a plain re-open must not spend the star or advance");
+			helper.assertTrue(menu.clickMenuButton(player, study), "studying with the nether star present should succeed");
 			boolean stillHasStar = false;
 			for (ItemStack s : player.getInventory().items) if (s.is(Items.NETHER_STAR)) stillHasStar = true;
 			helper.assertFalse(stillHasStar, "the nether star should have really been consumed");
@@ -14350,7 +14355,7 @@ public class ThaumcraftGameTests {
 			ServerPlayer player = helper.makeMockServerPlayerInLevel();
 			IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
 			thaumcraft.common.container.ThaumonomiconMenu menu = new thaumcraft.common.container.ThaumonomiconMenu(0, player.getInventory());
-			helper.assertTrue(menu.clickMenuButton(player, "TEST_ONE_CLICK".hashCode()), "the single click should succeed");
+			helper.assertTrue(menu.clickMenuButton(player, thaumcraft.common.container.ThaumonomiconMenu.buttonId(thaumcraft.common.container.ThaumonomiconMenu.ACTION_OPEN, "TEST_ONE_CLICK")), "the single click should succeed");
 			helper.assertTrue(knowledge.isResearchComplete("TEST_ONE_CLICK"), "a one-stage, requirement-free entry should complete on that one click, not need a second");
 			helper.succeed();
 		} finally {

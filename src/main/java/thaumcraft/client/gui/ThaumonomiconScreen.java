@@ -1,33 +1,42 @@
 package thaumcraft.client.gui;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Map;
+import java.util.Set;
 
+import org.lwjgl.glfw.GLFW;
+import org.lwjgl.opengl.GL11;
+
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.BufferUploader;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.math.Axis;
+
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingRecipe;
-import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.ShapedRecipe;
-import thaumcraft.api.aspects.Aspect;
-import thaumcraft.api.aspects.AspectList;
+import org.joml.Matrix4f;
 import thaumcraft.api.capabilities.IPlayerKnowledge;
-import thaumcraft.api.crafting.ArcaneRecipe;
-import thaumcraft.api.crafting.ArcaneShapedRecipe;
-import thaumcraft.api.crafting.CrucibleRecipe;
-import thaumcraft.api.crafting.InfusionRecipe;
-import thaumcraft.api.research.ResearchAddendum;
+import thaumcraft.api.casters.FocusEngine;
+import thaumcraft.api.casters.IFocusElement;
 import thaumcraft.api.research.ResearchCategories;
 import thaumcraft.api.research.ResearchCategory;
 import thaumcraft.api.research.ResearchEntry;
@@ -35,109 +44,74 @@ import thaumcraft.api.research.ResearchEntry.EnumResearchMeta;
 import thaumcraft.api.research.ResearchStage;
 import thaumcraft.client.ClientPlayerKnowledgeCache;
 import thaumcraft.common.container.ThaumonomiconMenu;
-import thaumcraft.common.lib.crafting.InfusionEnchantmentRecipe;
+import thaumcraft.common.lib.research.ResearchRecipeCatalog;
 
 /**
- * Replaces the old (1.12.2) {@code GuiResearchBrowser}/{@code GuiResearchPage} pair. Restores the original's
- * real hex-grid browser in full - pan/zoom, per-entry hex/round icon frames, real connector lines between
- * parents/siblings, category tabs, "new research"/"new page" badges - reusing the original's own real
- * {@code gui_research_browser.png} atlas and UV layout directly. The reader side is restored as a real
- * two-page open-book spread (the original's {@code gui_researchbook.png} art, real {@code <BR>}/{@code <LINE>}/
- * {@code <DIV>}/{@code <PAGE>}/{@code <IMG>} stage-text markup, real addenda) - see {@link #buildReaderPages}'s
- * own doc comment for the one deliberate omission (the live per-stage requirements checklist) and why it
- * doesn't apply here. {@code GuiResearchPage}'s real recipe-visualization page types (crafting/arcane/
- * crucible/infusion/compound-crafting grids, the aspect/knowledge "insert" popups) are a separate, later
- * restoration pass.
+ * The Thaumonomicon: a port of the original's {@code GuiResearchBrowser}, with its {@code GuiResearchPage} as
+ * {@link ResearchPageView} opened on top. Same layout and numbers throughout - the 16px inset map pane with its
+ * wooden frame, category tabs down the left (with completion percentage on hover), the node map in 24px cells panned
+ * by dragging and zoomed 1x-2x with the wheel, the tiled two-layer parallax background, the connector-line pieces,
+ * node frames by meta, the "new" badges, the pulsing violet glow behind nodes that cost warp, and the search mode
+ * (categories, known research and the recipes of the stage you're on).
  *
- * <p>Real search: category names plus every research entry the player already knows (matched by localized
- * name), following the original's own real filtering - dropped from that original search: matching against
- * craftable-recipe display names within a stage's {@code recipes} list, since no recipe-catalog/name-lookup
- * infrastructure exists in this port to drive that half.
- *
- * <p>Real, deliberate simplifications versus the original, each because a supporting system doesn't exist in
- * this port (not a visual shortcut on the parts that do): the original's separate scrollable "addon mod
- * categories" side panel is dropped outright rather than simplified - this port can never have more than the
- * 7 real Thaumcraft categories, so that whole panel is unreachable dead code here, not a real cut; the
- * "forbidden" (warp-cost) pulsing node-texture warning is replaced with a simpler real pulsing color marker
- * (no {@code UtilsFX}/node-texture helper exists in this port); a {@code "focus:"} icon renders its real
- * registered {@link thaumcraft.api.casters.FocusEngine} icon+tint when that focus element is actually
- * ported, falling back to a generic placeholder only for the handful that aren't yet. Real network-synced
- * click actions (start research, clear "new" flags) go through {@link ThaumonomiconMenu}'s button-click
- * plumbing instead of the original's dedicated packets, same approach as the rest of this port.
+ * <p>This is a container screen only so its clicks have a server round trip ({@link ThaumonomiconMenu}); it has no
+ * slots and draws everything itself.
  */
 public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMenu> {
 
-	private static final ResourceLocation ATLAS = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/gui/gui_research_browser.png");
-	private static final int CELL = 24;
-	private static final float MIN_ZOOM = 1.0f;
-	private static final float MAX_ZOOM = 2.0f;
+	static final ResourceLocation TX1 = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/gui/gui_research_browser.png");
+	private static final ResourceLocation NODE_TEXTURE = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/auranodes.png");
+	private static final ResourceLocation FOCUS_EFFECT = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/foci/_effect.png");
+	private static final ResourceLocation FOCUS_MEDIUM = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/foci/_medium.png");
+	/** ConfigResearch.TCCategories - these get the left-hand tab column; anything else goes on the right. */
+	private static final List<String> TC_CATEGORIES = List.of("BASICS", "AUROMANCY", "ALCHEMY", "ARTIFICE", "INFUSION", "GOLEMANCY", "ELDRITCH");
 
-	// Persists across screen re-opens, matching the original's own static lastX/lastY/selectedCategory.
-	private static double savedPanX = Double.NaN;
-	private static double savedPanY = Double.NaN;
-	private static String savedCategory;
+	// the original's statics: where the map was left, which category, search mode and the addon-tab scroll
+	private static double lastX = -9999.0;
+	private static double lastY = -9999.0;
+	static String selectedCategory;
+	private static boolean searching;
+	private static int catScrollPos;
+	private static int catScrollMax;
 
-	private String category;
-	private final List<ResearchEntry> entries = new ArrayList<>();
-	private double gridMinX, gridMinY, gridMaxX, gridMaxY;
-
-	private float zoom = 1.0f;
-	private double panX, panY;
-	private double panPrevX, panPrevY;
-	private double panTargetX, panTargetY;
+	private int boundsLeft, boundsTop, boundsRight, boundsBottom;
+	private final int startX = 16;
+	private final int startY = 16;
+	private int screenX, screenY;
+	private float screenZoom = 1.0f;
+	private double curMouseX, curMouseY, guiMapX, guiMapY, tempMapX, tempMapY;
 	private boolean dragging;
-	private double dragLastMouseX, dragLastMouseY;
+	private double dragMouseX, dragMouseY;
+	private int addonShift;
 
-	private int viewLeft, viewTop, viewWidth, viewHeight;
-	private ResearchEntry hovered;
-
-	private boolean searching;
+	private final List<ResearchEntry> research = new ArrayList<>();
+	private final Set<String> invisible = new HashSet<>();
+	private ResearchEntry currentHighlight;
+	private final List<CategoryTab> tabs = new ArrayList<>();
+	private boolean scrollButtons;
 	private EditBox searchField;
-	private final List<SearchHit> searchResults = new ArrayList<>();
+	private final List<SearchResult> searchResults = new ArrayList<>();
 
-	private ResearchEntry openEntry;
-	private final List<ReaderPage> readerPages = new ArrayList<>();
-	private int readerPage;
+	/** The open book page, or null while browsing. */
+	private ResearchPageView page;
 
-	private static final ResourceLocation BOOK_TEX = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/gui/gui_researchbook.png");
-	private static final ResourceLocation OVERLAY_TEX = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/gui/gui_researchbook_overlay.png");
-	private static final ResourceLocation PAPER_TEX = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/gui/paper.png");
-	private static final int BOOK_W = 256, BOOK_H = 181;
-	private static final int PAGE_TEXT_WIDTH = 140;
-	private static final Pattern MARKUP_MARKER = Pattern.compile("~P|~D|~L|~I");
-	private static final Object PAGE_BREAK = new Object();
-	private static final ResourceLocation[] NO_RECIPES = new ResourceLocation[0];
+	private record CategoryTab(ResearchCategory category, String key, boolean flip, int x, int y, int completion) {
+	}
 
-	/** The recipe bookmark currently open in the reader's detail popup, {@code null} when closed. */
-	private RecipeHolder<?> shownRecipe;
-
-	/** One pre-cut decorative rule image, cut from {@link #BOOK_TEX} under the original's own fixed 256x256
-	 * UV-space convention (its real file is 512x512 - see {@link #drawReaderImage} for why that's irrelevant). */
-	private record ReaderImage(ResourceLocation tex, int u, int v, int w, int h, float scale, int aw, int ah) {
-		static ReaderImage of(ResourceLocation tex, int u, int v, int w, int h, float scale) {
-			return new ReaderImage(tex, u, v, w, h, scale, Math.round(w * scale), Math.round(h * scale));
+	private record SearchResult(String label, String key, ResourceLocation recipe, boolean cat) implements Comparable<SearchResult> {
+		@Override
+		public int compareTo(SearchResult o) {
+			int c = label.compareTo(o.label);
+			if (c != 0) return c;
+			c = key.compareTo(o.key);
+			return c == 0 && recipe != null && o.recipe != null ? recipe.compareTo(o.recipe) : c;
 		}
-	}
-
-	private static final ReaderImage DIVIDER_LINE = ReaderImage.of(BOOK_TEX, 24, 184, 95, 6, 1f);
-	private static final ReaderImage DIVIDER_BIG = ReaderImage.of(BOOK_TEX, 28, 192, 140, 6, 1f);
-
-	/** One physical page's worth of already-paginated content - each element is either a wrapped text
-	 * {@link String} line (possibly ending in the internal {@code "~B"} paragraph-break marker) or a
-	 * {@link ReaderImage}, mirroring the original's own {@code Page.contents} mixed list. Also carries the
-	 * real {@code recipes} bookmark list from whichever stage or addendum this page's own text came from. */
-	private static final class ReaderPage {
-		final List<Object> content = new ArrayList<>();
-		ResourceLocation[] recipes = NO_RECIPES;
-	}
-
-	/** One real search result row - either a category (jump there) or a known research entry (open its
-	 * page directly), matching the original's own two real result kinds. */
-	private record SearchHit(Component label, String categoryKey, ResearchEntry entry) {
 	}
 
 	public ThaumonomiconScreen(ThaumonomiconMenu menu, Inventory playerInventory, Component title) {
 		super(menu, playerInventory, title);
+		tempMapX = guiMapX = curMouseX = lastX;
+		tempMapY = guiMapY = curMouseY = lastY;
 	}
 
 	@Override
@@ -145,284 +119,288 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 		imageWidth = width;
 		imageHeight = height;
 		super.init();
-		inventoryLabelY = -1000; // no player-inventory slots in this menu at all - see TurretConfigScreen
-
-		viewLeft = 16;
-		viewTop = 16;
-		viewWidth = Math.max(1, width - 32);
-		viewHeight = Math.max(1, height - 32);
-
-		if (category == null) {
-			category = savedCategory != null && ResearchCategories.getResearchCategory(savedCategory) != null
-					? savedCategory
-					: ResearchCategories.researchCategories.keySet().iterator().next();
+		updateResearch();
+		if (lastX == -9999.0 || guiMapX > boundsRight || guiMapX < boundsLeft) {
+			tempMapX = guiMapX = (boundsLeft + boundsRight) / 2;
 		}
-		rebuildEntries();
-
-		if (Double.isNaN(savedPanX) || savedPanX < gridMinX || savedPanX > gridMaxX || savedPanY < gridMinY || savedPanY > gridMaxY) {
-			panTargetX = (gridMinX + gridMaxX) / 2.0;
-			panTargetY = (gridMinY + gridMaxY) / 2.0;
-		} else {
-			panTargetX = savedPanX;
-			panTargetY = savedPanY;
+		if (lastY == -9999.0 || guiMapY > boundsBottom || guiMapY < boundsTop) {
+			tempMapY = guiMapY = (boundsBottom + boundsTop) / 2;
 		}
-		panX = panPrevX = panTargetX;
-		panY = panPrevY = panTargetY;
+		if (page != null) page.init();
+	}
 
-		searchField = new EditBox(font, viewLeft + 4, viewTop + 4, 89, font.lineHeight + 2, Component.translatable("tc.search"));
-		searchField.setMaxLength(32);
+	IPlayerKnowledge knowledge() {
+		return ClientPlayerKnowledgeCache.getData();
+	}
+
+	/** ThaumcraftCapabilities#knowsResearchStrict against the synced client copy: "KEY@n" needs stage n, a bare key completion. */
+	boolean knowsStrict(String key) {
+		if (key == null) return true;
+		IPlayerKnowledge k = knowledge();
+		return key.indexOf('@') >= 0 ? k.isResearchKnown(key) : k.isResearchComplete(key);
+	}
+
+	boolean knowsStrict(String[] keys) {
+		if (keys == null) return true;
+		for (String key : keys) if (!knowsStrict(key)) return false;
+		return true;
+	}
+
+	void updateResearch() {
+		screenX = width - 32;
+		screenY = height - 32;
+		research.clear();
+		if (selectedCategory == null) selectedCategory = ResearchCategories.researchCategories.keySet().iterator().next();
+		searchField = new EditBox(font, 20, 20, 89, font.lineHeight, Component.translatable("tc.search"));
+		searchField.setMaxLength(15);
+		searchField.setTextColor(0xFFFFFF);
 		searchField.setResponder(s -> updateSearch());
+		clearWidgets();
+		if (searching) {
+			addWidget(searchField);
+			setFocused(searchField);
+			searchField.setFocused(true);
+			updateSearch();
+		}
 
-		rebuild();
+		int limit = (int) Math.floor((screenY - 28) / 24.0f);
+		addonShift = 0;
+		int count = 0;
+		tabs.clear();
+		int tcCount = 0;
+		int otherCount = 0;
+		for (String key : ResearchCategories.researchCategories.keySet()) {
+			ResearchCategory rc = ResearchCategories.getResearchCategory(key);
+			int total = 0;
+			int known = 0;
+			for (ResearchEntry entry : rc.research.values()) {
+				if (entry.hasMeta(EnumResearchMeta.AUTOUNLOCK)) continue;
+				total++;
+				if (knowledge().isResearchKnown(entry.getKey())) known++;
+			}
+			int completion = (int) (known / (float) total * 100.0f);
+			if (rc.researchKey != null && !knowsStrict(rc.researchKey)) continue;
+			if (TC_CATEGORIES.contains(key)) {
+				tcCount++;
+				tabs.add(new CategoryTab(rc, key, false, 1, 10 + tcCount * 24, completion));
+				continue;
+			}
+			if (++count > limit + catScrollPos) continue;
+			if (count - 1 < catScrollPos) continue;
+			otherCount++;
+			tabs.add(new CategoryTab(rc, key, true, width - 17, 10 + otherCount * 24, completion));
+		}
+		scrollButtons = count > limit || count < catScrollPos;
+		if (scrollButtons) addonShift = (screenY - 28) % 24 / 2;
+		catScrollMax = count - limit;
+
+		if (selectedCategory == null || selectedCategory.isEmpty()) return;
+		ResearchCategory selected = ResearchCategories.getResearchCategory(selectedCategory);
+		if (selected == null) return;
+		research.addAll(selected.research.values());
+		boundsLeft = 99999;
+		boundsTop = 99999;
+		boundsRight = -99999;
+		boundsBottom = -99999;
+		for (ResearchEntry entry : research) {
+			if (entry == null || !isVisible(entry)) continue;
+			boundsLeft = Math.min(boundsLeft, entry.getDisplayColumn() * 24 - screenX + 48);
+			boundsRight = Math.max(boundsRight, entry.getDisplayColumn() * 24 - 24);
+			boundsTop = Math.min(boundsTop, entry.getDisplayRow() * 24 - screenY + 48);
+			boundsBottom = Math.max(boundsBottom, entry.getDisplayRow() * 24 - 24);
+		}
+	}
+
+	private boolean isVisible(ResearchEntry entry) {
+		if (knowledge().isResearchKnown(entry.getKey())) return true;
+		if (invisible.contains(entry.getKey()) || (entry.hasMeta(EnumResearchMeta.HIDDEN) && !canUnlockResearch(entry))) return false;
+		if (entry.getParents() == null && entry.hasMeta(EnumResearchMeta.HIDDEN)) return false;
+		if (entry.getParents() != null) {
+			for (String parentKey : entry.getParents()) {
+				ResearchEntry parent = ResearchCategories.getResearch(parentKey);
+				if (parent != null && !isVisible(parent)) {
+					invisible.add(parentKey);
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	/** ResearchManager#doesPlayerHaveRequisites: every parent (stripped of ~ and @) known strictly. */
+	boolean canUnlockResearch(ResearchEntry entry) {
+		String[] parents = entry.getParentsStripped();
+		if (parents == null) return true;
+		for (String parent : parents) if (!knowsStrict(parent)) return false;
+		return true;
 	}
 
 	@Override
 	public void removed() {
 		super.removed();
-		savedPanX = panX;
-		savedPanY = panY;
-		savedCategory = category;
+		lastX = guiMapX;
+		lastY = guiMapY;
 	}
 
-	private void rebuild() {
-		clearWidgets();
-		if (openEntry != null) {
-			addReaderButtons();
-		} else if (searching) {
-			addRenderableWidget(searchField);
-			searchField.setFocused(true);
-		}
-	}
+	// ------------------------------------------------------------------------------------------------------------
+	// Search
+	// ------------------------------------------------------------------------------------------------------------
 
-	private void toggleSearch() {
-		searching = !searching;
-		if (searching) {
-			searchField.setValue("");
-			updateSearch();
-		} else {
-			searchField.setFocused(false);
-		}
-		rebuild();
-	}
-
-	/** Real filtering: category names, plus every research entry the player already knows, matched by
-	 * localized name - see this class's own doc comment for what's dropped from the original's search. */
 	private void updateSearch() {
 		searchResults.clear();
-		String needle = searchField.getValue().toLowerCase();
-		if (needle.isEmpty()) return;
-		for (String key : ResearchCategories.researchCategories.keySet()) {
-			Component name = ResearchCategories.getCategoryName(key);
-			if (name.getString().toLowerCase().contains(needle)) {
-				searchResults.add(new SearchHit(name, key, null));
+		invisible.clear();
+		String s1 = searchField.getValue().toLowerCase();
+		for (CategoryTab tab : tabs) {
+			if (tab.key().toLowerCase().contains(s1)) {
+				searchResults.add(new SearchResult(ResearchCategories.getCategoryName(tab.key()).getString(), tab.key(), null, true));
 			}
 		}
+		List<ResourceLocation> dupCheck = new ArrayList<>();
 		IPlayerKnowledge knowledge = knowledge();
-		for (String key : knowledge.getResearchList()) {
-			ResearchEntry entry = ResearchCategories.getResearch(key);
-			if (entry == null) continue;
-			Component name = entry.getLocalizedName();
-			if (name.getString().toLowerCase().contains(needle)) {
-				searchResults.add(new SearchHit(name, null, entry));
+		for (String pre : knowledge.getResearchList()) {
+			ResearchEntry ri = ResearchCategories.getResearch(pre);
+			if (ri == null) continue;
+			String name = ri.getLocalizedName().getString();
+			if (name.toLowerCase().contains(s1)) searchResults.add(new SearchResult(name, pre, null, false));
+			int stage = knowledge.getResearchStage(pre);
+			if (ri.getStages() == null) continue;
+			int s2 = Math.min(ri.getStages().length - 1, stage + 1);
+			if (s2 < 0) continue;
+			ResearchStage st = ri.getStages()[s2];
+			if (st == null || st.getRecipes() == null || minecraft == null || minecraft.level == null) continue;
+			for (ResourceLocation rec : st.getRecipes()) {
+				if (dupCheck.contains(rec)) continue;
+				dupCheck.add(rec);
+				List<RecipeHolder<?>> holders = ResearchRecipeCatalog.resolve(minecraft.level.getRecipeManager(), rec);
+				if (holders.isEmpty()) continue;
+				ItemStack out = holders.get(0).value().getResultItem(minecraft.level.registryAccess());
+				if (!out.isEmpty() && out.getHoverName().getString().toLowerCase().contains(s1)) {
+					searchResults.add(new SearchResult(out.getHoverName().getString(), pre, rec, false));
+				}
 			}
 		}
+		searchResults.sort(null);
 	}
 
-	private void addReaderButtons() {
-		addRenderableWidget(Button.builder(Component.translatable("gui.back"), b -> closeEntry())
-				.bounds(viewLeft, viewTop, 60, 18).build());
-		// Page-turning uses real book-arrow graphics hit-tested directly against the mouse (see
-		// prevArrowRect/nextArrowRect + mouseClicked) instead of Button widgets, matching the original's
-		// own non-widget click handling for these.
-
-		// Restored 2026-09-27: real per-stage progression needs a real "study this stage" action once an
-		// entry is known but not yet complete - the original drew this as a clickable quill icon baked into the
-		// page art itself with a graphical requirement checklist around it (see ResearchRequirements' own doc
-		// comment for why the checklist isn't reproduced); a plain button that reports what's missing in chat
-		// on failure is the honest stand-in used here instead.
-		IPlayerKnowledge knowledge = knowledge();
-		if (openEntry != null && knowledge.isResearchKnown(openEntry.getKey()) && !knowledge.isResearchComplete(openEntry.getKey())) {
-			int sw = (width - BOOK_W) / 2;
-			int sh = (height - BOOK_H) / 2;
-			addRenderableWidget(Button.builder(Component.translatable("tc.study"), b -> sendButtonClick(openEntry.getKey().hashCode()))
-					.bounds(sw + BOOK_W / 2 - 40, sh + BOOK_H + 6, 80, 18).build());
-		}
+	private void startSearch() {
+		selectedCategory = "";
+		searching = true;
+		updateResearch();
+		searchField.setValue("");
+		updateSearch();
 	}
 
-	// --------------------------------------------------------------------------------------------------
-	// Data
-	// --------------------------------------------------------------------------------------------------
-
-	private void rebuildEntries() {
-		entries.clear();
-		ResearchCategory cat = ResearchCategories.getResearchCategory(category);
-		gridMinX = gridMinY = 99999;
-		gridMaxX = gridMaxY = -99999;
-		if (cat == null) return;
-		for (ResearchEntry entry : cat.research.values()) {
-			entries.add(entry);
-			if (!isVisible(entry)) continue;
-			double left = entry.getDisplayColumn() * (double) CELL - viewWidth / 2.0;
-			double right = entry.getDisplayColumn() * (double) CELL + viewWidth / 2.0;
-			double top = entry.getDisplayRow() * (double) CELL - viewHeight / 2.0;
-			double bottom = entry.getDisplayRow() * (double) CELL + viewHeight / 2.0;
-			gridMinX = Math.min(gridMinX, left);
-			gridMaxX = Math.max(gridMaxX, right);
-			gridMinY = Math.min(gridMinY, top);
-			gridMaxY = Math.max(gridMaxY, bottom);
-		}
-		if (gridMinX > gridMaxX) {
-			gridMinX = gridMaxX = 0;
-			gridMinY = gridMaxY = 0;
-		}
+	private void selectCategory(String key) {
+		searching = false;
+		selectedCategory = key;
+		updateResearch();
+		tempMapX = guiMapX = (boundsLeft + boundsRight) / 2;
+		tempMapY = guiMapY = (boundsBottom + boundsTop) / 2;
 	}
 
-	private IPlayerKnowledge knowledge() {
-		return ClientPlayerKnowledgeCache.getData();
-	}
-
-	/** Real port of the original's own {@code isVisible} - known research is always visible; otherwise
-	 * HIDDEN entries (and anything with a HIDDEN, not-yet-reachable parent) stay invisible until reachable. */
-	private boolean isVisible(ResearchEntry entry) {
-		IPlayerKnowledge knowledge = knowledge();
-		if (knowledge.isResearchKnown(entry.getKey())) return true;
-		if (entry.hasMeta(EnumResearchMeta.HIDDEN) && !hasRequisites(entry)) return false;
-		if (entry.getParents() == null && entry.hasMeta(EnumResearchMeta.HIDDEN)) return false;
-		if (entry.getParents() != null) {
-			for (String p : entry.getParentsClean()) {
-				ResearchEntry parent = ResearchCategories.getResearch(p);
-				if (parent != null && !isVisible(parent)) return false;
-			}
-		}
-		return true;
-	}
-
-	/** Mirrors {@code IInternalMethodHandler#doesPlayerHaveRequisites} against the synced client-side
-	 * knowledge cache - see {@link ClientPlayerKnowledgeCache}'s own doc comment for why. */
-	private boolean hasRequisites(ResearchEntry entry) {
-		String[] parents = entry.getParentsStripped();
-		if (parents == null) return true;
-		IPlayerKnowledge knowledge = knowledge();
-		for (String parent : parents) {
-			if (!knowsStrict(parent)) return false;
-		}
-		return true;
-	}
-
-	/** Mirrors {@code ThaumcraftCapabilities#knowsResearchStrict}'s single-key semantics: a bare key needs
-	 * real completion, a {@code "key@stage"} qualifier only needs that stage known. */
-	private boolean knowsStrict(String key) {
-		IPlayerKnowledge knowledge = knowledge();
-		return key.indexOf('@') >= 0 ? knowledge.isResearchKnown(key) : knowledge.isResearchComplete(key);
-	}
-
-	// --------------------------------------------------------------------------------------------------
-	// Tick / smoothing - mirrors the original's own real curMouseX/guiMapX two-tick lerp.
-	// --------------------------------------------------------------------------------------------------
-
-	/** The open entry's own stage count last time the reader was rebuilt - see {@link #containerTick}. */
-	private int lastReaderStage = -1;
+	// ------------------------------------------------------------------------------------------------------------
+	// Ticking and input
+	// ------------------------------------------------------------------------------------------------------------
 
 	@Override
 	protected void containerTick() {
 		super.containerTick();
-		if (openEntry != null) {
-			// Restored 2026-09-27 alongside the "Study" button: a successful study advances the entry's own
-			// stage count on the server and syncs it back, but nothing here was watching for that while the
-			// reader stayed open - the next stage's text/recipes, and the button itself once the entry
-			// completes, only ever appeared after closing and reopening the book.
-			int stage = knowledge().getResearchStage(openEntry.getKey());
-			if (stage != lastReaderStage) {
-				lastReaderStage = stage;
-				buildReaderPages();
-				readerPage = Math.min(readerPage, Math.max(0, readerPages.size() - 1));
-				rebuild();
-			}
+		if (page != null) {
+			page.tick();
 			return;
 		}
-		panPrevX = panX;
-		panPrevY = panY;
-		double dx = panTargetX - panX;
-		double dy = panTargetY - panY;
-		double factor = dx * dx + dy * dy < 4.0 ? 1.0 : 0.85;
-		panX += dx * factor;
-		panY += dy * factor;
+		curMouseX = guiMapX;
+		curMouseY = guiMapY;
+		double dx = tempMapX - guiMapX;
+		double dy = tempMapY - guiMapY;
+		if (dx * dx + dy * dy < 4.0) {
+			guiMapX += dx;
+			guiMapY += dy;
+		} else {
+			guiMapX += dx * 0.85;
+			guiMapY += dy * 0.85;
+		}
 	}
-
-	// --------------------------------------------------------------------------------------------------
-	// Input
-	// --------------------------------------------------------------------------------------------------
 
 	@Override
 	public boolean mouseClicked(double mouseX, double mouseY, int button) {
-		if (super.mouseClicked(mouseX, mouseY, button)) return true;
-		if (openEntry != null) {
-			if (button != 0) return false;
-			if (shownRecipe != null) {
-				if (!detailPopupContains(mouseX, mouseY)) {
-					shownRecipe = null;
-					playPageTurnSound();
+		if (page != null) return page.mouseClicked(mouseX, mouseY, button);
+		int mx = (int) mouseX;
+		int my = (int) mouseY;
+		if (!searching && button == 0 && mx >= startX && mx < startX + screenX && my >= startY && my < startY + screenY) {
+			dragging = true;
+			dragMouseX = mouseX;
+			dragMouseY = mouseY;
+		}
+		if (!searching && currentHighlight != null && !knowledge().isResearchKnown(currentHighlight.getKey()) && canUnlockResearch(currentHighlight)) {
+			updateResearch();
+			sendAction(ThaumonomiconMenu.ACTION_OPEN, currentHighlight.getKey());
+			openPage(currentHighlight, null);
+			return true;
+		} else if (currentHighlight != null && knowledge().isResearchKnown(currentHighlight.getKey())) {
+			knowledge().clearResearchFlag(currentHighlight.getKey(), IPlayerKnowledge.EnumResearchFlag.RESEARCH);
+			knowledge().clearResearchFlag(currentHighlight.getKey(), IPlayerKnowledge.EnumResearchFlag.PAGE);
+			sendAction(ThaumonomiconMenu.ACTION_OPEN, currentHighlight.getKey());
+			openPage(currentHighlight, null);
+			return true;
+		} else if (searching) {
+			int q = 0;
+			for (SearchResult sr : searchResults) {
+				if (mx > 22 && mx < 18 + screenX && my >= 32 + q * 10 && my < 40 + q * 10) {
+					if (knowledge().isResearchKnown(sr.key()) && !sr.cat()) {
+						openPage(ResearchCategories.getResearch(sr.key()), sr.recipe());
+						return true;
+					}
+					if (sr.cat()) {
+						selectCategory(sr.key());
+						return true;
+					}
 				}
-				return true;
+				q++;
+				if (32 + (q + 1) * 10 > screenY) break;
 			}
-			int sw = (width - BOOK_W) / 2;
-			int sh = (height - BOOK_H) / 2;
-			RecipeHolder<?> clicked = bookmarkAt(mouseX, mouseY, resolveVisibleRecipes(), sw, sh);
-			if (clicked != null) {
-				shownRecipe = clicked;
-				playPageTurnSound();
-				return true;
-			}
-			if (readerPage > 0 && mouseInsidePrevArrow(mouseX, mouseY)) {
-				readerPage -= 2;
-				playPageTurnSound();
-				return true;
-			}
-			if (readerPage + 2 < readerPages.size() && mouseInsideNextArrow(mouseX, mouseY)) {
-				readerPage += 2;
-				playPageTurnSound();
-				return true;
-			}
-			return false;
 		}
 
-		if (button == 0) {
-			if (searchButtonAt(mouseX, mouseY)) {
-				toggleSearch();
+		// the original's buttons: search, addon-tab scroll arrows, category tabs
+		if (mx >= 1 && my >= height - 17 && mx < 17 && my < height - 1) {
+			startSearch();
+			return true;
+		}
+		if (scrollButtons) {
+			if (mx >= width - 14 && mx < width - 4 && my >= 20 && my < 31 && catScrollPos > 0) {
+				catScrollPos--;
+				updateResearch();
 				return true;
 			}
-			if (searching) {
-				return handleSearchResultClick(mouseX, mouseY);
-			}
-			String tab = tabAt(mouseX, mouseY);
-			if (tab != null) {
-				selectCategory(tab);
+			if (mx >= width - 14 && mx < width - 4 && my >= screenY + 1 && my < screenY + 12 && catScrollPos < catScrollMax) {
+				catScrollPos++;
+				updateResearch();
 				return true;
-			}
-			if (hovered != null && isVisible(hovered)) {
-				tryOpen(hovered);
-				return true;
-			}
-			if (mouseX >= viewLeft && mouseX < viewLeft + viewWidth && mouseY >= viewTop && mouseY < viewTop + viewHeight) {
-				dragging = true;
-				dragLastMouseX = mouseX;
-				dragLastMouseY = mouseY;
 			}
 		}
-		return false;
+		for (CategoryTab tab : tabs) {
+			if (mx >= tab.x() && my >= tab.y() + addonShift && mx < tab.x() + 16 && my < tab.y() + 16 + addonShift) {
+				if (!tab.key().equals(selectedCategory)) selectCategory(tab.key());
+				return true;
+			}
+		}
+		return super.mouseClicked(mouseX, mouseY, button);
 	}
 
 	@Override
 	public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-		if (dragging && button == 0) {
-			panTargetX -= (mouseX - dragLastMouseX) * zoom;
-			panTargetY -= (mouseY - dragLastMouseY) * zoom;
-			panTargetX = Mth.clamp(panTargetX, gridMinX, gridMaxX);
-			panTargetY = Mth.clamp(panTargetY, gridMinY, gridMaxY);
-			panX = panPrevX = panTargetX;
-			panY = panPrevY = panTargetY;
-			dragLastMouseX = mouseX;
-			dragLastMouseY = mouseY;
+		if (page != null) return true;
+		if (dragging && button == 0 && !searching) {
+			guiMapX -= (mouseX - dragMouseX) * screenZoom;
+			guiMapY -= (mouseY - dragMouseY) * screenZoom;
+			curMouseX = tempMapX = guiMapX;
+			curMouseY = tempMapY = guiMapY;
+			dragMouseX = mouseX;
+			dragMouseY = mouseY;
+			if (tempMapX < boundsLeft * (double) screenZoom) tempMapX = boundsLeft * (double) screenZoom;
+			if (tempMapY < boundsTop * (double) screenZoom) tempMapY = boundsTop * (double) screenZoom;
+			if (tempMapX >= boundsRight * (double) screenZoom) tempMapX = boundsRight * screenZoom - 1.0f;
+			if (tempMapY >= boundsBottom * (double) screenZoom) tempMapY = boundsBottom * screenZoom - 1.0f;
 			return true;
 		}
 		return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
@@ -436,1106 +414,527 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-		if (openEntry != null || searching) return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
-		zoom = Mth.clamp((float) (zoom - scrollY * 0.25f), MIN_ZOOM, MAX_ZOOM);
-		return true;
-	}
-
-	private String tabAt(double mouseX, double mouseY) {
-		int index = 0;
-		for (String key : ResearchCategories.researchCategories.keySet()) {
-			int y = 10 + index * 24;
-			if (mouseX >= 1 && mouseX < 17 && mouseY >= y && mouseY < y + 16) return key;
-			index++;
-		}
-		return null;
-	}
-
-	private boolean searchButtonAt(double mouseX, double mouseY) {
-		return mouseX >= 1 && mouseX < 17 && mouseY >= height - 17 && mouseY < height - 1;
-	}
-
-	private static final int SEARCH_ROW_HEIGHT = 12;
-
-	private boolean handleSearchResultClick(double mouseX, double mouseY) {
-		int rowTop = viewTop + 24;
-		if (mouseX < viewLeft + 4 || mouseX >= viewLeft + viewWidth - 4) return false;
-		int row = (int) ((mouseY - rowTop) / SEARCH_ROW_HEIGHT);
-		if (row < 0 || row >= searchResults.size()) return false;
-		SearchHit hit = searchResults.get(row);
-		if (hit.categoryKey() != null) {
-			toggleSearch();
-			selectCategory(hit.categoryKey());
-		} else if (hit.entry() != null) {
-			toggleSearch();
-			category = hit.entry().getCategory();
-			rebuildEntries();
-			openReader(hit.entry());
+		if (page != null) return page.mouseScrolled(scrollY);
+		if (!searching) {
+			if (scrollY < 0) screenZoom += 0.25f;
+			else if (scrollY > 0) screenZoom -= 0.25f;
+			screenZoom = Mth.clamp(screenZoom, 1.0f, 2.0f);
 		}
 		return true;
 	}
 
-	private void selectCategory(String key) {
-		if (key.equals(category)) return;
-		category = key;
-		rebuildEntries();
-		panTargetX = (gridMinX + gridMaxX) / 2.0;
-		panTargetY = (gridMinY + gridMaxY) / 2.0;
-		panX = panPrevX = panTargetX;
-		panY = panPrevY = panTargetY;
-	}
-
-	private void tryOpen(ResearchEntry entry) {
-		if (!hasRequisites(entry)) return;
-		if (!knowledge().isResearchComplete(entry.getKey())) {
-			sendButtonClick(entry.getKey().hashCode());
-		} else {
-			sendButtonClick(entry.getKey().hashCode()); // clears "new" flags server-side, see ThaumonomiconMenu
+	@Override
+	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+		if (page != null) return page.keyPressed(keyCode, scanCode) || true;
+		if (searching && searchField.keyPressed(keyCode, scanCode, modifiers)) return true;
+		if (keyCode == GLFW.GLFW_KEY_ESCAPE || (minecraft != null && minecraft.options.keyInventory.matches(keyCode, scanCode) && !searching)) {
+			onClose();
+			return true;
 		}
-		openReader(entry);
+		return searching || super.keyPressed(keyCode, scanCode, modifiers);
 	}
 
-	private void openReader(ResearchEntry entry) {
-		openEntry = entry;
-		readerPage = 0;
-		shownRecipe = null;
-		lastReaderStage = knowledge().getResearchStage(entry.getKey());
-		buildReaderPages();
-		rebuild();
+	@Override
+	public boolean charTyped(char codePoint, int modifiers) {
+		if (page == null && searching) return searchField.charTyped(codePoint, modifiers);
+		return super.charTyped(codePoint, modifiers);
 	}
 
-	private void closeEntry() {
-		openEntry = null;
-		readerPages.clear();
-		readerPage = 0;
-		shownRecipe = null;
-		rebuild();
+	void sendAction(int action, String key) {
+		int id = ThaumonomiconMenu.buttonId(action, key);
+		if (id >= 0 && minecraft != null && minecraft.gameMode != null) minecraft.gameMode.handleInventoryButtonClick(menu.containerId, id);
 	}
 
-	private void sendButtonClick(int id) {
-		if (minecraft != null && minecraft.gameMode != null) {
-			minecraft.gameMode.handleInventoryButtonClick(menu.containerId, id);
-		}
+	void openPage(ResearchEntry entry, ResourceLocation recipe) {
+		if (entry == null) return;
+		page = new ResearchPageView(this, entry, recipe);
+		page.init();
 	}
 
-	// --------------------------------------------------------------------------------------------------
+	/** Back from the book to the map - the original rebuilt the browser here, so newly revealed nodes show at once. */
+	void closePage() {
+		page = null;
+		invisible.clear();
+		updateResearch();
+	}
+
+	void playSound(SoundEvent sound, float volume, float pitch) {
+		if (minecraft != null && minecraft.player != null) minecraft.player.playSound(sound, volume, pitch);
+	}
+
+	// ------------------------------------------------------------------------------------------------------------
 	// Rendering
-	// --------------------------------------------------------------------------------------------------
+	// ------------------------------------------------------------------------------------------------------------
 
 	@Override
 	protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-		graphics.fill(0, 0, width, height, 0xFF000000);
 	}
 
 	@Override
-	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-		super.render(graphics, mouseX, mouseY, partialTick);
-		if (openEntry != null) {
-			renderReader(graphics, mouseX, mouseY);
-		} else {
-			renderBrowser(graphics, mouseX, mouseY, partialTick);
+	public void render(GuiGraphics graphics, int mx, int my, float partialTick) {
+		// drawDefaultBackground over a world
+		graphics.fillGradient(0, 0, width, height, 0xC0101010, 0xD0101010);
+		graphics.flush();
+		if (page != null) {
+			page.render(graphics, mx, my, partialTick);
+			return;
 		}
-	}
+		int locX = Mth.floor(curMouseX + (guiMapX - curMouseX) * partialTick);
+		int locY = Mth.floor(curMouseY + (guiMapY - curMouseY) * partialTick);
+		if (locX < boundsLeft * screenZoom) locX = (int) (boundsLeft * screenZoom);
+		if (locY < boundsTop * screenZoom) locY = (int) (boundsTop * screenZoom);
+		if (locX >= boundsRight * screenZoom) locX = (int) (boundsRight * screenZoom - 1.0f);
+		if (locY >= boundsBottom * screenZoom) locY = (int) (boundsBottom * screenZoom - 1.0f);
 
-	private void renderBrowser(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
 		if (!searching) {
-			double locX = Mth.clamp(panPrevX + (panX - panPrevX) * partialTick, gridMinX, gridMaxX);
-			double locY = Mth.clamp(panPrevY + (panY - panPrevY) * partialTick, gridMinY, gridMaxY);
-
-			ResearchCategory cat = ResearchCategories.getResearchCategory(category);
-			if (cat != null) renderParallaxBackground(graphics, cat, locX, locY);
-
 			graphics.pose().pushPose();
-			graphics.pose().translate(viewLeft, viewTop, 0);
-			graphics.pose().scale(1.0f / zoom, 1.0f / zoom, 1.0f);
-			graphics.enableScissor(viewLeft, viewTop, viewLeft + viewWidth, viewTop + viewHeight);
-
-			renderConnectorLines(graphics, locX, locY);
-			hovered = renderIcons(graphics, mouseX, mouseY, locX, locY);
-
-			graphics.disableScissor();
+			graphics.pose().scale(1.0f / screenZoom, 1.0f / screenZoom, 1.0f);
+			drawZoomable(graphics, mx, my, locX, locY);
 			graphics.pose().popPose();
-
-			renderCategoryTabs(graphics, mouseX, mouseY);
-			if (hovered != null) renderHoverTooltip(graphics, mouseX, mouseY);
 		} else {
-			graphics.fill(viewLeft, viewTop, viewLeft + viewWidth, viewTop + viewHeight, 0xE0100810);
-			renderSearchResults(graphics, mouseX, mouseY);
-		}
-
-		renderBorderFrame(graphics);
-		renderSearchButton(graphics, mouseX, mouseY);
-	}
-
-	private void renderSearchButton(GuiGraphics graphics, int mouseX, int mouseY) {
-		boolean hoveredButton = searchButtonAt(mouseX, mouseY);
-		graphics.setColor(searching || hoveredButton ? 1.0f : 0.8f, searching || hoveredButton ? 1.0f : 0.8f, searching || hoveredButton ? 1.0f : 0.8f, 1.0f);
-		graphics.blit(ATLAS, 1, height - 17, 160, 16, 16, 16);
-		graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-		if (hoveredButton) {
-			graphics.renderTooltip(font, Component.translatable("tc.search"), mouseX, mouseY);
-		}
-	}
-
-	private void renderSearchResults(GuiGraphics graphics, int mouseX, int mouseY) {
-		int rowTop = viewTop + 24;
-		int rowLeft = viewLeft + 4;
-		int rowWidth = viewWidth - 8;
-		for (int i = 0; i < searchResults.size(); i++) {
-			int y = rowTop + i * SEARCH_ROW_HEIGHT;
-			if (y + SEARCH_ROW_HEIGHT > viewTop + viewHeight) {
-				graphics.drawString(font, Component.translatable("tc.search.more"), rowLeft, y, 0xFFA0A0A0);
-				break;
+			currentHighlight = null;
+			searchField.render(graphics, mx, my, partialTick);
+			int q = 0;
+			for (SearchResult sr : searchResults) {
+				int color = sr.cat() ? 14527146 : (sr.recipe() == null ? 14540253 : 11184861);
+				if (sr.recipe() != null) {
+					graphics.pose().pushPose();
+					graphics.pose().scale(0.5f, 0.5f, 1f);
+					graphics.blit(TX1, 44, (32 + q * 10) * 2, 224, 48, 16, 16);
+					graphics.pose().popPose();
+				}
+				if (mx > 22 && mx < 18 + screenX && my >= 32 + q * 10 && my < 40 + q * 10) {
+					color = sr.recipe() == null ? 16777215 : (sr.cat() ? 16764108 : 13421823);
+				}
+				graphics.drawString(font, sr.label(), 32, 32 + q * 10, color, false);
+				q++;
+				if (32 + (q + 1) * 10 > screenY) {
+					graphics.drawString(font, Component.translatable("tc.search.more"), 22, 34 + q * 10, 11184810, false);
+					break;
+				}
 			}
-			SearchHit hit = searchResults.get(i);
-			boolean rowHovered = mouseX >= rowLeft && mouseX < rowLeft + rowWidth && mouseY >= y && mouseY < y + SEARCH_ROW_HEIGHT;
-			int color = hit.categoryKey() != null ? 0xFFDD6688 : (hit.entry() != null ? 0xFFAAAAFF : 0xFFDDDDDD);
-			if (rowHovered) color = 0xFFFFFFFF;
-			graphics.drawString(font, hit.label(), rowLeft, y, color);
 		}
-		if (searchResults.isEmpty() && !searchField.getValue().isEmpty()) {
-			graphics.drawString(font, Component.translatable("tc.search.none"), rowLeft, rowTop, 0xFFA0A0A0);
-		}
-	}
 
-	private void renderParallaxBackground(GuiGraphics graphics, ResearchCategory cat, double locX, double locY) {
 		graphics.pose().pushPose();
-		graphics.enableScissor(viewLeft - 2, viewTop - 2, viewLeft + viewWidth + 2, viewTop + viewHeight + 2);
-		int bw = viewWidth + 4;
-		int bh = viewHeight + 4;
-		int ox = (int) (locX / 2.0 / zoom) % bw;
-		int oy = (int) (locY / 2.0 / zoom) % bh;
-		graphics.blit(cat.background, viewLeft - 2 - ox, viewTop - 2 - oy, 0, 0, bw, bh, bw, bh);
-		if (cat.background2 != null) {
-			int ox2 = (int) (locX / 1.5 / zoom) % bw;
-			int oy2 = (int) (locY / 1.5 / zoom) % bh;
-			graphics.blit(cat.background2, viewLeft - 2 - ox2, viewTop - 2 - oy2, 0, 0, bw, bh, bw, bh);
-		}
-		graphics.disableScissor();
+		graphics.pose().translate(0, 0, 300);
+		drawFrame(graphics);
+		drawButtons(graphics, mx, my);
 		graphics.pose().popPose();
-	}
 
-	/** Real port of the original's own {@code drawLine} - same UV pieces (straight segment, small/big
-	 * corners, directional arrowheads), same real color/thickness distinction between "known" (bright) and
-	 * "reachable but not yet known" (dim) connections, same skip for {@code ~}-prefixed
-	 * parents/siblings. */
-	private void renderConnectorLines(GuiGraphics graphics, double locX, double locY) {
-		IPlayerKnowledge knowledge = knowledge();
-		for (ResearchEntry source : entries) {
-			if (source.getParents() != null) {
-				String[] parentsClean = source.getParentsClean();
-				for (int a = 0; a < source.getParents().length; a++) {
-					String rawParent = source.getParents()[a];
-					if (rawParent == null) continue;
-					ResearchEntry parent = ResearchCategories.getResearch(parentsClean[a]);
-					if (parent == null || !parent.getCategory().equals(category)) continue;
-					if (parent.getSiblings() != null && java.util.Arrays.asList(parent.getSiblings()).contains(source.getKey())) continue;
-					if (rawParent.startsWith("~") || !isVisible(source)) continue;
-					boolean knowsParent = knowsStrict(rawParent);
-					if (knowsParent) {
-						drawLine(graphics, source.getDisplayColumn(), source.getDisplayRow(), parent.getDisplayColumn(), parent.getDisplayRow(), 0.6f, 0.6f, 0.6f, locX, locY, true, source.hasMeta(EnumResearchMeta.REVERSE));
-					} else if (isVisible(parent)) {
-						drawLine(graphics, source.getDisplayColumn(), source.getDisplayRow(), parent.getDisplayColumn(), parent.getDisplayRow(), 0.2f, 0.2f, 0.2f, locX, locY, true, source.hasMeta(EnumResearchMeta.REVERSE));
+		if (currentHighlight != null) {
+			List<String> text = new ArrayList<>();
+			text.add("§6" + currentHighlight.getLocalizedName().getString());
+			IPlayerKnowledge knowledge = knowledge();
+			if (canUnlockResearch(currentHighlight)) {
+				if (!knowledge.isResearchComplete(currentHighlight.getKey()) && currentHighlight.getStages() != null) {
+					int stage = knowledge.getResearchStage(currentHighlight.getKey());
+					if (stage > 0) {
+						text.add("@@" + ChatFormatting.AQUA + Component.translatable("tc.research.stage").getString() + " " + stage + "/"
+								+ currentHighlight.getStages().length + ChatFormatting.RESET);
+					} else {
+						text.add("@@" + ChatFormatting.GREEN + Component.translatable("tc.research.begin").getString() + ChatFormatting.RESET);
+					}
+				}
+			} else {
+				text.add("@@§c" + Component.translatable("tc.researchmissing").getString());
+				String[] parents = currentHighlight.getParents();
+				if (parents != null) {
+					String[] clean = currentHighlight.getParentsClean();
+					for (int a = 0; a < parents.length; a++) {
+						if (knowsStrict(parents[a])) continue;
+						ResearchEntry parent = ResearchCategories.getResearch(clean[a]);
+						text.add("@@§e - " + (parent != null ? parent.getLocalizedName().getString() : "?"));
 					}
 				}
 			}
-			if (source.getSiblings() != null && isVisible(source)) {
-				for (String rawSibling : source.getSiblings()) {
-					if (rawSibling == null) continue;
-					String siblingKey = rawSibling.startsWith("~") ? rawSibling.substring(1) : rawSibling;
+			if (knowledge.hasResearchFlag(currentHighlight.getKey(), IPlayerKnowledge.EnumResearchFlag.RESEARCH)) {
+				text.add("@@" + Component.translatable("tc.research.newresearch").getString());
+			}
+			if (knowledge.hasResearchFlag(currentHighlight.getKey(), IPlayerKnowledge.EnumResearchFlag.PAGE)) {
+				text.add("@@" + Component.translatable("tc.research.newpage").getString());
+			}
+			ResearchTooltip.draw(graphics, font, text, mx + 3, my - 3, -99, width, height);
+		}
+	}
+
+	private void drawZoomable(GuiGraphics graphics, int mx, int my, int locX, int locY) {
+		ResearchCategory cat = ResearchCategories.getResearchCategory(selectedCategory);
+		if (cat == null) return;
+		RenderSystem.enableBlend();
+		RenderSystem.defaultBlendFunc();
+		drawTiled(graphics, cat.background, (startX - 2) * screenZoom, (startY - 2) * screenZoom, locX / 2.0, locY / 2.0,
+				(screenX + 4) * screenZoom, (screenY + 4) * screenZoom);
+		if (cat.background2 != null) {
+			drawTiled(graphics, cat.background2, (startX - 2) * screenZoom, (startY - 2) * screenZoom, locX / 1.5, locY / 1.5,
+					(screenX + 4) * screenZoom, (screenY + 4) * screenZoom);
+		}
+
+		for (ResearchEntry source : research) {
+			String[] parents = source.getParents();
+			if (parents != null) {
+				String[] clean = source.getParentsClean();
+				for (int a = 0; a < parents.length; a++) {
+					if (parents[a] == null) continue;
+					ResearchEntry parent = ResearchCategories.getResearch(clean[a]);
+					if (parent == null || !parent.getCategory().equals(selectedCategory)) continue;
+					if (parent.getSiblings() != null && Arrays.asList(parent.getSiblings()).contains(source.getKey())) continue;
+					boolean knowsParent = knowsStrict(parents[a]);
+					if (!isVisible(source) || parents[a].startsWith("~")) continue;
+					boolean reverse = source.hasMeta(EnumResearchMeta.REVERSE);
+					if (knowsParent) {
+						drawLine(graphics, source.getDisplayColumn(), source.getDisplayRow(), parent.getDisplayColumn(), parent.getDisplayRow(), 0.6f, 0.6f, 0.6f, locX, locY, true, reverse);
+					} else if (isVisible(parent)) {
+						drawLine(graphics, source.getDisplayColumn(), source.getDisplayRow(), parent.getDisplayColumn(), parent.getDisplayRow(), 0.2f, 0.2f, 0.2f, locX, locY, true, reverse);
+					}
+				}
+			}
+			String[] siblings = source.getSiblings();
+			if (siblings != null) {
+				for (String siblingKey : siblings) {
+					if (siblingKey == null) continue;
 					ResearchEntry sibling = ResearchCategories.getResearch(siblingKey);
-					if (sibling == null || !sibling.getCategory().equals(category) || rawSibling.startsWith("~")) continue;
-					boolean knowsSibling = knowledge.isResearchComplete(sibling.getKey());
+					if (sibling == null || !sibling.getCategory().equals(selectedCategory)) continue;
+					boolean knowsSibling = knowsStrict(sibling.getKey());
+					if (!isVisible(source) || siblingKey.startsWith("~")) continue;
+					boolean reverse = source.hasMeta(EnumResearchMeta.REVERSE);
 					if (knowsSibling) {
-						drawLine(graphics, sibling.getDisplayColumn(), sibling.getDisplayRow(), source.getDisplayColumn(), source.getDisplayRow(), 0.3f, 0.3f, 0.4f, locX, locY, false, source.hasMeta(EnumResearchMeta.REVERSE));
+						drawLine(graphics, sibling.getDisplayColumn(), sibling.getDisplayRow(), source.getDisplayColumn(), source.getDisplayRow(), 0.3f, 0.3f, 0.4f, locX, locY, false, reverse);
 					} else if (isVisible(sibling)) {
-						drawLine(graphics, sibling.getDisplayColumn(), sibling.getDisplayRow(), source.getDisplayColumn(), source.getDisplayRow(), 0.1875f, 0.1875f, 0.25f, locX, locY, false, source.hasMeta(EnumResearchMeta.REVERSE));
+						drawLine(graphics, sibling.getDisplayColumn(), sibling.getDisplayRow(), source.getDisplayColumn(), source.getDisplayRow(), 0.1875f, 0.1875f, 0.25f, locX, locY, false, reverse);
 					}
 				}
 			}
 		}
+
+		currentHighlight = null;
+		IPlayerKnowledge knowledge = knowledge();
+		for (ResearchEntry entry : research) {
+			boolean hasWarp = false;
+			if (entry.getStages() != null) {
+				for (ResearchStage stage : entry.getStages()) {
+					if (stage.getWarp() > 0) {
+						hasWarp = true;
+						break;
+					}
+				}
+			}
+			int var25 = entry.getDisplayColumn() * 24 - locX;
+			int var26 = entry.getDisplayRow() * 24 - locY;
+			if (var25 < -24 || var26 < -24 || var25 > screenX * screenZoom || var26 > screenY * screenZoom) continue;
+			int iconX = startX + var25;
+			int iconY = startY + var26;
+			if (!isVisible(entry)) continue;
+			if (hasWarp) drawForbidden(graphics, iconX + 8, iconY + 8);
+			boolean unlockable = canUnlockResearch(entry);
+			float shade;
+			if (knowledge.isResearchComplete(entry.getKey())) shade = 1.0f;
+			else if (unlockable) shade = (float) Math.sin(System.currentTimeMillis() % 600L / 600.0 * Math.PI * 2.0) * 0.25f + 0.75f;
+			else shade = 0.3f;
+			RenderSystem.enableBlend();
+			graphics.setColor(shade, shade, shade, 1.0f);
+			int hiddenV = entry.hasMeta(EnumResearchMeta.HIDDEN) ? 32 : 0;
+			if (entry.hasMeta(EnumResearchMeta.ROUND)) {
+				graphics.blit(TX1, iconX - 8, iconY - 8, 144, 48 + hiddenV, 32, 32);
+			} else {
+				graphics.blit(TX1, iconX - 8, iconY - 8, entry.hasMeta(EnumResearchMeta.HEX) ? 112 : 80, 48 + hiddenV, 32, 32);
+			}
+			if (entry.hasMeta(EnumResearchMeta.SPIKY)) graphics.blit(TX1, iconX - 8, iconY - 8, 176, 48 + hiddenV, 32, 32);
+			boolean bw = !unlockable;
+			if (knowledge.hasResearchFlag(entry.getKey(), IPlayerKnowledge.EnumResearchFlag.RESEARCH)) {
+				graphics.setColor(1f, 1f, 1f, 1f);
+				graphics.pose().pushPose();
+				graphics.pose().translate(iconX - 9, iconY - 9, 0);
+				graphics.pose().scale(0.5f, 0.5f, 1f);
+				graphics.blit(TX1, 0, 0, 176, 16, 32, 32);
+				graphics.pose().popPose();
+			}
+			if (knowledge.hasResearchFlag(entry.getKey(), IPlayerKnowledge.EnumResearchFlag.PAGE)) {
+				graphics.setColor(1f, 1f, 1f, 1f);
+				graphics.pose().pushPose();
+				graphics.pose().translate(iconX - 9, iconY + 9, 0);
+				graphics.pose().scale(0.5f, 0.5f, 1f);
+				graphics.blit(TX1, 0, 0, 208, 16, 32, 32);
+				graphics.pose().popPose();
+			}
+			graphics.setColor(1f, 1f, 1f, 1f);
+			drawResearchIcon(graphics, entry, iconX, iconY, bw);
+			if (mx >= startX && my >= startY && mx < startX + screenX && my < startY + screenY
+					&& mx >= (iconX - 2) / screenZoom && mx <= (iconX + 18) / screenZoom
+					&& my >= (iconY - 2) / screenZoom && my <= (iconY + 18) / screenZoom) {
+				currentHighlight = entry;
+			}
+			graphics.setColor(1f, 1f, 1f, 1f);
+		}
 	}
 
-	private void drawLine(GuiGraphics graphics, int x, int y, int x2, int y2, float r, float g, float b, double locX, double locY, boolean arrow, boolean flipped) {
-		int xd, yd, xm, ym, xx, yy;
+	/** drawTexturedModalRectWithDoubles: a quad whose UVs are in 1/256ths of the texture and run past its edge, so the
+	 * (1024px) background repeats every 256 GUI pixels and scrolls with the map - needs the texture set to repeat. */
+	private void drawTiled(GuiGraphics graphics, ResourceLocation texture, float x, float y, double u, double v, float w, float h) {
+		if (minecraft == null) return;
+		AbstractTexture tex = minecraft.getTextureManager().getTexture(texture);
+		tex.bind();
+		GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL11.GL_REPEAT);
+		GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_REPEAT);
+		RenderSystem.setShaderTexture(0, tex.getId());
+		RenderSystem.setShader(GameRenderer::getPositionTexShader);
+		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+		float f = 1f / 256f;
+		Matrix4f m = graphics.pose().last().pose();
+		BufferBuilder b = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+		b.addVertex(m, x, y + h, 0).setUv((float) (u * f), (float) ((v + h) * f));
+		b.addVertex(m, x + w, y + h, 0).setUv((float) ((u + w) * f), (float) ((v + h) * f));
+		b.addVertex(m, x + w, y, 0).setUv((float) ((u + w) * f), (float) (v * f));
+		b.addVertex(m, x, y, 0).setUv((float) (u * f), (float) (v * f));
+		BufferUploader.drawWithShader(b.buildOrThrow());
+	}
+
+	private void drawLine(GuiGraphics graphics, int x, int y, int x2, int y2, float r, float g, float b, int locX, int locY, boolean arrow, boolean flipped) {
 		boolean bigCorner;
+		int xd, yd, xm, ym, xx, yy;
 		if (flipped) {
 			xd = Math.abs(x2 - x);
 			yd = Math.abs(y2 - y);
 			xm = xd == 0 ? 0 : (x2 - x > 0 ? -1 : 1);
 			ym = yd == 0 ? 0 : (y2 - y > 0 ? -1 : 1);
-			bigCorner = xd > 1 && yd > 1;
-			xx = (int) (x2 * CELL - 4 - locX);
-			yy = (int) (y2 * CELL - 4 - locY);
+			xx = x2 * 24 - 4 - locX + startX;
+			yy = y2 * 24 - 4 - locY + startY;
 		} else {
 			xd = Math.abs(x - x2);
 			yd = Math.abs(y - y2);
 			xm = xd == 0 ? 0 : (x - x2 > 0 ? -1 : 1);
 			ym = yd == 0 ? 0 : (y - y2 > 0 ? -1 : 1);
-			bigCorner = xd > 1 && yd > 1;
-			xx = (int) (x * CELL - 4 - locX);
-			yy = (int) (y * CELL - 4 - locY);
+			xx = x * 24 - 4 - locX + startX;
+			yy = y * 24 - 4 - locY + startY;
 		}
-
+		bigCorner = xd > 1 && yd > 1;
+		RenderSystem.enableBlend();
 		graphics.setColor(r, g, b, 1.0f);
-
 		if (arrow) {
 			if (flipped) {
-				int xx2 = (int) (x * CELL - 8 - locX);
-				int yy2 = (int) (y * CELL - 8 - locY);
-				if (xm < 0) graphics.blit(ATLAS, xx2, yy2, 160, 112, 32, 32);
-				else if (xm > 0) graphics.blit(ATLAS, xx2, yy2, 128, 112, 32, 32);
-				else if (ym > 0) graphics.blit(ATLAS, xx2, yy2, 64, 112, 32, 32);
-				else if (ym < 0) graphics.blit(ATLAS, xx2, yy2, 96, 112, 32, 32);
+				int xx2 = x * 24 - 8 - locX + startX;
+				int yy2 = y * 24 - 8 - locY + startY;
+				if (xm < 0) graphics.blit(TX1, xx2, yy2, 160, 112, 32, 32);
+				else if (xm > 0) graphics.blit(TX1, xx2, yy2, 128, 112, 32, 32);
+				else if (ym > 0) graphics.blit(TX1, xx2, yy2, 64, 112, 32, 32);
+				else if (ym < 0) graphics.blit(TX1, xx2, yy2, 96, 112, 32, 32);
 			} else if (ym < 0) {
-				graphics.blit(ATLAS, xx - 4, yy - 4, 64, 112, 32, 32);
+				graphics.blit(TX1, xx - 4, yy - 4, 64, 112, 32, 32);
 			} else if (ym > 0) {
-				graphics.blit(ATLAS, xx - 4, yy - 4, 96, 112, 32, 32);
+				graphics.blit(TX1, xx - 4, yy - 4, 96, 112, 32, 32);
 			} else if (xm > 0) {
-				graphics.blit(ATLAS, xx - 4, yy - 4, 160, 112, 32, 32);
+				graphics.blit(TX1, xx - 4, yy - 4, 160, 112, 32, 32);
 			} else if (xm < 0) {
-				graphics.blit(ATLAS, xx - 4, yy - 4, 128, 112, 32, 32);
+				graphics.blit(TX1, xx - 4, yy - 4, 128, 112, 32, 32);
 			}
 		}
-
 		int v = 1;
 		int h = 0;
 		while (v < yd - (bigCorner ? 1 : 0)) {
-			graphics.blit(ATLAS, xx + xm * CELL * h, yy + ym * CELL * v, 0, 228, 24, 24);
+			graphics.blit(TX1, xx + xm * 24 * h, yy + ym * 24 * v, 0, 228, 24, 24);
 			v++;
 		}
 		if (bigCorner) {
-			if (xm < 0 && ym > 0) graphics.blit(ATLAS, xx + xm * CELL * h - 24, yy + ym * CELL * v, 0, 180, 48, 48);
-			if (xm > 0 && ym > 0) graphics.blit(ATLAS, xx + xm * CELL * h, yy + ym * CELL * v, 48, 180, 48, 48);
-			if (xm < 0 && ym < 0) graphics.blit(ATLAS, xx + xm * CELL * h - 24, yy + ym * CELL * v - 24, 96, 180, 48, 48);
-			if (xm > 0 && ym < 0) graphics.blit(ATLAS, xx + xm * CELL * h, yy + ym * CELL * v - 24, 144, 180, 48, 48);
+			if (xm < 0 && ym > 0) graphics.blit(TX1, xx + xm * 24 * h - 24, yy + ym * 24 * v, 0, 180, 48, 48);
+			if (xm > 0 && ym > 0) graphics.blit(TX1, xx + xm * 24 * h, yy + ym * 24 * v, 48, 180, 48, 48);
+			if (xm < 0 && ym < 0) graphics.blit(TX1, xx + xm * 24 * h - 24, yy + ym * 24 * v - 24, 96, 180, 48, 48);
+			if (xm > 0 && ym < 0) graphics.blit(TX1, xx + xm * 24 * h, yy + ym * 24 * v - 24, 144, 180, 48, 48);
 		} else {
-			if (xm < 0 && ym > 0) graphics.blit(ATLAS, xx + xm * CELL * h, yy + ym * CELL * v, 48, 228, 24, 24);
-			if (xm > 0 && ym > 0) graphics.blit(ATLAS, xx + xm * CELL * h, yy + ym * CELL * v, 72, 228, 24, 24);
-			if (xm < 0 && ym < 0) graphics.blit(ATLAS, xx + xm * CELL * h, yy + ym * CELL * v, 96, 228, 24, 24);
-			if (xm > 0 && ym < 0) graphics.blit(ATLAS, xx + xm * CELL * h, yy + ym * CELL * v, 120, 228, 24, 24);
+			if (xm < 0 && ym > 0) graphics.blit(TX1, xx + xm * 24 * h, yy + ym * 24 * v, 48, 228, 24, 24);
+			if (xm > 0 && ym > 0) graphics.blit(TX1, xx + xm * 24 * h, yy + ym * 24 * v, 72, 228, 24, 24);
+			if (xm < 0 && ym < 0) graphics.blit(TX1, xx + xm * 24 * h, yy + ym * 24 * v, 96, 228, 24, 24);
+			if (xm > 0 && ym < 0) graphics.blit(TX1, xx + xm * 24 * h, yy + ym * 24 * v, 120, 228, 24, 24);
 		}
 		v += bigCorner ? 1 : 0;
 		for (h += bigCorner ? 2 : 1; h < xd; h++) {
-			graphics.blit(ATLAS, xx + xm * CELL * h, yy + ym * CELL * v, 24, 228, 24, 24);
+			graphics.blit(TX1, xx + xm * 24 * h, yy + ym * 24 * v, 24, 228, 24, 24);
 		}
-		graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+		graphics.setColor(1f, 1f, 1f, 1f);
 	}
 
-	/** @return the entry the mouse is currently hovering, or {@code null}. Real port of the original's own
-	 * icon-frame/brightness/badge logic. */
-	private ResearchEntry renderIcons(GuiGraphics graphics, int mouseX, int mouseY, double locX, double locY) {
-		IPlayerKnowledge knowledge = knowledge();
-		ResearchEntry hoveredEntry = null;
-		for (ResearchEntry entry : entries) {
-			if (!isVisible(entry)) continue;
-			int ix = (int) (entry.getDisplayColumn() * (double) CELL - locX);
-			int iy = (int) (entry.getDisplayRow() * (double) CELL - locY);
-			if (ix < -24 || iy < -24 || ix > viewWidth * zoom || iy > viewHeight * zoom) continue;
-
-			boolean complete = knowledge.isResearchComplete(entry.getKey());
-			boolean unlockable = hasRequisites(entry);
-			float shade;
-			if (complete) {
-				shade = 1.0f;
-			} else if (unlockable) {
-				shade = (float) Math.sin(System.currentTimeMillis() % 600L / 600.0 * Math.PI * 2.0) * 0.25f + 0.75f;
-			} else {
-				shade = 0.3f;
-			}
-			graphics.setColor(shade, shade, shade, 1.0f);
-
-			boolean hidden = entry.hasMeta(EnumResearchMeta.HIDDEN);
-			if (entry.hasMeta(EnumResearchMeta.ROUND)) {
-				graphics.blit(ATLAS, ix - 8, iy - 8, 144, hidden ? 80 : 48, 32, 32);
-			} else {
-				int fx = entry.hasMeta(EnumResearchMeta.HEX) ? 112 : 80;
-				graphics.blit(ATLAS, ix - 8, iy - 8, fx, hidden ? 80 : 48, 32, 32);
-			}
-			if (entry.hasMeta(EnumResearchMeta.SPIKY)) {
-				graphics.blit(ATLAS, ix - 8, iy - 8, 176, hidden ? 80 : 48, 32, 32);
-			}
-
-			boolean grayscale = !unlockable;
-			if (grayscale) graphics.setColor(0.1f, 0.1f, 0.1f, 1.0f);
-
-			if (knowledge.hasResearchFlag(entry.getKey(), IPlayerKnowledge.EnumResearchFlag.RESEARCH)) {
-				graphics.pose().pushPose();
-				graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-				graphics.pose().translate(ix - 9, iy - 9, 0);
-				graphics.pose().scale(0.5f, 0.5f, 1.0f);
-				graphics.blit(ATLAS, 0, 0, 176, 16, 32, 32);
-				graphics.pose().popPose();
-			}
-			if (knowledge.hasResearchFlag(entry.getKey(), IPlayerKnowledge.EnumResearchFlag.PAGE)) {
-				graphics.pose().pushPose();
-				graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-				graphics.pose().translate(ix - 9, iy + 9, 0);
-				graphics.pose().scale(0.5f, 0.5f, 1.0f);
-				graphics.blit(ATLAS, 0, 0, 208, 16, 32, 32);
-				graphics.pose().popPose();
-			}
-
-			renderEntryIcon(graphics, entry, ix, iy, grayscale);
-			graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-
-			if (hasWarpCost(entry)) renderWarpWarning(graphics, ix, iy);
-
-			// ix/iy are in the pose-space this whole block is rendered under (translated by viewLeft/viewTop,
-			// then scaled by 1/zoom) - convert the icon's own real screen-space bounds back out of that
-			// transform to compare against mouseX/mouseY, which are always real screen pixels.
-			double screenIconLeft = viewLeft + (ix - 8) / (double) zoom;
-			double screenIconRight = viewLeft + (ix + 8) / (double) zoom;
-			double screenIconTop = viewTop + (iy - 8) / (double) zoom;
-			double screenIconBottom = viewTop + (iy + 8) / (double) zoom;
-			if (mouseX >= viewLeft && mouseY >= viewTop && mouseX < viewLeft + viewWidth && mouseY < viewTop + viewHeight
-					&& mouseX >= screenIconLeft && mouseX <= screenIconRight
-					&& mouseY >= screenIconTop && mouseY <= screenIconBottom) {
-				hoveredEntry = entry;
-			}
-		}
-		return hoveredEntry;
+	/** GuiResearchBrowser#drawForbidden: the slowly turning violet aura-node glow behind a node that costs warp. */
+	static void drawForbidden(GuiGraphics graphics, double x, double y) {
+		net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+		int count = mc.player != null ? mc.player.tickCount : 0;
+		graphics.pose().pushPose();
+		graphics.pose().translate(x, y, 0);
+		GuiQuadRenderer.renderQuadCenteredQuarterTurned(graphics, NODE_TEXTURE, 32, 160 + count % 32, 90.0f, 0.33f, 0.0f, 0.44f, 0.9f, true);
+		graphics.setColor(1f, 1f, 1f, 1f);
+		graphics.pose().popPose();
 	}
 
-	private boolean hasWarpCost(ResearchEntry entry) {
-		if (entry.getStages() == null) return false;
-		for (ResearchStage stage : entry.getStages()) {
-			if (stage.getWarp() > 0) return true;
-		}
-		return false;
+	private static final Map<ResourceLocation, int[]> TEXTURE_SIZES = new HashMap<>();
+
+	/** Pixel size of a research icon texture, read once from its PNG header (for the animated strip icons). */
+	private static int[] textureSize(ResourceLocation loc) {
+		return TEXTURE_SIZES.computeIfAbsent(loc, l -> {
+			try (var in = net.minecraft.client.Minecraft.getInstance().getResourceManager().open(l)) {
+				byte[] header = in.readNBytes(24);
+				int w = ((header[16] & 0xFF) << 24) | ((header[17] & 0xFF) << 16) | ((header[18] & 0xFF) << 8) | (header[19] & 0xFF);
+				int h = ((header[20] & 0xFF) << 24) | ((header[21] & 0xFF) << 16) | ((header[22] & 0xFF) << 8) | (header[23] & 0xFF);
+				return new int[] {w, h};
+			} catch (Exception e) {
+				return new int[] {16, 16};
+			}
+		});
 	}
 
-	/** Real warp-cost warning - the original's own real pulsing "forbidden" node icon ({@code
-	 * UtilsFX.nodeTexture}) doesn't exist in this port, so this is a real, simpler substitute conveying the
-	 * same information (this research costs real Warp to complete): a pulsing red marker at the icon's
-	 * corner rather than a dedicated animated sprite. */
-	private void renderWarpWarning(GuiGraphics graphics, int ix, int iy) {
-		float pulse = (float) Math.sin(System.currentTimeMillis() % 800L / 800.0 * Math.PI * 2.0) * 0.3f + 0.7f;
-		int alpha = (int) (pulse * 255) << 24;
-		graphics.fill(ix + 6, iy - 10, ix + 12, iy - 4, alpha | 0xFF3020);
-	}
-
-	/** Real icon cycling (1 second per frame, matching the original) across all 3 real icon types this port
-	 * loads - see {@code ThaumcraftResearchLoader#parseIcons}'s own doc comment. */
-	static void renderEntryIcon(GuiGraphics graphics, ResearchEntry entry, int ix, int iy, boolean grayscale) {
+	/** GuiResearchBrowser#drawResearchIcon: the entry's icon (cycling once a second if it has several) with its top-left
+	 * at (x, y) - a texture (a vertical or horizontal frame strip animates at 150ms a frame), an item, or a focus part. */
+	static void drawResearchIcon(GuiGraphics graphics, ResearchEntry entry, int x, int y, boolean bw) {
 		Object[] icons = entry.getIcons();
 		if (icons == null || icons.length == 0) return;
 		Object icon = icons[(int) (System.currentTimeMillis() / 1000L % icons.length)];
+		RenderSystem.enableBlend();
 		if (icon instanceof ResourceLocation texture) {
-			if (grayscale) graphics.setColor(0.2f, 0.2f, 0.2f, 1.0f);
-			graphics.blit(texture, ix - 8, iy - 8, 0, 0, 16, 16, 16, 16);
-			graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+			if (bw) graphics.setColor(0.2f, 0.2f, 0.2f, 1.0f);
+			int[] size = textureSize(texture);
+			int w = size[0];
+			int h = size[1];
+			if (h > w && h % w == 0) {
+				int m = h / w;
+				int frame = (int) (System.currentTimeMillis() / 150L % m);
+				graphics.blit(texture, x, y, 16, 16, 0, frame * 16, 16, 16, 16, 16 * m);
+			} else if (w > h && w % h == 0) {
+				int m = w / h;
+				int frame = (int) (System.currentTimeMillis() / 150L % m);
+				graphics.blit(texture, x, y, 16, 16, frame * 16, 0, 16, 16, 16 * m, 16);
+			} else {
+				graphics.blit(texture, x, y, 0, 0, 16, 16, 16, 16);
+			}
+			graphics.setColor(1f, 1f, 1f, 1f);
 		} else if (icon instanceof ItemStack stack) {
-			graphics.renderItem(stack, ix - 8, iy - 8);
-		} else if (icon instanceof String focusRef) {
-			// "focus:key" - the real icon+tint every registered FocusEffect/FocusMedium already carries from
-			// its own FocusEngine.registerElement(class, icon, color) call (see Thaumcraft#commonSetup).
-			// Falls back to a generic placeholder only for a key with no real registered element yet.
-			String key = focusRef.startsWith("focus:") ? focusRef.substring(6).trim() : focusRef.substring(5).trim();
-			ResourceLocation icon2 = thaumcraft.api.casters.FocusEngine.getElementIcon(key);
-			if (icon2 != null) {
-				int rgb = thaumcraft.api.casters.FocusEngine.getElementColor(key);
-				float rC = ((rgb >> 16) & 0xFF) / 255.0f;
-				float gC = ((rgb >> 8) & 0xFF) / 255.0f;
-				float bC = (rgb & 0xFF) / 255.0f;
-				if (grayscale) {
-					rC *= 0.3f;
-					gC *= 0.3f;
-					bC *= 0.3f;
-				}
-				graphics.setColor(rC, gC, bC, 1.0f);
-				graphics.blit(icon2, ix - 8, iy - 8, 0, 0, 16, 16, 16, 16);
-				graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-			} else {
-				graphics.blit(ATLAS, ix - 8, iy - 8, 160, 16, 16, 16);
-			}
+			graphics.renderItem(stack, x, y);
+		} else if (icon instanceof String s && s.startsWith("focus")) {
+			drawFocusPart(graphics, s.replace("focus:", "").trim(), x + 8, y + 8, 24.0f, bw);
 		}
 	}
 
-	private void renderBorderFrame(GuiGraphics graphics) {
-		graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-		for (int c = viewLeft; c < width - viewLeft; c += 64) {
-			int p = Math.min(64, width - viewLeft - c);
+	/** GuiFocalManipulator#drawPart as the book used it: the effect/medium backing disc in the element's colour, then its icon. */
+	private static void drawFocusPart(GuiGraphics graphics, String key, int x, int y, float scale, boolean bw) {
+		IFocusElement element = FocusEngine.getElement(key);
+		ResourceLocation icon = FocusEngine.getElementIcon(key);
+		if (element == null || icon == null) return;
+		boolean root = element.getType() == IFocusElement.EnumUnitType.MOD || key.equals("thaumcraft.ROOT");
+		if (root) scale *= 2.0f;
+		int rgb = FocusEngine.getElementColor(key);
+		float dim = bw ? 50f / 220f : 1f;
+		float r = ((rgb >> 16) & 0xFF) / 255f * dim;
+		float g = ((rgb >> 8) & 0xFF) / 255f * dim;
+		float b = (rgb & 0xFF) / 255f * dim;
+		graphics.pose().pushPose();
+		graphics.pose().translate(x, y, 0);
+		graphics.pose().mulPose(Axis.ZN.rotationDegrees(90.0f));
+		if (element.getType() == IFocusElement.EnumUnitType.EFFECT) {
+			GuiQuadRenderer.renderQuadCenteredQuarterTurned(graphics, FOCUS_EFFECT, 1, 0, scale * 0.9f, r, g, b, 1f, false);
+		} else if (element.getType() == IFocusElement.EnumUnitType.MEDIUM && !root) {
+			GuiQuadRenderer.renderQuadCenteredQuarterTurned(graphics, FOCUS_MEDIUM, 1, 0, scale * 0.9f, r, g, b, 1f, false);
+		}
+		graphics.pose().translate(0, 0, 1);
+		GuiQuadRenderer.renderQuadCenteredQuarterTurned(graphics, icon, 1, 0, scale / 2.0f, dim, dim, dim, 1f, false);
+		graphics.pose().popPose();
+	}
+
+	private void drawFrame(GuiGraphics graphics) {
+		RenderSystem.enableBlend();
+		graphics.setColor(1f, 1f, 1f, 1f);
+		for (int c = 16; c < width - 16; c += 64) {
+			int p = 64;
+			if (c + p > width - 16) p = width - 16 - c;
 			if (p > 0) {
-				graphics.blit(ATLAS, c, -2, 48, 13, p, 22);
-				graphics.blit(ATLAS, c, height - 20, 48, 13, p, 22);
+				graphics.blit(TX1, c, -2, 48, 13, p, 22);
+				graphics.blit(TX1, c, height - 20, 48, 13, p, 22);
 			}
 		}
-		for (int c = viewTop; c < height - viewTop; c += 64) {
-			int p = Math.min(64, height - viewTop - c);
+		for (int c = 16; c < height - 16; c += 64) {
+			int p = 64;
+			if (c + p > height - 16) p = height - 16 - c;
 			if (p > 0) {
-				graphics.blit(ATLAS, -2, c, 13, 48, 22, p);
-				graphics.blit(ATLAS, width - 20, c, 13, 48, 22, p);
+				graphics.blit(TX1, -2, c, 13, 48, 22, p);
+				graphics.blit(TX1, width - 20, c, 13, 48, 22, p);
 			}
 		}
-		graphics.blit(ATLAS, -2, -2, 13, 13, 22, 22);
-		graphics.blit(ATLAS, -2, height - 20, 13, 13, 22, 22);
-		graphics.blit(ATLAS, width - 20, -2, 13, 13, 22, 22);
-		graphics.blit(ATLAS, width - 20, height - 20, 13, 13, 22, 22);
+		graphics.blit(TX1, -2, -2, 13, 13, 22, 22);
+		graphics.blit(TX1, -2, height - 20, 13, 13, 22, 22);
+		graphics.blit(TX1, width - 20, -2, 13, 13, 22, 22);
+		graphics.blit(TX1, width - 20, height - 20, 13, 13, 22, 22);
 	}
 
-	private void renderCategoryTabs(GuiGraphics graphics, int mouseX, int mouseY) {
-		int index = 0;
-		for (String key : ResearchCategories.researchCategories.keySet()) {
-			ResearchCategory cat = ResearchCategories.getResearchCategory(key);
-			int x = 1;
-			int y = 10 + index * 24;
-			index++;
-			boolean selected = key.equals(category);
-			boolean hovered = mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16;
-
-			graphics.setColor(selected ? 0.6f : 1.0f, 1.0f, 1.0f, 1.0f);
-			graphics.blit(ATLAS, x - 3, y - 3, 13, 13, 22, 22);
-			graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-
-			graphics.setColor(selected || hovered ? 1.0f : 0.66f, selected || hovered ? 1.0f : 0.66f, selected || hovered ? 1.0f : 0.66f, selected || hovered ? 1.0f : 0.8f);
-			graphics.blit(cat.icon, x, y, 0, 0, 16, 16, 16, 16);
-			graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-
-			boolean newResearch = false;
-			boolean newPage = false;
-			IPlayerKnowledge knowledge = knowledge();
-			for (String rk : cat.research.keySet()) {
-				if (!knowledge.isResearchKnown(rk)) continue;
-				if (knowledge.hasResearchFlag(rk, IPlayerKnowledge.EnumResearchFlag.RESEARCH)) newResearch = true;
-				if (knowledge.hasResearchFlag(rk, IPlayerKnowledge.EnumResearchFlag.PAGE)) newPage = true;
-				if (newResearch && newPage) break;
-			}
-			if (newResearch) {
-				graphics.pose().pushPose();
-				graphics.setColor(1.0f, 1.0f, 1.0f, 0.7f);
-				graphics.pose().translate(x - 2, y - 2, 0);
-				graphics.pose().scale(0.25f, 0.25f, 1.0f);
-				graphics.blit(ATLAS, 0, 0, 176, 16, 32, 32);
-				graphics.pose().popPose();
-				graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-			}
-			if (newPage) {
-				graphics.pose().pushPose();
-				graphics.setColor(1.0f, 1.0f, 1.0f, 0.7f);
-				graphics.pose().translate(x - 2, y + 9, 0);
-				graphics.pose().scale(0.25f, 0.25f, 1.0f);
-				graphics.blit(ATLAS, 0, 0, 208, 16, 32, 32);
-				graphics.pose().popPose();
-				graphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-			}
-
-			if (hovered) {
-				graphics.renderTooltip(font, ResearchCategories.getCategoryName(key), mouseX, mouseY);
-			}
-		}
-	}
-
-	private void renderHoverTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+	private void drawButtons(GuiGraphics graphics, int mx, int my) {
 		IPlayerKnowledge knowledge = knowledge();
-		List<Component> lines = new ArrayList<>();
-		lines.add(hovered.getLocalizedName());
-		if (hasRequisites(hovered)) {
-			if (!knowledge.isResearchComplete(hovered.getKey()) && hovered.getStages() != null) {
-				int stage = knowledge.getResearchStage(hovered.getKey());
-				lines.add(stage > 0
-						? Component.translatable("tc.research.stage").append(" " + stage + "/" + hovered.getStages().length)
-						: Component.translatable("tc.research.begin"));
+		for (CategoryTab tab : tabs) {
+			int x = tab.x();
+			int y = tab.y() + addonShift;
+			boolean hovered = mx >= x && my >= y && mx < x + 16 && my < y + 16;
+			boolean selected = tab.key().equals(selectedCategory);
+			RenderSystem.enableBlend();
+			graphics.setColor(selected ? 0.6f : 1.0f, 1.0f, 1.0f, 1.0f);
+			graphics.blit(TX1, x - 3, y - 3, 13, 13, 22, 22);
+			if (selected || hovered) graphics.setColor(1f, 1f, 1f, 1f);
+			else graphics.setColor(0.66f, 0.66f, 0.66f, 0.8f);
+			graphics.blit(tab.category().icon, x, y, 0, 0, 16, 16, 16, 16);
+			graphics.setColor(1f, 1f, 1f, 1f);
+			boolean nr = false;
+			boolean np = false;
+			for (String rk : tab.category().research.keySet()) {
+				if (!knowledge.isResearchKnown(rk)) continue;
+				if (!nr && knowledge.hasResearchFlag(rk, IPlayerKnowledge.EnumResearchFlag.RESEARCH)) nr = true;
+				if (!np && knowledge.hasResearchFlag(rk, IPlayerKnowledge.EnumResearchFlag.PAGE)) np = true;
+				if (nr && np) break;
 			}
-		} else {
-			lines.add(Component.translatable("tc.researchmissing"));
-			if (hovered.getParents() != null) {
-				String[] clean = hovered.getParentsClean();
-				for (int a = 0; a < hovered.getParents().length; a++) {
-					if (!knowledge.isResearchKnown(hovered.getParents()[a])) {
-						ResearchEntry parent = ResearchCategories.getResearch(clean[a]);
-						lines.add(Component.literal(" - " + (parent != null ? parent.getLocalizedName().getString() : "?")));
-					}
-				}
-			}
-		}
-		if (knowledge.hasResearchFlag(hovered.getKey(), IPlayerKnowledge.EnumResearchFlag.RESEARCH)) {
-			lines.add(Component.translatable("tc.research.newresearch"));
-		}
-		if (knowledge.hasResearchFlag(hovered.getKey(), IPlayerKnowledge.EnumResearchFlag.PAGE)) {
-			lines.add(Component.translatable("tc.research.newpage"));
-		}
-		graphics.renderTooltip(font, lines.stream().map(Component::getVisualOrderText).toList(), mouseX, mouseY);
-	}
-
-	// --------------------------------------------------------------------------------------------------
-	// Reader - real two-page open-book spread, restoring GuiResearchPage's own real look. Recipe
-	// visualization (crafting/arcane/crucible/infusion/compound-crafting page types, aspect/knowledge
-	// "insert" popups) is a separate, later restoration pass - see this class's own doc comment.
-	// --------------------------------------------------------------------------------------------------
-
-	/** Builds {@link #readerPages} from {@link #openEntry}'s real stage text - restored 2026-09-27 to only show
-	 * stages the player has actually reached (see {@link ThaumonomiconMenu}'s own doc comment for the real
-	 * per-stage progression this now reflects): concatenating every stage unconditionally, as this did before,
-	 * would spoil an entry's later stages before a single {@code required_item}/{@code required_craft} gate on
-	 * an earlier one was ever met. Stage boundaries are marked with the same real page-break behavior the
-	 * original itself already uses between addenda. Real addenda are appended the same way, gated on the same
-	 * {@code required_research} check. The original's own live per-stage requirements checklist
-	 * ({@code drawRequirements}, its icon rows and quill-icon "complete stage" hotspot) is still not ported -
-	 * see {@link ThaumonomiconMenu}'s own doc comment for the plain "Study" button standing in for it instead. */
-	private void buildReaderPages() {
-		readerPages.clear();
-		ResearchStage[] stages = openEntry.getStages();
-		if (stages == null || stages.length == 0) {
-			readerPages.add(new ReaderPage());
-			return;
-		}
-
-		int reached = Math.min(stages.length, Math.max(0, knowledge().getResearchStage(openEntry.getKey())));
-		for (int i = 0; i < reached; i++) {
-			readerPages.addAll(paginateSegment(stages[i].getTextLocalized().getString(), stages[i].getRecipes()));
-		}
-		if (openEntry.getAddenda() != null) {
-			int ac = 0;
-			for (ResearchAddendum addendum : openEntry.getAddenda()) {
-				if (addendum.getResearch() == null || knowsAllStrict(addendum.getResearch())) {
-					ac++;
-					String text = Component.translatable("tc.addendumtext", ac).getString()
-							+ "<BR>" + addendum.getTextLocalized().getString();
-					readerPages.addAll(paginateSegment(text, addendum.getRecipes()));
-				}
-			}
-		}
-		if (readerPages.isEmpty()) readerPages.add(new ReaderPage());
-	}
-
-	/** Real markup parsing + word-wrap + height-budget pagination for one stage's or addendum's own raw
-	 * text, tagging every resulting page with that source's own real {@code recipes} bookmark list - split
-	 * out of {@link #buildReaderPages} so each stage/addendum's own recipes stay attached to the pages that
-	 * actually came from it, rather than one flat document losing track of which part said what. */
-	private List<ReaderPage> paginateSegment(String rawText, ResourceLocation[] recipes) {
-		String text = rawText;
-		text = text.replace("<BR/>", "~B\n").replace("<BR>", "~B\n");
-		text = text.replace("<LINE/>", "~L").replace("<LINE>", "~L");
-		text = text.replace("<DIV/>", "~D").replace("<DIV>", "~D");
-		text = text.replace("<PAGE/>", "~P").replace("<PAGE>", "~P");
-
-		List<ReaderImage> images = new ArrayList<>();
-		StringBuilder cleaned = new StringBuilder();
-		int idx = 0;
-		while (true) {
-			int start = text.indexOf("<IMG>", idx);
-			if (start < 0) {
-				cleaned.append(text, idx, text.length());
-				break;
-			}
-			cleaned.append(text, idx, start);
-			int end = text.indexOf("</IMG>", start);
-			if (end < 0) {
-				cleaned.append(text, start, text.length());
-				break;
-			}
-			ReaderImage img = parseInlineImage(text.substring(start + 5, end));
-			if (img != null) {
-				images.add(img);
-				cleaned.append("~I");
-			}
-			idx = end + 6;
-		}
-		text = cleaned.toString();
-
-		List<Object> stream = new ArrayList<>();
-		for (String token : tokenizeMarkup(text)) {
-			switch (token) {
-				case "~L" -> stream.add(DIVIDER_LINE);
-				case "~D" -> stream.add(DIVIDER_BIG);
-				case "~I" -> {
-					if (!images.isEmpty()) stream.add(images.remove(0));
-				}
-				case "~P" -> stream.add(PAGE_BREAK);
-				default -> {
-					for (String line : wrap(token, PAGE_TEXT_WIDTH)) {
-						if (!line.isEmpty()) stream.add(line);
-					}
-				}
-			}
-		}
-
-		List<ReaderPage> pages = new ArrayList<>();
-		int lineHeight = font.lineHeight;
-		int heightRemaining = 182;
-		ReaderPage current = new ReaderPage();
-		for (Object el : stream) {
-			if (el == PAGE_BREAK) {
-				pages.add(current);
-				current = new ReaderPage();
-				heightRemaining = 210;
-				continue;
-			}
-			if (el instanceof ReaderImage img) {
-				if (heightRemaining < img.ah() + 2 && !current.content.isEmpty()) {
-					pages.add(current);
-					current = new ReaderPage();
-					heightRemaining = 210;
-				}
-				current.content.add(img);
-				heightRemaining -= img.ah() + 2;
-				continue;
-			}
-			String line = (String) el;
-			current.content.add(line);
-			heightRemaining -= lineHeight;
-			if (line.endsWith("~B")) heightRemaining -= (int) (lineHeight * 0.66);
-			if (heightRemaining < lineHeight && !current.content.isEmpty()) {
-				pages.add(current);
-				current = new ReaderPage();
-				heightRemaining = 210;
-			}
-		}
-		if (!current.content.isEmpty()) pages.add(current);
-		if (pages.isEmpty()) pages.add(new ReaderPage());
-		ResourceLocation[] tag = recipes != null ? recipes : NO_RECIPES;
-		for (ReaderPage page : pages) page.recipes = tag;
-		return pages;
-	}
-
-	private boolean knowsAllStrict(String[] keys) {
-		for (String key : keys) {
-			if (!knowsStrict(key)) return false;
-		}
-		return true;
-	}
-
-	/** Splits on the internal {@code ~P}/{@code ~D}/{@code ~L}/{@code ~I} markers, keeping each as its own
-	 * token (mirroring the original's own nested nothing-lost nothing-gained token split). */
-	private static List<String> tokenizeMarkup(String s) {
-		List<String> tokens = new ArrayList<>();
-		Matcher m = MARKUP_MARKER.matcher(s);
-		int last = 0;
-		while (m.find()) {
-			if (m.start() > last) tokens.add(s.substring(last, m.start()));
-			tokens.add(m.group());
-			last = m.end();
-		}
-		if (last < s.length()) tokens.add(s.substring(last));
-		return tokens;
-	}
-
-	/** Real word-wrap to a pixel width - the original delegates this to vanilla's own
-	 * {@code FontRenderer#listFormattedStringToWidth}; that exact call no longer exists in modern
-	 * {@code Font}, so this is a direct greedy re-implementation against {@link #font}. Treats {@code \n}
-	 * (from the {@code <BR>} replacement above) as a hard break, same as the original relied on. */
-	private List<String> wrap(String text, int maxWidth) {
-		List<String> out = new ArrayList<>();
-		for (String paragraph : text.split("\n", -1)) {
-			if (paragraph.isEmpty()) continue;
-			String remaining = paragraph;
-			while (!remaining.isEmpty()) {
-				if (font.width(remaining) <= maxWidth) {
-					out.add(remaining);
-					break;
-				}
-				int cut = remaining.length();
-				int lastSpace = -1;
-				for (int i = 1; i <= remaining.length(); i++) {
-					if (font.width(remaining.substring(0, i)) > maxWidth) {
-						cut = i - 1;
-						break;
-					}
-					if (i < remaining.length() && remaining.charAt(i) == ' ') lastSpace = i;
-				}
-				int breakAt = lastSpace > 0 ? lastSpace : Math.max(cut, 1);
-				out.add(remaining.substring(0, breakAt).stripTrailing());
-				remaining = remaining.substring(breakAt).stripLeading();
-			}
-		}
-		return out;
-	}
-
-	/** Parses the original's real {@code "namespace:path:x:y:w:h:scale"} inline-image format. The x/y/w/h
-	 * are always authored assuming a fixed 256x256 UV space - vanilla's own {@code Gui#drawTexturedModalRect}
-	 * hardcoded that divisor regardless of the bound texture's real size, and every real usage in this
-	 * port's lang files (256-wide item icons at 16x16 real size, research diagrams at up to 1024x1024 real
-	 * size) was authored against that same convention - so this is reproduced by always drawing these
-	 * through the plain 256-assuming {@code GuiGraphics#blit} overload rather than each file's real size. */
-	private ReaderImage parseInlineImage(String spec) {
-		String[] parts = spec.split(":");
-		if (parts.length != 7) return null;
-		try {
-			ResourceLocation tex = ResourceLocation.fromNamespaceAndPath(parts[0], parts[1]);
-			int x = Integer.parseInt(parts[2]);
-			int y = Integer.parseInt(parts[3]);
-			int w = Integer.parseInt(parts[4]);
-			int h = Integer.parseInt(parts[5]);
-			float scale = Float.parseFloat(parts[6]);
-			int aw = Math.round(w * scale);
-			int ah = Math.round(h * scale);
-			if (aw > PAGE_TEXT_WIDTH || ah > 208) return null;
-			return new ReaderImage(tex, x, y, w, h, scale, aw, ah);
-		} catch (Exception ex) {
-			return null;
-		}
-	}
-
-	private void playPageTurnSound() {
-		if (minecraft != null && minecraft.player != null) {
-			minecraft.player.playSound(SoundEvents.BOOK_PAGE_TURN, 0.66f, 1.0f);
-		}
-	}
-
-	private boolean mouseInsidePrevArrow(double mouseX, double mouseY) {
-		int sw = (width - BOOK_W) / 2;
-		int sh = (height - BOOK_H) / 2;
-		return mouseX >= sw - 16 && mouseX < sw - 4 && mouseY >= sh + 190 && mouseY < sh + 198;
-	}
-
-	private boolean mouseInsideNextArrow(double mouseX, double mouseY) {
-		int sw = (width - BOOK_W) / 2;
-		int sh = (height - BOOK_H) / 2;
-		return mouseX >= sw + BOOK_W + 6 && mouseX < sw + BOOK_W + 18 && mouseY >= sh + 190 && mouseY < sh + 198;
-	}
-
-	private void renderReader(GuiGraphics graphics, int mouseX, int mouseY) {
-		graphics.fill(0, 0, width, height, 0xFF000000);
-
-		int sw = (width - BOOK_W) / 2;
-		int sh = (height - BOOK_H) / 2;
-		float bx = (width - BOOK_W * 1.3f) / 2.0f;
-		float by = (height - BOOK_H * 1.3f) / 2.0f;
-		graphics.setColor(1f, 1f, 1f, 1f);
-		graphics.pose().pushPose();
-		graphics.pose().translate(bx, by, 0);
-		graphics.pose().scale(1.3f, 1.3f, 1f);
-		graphics.blit(BOOK_TEX, 0, 0, 0, 0, BOOK_W, BOOK_H);
-		graphics.pose().popPose();
-
-		if (readerPage < readerPages.size()) {
-			drawReaderPage(graphics, readerPages.get(readerPage), 0, sw, sh - 10);
-		}
-		if (readerPage + 1 < readerPages.size()) {
-			drawReaderPage(graphics, readerPages.get(readerPage + 1), 1, sw, sh - 10);
-		}
-
-		int totalSpreads = Math.max(1, (readerPages.size() + 1) / 2);
-		graphics.drawCenteredString(font, (readerPage / 2 + 1) + " / " + totalSpreads, sw + BOOK_W / 2, sh + BOOK_H + 8, 0xFFE0E0E0);
-
-		float bob = Mth.sin((minecraft.player != null ? minecraft.player.tickCount : 0) / 10f) * 0.15f + 0.1f;
-		graphics.setColor(1f, 1f, 1f, 1f);
-		if (readerPage > 0) {
-			drawBobbingArrow(graphics, sw - 16, sh + 190, 0, 184, bob);
-		}
-		if (readerPage + 2 < readerPages.size()) {
-			drawBobbingArrow(graphics, sw + BOOK_W + 6, sh + 190, 12, 184, bob);
-		}
-
-		renderRecipeBookmarks(graphics, resolveVisibleRecipes(), mouseX, mouseY, sw, sh);
-		if (shownRecipe != null) {
-			renderRecipeDetail(graphics, mouseX, mouseY);
-		}
-	}
-
-	/** The real recipe bookmarks for whichever stage/addendum the current LEFT page came from - matches the
-	 * original's own "recipes shown are for the page you're looking at" behavior, generalized to this port's
-	 * concatenated-all-stages document (see {@link #buildReaderPages}'s own doc comment for why that's a
-	 * real, deliberate difference from the original's per-stage reader). */
-	private List<RecipeHolder<?>> resolveVisibleRecipes() {
-		if (readerPage >= readerPages.size() || minecraft.level == null) return List.of();
-		ResourceLocation[] ids = readerPages.get(readerPage).recipes;
-		if (ids.length == 0) return List.of();
-		List<RecipeHolder<?>> out = new ArrayList<>();
-		for (ResourceLocation id : ids) {
-			minecraft.level.getRecipeManager().byKey(id).ifPresent(out::add);
-		}
-		return out;
-	}
-
-	private void drawBobbingArrow(GuiGraphics graphics, int x, int y, int u, int v, float bob) {
-		float s = 1f + bob;
-		graphics.pose().pushPose();
-		graphics.pose().translate(x + 6f, y + 4f, 0);
-		graphics.pose().scale(s, s, 1f);
-		graphics.pose().translate(-6f, -4f, 0);
-		graphics.blit(BOOK_TEX, 0, 0, u, v, 12, 8);
-		graphics.pose().popPose();
-	}
-
-	private void drawReaderPage(GuiGraphics graphics, ReaderPage page, int side, int x, int y) {
-		int px = x - 15 + side * 152;
-		if (readerPage == 0 && side == 0) {
-			String title = openEntry.getLocalizedName().getString();
-			int w = font.width(title);
-			if (w <= PAGE_TEXT_WIDTH) {
-				graphics.drawString(font, title, px + (PAGE_TEXT_WIDTH - w) / 2, y, 0x202020, false);
-			} else {
-				float s = (float) PAGE_TEXT_WIDTH / w;
+			if (nr) {
+				graphics.setColor(1f, 1f, 1f, 0.7f);
 				graphics.pose().pushPose();
-				graphics.pose().translate(px, y + 1f, 0);
-				graphics.pose().scale(s, s, 1f);
-				graphics.drawString(font, title, 0, 0, 0x202020, false);
+				graphics.pose().translate(x - 2, y - 2, 0);
+				graphics.pose().scale(0.25f, 0.25f, 1f);
+				graphics.blit(TX1, 0, 0, 176, 16, 32, 32);
 				graphics.pose().popPose();
 			}
-			y += 28;
-		}
-		for (Object el : page.content) {
-			if (el instanceof String line) {
-				graphics.drawString(font, line.replace("~B", ""), px, y - 6, 0x000000, false);
-				y += font.lineHeight;
-				if (line.endsWith("~B")) y += (int) (font.lineHeight * 0.66);
-			} else if (el instanceof ReaderImage img) {
-				drawReaderImage(graphics, img, px, y - 5);
-				y += img.ah() + 2;
+			if (np) {
+				graphics.setColor(1f, 1f, 1f, 0.7f);
+				graphics.pose().pushPose();
+				graphics.pose().translate(x - 2, y + 9, 0);
+				graphics.pose().scale(0.25f, 0.25f, 1f);
+				graphics.blit(TX1, 0, 0, 208, 16, 32, 32);
+				graphics.pose().popPose();
 			}
-		}
-	}
-
-	/** Always drawn through the plain (256x256-assuming) {@code blit} overload - see
-	 * {@link #parseInlineImage} for why that's correct even for the real, differently-sized textures these
-	 * reference. */
-	private void drawReaderImage(GuiGraphics graphics, ReaderImage img, int x, int y) {
-		int pad = (PAGE_TEXT_WIDTH - img.aw()) / 2;
-		graphics.pose().pushPose();
-		graphics.pose().translate(x + pad, y, 0);
-		graphics.pose().scale(img.scale(), img.scale(), 1f);
-		graphics.blit(img.tex(), 0, 0, img.u(), img.v(), img.w(), img.h());
-		graphics.pose().popPose();
-	}
-
-	// --------------------------------------------------------------------------------------------------
-	// Recipe visualization ("Stage 2b") - real crafting/arcane/crucible/infusion recipe pages, restoring
-	// GuiResearchPage's own real per-type renderers. The original's 5th type, compound crafting (a real 3D
-	// multiblock-structure preview via a bespoke IBlockAccess + the game's own block renderer), is dropped
-	// outright rather than ported: confirmed via direct search that no compound-crafting recipe type was
-	// ever ported to this project at all - no Java class, no JSON data anywhere - so it's real, provable
-	// dead code for this port, the same class of cut as the hex-grid browser's addon-category panel. The
-	// aspect/knowledge "insert" encyclopedia popups (drawAspectPage/drawKnowledgesInsert) are a separate
-	// feature from recipe visualization and stay out of scope here too.
-	//
-	// Real simplification versus the original: one bookmark (one real ResourceLocation in a stage's
-	// `recipes` list) now always means exactly one real recipe, so the original's own recipe-cycling
-	// ("recipePage"/"hasRecipePages", for when several physical recipes shared one catalog key) is dropped -
-	// that stemmed entirely from the original's own recipe-groups catalog, which was never ported (this
-	// port's data-driven recipe files are already real, individually-addressed one-key-one-recipe).
-	// --------------------------------------------------------------------------------------------------
-
-	private static final int BOOKMARK_SIZE = 18;
-	private static final int DETAIL_SIZE = 256;
-
-	private int bookmarkX(int sw) {
-		return sw + BOOK_W + 22;
-	}
-
-	private int bookmarkY(int sh, int index) {
-		return sh + 12 + index * (BOOKMARK_SIZE + 4);
-	}
-
-	private void renderRecipeBookmarks(GuiGraphics graphics, List<RecipeHolder<?>> bookmarks, int mouseX, int mouseY, int sw, int sh) {
-		for (int i = 0; i < bookmarks.size(); i++) {
-			RecipeHolder<?> holder = bookmarks.get(i);
-			int x = bookmarkX(sw);
-			int y = bookmarkY(sh, i);
-			boolean hovered = mouseX >= x && mouseX < x + BOOKMARK_SIZE && mouseY >= y && mouseY < y + BOOKMARK_SIZE;
-			boolean open = shownRecipe == holder;
 			graphics.setColor(1f, 1f, 1f, 1f);
-			graphics.fill(x - 1, y - 1, x + BOOKMARK_SIZE + 1, y + BOOKMARK_SIZE + 1,
-					open ? 0xE0805030 : (hovered ? 0xC0403020 : 0xA0201810));
-			ItemStack icon = recipeIcon(holder.value());
-			if (!icon.isEmpty()) {
-				graphics.renderItem(icon, x + 1, y + 1);
-				if (hovered) graphics.renderTooltip(font, icon, mouseX, mouseY);
+			if (hovered) {
+				String dp = ResearchCategories.getCategoryName(tab.key()).getString() + " (" + tab.completion() + "%)";
+				graphics.drawString(font, dp, tab.flip() ? screenX + 9 - font.width(dp) : x + 22, y + 4, 0xFFFFFF, true);
+				int t = 9;
+				if (nr) {
+					String s = Component.translatable("tc.research.newresearch").getString();
+					graphics.drawString(font, s, tab.flip() ? screenX + 9 - font.width(s) : x + 22, y + 4 + t, 0xFFFFFF, true);
+					t += 9;
+				}
+				if (np) {
+					String s = Component.translatable("tc.research.newpage").getString();
+					graphics.drawString(font, s, tab.flip() ? screenX + 9 - font.width(s) : x + 22, y + 4 + t, 0xFFFFFF, true);
+				}
 			}
 		}
-	}
-
-	/** Returns the bookmark hit at this screen position, or {@code null}. Mirrors
-	 * {@link #renderRecipeBookmarks}'s own layout exactly. */
-	private RecipeHolder<?> bookmarkAt(double mouseX, double mouseY, List<RecipeHolder<?>> bookmarks, int sw, int sh) {
-		for (int i = 0; i < bookmarks.size(); i++) {
-			int x = bookmarkX(sw);
-			int y = bookmarkY(sh, i);
-			if (mouseX >= x && mouseX < x + BOOKMARK_SIZE && mouseY >= y && mouseY < y + BOOKMARK_SIZE) {
-				return bookmarks.get(i);
-			}
+		if (scrollButtons) {
+			boolean up = mx >= width - 14 && mx < width - 4 && my >= 20 && my < 31;
+			float c = up ? 1f : 0.7f;
+			graphics.setColor(c, c, c, 1f);
+			graphics.blit(TX1, width - 14, 20, 51, 55, 10, 11);
+			boolean down = mx >= width - 14 && mx < width - 4 && my >= screenY + 1 && my < screenY + 12;
+			c = down ? 1f : 0.7f;
+			graphics.setColor(c, c, c, 1f);
+			graphics.blit(TX1, width - 14, screenY + 1, 51, 71, 10, 11);
+			graphics.setColor(1f, 1f, 1f, 1f);
 		}
-		return null;
-	}
-
-	private ItemStack recipeIcon(Recipe<?> recipe) {
-		try {
-			return recipe.getResultItem(minecraft.level.registryAccess());
-		} catch (Exception ex) {
-			return ItemStack.EMPTY;
-		}
-	}
-
-	private boolean detailPopupContains(double mouseX, double mouseY) {
-		int x = (width - DETAIL_SIZE) / 2;
-		int y = (height - DETAIL_SIZE) / 2;
-		return mouseX >= x && mouseX < x + DETAIL_SIZE && mouseY >= y && mouseY < y + DETAIL_SIZE;
-	}
-
-	private void renderRecipeDetail(GuiGraphics graphics, int mouseX, int mouseY) {
-		Recipe<?> recipe = shownRecipe.value();
-		int x = (width - DETAIL_SIZE) / 2;
-		int y = (height - DETAIL_SIZE) / 2;
-		int cx = x + DETAIL_SIZE / 2;
-		int cy = y + DETAIL_SIZE / 2;
-
-		graphics.fill(0, 0, width, height, 0x90000000);
+		boolean searchHover = mx >= 1 && my >= height - 17 && mx < 17 && my < height - 1;
+		float c = searchHover ? 1f : 0.8f;
+		RenderSystem.enableBlend();
+		graphics.setColor(c, c, c, 1f);
+		graphics.blit(TX1, 1, height - 17, 160, 16, 16, 16);
 		graphics.setColor(1f, 1f, 1f, 1f);
-		graphics.blit(PAPER_TEX, x, y, 0, 0, DETAIL_SIZE, DETAIL_SIZE);
-
-		if (recipe instanceof ArcaneRecipe ar) {
-			drawArcaneDetail(graphics, cx, cy, mouseX, mouseY, ar);
-		} else if (recipe instanceof CrucibleRecipe cr) {
-			drawCrucibleDetail(graphics, cx, cy, mouseX, mouseY, cr);
-		} else if (recipe instanceof InfusionRecipe ir) {
-			drawInfusionDetail(graphics, cx, cy, mouseX, mouseY, ir);
-		} else if (recipe instanceof CraftingRecipe cr) {
-			drawCraftingDetail(graphics, cx, cy, mouseX, mouseY, cr);
-		}
-
-		graphics.drawCenteredString(font, Component.translatable("gui.back"), cx, y + DETAIL_SIZE - 14, 0xFFA0A0A0);
+		if (searchHover) graphics.drawString(font, Component.translatable("tc.search"), 20, height - 13, 0xFFFFFF, true);
 	}
 
-	private void drawArcaneDetail(GuiGraphics graphics, int cx, int cy, int mouseX, int mouseY, ArcaneRecipe recipe) {
-		graphics.drawCenteredString(font, Component.translatable("recipe.type.arcane"), cx, cy - 90, 0x202020);
-		drawStackAt(graphics, recipeIcon(recipe), cx - 8, cy - 70, mouseX, mouseY);
-
-		String vis = String.valueOf(recipe.getVis());
-		graphics.drawCenteredString(font, vis + " " + Component.translatable("wandtable.text1").getString(), cx, cy + 60, 0x202020);
-
-		AspectList crystals = recipe.getCrystals();
-		if (crystals != null && crystals.size() > 0) {
-			Aspect[] tags = crystals.getAspectsSortedByName();
-			int startX = cx - tags.length * 10;
-			for (int i = 0; i < tags.length; i++) {
-				drawAspectTag(graphics, startX + i * 20, cy + 74, mouseX, mouseY, tags[i], crystals.getAmount(tags[i]));
-			}
-		}
-
-		if (recipe instanceof ArcaneShapedRecipe shaped) {
-			drawIngredientGrid(graphics, shaped.getIngredients(), shaped.getWidth(), shaped.getHeight(), cx, cy - 16, mouseX, mouseY);
-		} else {
-			drawIngredientGrid(graphics, recipe.getIngredients(), 3, 3, cx, cy - 16, mouseX, mouseY);
-		}
-	}
-
-	private void drawCraftingDetail(GuiGraphics graphics, int cx, int cy, int mouseX, int mouseY, CraftingRecipe recipe) {
-		String typeKey = recipe instanceof ShapedRecipe ? "recipe.type.workbench" : "recipe.type.workbenchshapeless";
-		graphics.drawCenteredString(font, Component.translatable(typeKey), cx, cy - 90, 0x202020);
-		drawStackAt(graphics, recipeIcon(recipe), cx - 8, cy - 70, mouseX, mouseY);
-
-		if (recipe instanceof ShapedRecipe shaped) {
-			drawIngredientGrid(graphics, shaped.getIngredients(), shaped.getWidth(), shaped.getHeight(), cx, cy, mouseX, mouseY);
-		} else {
-			drawIngredientGrid(graphics, recipe.getIngredients(), 3, 3, cx, cy, mouseX, mouseY);
-		}
-	}
-
-	private void drawCrucibleDetail(GuiGraphics graphics, int cx, int cy, int mouseX, int mouseY, CrucibleRecipe recipe) {
-		graphics.drawCenteredString(font, Component.translatable("recipe.type.crucible"), cx, cy - 90, 0x202020);
-		drawStackAt(graphics, recipeIcon(recipe), cx - 8, cy - 70, mouseX, mouseY);
-		drawStackAt(graphics, cycleIngredient(recipe.getCatalyst()), cx - 40, cy - 8, mouseX, mouseY);
-
-		Aspect[] tags = recipe.getAspects().getAspectsSortedByName();
-		int cols = Math.min(6, Math.max(1, tags.length));
-		int rows = (tags.length + cols - 1) / Math.max(1, cols);
-		for (int i = 0; i < tags.length; i++) {
-			int row = i / cols;
-			int col = i % cols;
-			int rowLen = Math.min(cols, tags.length - row * cols);
-			int startX = cx - rowLen * 10;
-			drawAspectTag(graphics, startX + col * 20, cy + 16 + row * 20 - (rows - 1) * 10, mouseX, mouseY, tags[i], recipe.getAspects().getAmount(tags[i]));
-		}
-	}
-
-	private void drawInfusionDetail(GuiGraphics graphics, int cx, int cy, int mouseX, int mouseY, InfusionRecipe recipe) {
-		graphics.drawCenteredString(font, Component.translatable("recipe.type.infusion"), cx, cy - 90, 0x202020);
-
-		ItemStack central = cycleIngredient(recipe.getRecipeInput());
-		AspectList aspects = recipe.getAspects();
-		ItemStack output = recipeIcon(recipe);
-		int instability = recipe.getInstability();
-		if (recipe instanceof InfusionEnchantmentRecipe && minecraft.player != null && !central.isEmpty()) {
-			List<ItemStack> comps = new ArrayList<>();
-			for (Ingredient ing : recipe.getComponents()) comps.add(cycleIngredient(ing));
-			output = recipe.getRecipeOutput(minecraft.player, central, comps);
-			aspects = recipe.getAspects(minecraft.player, central, comps);
-			instability = recipe.getInstability(minecraft.player, central, comps);
-		}
-
-		drawStackAt(graphics, output, cx - 8, cy - 70, mouseX, mouseY);
-		drawStackAt(graphics, central, cx - 8, cy - 8, mouseX, mouseY);
-
-		List<Ingredient> components = recipe.getComponents();
-		int count = components.size();
-		double slice = count > 0 ? Math.PI * 2 / count : 0;
-		for (int i = 0; i < count; i++) {
-			double angle = -Math.PI / 2 + slice * i;
-			int vx = cx + (int) (Math.cos(angle) * 34) - 8;
-			int vy = cy + (int) (Math.sin(angle) * 34) - 8;
-			drawStackAt(graphics, cycleIngredient(components.get(i)), vx, vy, mouseX, mouseY);
-		}
-
-		String instText = Component.translatable("tc.inst").getString() + " "
-				+ Component.translatable("tc.inst." + Math.min(5, instability / 2)).getString();
-		graphics.drawCenteredString(font, instText, cx, cy + 60, 0x202020);
-
-		Aspect[] tags = aspects.getAspectsSortedByName();
-		int cols = Math.min(6, Math.max(1, tags.length));
-		for (int i = 0; i < tags.length; i++) {
-			int row = i / cols;
-			int col = i % cols;
-			int rowLen = Math.min(cols, tags.length - row * cols);
-			int startX = cx - rowLen * 10;
-			drawAspectTag(graphics, startX + col * 20, cy + 74 + row * 20, mouseX, mouseY, tags[i], aspects.getAmount(tags[i]));
-		}
-	}
-
-	/** Lays a shaped recipe's real flat, row-major {@link Ingredient} list back out into its own {@code
-	 * width}x{@code height} grid, centered on ({@code cx},{@code cy}); a shapeless list is drawn the same
-	 * way by just passing 3x3 and taking whatever fits, matching the original's own "shapeless just fills a
-	 * 3x3 in order" real behavior. */
-	private void drawIngredientGrid(GuiGraphics graphics, List<Ingredient> ingredients, int gridW, int gridH, int cx, int cy, int mouseX, int mouseY) {
-		int startX = cx - gridW * 9;
-		int startY = cy - gridH * 9;
-		for (int row = 0; row < gridH; row++) {
-			for (int col = 0; col < gridW; col++) {
-				int i = row * gridW + col;
-				if (i >= ingredients.size()) continue;
-				Ingredient ing = ingredients.get(i);
-				if (ing == null || ing.isEmpty()) continue;
-				drawStackAt(graphics, cycleIngredient(ing), startX + col * 18, startY + row * 18, mouseX, mouseY);
-			}
-		}
-	}
-
-	/** Shows a different one of an {@link Ingredient}'s real matching items every second, matching the
-	 * original's own real {@code InventoryUtils#cycleItemStack} ore-dictionary-cycling display behavior. */
-	private ItemStack cycleIngredient(Ingredient ingredient) {
-		if (ingredient == null || ingredient.isEmpty()) return ItemStack.EMPTY;
-		ItemStack[] items = ingredient.getItems();
-		if (items.length == 0) return ItemStack.EMPTY;
-		return items[(int) (System.currentTimeMillis() / 1000L % items.length)];
-	}
-
-	private void drawStackAt(GuiGraphics graphics, ItemStack stack, int x, int y, int mouseX, int mouseY) {
-		if (stack == null || stack.isEmpty()) return;
-		graphics.renderItem(stack, x, y);
-		if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
-			graphics.renderTooltip(font, stack, mouseX, mouseY);
-		}
-	}
-
-	private void drawAspectTag(GuiGraphics graphics, int x, int y, int mouseX, int mouseY, Aspect aspect, int amount) {
-		ResourceLocation image = aspect.getImage();
-		if (image != null) {
-			java.awt.Color c = new java.awt.Color(aspect.getColor());
-			graphics.setColor(c.getRed() / 255f, c.getGreen() / 255f, c.getBlue() / 255f, 1f);
-			graphics.blit(image, x, y, 0, 0, 16, 16);
-			graphics.setColor(1f, 1f, 1f, 1f);
-		}
-		if (amount > 0) {
-			String s = String.valueOf(amount);
-			graphics.pose().pushPose();
-			graphics.pose().translate(x + 16 - font.width(s) * 0.6f, y + 10, 200);
-			graphics.pose().scale(0.6f, 0.6f, 1f);
-			graphics.drawString(font, s, 0, 0, 0xFFFFFFFF);
-			graphics.pose().popPose();
-		}
-		if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
-			graphics.renderTooltip(font, List.of(Component.literal(aspect.getName()).getVisualOrderText(),
-					aspect.getLocalizedDescription().getVisualOrderText()), mouseX, mouseY);
-		}
+	@Override
+	public boolean isPauseScreen() {
+		return false;
 	}
 }

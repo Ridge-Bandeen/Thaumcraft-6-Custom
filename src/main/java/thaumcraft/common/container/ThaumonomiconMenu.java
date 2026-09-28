@@ -1,8 +1,10 @@
 package thaumcraft.common.container;
 
-import net.minecraft.ChatFormatting;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -21,39 +23,32 @@ import thaumcraft.common.lib.research.ResearchRequirements;
 import thaumcraft.common.registry.ThaumcraftMenus;
 
 /**
- * The real menu behind the new (simplified - see {@link thaumcraft.client.gui.ThaumonomiconScreen}'s own doc
- * comment) Thaumonomicon research browser. No slots at all - like {@code TurretConfigMenu}, this only exists
- * to (a) give the screen a real server round-trip for its one real action, matching the {@code clickMenuButton}
- * pattern {@code ResearchTableMenu} already established, and (b) push the viewing player's own
- * {@link IPlayerKnowledge} to the client via {@link ClientboundPlayerKnowledgePacket} - attachments aren't
- * auto-synced, and there's no other trigger for this yet (see that packet's own doc comment).
+ * The menu behind the Thaumonomicon ({@link thaumcraft.client.gui.ThaumonomiconScreen}). No slots - it exists to give
+ * the book a server round-trip for its research clicks and to push the viewer's {@link IPlayerKnowledge} to the client
+ * on open ({@link ClientboundPlayerKnowledgePacket}; attachments aren't auto-synced).
  *
- * <p>Restored 2026-09-27, at the user's own explicit request ("match the user experience perfectly with the
- * original") once a look at the {@code enchanted_placeholder} tooltip gap turned up that this class had never
- * actually consulted {@link ResearchRequirements} at all: the ONE button id now does two different real things
- * depending on the entry's own state, matching the true original's own two distinct network messages
- * ({@code PacketSyncProgressToServer}'s {@code first}/{@code checks} flags) that this port's single
- * {@code clickMenuButton} pattern collapses into one call:
+ * <p>The original sent {@code PacketSyncProgressToServer(key, first, checks, noFlags)} for three different clicks; here
+ * each is a button id carrying an action and the entry (its index in {@link #researchKeys()}, identical on both sides
+ * since both load the same research data):
  * <ul>
- * <li><b>Unknown entry</b> - "open" it: a real, genuinely ungated {@link ThaumcraftApi#internalMethods}
- * {@code progressResearch} call (matching {@code GuiResearchBrowser}'s own node-click, which never checked
- * requirements either - only the SECOND, in-book click does).</li>
- * <li><b>Known, not complete</b> - "study" its next stage: real per-stage gating via
- * {@link ResearchRequirements#isStageSatisfied}, real consumption via {@link ResearchRequirements#consumeStage}
- * on success, and a real chat message naming what's still missing on failure - a deliberate, honest stand-in
- * for the original's own graphical per-requirement checklist (green/red icons in the open book), which is a
- * real, separate client-rendering project of its own not undertaken here. See
- * {@link thaumcraft.client.gui.ThaumonomiconScreen}'s own "Study" button for the client side of this.</li>
- * <li><b>Already complete</b> - unchanged: just clears the "new" badges, matching
- * {@code GuiResearchBrowser}'s own real re-click handler.</li>
+ * <li>{@link #ACTION_OPEN} - clicking a node in the browser. An entry not yet known is started, ungated
+ * ({@code first=true, checks=false, noFlags=true}). A known one has its "new" badges cleared, and if it stands on its
+ * last stage ({@code stage > 1 && stage >= stages}) its requirements are checked and it's finished if met
+ * ({@code first=false, checks=true, noFlags=false}).</li>
+ * <li>{@link #ACTION_COMPLETE_STAGE} - the "Complete stage" hotspot under the requirement checklist in the open book:
+ * check and consume the current stage's requirements, then advance one stage ({@code first=false, checks=true,
+ * noFlags=true}). A failed check does nothing, as in the original; the checklist already shows what's missing.</li>
  * </ul>
- *
- * <p>The button id is the target {@link ResearchEntry#getKey()}'s own {@code hashCode()} rather than a stable
- * index - since {@link ResearchCategory#research} is a plain (unordered) map and the screen and this menu
- * only ever need to agree with <i>each other</i> at the moment of a single click, not across sessions, hashing
- * the key is simpler than threading a stable ordering through both sides.
+ * One deliberate difference from the original's {@code checkRequisites}: it consumed the carried items before looking at
+ * the craft/research/knowledge gates, so a request whose later gates failed still ate the items. Here nothing is spent
+ * unless every gate passes. The client only offers the click once everything is met, so this only matters for a stale
+ * click, where eating items for nothing would be a plain loss.
  */
 public class ThaumonomiconMenu extends AbstractContainerMenu {
+
+	public static final int ACTION_OPEN = 0;
+	public static final int ACTION_COMPLETE_STAGE = 1;
+	private static final int ACTIONS = 2;
 
 	public ThaumonomiconMenu(int containerId, Inventory playerInventory) {
 		super(ThaumcraftMenus.THAUMONOMICON.get(), containerId);
@@ -62,106 +57,68 @@ public class ThaumonomiconMenu extends AbstractContainerMenu {
 		}
 	}
 
+	/** Every research key, sorted - the shared index a button id refers to. */
+	public static List<String> researchKeys() {
+		List<String> keys = new ArrayList<>();
+		for (ResearchCategory category : ResearchCategories.researchCategories.values()) keys.addAll(category.research.keySet());
+		Collections.sort(keys);
+		return keys;
+	}
+
+	/** The button id for {@code action} on {@code key}, or -1 if the key isn't a research entry. */
+	public static int buttonId(int action, String key) {
+		int index = researchKeys().indexOf(key);
+		return index < 0 ? -1 : index * ACTIONS + action;
+	}
+
 	@Override
 	public boolean clickMenuButton(Player player, int id) {
-		boolean result = startResearch(player, id);
-		if (result && player instanceof ServerPlayer serverPlayer) {
+		List<String> keys = researchKeys();
+		if (id < 0 || id / ACTIONS >= keys.size()) return false;
+		ResearchEntry target = ResearchCategories.getResearch(keys.get(id / ACTIONS));
+		if (target == null) return false;
+		boolean changed = id % ACTIONS == ACTION_COMPLETE_STAGE ? completeStage(player, target) : open(player, target);
+		if (changed && player instanceof ServerPlayer serverPlayer) {
 			syncToPlayer(serverPlayer);
 		}
-		return result;
+		return changed;
 	}
 
-	private boolean startResearch(Player player, int keyHash) {
-		ResearchEntry target = null;
-		for (ResearchCategory category : ResearchCategories.researchCategories.values()) {
-			for (ResearchEntry entry : category.research.values()) {
-				if (entry.getKey().hashCode() == keyHash) {
-					target = entry;
-					break;
-				}
-			}
-			if (target != null) break;
-		}
-		if (target == null) return false;
-
+	private boolean open(Player player, ResearchEntry target) {
 		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
-		if (knowledge.isResearchComplete(target.getKey())) {
-			// Real original behavior: opening an already-known entry's page just clears its "new" badges,
-			// same as GuiResearchBrowser's own real mouseClicked handler.
-			boolean clearedResearch = knowledge.clearResearchFlag(target.getKey(), IPlayerKnowledge.EnumResearchFlag.RESEARCH);
-			boolean clearedPage = knowledge.clearResearchFlag(target.getKey(), IPlayerKnowledge.EnumResearchFlag.PAGE);
-			return clearedResearch || clearedPage;
+		String key = target.getKey();
+		if (!knowledge.isResearchKnown(key)) {
+			if (!ThaumcraftApi.internalMethods.doesPlayerHaveRequisites(player, key)) return false;
+			thaumcraft.common.ThaumcraftInternalMethodHandler.noFlags = true;
+			return ThaumcraftApi.internalMethods.progressResearch(player, key);
 		}
-
-		if (knowledge.isResearchKnown(target.getKey())) {
-			return studyNextStage(player, target, knowledge);
+		boolean changed = knowledge.clearResearchFlag(key, IPlayerKnowledge.EnumResearchFlag.RESEARCH);
+		changed |= knowledge.clearResearchFlag(key, IPlayerKnowledge.EnumResearchFlag.PAGE);
+		int stage = knowledge.getResearchStage(key);
+		if (target.getStages() != null && stage > 1 && stage >= target.getStages().length) {
+			changed |= checkAndProgress(player, target, false);
 		}
-
-		// Not known at all yet: the original's own real ungated node-click - see this class's own doc comment.
-		if (!ThaumcraftApi.internalMethods.doesPlayerHaveRequisites(player, target.getKey())) {
-			return false;
-		}
-		thaumcraft.common.ThaumcraftInternalMethodHandler.noFlags = true; // the original's own node-click sent noFlags=true
-		return ThaumcraftApi.internalMethods.progressResearch(player, target.getKey());
+		return changed;
 	}
 
-	/** The original's own real in-book "study this stage" click: gate, consume, and advance exactly one stage -
-	 * see this class's own doc comment. */
-	private boolean studyNextStage(Player player, ResearchEntry entry, IPlayerKnowledge knowledge) {
+	private boolean completeStage(Player player, ResearchEntry target) {
+		if (!ThaumcraftCapabilities.getKnowledge(player).isResearchKnown(target.getKey())) return false;
+		return checkAndProgress(player, target, true);
+	}
+
+	/** The original's {@code checkRequisites} followed by {@code progressResearch}. */
+	private boolean checkAndProgress(Player player, ResearchEntry entry, boolean noFlags) {
 		ResearchStage[] stages = entry.getStages();
 		if (stages == null) return false;
-		// Matches the original's own currentStage = getResearchStage(key) - 1 exactly.
-		int stageIndex = knowledge.getResearchStage(entry.getKey()) - 1;
-		if (stageIndex < 0 || stageIndex >= stages.length) return false;
-		ResearchStage stage = stages[stageIndex];
-
-		if (!ResearchRequirements.isStageSatisfied(player, stage)) {
-			if (player instanceof ServerPlayer serverPlayer) reportMissing(serverPlayer, stage);
-			return false;
+		int stageIndex = ThaumcraftCapabilities.getKnowledge(player).getResearchStage(entry.getKey()) - 1;
+		if (stageIndex < 0) return false;
+		if (stageIndex < stages.length) {
+			ResearchStage stage = stages[stageIndex];
+			if (!ResearchRequirements.isStageSatisfied(player, stage)) return false;
+			if (player instanceof ServerPlayer serverPlayer) ResearchRequirements.consumeStage(serverPlayer, stage);
 		}
-		if (player instanceof ServerPlayer serverPlayer) {
-			ResearchRequirements.consumeStage(serverPlayer, stage);
-		}
-		thaumcraft.common.ThaumcraftInternalMethodHandler.noFlags = true; // the original's own study click sent noFlags=true
+		if (noFlags) thaumcraft.common.ThaumcraftInternalMethodHandler.noFlags = true;
 		return ThaumcraftApi.internalMethods.progressResearch(player, entry.getKey());
-	}
-
-	/** A plain chat report of what a failed {@link #studyNextStage} is still missing - see this class's own
-	 * doc comment for why this stands in for the original's own graphical checklist. */
-	private void reportMissing(ServerPlayer player, ResearchStage stage) {
-		StringBuilder missing = new StringBuilder();
-		int[] craftReferences = stage.getCraftReference();
-		if (craftReferences != null && craftReferences.length > 0) {
-			missing.append(craftReferences.length == 1 ? "an item you must craft" : "items you must craft");
-		}
-		Object[] obtain = stage.getObtain();
-		if (obtain != null && obtain.length > 0) {
-			if (!missing.isEmpty()) missing.append(", ");
-			missing.append(obtain.length == 1 ? "an item you must be carrying" : "items you must be carrying");
-		}
-		String[] research = stage.getResearch();
-		if (research != null) {
-			for (String key : research) {
-				if (ThaumcraftCapabilities.knowsResearchStrict(player, key)) continue;
-				if (!missing.isEmpty()) missing.append(", ");
-				missing.append("more research or observation first");
-				break;
-			}
-		}
-		ResearchStage.Knowledge[] know = stage.getKnow();
-		if (know != null) {
-			IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
-			for (ResearchStage.Knowledge k : know) {
-				int have = knowledge.getKnowledge(k.type, k.category);
-				if (have >= k.amount) continue;
-				if (!missing.isEmpty()) missing.append(", ");
-				String kind = k.type.name().charAt(0) + k.type.name().substring(1).toLowerCase();
-				missing.append(k.amount - have).append(" more ").append(kind);
-				if (k.category != null) missing.append(" (").append(ResearchCategories.getCategoryName(k.category.key).getString()).append(")");
-			}
-		}
-		if (missing.isEmpty()) missing.append("its requirements");
-		player.sendSystemMessage(Component.literal("You still need " + missing + " for this.").withStyle(ChatFormatting.DARK_PURPLE, ChatFormatting.ITALIC));
 	}
 
 	/** Same defensive try/catch {@code ResearchTableMenu#syncToPlayer} already established - a genuinely
