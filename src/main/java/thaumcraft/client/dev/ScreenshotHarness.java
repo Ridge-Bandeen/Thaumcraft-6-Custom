@@ -72,6 +72,22 @@ public final class ScreenshotHarness {
 			});
 			case "all" -> mc.player.connection.sendCommand("thaumcraft research @s all");
 			case "reset" -> mc.player.connection.sendCommand("thaumcraft research @s reset");
+			case "table" -> mc.getSingleplayerServer().execute(() -> {
+				// a Research Table two blocks ahead with ink and paper, a bookshelf beside it (an aid), then open it
+				ServerPlayer sp = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+				if (sp == null) return;
+				net.minecraft.core.BlockPos pos = sp.blockPosition().relative(sp.getDirection(), 2);
+				sp.serverLevel().setBlockAndUpdate(pos, thaumcraft.api.blocks.BlocksTC.researchTable.get().defaultBlockState());
+				sp.serverLevel().setBlockAndUpdate(pos.relative(sp.getDirection().getClockWise()), net.minecraft.world.level.block.Blocks.BOOKSHELF.defaultBlockState());
+				if (sp.serverLevel().getBlockEntity(pos) instanceof thaumcraft.common.tiles.crafting.TileResearchTable tile) {
+					tile.getItemHandler().insertItem(0, new net.minecraft.world.item.ItemStack(thaumcraft.api.items.ItemsTC.scribingTools.get()), false);
+					tile.getItemHandler().insertItem(1, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.PAPER, 16), false);
+					sp.openMenu(tile);
+				}
+			});
+			case "click" -> {
+				if (mc.player.containerMenu != null) mc.gameMode.handleInventoryButtonClick(mc.player.containerMenu.containerId, Integer.parseInt(arg));
+			}
 			case "cat" -> invoke(mc, "selectCategory", String.class, arg);
 			case "entry" -> {
 				if (mc.screen instanceof ThaumonomiconScreen s) {

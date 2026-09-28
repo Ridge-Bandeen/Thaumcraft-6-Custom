@@ -42,6 +42,12 @@ public final class ClientResearchTableCache {
 		return data;
 	}
 
+	/** Where the open table is (from the last sync), so the screen can look for research aids around it. */
+	@Nullable
+	public static BlockPos getPos() {
+		return pos;
+	}
+
 	public static void clear() {
 		pos = null;
 		data = null;

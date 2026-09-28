@@ -9085,6 +9085,28 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** Starting a theory with a chosen aid (the original's PacketStartTheoryToServer; here a START_WITH_AIDS bitmask button):
+	 * a nearby bookshelf chosen counts; asking for an aid that isn't around the table doesn't. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void researchTableStartsATheoryWithTheChosenNearbyAid(GameTestHelper helper) {
+		BlockPos tablePos = new BlockPos(3, 2, 3);
+		helper.setBlock(tablePos, thaumcraft.api.blocks.BlocksTC.researchTable.get());
+		helper.setBlock(tablePos.offset(1, 0, 0), net.minecraft.world.level.block.Blocks.BOOKSHELF);
+		thaumcraft.common.tiles.crafting.TileResearchTable tile = helper.getBlockEntity(tablePos);
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(tablePos).above());
+		forceResearch(player, "FIRSTSTEPS", "KNOWLEDGETYPES", "THEORYRESEARCH");
+		thaumcraft.common.container.ResearchTableMenu menu = new thaumcraft.common.container.ResearchTableMenu(0, player.getInventory(), tile);
+		java.util.List<String> keys = thaumcraft.common.container.ResearchTableMenu.aidKeys();
+		int bookshelf = keys.indexOf(thaumcraft.api.research.theorycraft.AidBookshelf.class.getName());
+		helper.assertTrue(bookshelf >= 0, "the bookshelf aid is registered");
+		int allAids = (1 << Math.min(keys.size(), 30)) - 1;
+		helper.assertTrue(menu.clickMenuButton(player, thaumcraft.common.container.ResearchTableMenu.START_WITH_AIDS + allAids), "starting with aids should work");
+		// each aid used costs a starting bulb (the original's initialize: inspiration = start - aids)
+		helper.assertTrue(tile.data != null && tile.data.inspirationStart - tile.data.inspiration == 1,
+				"only the bookshelf is around the table, so only it counts, found " + (tile.data == null ? "no theory" : (tile.data.inspirationStart - tile.data.inspiration)));
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void checkSurroundingAidsDetectsARealPlacedBookshelf(GameTestHelper helper) {
 		BlockPos tablePos = new BlockPos(3, 2, 3);

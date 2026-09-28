@@ -101,7 +101,7 @@ public class ResearchTableMenu extends AbstractContainerMenu {
 			case 4, 5, 6 -> pick(player, id - 4);
 			case 7 -> finish(player);
 			case 9 -> abandon();
-			default -> super.clickMenuButton(player, id);
+			default -> id >= START_WITH_AIDS ? startTheory(player, id - START_WITH_AIDS) : super.clickMenuButton(player, id);
 		};
 		if (result && player instanceof ServerPlayer serverPlayer) {
 			syncToPlayer(serverPlayer);
@@ -122,8 +122,30 @@ public class ResearchTableMenu extends AbstractContainerMenu {
 	}
 
 	private boolean startTheory(Player player) {
+		return startTheory(player, 0);
+	}
+
+	/** Button ids from this up start a theory with research aids: the original's {@code PacketStartTheoryToServer}
+	 * carried the chosen aid set; here it's a bitmask over {@link #aidKeys()}. Only aids actually around the table
+	 * count, whatever the client sent. */
+	public static final int START_WITH_AIDS = 100;
+
+	/** Every registered research aid, sorted - the bit order of a {@link #START_WITH_AIDS} mask. */
+	public static java.util.List<String> aidKeys() {
+		java.util.List<String> keys = new java.util.ArrayList<>(thaumcraft.api.research.theorycraft.TheorycraftManager.aids.keySet());
+		java.util.Collections.sort(keys);
+		return keys;
+	}
+
+	private boolean startTheory(Player player, int aidMask) {
 		if (tile == null || tile.data != null) return false;
-		tile.startNewTheory(player, Set.of());
+		java.util.List<String> keys = aidKeys();
+		Set<String> around = tile.checkSurroundingAids();
+		Set<String> chosen = new java.util.HashSet<>();
+		for (int i = 0; i < keys.size() && i < 30; i++) {
+			if ((aidMask & (1 << i)) != 0 && around.contains(keys.get(i))) chosen.add(keys.get(i));
+		}
+		tile.startNewTheory(player, chosen);
 		return true;
 	}
 
