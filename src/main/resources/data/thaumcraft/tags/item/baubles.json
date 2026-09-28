@@ -1,0 +1,22 @@
+{
+  "values": [
+    "thaumcraft:amulet_mundane",
+    "thaumcraft:ring_mundane",
+    "thaumcraft:girdle_mundane",
+    "thaumcraft:ring_apprentice",
+    "thaumcraft:amulet_fancy",
+    "thaumcraft:ring_fancy",
+    "thaumcraft:girdle_fancy",
+    "thaumcraft:amulet_vis",
+    "thaumcraft:amulet_vis_stone",
+    "thaumcraft:charm_undying",
+    "thaumcraft:cloud_ring",
+    "thaumcraft:curiosity_band",
+    "thaumcraft:verdant_charm",
+    "thaumcraft:verdant_charm_life",
+    "thaumcraft:verdant_charm_sustain",
+    "thaumcraft:voidseer_charm",
+    "thaumcraft:goggles",
+    "thaumcraft:focus_pouch"
+  ]
+}

@@ -563,8 +563,8 @@
   "item.thaumcraft.ring_fancy": "Fancy Ring",
   "item.thaumcraft.girdle_fancy": "Fancy Belt",
   "item.amulet_vis.text": "Recharges armor, baubles and hotbar items.",
-  "item.thaumcraft.amulet_vis": "Vis Stone",
-  "item.thaumcraft.amulet_vis_stone": "Amulet of Vis",
+  "item.thaumcraft.amulet_vis": "Amulet of Vis",
+  "item.thaumcraft.amulet_vis_stone": "Vis Stone",
   "item.girdle_hover.name": "Thaumostatic Girdle",
   "item.thaumcraft.verdant_charm": "Verdant Heart Charm",
   "item.thaumcraft.verdant_charm_life": "Verdant Lifegiver",
@@ -1909,5 +1909,6 @@
   "item.thaumcraft.curio_knowledge": "Illuminating Curiosity",
   "item.thaumcraft.curio_twisted": "Twisted Curiosity",
   "item.thaumcraft.curio_rites": "Crimson Rites",
-  "entity.thaumcraft.special_item": "Item"
+  "entity.thaumcraft.special_item": "Item",
+  "item.thaumcraft.thaumonomicon_cheat": "Cheater's Thaumonomicon"
 }

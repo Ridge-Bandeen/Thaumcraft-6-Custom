@@ -16423,6 +16423,50 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** Baubles take runes too (the original allowed any IBauble); the book's example copies never match. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void runicArmorRecipeAcceptsABaubleButNotItsDisplayCopies(GameTestHelper helper) {
+		thaumcraft.api.crafting.InfusionRecipeInput input = new thaumcraft.api.crafting.InfusionRecipeInput(
+				new ItemStack(thaumcraft.api.items.ItemsTC.ringMundane.get()),
+				java.util.List.of(new ItemStack(thaumcraft.api.items.ItemsTC.salisMundus.get()), new ItemStack(thaumcraft.api.items.ItemsTC.amber.get())));
+		var all = helper.getLevel().getRecipeManager().getAllRecipesFor(thaumcraft.api.crafting.ThaumcraftRecipeTypes.INFUSION_TYPE.get());
+		java.util.List<String> matching = all.stream().filter(h -> h.value().matches(input, helper.getLevel())).map(h -> h.id().getPath()).toList();
+		helper.assertTrue(matching.equals(java.util.List.of("runic_armor")), "a mundane ring should match only the real runic recipe, found " + matching);
+		helper.succeed();
+	}
+
+	/** Pech trades are the original's tables: the forager's list even carries the three items the original filed there
+	 * by mistake (Totem of Undying, Compass, Spectral Arrow). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void pechForagerTradesIncludeTheOriginalsMisfiledItems(GameTestHelper helper) throws Exception {
+		java.lang.reflect.Field f = thaumcraft.common.entities.monster.EntityPech.class.getDeclaredField("TRADE_REWARDS");
+		f.setAccessible(true);
+		java.util.Map<Integer, java.util.List<?>> tables = (java.util.Map<Integer, java.util.List<?>>) f.get(null);
+		java.util.Set<net.minecraft.world.item.Item> forager = new java.util.HashSet<>();
+		for (Object r : tables.get(0)) {
+			java.lang.reflect.Method stack = r.getClass().getDeclaredMethod("stack");
+			stack.setAccessible(true);
+			@SuppressWarnings("unchecked")
+			ItemStack s = ((java.util.function.Function<net.minecraft.world.level.Level, ItemStack>) stack.invoke(r)).apply(helper.getLevel());
+			if (!s.isEmpty()) forager.add(s.getItem());
+		}
+		helper.assertTrue(forager.contains(Items.TOTEM_OF_UNDYING) && forager.contains(Items.COMPASS) && forager.contains(Items.SPECTRAL_ARROW)
+				&& forager.contains(thaumcraft.api.items.ItemsTC.clusterCopper.get()), "forager table should match the original, found " + forager);
+		helper.assertFalse(forager.contains(thaumcraft.api.items.ItemsTC.clusterTin.get()), "no tin ingot in vanilla, so no tin cluster offered");
+		helper.succeed();
+	}
+
+	/** Tin/silver/lead clusters smelt into a mod's ingot only when one exists; plain vanilla has none, so no recipe. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tinClusterSmeltingOnlyLoadsWithATinIngot(GameTestHelper helper) {
+		var rm = helper.getLevel().getRecipeManager();
+		helper.assertTrue(rm.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "cluster_tin_smelting")).isEmpty(),
+				"without any c:ingots/tin the tin cluster smelting recipe must not load");
+		helper.assertTrue(rm.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "cluster_copper_smelting")).isPresent(),
+				"copper cluster smelting is always there");
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void runicArmorRecipeRefusesARealNonArmorCentralItem(GameTestHelper helper) {
 		thaumcraft.api.crafting.InfusionRecipeInput input = new thaumcraft.api.crafting.InfusionRecipeInput(

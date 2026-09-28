@@ -43,16 +43,37 @@ import thaumcraft.api.items.ThaumcraftDataComponents;
  * {@link ThaumcraftDataComponents#RUNIC_CHARGE} by exactly one - the real payoff, an absorption-shield tick
  * that reads this value off worn/held gear, lives in {@code RunicShieldEvents}.
  *
- * Real, documented cuts from the original: {@code IBauble} baubles-slot eligibility is dropped (baubles
- * aren't ported - see {@code WornGearHelper}'s own doc comment for this whole port's standing decision on
- * that), leaving real armor pieces as the only eligible central item. No hard level cap either way (matches
+ * Armor or any bauble ({@link #BAUBLES}) can take runes, as in the original. No hard level cap either way (matches
  * the original, which never capped this - the escalating Amber cost is the only real brake on how far a
  * player pushes it).
  */
 public class RunicArmorRecipe extends InfusionRecipe {
 
+	/** Items the original let take runes besides armor: every IBauble - here the {@code thaumcraft:baubles} tag. */
+	public static final net.minecraft.tags.TagKey<net.minecraft.world.item.Item> BAUBLES =
+			net.minecraft.tags.ItemTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "baubles"));
+
+	/** Set only on the book's example pages (the original's RunicArmorFake0-2: a ring at charge 0, 1 and 2, showing how
+	 * the cost climbs). A recipe with one never matches. */
+	private final ItemStack display;
+
 	public RunicArmorRecipe(String group, String research, AspectList aspects, int instability, NonNullList<Ingredient> components) {
-		super(group, research, aspects, instability, Ingredient.EMPTY, components, ItemStack.EMPTY);
+		this(group, research, aspects, instability, components, ItemStack.EMPTY);
+	}
+
+	public RunicArmorRecipe(String group, String research, AspectList aspects, int instability, NonNullList<Ingredient> components, ItemStack display) {
+		super(group, research, aspects, instability, display.isEmpty() ? Ingredient.EMPTY : Ingredient.of(display.getItem()), components, ItemStack.EMPTY);
+		this.display = display;
+	}
+
+	/** The example item a display copy shows, or empty. */
+	public ItemStack getDisplay() {
+		return display;
+	}
+
+	/** The components needed to add one more rune to this item - the base list plus one Amber per rune it already has. */
+	public NonNullList<Ingredient> getComponents(ItemStack input) {
+		return NonNullList.of(Ingredient.EMPTY, requiredComponents(currentLevel(input)).toArray(new Ingredient[0]));
 	}
 
 	private static int currentLevel(ItemStack stack) {
@@ -76,8 +97,9 @@ public class RunicArmorRecipe extends InfusionRecipe {
 
 	@Override
 	public boolean matches(InfusionRecipeInput input, Level level) {
+		if (!display.isEmpty()) return false;
 		ItemStack central = input.central();
-		if (!(central.getItem() instanceof ArmorItem)) return false;
+		if (!(central.getItem() instanceof ArmorItem) && !central.is(BAUBLES)) return false;
 		List<Ingredient> required = requiredComponents(currentLevel(central));
 		return RecipeMatcher.findMatches(input.components(), NonNullList.of(Ingredient.EMPTY, required.toArray(new Ingredient[0]))) != null;
 	}
@@ -125,7 +147,8 @@ public class RunicArmorRecipe extends InfusionRecipe {
 								? DataResult.error(() -> "No components for runic armor recipe")
 								: DataResult.success(NonNullList.of(Ingredient.EMPTY, list.toArray(new Ingredient[0]))),
 						DataResult::success
-				).forGetter(RunicArmorRecipe::getComponents)
+				).forGetter(RunicArmorRecipe::getComponents),
+				ItemStack.OPTIONAL_CODEC.optionalFieldOf("display", ItemStack.EMPTY).forGetter(r -> r.display)
 			).apply(inst, RunicArmorRecipe::new));
 
 		public static final StreamCodec<RegistryFriendlyByteBuf, RunicArmorRecipe> STREAM_CODEC = StreamCodec.of(
@@ -150,7 +173,7 @@ public class RunicArmorRecipe extends InfusionRecipe {
 			int count = ByteBufCodecs.VAR_INT.decode(buf);
 			NonNullList<Ingredient> components = NonNullList.withSize(count, Ingredient.EMPTY);
 			components.replaceAll(ignored -> Ingredient.CONTENTS_STREAM_CODEC.decode(buf));
-			return new RunicArmorRecipe(group, research, aspects, instability, components);
+			return new RunicArmorRecipe(group, research, aspects, instability, components, ItemStack.OPTIONAL_STREAM_CODEC.decode(buf));
 		}
 
 		private static void toNetwork(RegistryFriendlyByteBuf buf, RunicArmorRecipe recipe) {
@@ -162,6 +185,7 @@ public class RunicArmorRecipe extends InfusionRecipe {
 			for (Ingredient ingredient : recipe.getComponents()) {
 				Ingredient.CONTENTS_STREAM_CODEC.encode(buf, ingredient);
 			}
+			ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, recipe.display);
 		}
 	}
 }

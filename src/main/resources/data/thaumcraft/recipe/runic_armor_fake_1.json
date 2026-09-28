@@ -1,0 +1,23 @@
+{
+  "type": "thaumcraft:runic_armor",
+  "research": "RUNICSHIELDING",
+  "aspects": {
+    "praemunio": 40,
+    "vitreus": 20,
+    "potentia": 20
+  },
+  "components": [
+    {
+      "item": "thaumcraft:salis_mundus"
+    },
+    {
+      "item": "thaumcraft:amber"
+    }
+  ],
+  "display": {
+    "id": "thaumcraft:ring_mundane",
+    "components": {
+      "thaumcraft:runic_charge": 1
+    }
+  }
+}

@@ -371,6 +371,11 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.items.curios.ItemThaumonomicon> thaumonomicon =
 			ITEMS.registerItem("thaumonomicon", props -> new thaumcraft.common.items.curios.ItemThaumonomicon(props.stacksTo(1)));
 
+	/** The original's creative-only "cheat sheet" (thaumonomicon metadata 1): grants every research on use, when the
+	 * {@code allowCheatSheet} config allows it. */
+	public static final DeferredItem<thaumcraft.common.items.curios.ItemThaumonomicon> thaumonomiconCheat =
+			ITEMS.registerItem("thaumonomicon_cheat", props -> new thaumcraft.common.items.curios.ItemThaumonomicon(props.stacksTo(1), true));
+
 	public static final DeferredItem<ItemPechWand> pechWand =
 			ITEMS.registerItem("pech_wand", ItemPechWand::new);
 
@@ -1193,11 +1198,12 @@ public final class ItemsTC {
 
 	/** See {@link thaumcraft.common.items.baubles.ItemAmuletVis}'s own doc comment. Two variants: "found"
 	 * (slower recharge cadence, uncommon) and "crafted" (faster, rare) - same real difference the original's
-	 * two damage-value subtypes had. */
+	 * two damage-value subtypes had. Ids follow the original's textures: the found Vis Stone is {@code amulet_vis_stone}, the
+	 * crafted Amulet of Vis {@code amulet_vis} (they were crossed until 2026-09-28). */
 	public static final DeferredItem<thaumcraft.common.items.baubles.ItemAmuletVis> amuletVisFound =
-			ITEMS.registerItem("amulet_vis", props -> new thaumcraft.common.items.baubles.ItemAmuletVis(props, 40, false));
+			ITEMS.registerItem("amulet_vis_stone", props -> new thaumcraft.common.items.baubles.ItemAmuletVis(props, 40, false));
 	public static final DeferredItem<thaumcraft.common.items.baubles.ItemAmuletVis> amuletVisCrafted =
-			ITEMS.registerItem("amulet_vis_stone", props -> new thaumcraft.common.items.baubles.ItemAmuletVis(props, 5, true));
+			ITEMS.registerItem("amulet_vis", props -> new thaumcraft.common.items.baubles.ItemAmuletVis(props, 5, true));
 
 	/** See {@link thaumcraft.common.items.baubles.ItemCharmUndying}'s own doc comment - the real
 	 * cancel-death/heal/Regen/Absorption effect lives in {@link thaumcraft.common.lib.events.WornGearEvents#onDeath}. */

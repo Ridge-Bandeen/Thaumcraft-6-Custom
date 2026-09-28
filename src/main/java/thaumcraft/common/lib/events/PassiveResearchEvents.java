@@ -92,6 +92,9 @@ public class PassiveResearchEvents {
 				&& !ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("!gotcrystals")) {
 			grant(player, "!gotcrystals", null);
 			player.sendSystemMessage(Component.translatable("got.crystals").withStyle(ChatFormatting.DARK_PURPLE));
+			if (thaumcraft.common.config.ThaumcraftConfig.NO_SLEEP.get() && !ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("!gotdream")) {
+				giveDreamJournal(player);
+			}
 		}
 		if (event.getOriginalStack().getItem() instanceof ItemThaumonomicon) {
 			grant(player, "!gotthaumonomicon", null);

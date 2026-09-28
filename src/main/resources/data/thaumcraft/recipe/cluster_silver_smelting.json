@@ -1,0 +1,20 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:not",
+      "value": {
+        "type": "neoforge:tag_empty",
+        "tag": "c:ingots/silver"
+      }
+    }
+  ],
+  "type": "thaumcraft:tag_smelting",
+  "category": "misc",
+  "ingredient": {
+    "item": "thaumcraft:cluster_silver"
+  },
+  "result_tag": "c:ingots/silver",
+  "count": 2,
+  "experience": 1.0,
+  "cookingtime": 200
+}

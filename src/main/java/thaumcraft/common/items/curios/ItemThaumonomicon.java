@@ -30,8 +30,21 @@ public class ItemThaumonomicon extends Item {
 
 	private static final String GOT_THAUMONOMICON = "!gotthaumonomicon";
 
+	private final boolean cheat;
+
 	public ItemThaumonomicon(Properties properties) {
+		this(properties, false);
+	}
+
+	public ItemThaumonomicon(Properties properties, boolean cheat) {
 		super(properties);
+		this.cheat = cheat;
+	}
+
+	@Override
+	public void appendHoverText(ItemStack stack, Item.TooltipContext context, java.util.List<Component> tooltip, net.minecraft.world.item.TooltipFlag flag) {
+		super.appendHoverText(stack, context, tooltip, flag);
+		if (cheat) tooltip.add(Component.literal("Creative only").withStyle(net.minecraft.ChatFormatting.DARK_PURPLE));
 	}
 
 	@Override
@@ -42,6 +55,13 @@ public class ItemThaumonomicon extends Item {
 			if (!knowledge.isResearchKnown(GOT_THAUMONOMICON)) {
 				knowledge.addResearch(GOT_THAUMONOMICON);
 			}
+			if (cheat && thaumcraft.common.config.ThaumcraftConfig.ALLOW_CHEAT_SHEET.get() && player instanceof net.minecraft.server.level.ServerPlayer sp) {
+				for (thaumcraft.api.research.ResearchCategory cat : thaumcraft.api.research.ResearchCategories.researchCategories.values()) {
+					for (thaumcraft.api.research.ResearchEntry entry : new java.util.ArrayList<>(cat.research.values())) {
+						thaumcraft.common.lib.ThaumcraftCommands.giveRecursiveResearch(sp, entry.getKey());
+					}
+				}
+			} else
 			// the original's onItemRightClick: every sibling of research you already know is completed on opening -
 			// how First Steps' own siblings (Knowledge Types, the dream) get filled in
 			for (thaumcraft.api.research.ResearchCategory cat : thaumcraft.api.research.ResearchCategories.researchCategories.values()) {

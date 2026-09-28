@@ -34,8 +34,8 @@ import thaumcraft.common.items.consumables.ItemPhial;
  * ({@code setCreativeTab(null)}: hole, barrier, the golem builder, thaumatorium, infernal furnace, the
  * placeholder blocks) or that are only test scaffolding ({@code test_} prefix) are skipped.
  *
- * <p>Real, documented cuts carried over from the item classes themselves: no creative-only "cheat sheet"
- * Thaumonomicon, and no pre-infused Primal Crusher / elemental-tool tab copies.
+ * <p>The Cheater's Thaumonomicon is listed only when {@code allowCheatSheet} is on, as in the original. Still not
+ * listed: the pre-infused Primal Crusher / elemental-tool tab copies.
  */
 public final class ThaumcraftCreativeTabs {
 
@@ -52,6 +52,7 @@ public final class ThaumcraftCreativeTabs {
 						for (var holder : ItemsTC.ITEMS.getEntries()) {
 							Item item = holder.get();
 							if (isHidden(holder.getId())) continue;
+							if (item == ItemsTC.thaumonomiconCheat.get() && !thaumcraft.common.config.ThaumcraftConfig.ALLOW_CHEAT_SHEET.get()) continue;
 							if (item instanceof ItemGenericEssentiaContainer container) {
 								container.createAspectVariants().forEach(output::accept);
 							} else if (item instanceof ItemPhial) {

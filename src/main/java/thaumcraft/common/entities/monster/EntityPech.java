@@ -101,13 +101,7 @@ import thaumcraft.common.items.casters.foci.FocusMediumProjectile;
  * {@link thaumcraft.api.aspects.AspectHelper#getObjectAspects} once {@code ThaumcraftObjectTags} existed to
  * back it (added retroactively - this simplification was believed permanent when chunk 1 shipped, before
  * that class was found already real and modern from an earlier session).</li>
- * <li>{@link #TRADE_REWARDS} is a real, representative reward set per type, not an exhaustive port of the
- * original's own {@code ConfigEntities#tradeInventory} tables - several original reward items (ore
- * clusters, the Eldritch Eye, the Void amulet, enchanted books) reference either unported items or the
- * modern data-component enchantment API's real extra complexity, so this substitutes already-real items of
- * the same rough tier/flavor instead (crystal essence and elemental crystals, cloth armor, Thaumium tools,
- * baubles, candles, experience bottles, golden apples), same "substitute the nearest already-real
- * equivalent" precedent every other chunk this session has used.</li>
+ * <li>{@link #TRADE_REWARDS}: the original's tables entry for entry - see that field.</li>
  * <li>No enchantment-based arrow damage/knockback/fire-aspect scaling on the bow attack (Power/Punch/Flame)
  * - modern MC's data-component-based enchantment API is real extra complexity this pass skips; the arrow
  * still does real, difficulty-scaled damage and can still roll a poison tip.</li>
@@ -134,54 +128,109 @@ public class EntityPech extends Monster implements RangedAttackMob {
 	 * qualifies yet. */
 	private static final Map<Item, Integer> VALUED_ITEMS = Map.of(Items.ENDER_PEARL, 15);
 
-	private record TradeReward(int tier, java.util.function.Supplier<ItemStack> stack) {
+	private record TradeReward(int tier, java.util.function.Function<Level, ItemStack> stack) {
+		TradeReward(int tier, java.util.function.Supplier<ItemStack> stack) {
+			this(tier, level -> stack.get());
+		}
 	}
 
-	/** One real reward table per {@link #getPechType()} - see this class's own doc comment for why this is a
-	 * representative set, not an exhaustive port of the original's own {@code tradeInventory}. */
-	private static final Map<Integer, List<TradeReward>> TRADE_REWARDS = Map.of(
-			0, List.of( // forage/melee
-					new TradeReward(1, () -> new ItemStack(thaumcraft.api.items.ItemsTC.crystalEssence.get())),
-					new TradeReward(1, () -> new ItemStack(Items.BLAZE_POWDER)),
-					new TradeReward(2, () -> new ItemStack(Items.BLAZE_ROD)),
-					new TradeReward(2, () -> new ItemStack(thaumcraft.api.blocks.BlocksTC.saplingGreatwood.get())),
-					new TradeReward(3, () -> new ItemStack(Items.EXPERIENCE_BOTTLE)),
-					new TradeReward(3, () -> new ItemStack(Items.GOLDEN_APPLE)),
-					new TradeReward(4, () -> new ItemStack(thaumcraft.api.items.ItemsTC.thaumiumPick.get())),
-					new TradeReward(4, () -> new ItemStack(thaumcraft.api.items.ItemsTC.thaumiumAxe.get())),
-					new TradeReward(5, () -> new ItemStack(Items.TOTEM_OF_UNDYING)),
-					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.curiosityBand.get())),
-					// every pech type offered the Illuminating Curiosity at tier 5 in the original
-					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.curioKnowledge.get()))),
-			1, List.of( // thaum/wand
-					new TradeReward(1, () -> EntityPech.makeCrystal(Aspect.AIR)),
-					new TradeReward(1, () -> EntityPech.makeCrystal(Aspect.EARTH)),
-					new TradeReward(1, () -> EntityPech.makeCrystal(Aspect.FIRE)),
-					new TradeReward(1, () -> EntityPech.makeCrystal(Aspect.WATER)),
-					new TradeReward(1, () -> EntityPech.makeCrystal(Aspect.ORDER)),
-					new TradeReward(1, () -> EntityPech.makeCrystal(Aspect.ENTROPY)),
-					new TradeReward(2, () -> EntityPech.makeCrystal(Aspect.FLUX)),
-					new TradeReward(3, () -> new ItemStack(Items.EXPERIENCE_BOTTLE)),
-					new TradeReward(3, () -> EntityPech.makeCrystal(Aspect.AURA)),
-					new TradeReward(4, () -> new ItemStack(thaumcraft.api.items.ItemsTC.clothBoots.get())),
-					new TradeReward(4, () -> new ItemStack(thaumcraft.api.items.ItemsTC.clothChest.get())),
-					new TradeReward(4, () -> new ItemStack(thaumcraft.api.items.ItemsTC.clothLegs.get())),
-					new TradeReward(5, () -> new ItemStack(Items.ENCHANTED_GOLDEN_APPLE)),
-					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.pechWand.get())),
-					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.amuletVisCrafted.get())),
-					// every pech type offered the Illuminating Curiosity at tier 5 in the original
-					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.curioKnowledge.get()))),
-			2, List.of( // stalker/bow
-					new TradeReward(1, () -> new ItemStack(thaumcraft.api.blocks.BlocksTC.candles.get(DyeColor.WHITE).get())),
-					new TradeReward(2, () -> new ItemStack(Items.GHAST_TEAR)),
-					new TradeReward(2, () -> new ItemStack(Items.COMPASS)),
-					new TradeReward(3, () -> new ItemStack(Items.EXPERIENCE_BOTTLE)),
-					new TradeReward(3, () -> new ItemStack(Items.GOLDEN_APPLE)),
-					new TradeReward(4, () -> new ItemStack(Items.SPECTRAL_ARROW, 8)),
-					new TradeReward(4, () -> new ItemStack(Items.ENCHANTED_GOLDEN_APPLE)),
-					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.voidseerCharm.get())),
-					// every pech type offered the Illuminating Curiosity at tier 5 in the original
-					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.curioKnowledge.get()))));
+	private static TradeReward reward(int tier, java.util.function.Supplier<ItemStack> stack) {
+		return new TradeReward(tier, stack);
+	}
+
+	/** A native cluster the original only offered when some mod supplied that metal's ingot ({@code ModConfig.found*Ingot}). */
+	private static TradeReward clusterIfIngot(String metal, java.util.function.Supplier<Item> cluster) {
+		net.minecraft.tags.TagKey<Item> ingots = net.minecraft.tags.ItemTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("c", "ingots/" + metal));
+		return new TradeReward(1, level -> net.minecraft.core.registries.BuiltInRegistries.ITEM.getTagOrEmpty(ingots).iterator().hasNext()
+				? new ItemStack(cluster.get()) : ItemStack.EMPTY);
+	}
+
+	private static TradeReward book(int tier, net.minecraft.resources.ResourceKey<net.minecraft.world.item.enchantment.Enchantment> enchantment) {
+		return new TradeReward(tier, level -> level.registryAccess().lookup(net.minecraft.core.registries.Registries.ENCHANTMENT)
+				.flatMap(l -> l.get(enchantment))
+				.map(h -> net.minecraft.world.item.EnchantedBookItem.createForEnchantment(new net.minecraft.world.item.enchantment.EnchantmentInstance(h, 1)))
+				.orElse(ItemStack.EMPTY));
+	}
+
+	private static TradeReward potion(int tier, net.minecraft.core.Holder<net.minecraft.world.item.alchemy.Potion> potion) {
+		return reward(tier, () -> net.minecraft.world.item.alchemy.PotionContents.createItemStack(Items.POTION, potion));
+	}
+
+	/**
+	 * The original's {@code ConfigEntities} trade tables, one per {@link #getPechType()} (0 forager, 1 thaumaturge, 2
+	 * stalker), ported entry for entry on 2026-09-28 (it had been a "representative" substitute set). Kept as the
+	 * original had them, oddities included: three items written for the other two types went into the forager's list
+	 * instead (Totem of Undying, Compass, Spectral Arrow - {@code forInv.add} where {@code forMag}/{@code forArc} was
+	 * meant); the stalker's candles are fifteen colours, all but white; the stalker's tier-4 Eldritch Eye was an item the
+	 * original declared but never registered, so that roll gives nothing. The 1.12 potion damage values 8193 and 8261
+	 * are Regeneration and Healing.
+	 */
+	private static final Map<Integer, List<TradeReward>> TRADE_REWARDS = buildTradeRewards();
+
+	private static Map<Integer, List<TradeReward>> buildTradeRewards() {
+		List<TradeReward> forInv = new java.util.ArrayList<>(List.of(
+				reward(1, () -> new ItemStack(ItemsTC.clusterIron.get())),
+				reward(1, () -> new ItemStack(ItemsTC.clusterGold.get())),
+				reward(1, () -> new ItemStack(ItemsTC.clusterCinnabar.get())),
+				reward(1, () -> new ItemStack(ItemsTC.clusterQuartz.get())),
+				clusterIfIngot("copper", ItemsTC.clusterCopper::get),
+				clusterIfIngot("tin", ItemsTC.clusterTin::get),
+				clusterIfIngot("silver", ItemsTC.clusterSilver::get),
+				clusterIfIngot("lead", ItemsTC.clusterLead::get),
+				reward(2, () -> new ItemStack(Items.BLAZE_ROD)),
+				reward(2, () -> new ItemStack(thaumcraft.api.blocks.BlocksTC.saplingGreatwood.get())),
+				reward(2, () -> new ItemStack(Items.DRAGON_BREATH)),
+				reward(3, () -> new ItemStack(Items.EXPERIENCE_BOTTLE)),
+				reward(3, () -> new ItemStack(Items.EXPERIENCE_BOTTLE)),
+				reward(3, () -> new ItemStack(Items.GOLDEN_APPLE)),
+				reward(4, () -> new ItemStack(ItemsTC.thaumiumPick.get())),
+				reward(4, () -> new ItemStack(ItemsTC.thaumiumAxe.get())),
+				reward(4, () -> new ItemStack(ItemsTC.thaumiumHoe.get())),
+				reward(5, () -> new ItemStack(Items.ENCHANTED_GOLDEN_APPLE)),
+				reward(5, () -> new ItemStack(thaumcraft.api.blocks.BlocksTC.saplingSilverwood.get())),
+				reward(5, () -> new ItemStack(ItemsTC.curioKnowledge.get()))));
+		List<TradeReward> forMag = new java.util.ArrayList<>(List.of(
+				reward(1, () -> makeCrystal(Aspect.AIR)),
+				reward(1, () -> makeCrystal(Aspect.EARTH)),
+				reward(1, () -> makeCrystal(Aspect.FIRE)),
+				reward(1, () -> makeCrystal(Aspect.WATER)),
+				reward(1, () -> makeCrystal(Aspect.ORDER)),
+				reward(1, () -> makeCrystal(Aspect.ENTROPY)),
+				potion(2, net.minecraft.world.item.alchemy.Potions.REGENERATION),
+				potion(2, net.minecraft.world.item.alchemy.Potions.HEALING),
+				reward(2, () -> makeCrystal(Aspect.FLUX)),
+				reward(3, () -> new ItemStack(Items.EXPERIENCE_BOTTLE)),
+				reward(3, () -> new ItemStack(Items.EXPERIENCE_BOTTLE)),
+				reward(3, () -> makeCrystal(Aspect.AURA)),
+				reward(3, () -> new ItemStack(Items.GOLDEN_APPLE)),
+				reward(4, () -> new ItemStack(ItemsTC.clothBoots.get())),
+				reward(4, () -> new ItemStack(ItemsTC.clothChest.get())),
+				reward(4, () -> new ItemStack(ItemsTC.clothLegs.get())),
+				reward(5, () -> new ItemStack(Items.ENCHANTED_GOLDEN_APPLE)),
+				reward(5, () -> new ItemStack(ItemsTC.pechWand.get())),
+				reward(5, () -> new ItemStack(ItemsTC.curioKnowledge.get())),
+				reward(5, () -> new ItemStack(ItemsTC.amuletVisFound.get()))));
+		forInv.add(reward(5, () -> new ItemStack(Items.TOTEM_OF_UNDYING)));
+		List<TradeReward> forArc = new java.util.ArrayList<>();
+		// EnumDyeColor.byDyeDamage(0..14): black through orange - every colour but white
+		DyeColor[] byDyeDamage = {DyeColor.BLACK, DyeColor.RED, DyeColor.GREEN, DyeColor.BROWN, DyeColor.BLUE, DyeColor.PURPLE, DyeColor.CYAN,
+				DyeColor.LIGHT_GRAY, DyeColor.GRAY, DyeColor.PINK, DyeColor.LIME, DyeColor.YELLOW, DyeColor.LIGHT_BLUE, DyeColor.MAGENTA, DyeColor.ORANGE};
+		for (DyeColor dye : byDyeDamage) forArc.add(reward(1, () -> new ItemStack(thaumcraft.api.blocks.BlocksTC.candles.get(dye).get())));
+		forArc.add(reward(2, () -> new ItemStack(Items.GHAST_TEAR)));
+		forInv.add(reward(2, () -> new ItemStack(Items.COMPASS)));
+		forArc.add(book(2, net.minecraft.world.item.enchantment.Enchantments.POWER));
+		forArc.add(reward(3, () -> new ItemStack(Items.EXPERIENCE_BOTTLE)));
+		forArc.add(reward(3, () -> new ItemStack(Items.EXPERIENCE_BOTTLE)));
+		forArc.add(reward(3, () -> new ItemStack(Items.GOLDEN_APPLE)));
+		forArc.add(reward(4, () -> ItemStack.EMPTY)); // the unregistered Eldritch Eye
+		forArc.add(reward(4, () -> new ItemStack(Items.ENCHANTED_GOLDEN_APPLE)));
+		forInv.add(reward(4, () -> new ItemStack(Items.SPECTRAL_ARROW)));
+		forArc.add(reward(5, () -> new ItemStack(ItemsTC.ringApprentice.get())));
+		forArc.add(book(5, net.minecraft.world.item.enchantment.Enchantments.FLAME));
+		forArc.add(book(5, net.minecraft.world.item.enchantment.Enchantments.INFINITY));
+		forArc.add(reward(5, () -> new ItemStack(ItemsTC.curioKnowledge.get())));
+		return Map.of(0, List.copyOf(forInv), 1, List.copyOf(forMag), 2, List.copyOf(forArc));
+	}
 
 	/** Small, local stand-in for the original's {@code ThaumcraftApiHelper.makeCrystal} - same duplicate
 	 * {@code EntityWisp}/{@code ToolEvents} already carry locally rather than porting the whole unconverted
@@ -647,7 +696,7 @@ public class EntityPech extends Monster implements RangedAttackMob {
 
 	private ItemStack rollReward(List<TradeReward> pool, int tier) {
 		List<TradeReward> matching = pool.stream().filter(r -> r.tier() == tier).toList();
-		return matching.isEmpty() ? ItemStack.EMPTY : matching.get(random.nextInt(matching.size())).stack().get();
+		return matching.isEmpty() ? ItemStack.EMPTY : matching.get(random.nextInt(matching.size())).stack().apply(level());
 	}
 
 	@Override

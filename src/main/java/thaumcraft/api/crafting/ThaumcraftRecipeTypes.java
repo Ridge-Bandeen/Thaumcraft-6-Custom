@@ -82,6 +82,10 @@ public final class ThaumcraftRecipeTypes {
 			RECIPE_SERIALIZERS.register("magic_dust",
 					() -> new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>(thaumcraft.common.lib.crafting.RecipeMagicDust::new));
 
+	/** Furnace recipes with a tag output - see {@link thaumcraft.common.lib.crafting.TagSmeltingRecipe}. */
+	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.TagSmeltingRecipe>> TAG_SMELTING_SERIALIZER =
+			RECIPE_SERIALIZERS.register("tag_smelting", thaumcraft.common.lib.crafting.TagSmeltingRecipe.Serializer::new);
+
 	/** Book-only shapeless recipes - see {@link thaumcraft.common.lib.crafting.DisplayShapelessRecipe}. */
 	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.DisplayShapelessRecipe>> DISPLAY_SHAPELESS_SERIALIZER =
 			RECIPE_SERIALIZERS.register("display_shapeless", thaumcraft.common.lib.crafting.DisplayShapelessRecipe.Serializer::new);

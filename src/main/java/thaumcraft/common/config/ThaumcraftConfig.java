@@ -33,6 +33,8 @@ public class ThaumcraftConfig {
 	public static final ModConfigSpec SPEC;
 
 	public static final ModConfigSpec.BooleanValue WUSS_MODE;
+	public static final ModConfigSpec.BooleanValue NO_SLEEP;
+	public static final ModConfigSpec.BooleanValue ALLOW_CHEAT_SHEET;
 	public static final ModConfigSpec.BooleanValue ALLOW_CHAMPION_MOBS;
 	public static final ModConfigSpec.IntValue SHIELD_RECHARGE_MS;
 	public static final ModConfigSpec.IntValue SHIELD_WAIT_MS;
@@ -47,6 +49,13 @@ public class ThaumcraftConfig {
 		WUSS_MODE = builder
 				.comment("Setting this to true disables Warp misfortune events and taint fibre spread. You wuss.")
 				.define("wussMode", false);
+		NO_SLEEP = builder
+				.comment("Setting this to true gives the dream journal on first touching an essence crystal instead of on waking,",
+						"for servers where players can't sleep.")
+				.define("noSleep", false);
+		ALLOW_CHEAT_SHEET = builder
+				.comment("Enables a version of the Thaumonomicon in creative mode that grants you all the research when you first use it.")
+				.define("allowCheatSheet", false);
 		builder.pop();
 
 		builder.push("world");

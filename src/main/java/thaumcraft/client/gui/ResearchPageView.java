@@ -1129,7 +1129,14 @@ final class ResearchPageView {
 		AspectList aspects = ri.getAspects();
 		ItemStack output = ri.getRecipeOutput();
 		ItemStack input = firstStack(ri.getRecipeInput());
-		if (ri instanceof InfusionEnchantmentRecipe && mc().player != null && !input.isEmpty()) {
+		if (ri instanceof thaumcraft.common.lib.crafting.RunicArmorRecipe runic && !runic.getDisplay().isEmpty() && mc().player != null) {
+			input = runic.getDisplay();
+			components = runic.getComponents(input);
+			List<ItemStack> com = new ArrayList<>();
+			for (Ingredient s : components) com.add(firstStack(s));
+			aspects = ri.getAspects(mc().player, input, com);
+			output = ri.getRecipeOutput(mc().player, input.copy(), com);
+		} else if (ri instanceof InfusionEnchantmentRecipe && mc().player != null && !input.isEmpty()) {
 			List<ItemStack> com = new ArrayList<>();
 			for (Ingredient s : components) com.add(firstStack(s));
 			aspects = ri.getAspects(mc().player, input, com);
@@ -1159,7 +1166,8 @@ final class ResearchPageView {
 			total++;
 		}
 		drawStackAt(graphics, output, x - 8, y - 85, mx, my, false);
-		ItemStack rinp = cycle(ri.getRecipeInput(), 0).copy();
+		ItemStack rinp = ri instanceof thaumcraft.common.lib.crafting.RunicArmorRecipe runic2 && !runic2.getDisplay().isEmpty()
+				? runic2.getDisplay().copy() : cycle(ri.getRecipeInput(), 0).copy();
 		drawStackAt(graphics, rinp, x - 8, y - 16, mx, my, true);
 		int le = components.size();
 		List<ItemStack> cmps = new ArrayList<>();

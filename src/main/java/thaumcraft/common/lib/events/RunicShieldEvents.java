@@ -21,8 +21,8 @@ import thaumcraft.common.world.aura.AuraHandler;
  * Real port of the old (1.12.2) {@code PlayerEvents#handleRunicArmor} - the real payoff for
  * {@link thaumcraft.common.lib.crafting.RunicArmorRecipe}'s own real
  * {@link ThaumcraftDataComponents#RUNIC_CHARGE}: a real vis-fed absorption shield. Every 20 ticks, sums the
- * real Runic Charge across all 4 real worn armor slots (the original's own Baubles-slot scan is dropped -
- * baubles aren't ported, same standing decision {@code WornGearHelper}'s own doc comment already explains).
+ * Runic Charge across the 4 armor slots and every bauble worn (in the hotbar/offhand here - see {@code WornGearHelper};
+ * the original read its Baubles slots).
  * If that real max shrinks (armor removed/swapped), the player's real current
  * {@link Player#getAbsorptionAmount}) is trimmed down to match, matching the original exactly.
  *
@@ -86,6 +86,10 @@ public class RunicShieldEvents {
 		int max = 0;
 		for (EquipmentSlot slot : ARMOR_SLOTS) {
 			max += runicCharge(player.getItemBySlot(slot));
+		}
+		// the original also counted its Baubles slots; baubles are worn in the hotbar/offhand here
+		for (ItemStack worn : thaumcraft.api.items.WornGearHelper.getWornItems(player)) {
+			if (worn.is(thaumcraft.common.lib.crafting.RunicArmorRecipe.BAUBLES)) max += runicCharge(worn);
 		}
 		Integer previous = maxCharge.get(id);
 		if (previous != null && previous > max) {

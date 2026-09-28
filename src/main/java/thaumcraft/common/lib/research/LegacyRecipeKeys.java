@@ -184,9 +184,9 @@ final class LegacyRecipeKeys {
 		put("focus_3", "infusion_focus_blank_3");
 		put("JarBrain", "jar_brain");
 		put("VisAmulet", "infusion_vis_amulet");
-		put("RunicArmorFake0", "runic_armor");
-		put("RunicArmorFake1", "runic_armor");
-		put("RunicArmorFake2", "runic_armor");
+		put("RunicArmorFake0", "runic_armor_fake_0");
+		put("RunicArmorFake1", "runic_armor_fake_1");
+		put("RunicArmorFake2", "runic_armor_fake_2");
 		put("Mirror", "mirror");
 		put("MirrorHand", "hand_mirror");
 		put("MirrorEssentia", "mirror_essentia");
