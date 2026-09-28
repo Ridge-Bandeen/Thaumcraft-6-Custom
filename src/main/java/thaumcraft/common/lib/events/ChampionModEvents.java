@@ -41,6 +41,11 @@ import thaumcraft.api.ThaumcraftAttributes;
 @EventBusSubscriber(modid = Thaumcraft.MODID)
 public class ChampionModEvents {
 
+	/** Turned off only by the GameTest batch hook: every monster a test spawns would otherwise have a small chance
+	 * (about 1 in 50) of rolling as a champion, with +100 health or a champion effect, and failing whatever the test
+	 * checks. With it off, spawned monsters are simply marked "not champion"; champion tests make champions directly. */
+	public static boolean naturalRolls = true;
+
 	@SubscribeEvent
 	public static void onJoinLevel(EntityJoinLevelEvent event) {
 		if (event.loadedFromDisk() || event.getLevel().isClientSide()) return;
@@ -49,7 +54,7 @@ public class ChampionModEvents {
 		AttributeInstance championAttr = mob.getAttribute(ThaumcraftAttributes.CHAMPION_MOD);
 		if (championAttr == null || championAttr.getValue() > -2.0) return;
 
-		if (!ThaumcraftConfig.ALLOW_CHAMPION_MOBS.get()) {
+		if (!ThaumcraftConfig.ALLOW_CHAMPION_MOBS.get() || !naturalRolls) {
 			ChampionUtils.markNotChampion(mob);
 			return;
 		}

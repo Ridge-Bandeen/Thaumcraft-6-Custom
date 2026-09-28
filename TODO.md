@@ -187,6 +187,17 @@ Still open:
 - Needs a human check: config screen editing, the three HUD gauges, dialBottom, heartbeat, golem emotes, blue biome,
   regen with a new regenKey on an old world, and Magical Forest frequency at different weights.
 
+## Flaky GameTests root-caused, 2026-09-28
+
+All 16 disabled tests re-enabled (556 GameTests). Causes and fixes are listed in the memory file
+`flaky-gametest-human-check-list.md` and in each test's doc comment. Fixes to game code on the way: Cultist Knights
+were missing the original's always-on crimson boots and the robe hood that goes with a void sword.
+
+Open, found while doing it (game code, not tests):
+- `AuraThread.processAuraChunk` reads a chunk's vis/flux, works, then writes them back, off the server thread with no
+  locking - a drain/add the server makes in between is lost. Same design as the original; rare, small effect. Worth a
+  look if aura numbers ever seem to "undo" themselves.
+
 ## Confirmed real gaps (actionable)
 
 ~~**Real crash-risk bug fixed 2026-09-16**: `EntityTaintacleGiant` (the Taint

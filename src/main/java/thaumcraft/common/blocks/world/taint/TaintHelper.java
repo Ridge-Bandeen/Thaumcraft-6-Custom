@@ -86,6 +86,13 @@ public class TaintHelper {
 		}
 	}
 
+	/** Forgets every tracked seed. GameTests clear them before each batch: tracking is global, and a seed left behind
+	 * by one test (or a seed entity the test framework discarded without it dying) otherwise keeps every fibre within
+	 * range of it alive in the next. */
+	public static void clearTaintSeeds() {
+		taintSeeds.clear();
+	}
+
 	public static boolean isNearTaintSeed(Level level, BlockPos pos) {
 		int spreadArea = spreadArea();
 		double area = (double) spreadArea * spreadArea;

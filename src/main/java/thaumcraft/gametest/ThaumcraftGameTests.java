@@ -77,6 +77,23 @@ import java.util.Optional;
 public class ThaumcraftGameTests {
 
 	/**
+	 * Before every batch, two things that made tests fail at random (root-caused 2026-09-28):
+	 * <ul>
+	 *   <li>no natural champion rolls while tests run - see {@link thaumcraft.common.lib.events.ChampionModEvents#naturalRolls}.
+	 *       Several tests spawn monsters and check their exact health or behaviour, and each failed now and then when
+	 *       one happened to roll as a champion (+100 health).</li>
+	 *   <li>no taint seeds left over from earlier batches - see {@link thaumcraft.common.blocks.world.taint.TaintHelper#clearTaintSeeds}.
+	 *       Seed tracking is global and reaches 32 blocks, further than tests are apart, so a leftover seed kept other
+	 *       tests' fibres alive. Tests that register a seed also remove it again before they finish.</li>
+	 * </ul>
+	 */
+	@net.minecraft.gametest.framework.BeforeBatch(batch = "defaultBatch")
+	public static void noNaturalChampionRolls(ServerLevel level) {
+		thaumcraft.common.lib.events.ChampionModEvents.naturalRolls = false;
+		thaumcraft.common.blocks.world.taint.TaintHelper.clearTaintSeeds();
+	}
+
+	/**
 	 * A real, registered item for GameTest use only - constructing a bare {@code new Item(...)} at test
 	 * time throws ("Registry is already frozen"), since 1.21.1 freezes registries after the normal mod
 	 * loading pass finishes, unlike 1.12.2. Registered the same way every other item in this project is
@@ -1454,7 +1471,17 @@ public class ThaumcraftGameTests {
 	/** Ticks {@link thaumcraft.common.lib.scheduling.BlockScheduler} forward until {@code pos} either breaks
 	 * or a generous budget runs out - the real gradual break (restored from the original, see
 	 * {@code FocusEffectBreak}'s own doc comment) needs real elapsed ticks, not an instant result. */
+	/** A scheduled break is cancelled outright on any tick its chunk has less vis than the break costs, and tests
+	 * sharing that chunk drain it on purpose (the workbench "not enough vis" tests leave 5) - which is how the
+	 * Excavation tests failed now and then (root-caused 2026-09-28). Tops the chunk up first. */
+	private static void ensureChunkVis(GameTestHelper helper, BlockPos relPos) {
+		BlockPos abs = helper.absolutePos(relPos);
+		float vis = AuraHandler.getVis(helper.getLevel(), abs);
+		if (vis < 100.0f) AuraHandler.addVis(helper.getLevel(), abs, 100.0f - vis);
+	}
+
 	private static void tickSchedulerUntilBroken(GameTestHelper helper, BlockPos relPos, int maxTicks) {
+		ensureChunkVis(helper, relPos);
 		for (int i = 0; i < maxTicks && !helper.getBlockState(relPos).isAir(); i++) {
 			thaumcraft.common.lib.scheduling.BlockScheduler.tick(helper.getLevel());
 		}
@@ -1490,6 +1517,7 @@ public class ThaumcraftGameTests {
 		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
 		ServerPlayer stoneCaster = spawnCasterAt(helper, origin);
 		BlockPos stonePos = placeTargetBlock(helper, stoneCaster, Blocks.STONE);
+		ensureChunkVis(helper, stonePos);
 		cast(ItemsTC.focusBreak.get(), stoneCaster);
 		int stoneTicks = 0;
 		while (stoneTicks < 200 && !helper.getBlockState(stonePos).isAir()) {
@@ -1502,6 +1530,7 @@ public class ThaumcraftGameTests {
 		BlockPos obsidianPos = new BlockPos(4, 1, 3);
 		helper.setBlock(obsidianPos, Blocks.OBSIDIAN);
 		obsidianCaster.lookAt(EntityAnchorArgument.Anchor.EYES, Vec3.atCenterOf(helper.absolutePos(obsidianPos)));
+		ensureChunkVis(helper, obsidianPos);
 		cast(ItemsTC.focusBreak.get(), obsidianCaster);
 		int obsidianTicks = 0;
 		while (obsidianTicks < 500 && !helper.getBlockState(obsidianPos).isAir()) {
@@ -1569,7 +1598,10 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(menu.slots.get(1).getItem().isEmpty(), "taking the result should have consumed the grid ingredients");
 		float visAfter = AuraHandler.getVis(helper.getLevel(), origin);
-		helper.assertTrue(visAfter == visBefore - 15, "taking the result should have drained exactly the recipe's vis cost (15), before=" + visBefore + " after=" + visAfter);
+		// The aura thread regrows chunk vis once a second on its own thread (a moon-phase step, under 1), and now and
+		// then did so between the two readings (seen: 154.0 -> 139.25). So: 15 drained, give or take one regrowth step.
+		float drained = visBefore - visAfter;
+		helper.assertTrue(drained > 14.0f && drained <= 15.0f, "taking the result should have drained the recipe's vis cost (15), before=" + visBefore + " after=" + visAfter);
 		helper.succeed();
 	}
 
@@ -2468,13 +2500,10 @@ public class ThaumcraftGameTests {
 	// --------------------------------------------------------------------------------------------------
 
 	/**
-	 * Disabled 2026-09-25 - failed a 2nd time with the identical message ("a dropped item resting on a hungry chest
-	 * should have been auto-consumed into it by now"; 1st was 2026-09-17, {@code JAR} renderer chunk) during the
-	 * nitor/banner/lamp devices pass, whose changes touch nothing near hungry chests or dropped items (a client
-	 * particle tile, a block item, a lamp blockstate property). Likely timing-dependent (item-entity resting/pickup
-	 * tick order under suite load). Not root-caused yet. Re-enable (uncomment) once actually investigated, not just
-	 * to recheck. */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	 * Was disabled as flaky 2026-09-25; root-caused 2026-09-28: the test item kept vanilla's random toss velocity and
+	 * sometimes landed beside the chest instead of on it. It's dropped straight down now.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void hungryChestAutoConsumesADroppedItem(GameTestHelper helper) {
 		BlockPos relPos = BlockPos.ZERO;
 		helper.setBlock(relPos, BlocksTC.hungryChest.get());
@@ -2482,6 +2511,9 @@ public class ThaumcraftGameTests {
 		BlockPos absolute = helper.absolutePos(relPos);
 
 		ItemEntity dropped = new ItemEntity(helper.getLevel(), absolute.getX() + 0.5, absolute.getY() + 0.5, absolute.getZ() + 0.5, new ItemStack(Items.STICK, 5));
+		// ItemEntity's constructor throws the item in a random direction (up to 0.1 blocks/tick sideways), which could
+		// carry it off the chest before it came down - how this failed now and then. Dropped straight down instead.
+		dropped.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
 		helper.getLevel().addFreshEntity(dropped);
 
 		// entityInside is driven by the entity's own physics tick, same as the crucible's own auto-consume
@@ -5661,11 +5693,20 @@ public class ThaumcraftGameTests {
 		matrix.activate(level, player);
 		matrix.activate(level, player);
 
+		// The event roll (nextInt(24)) is pinned to 0 - a plain ejection. Rolling it for real, the 1-in-24 explosion
+		// came before the first ejection about 1 run in 12 and could wreck the pedestal/inlay/stabilizer, so the redirect
+		// never happened (seen 2026-09-28). Every other random draw is real.
+		net.minecraft.util.RandomSource ejectOnly = new net.minecraft.world.level.levelgen.LegacyRandomSource(level.getRandom().nextLong()) {
+			@Override
+			public int nextInt(int bound) {
+				return bound == 24 ? 0 : super.nextInt(bound);
+			}
+		};
 		boolean redirected = false;
 		int energyBefore = stabilizer.getEnergy();
 		for (int i = 0; i < 200 && !redirected; i++) {
 			component.setItem(new ItemStack(Items.STICK));
-			matrix.triggerInstabilityEvent(level, level.getRandom());
+			matrix.triggerInstabilityEvent(level, ejectOnly);
 			redirected = !component.getItem().isEmpty() && stabilizer.getEnergy() < energyBefore
 					&& level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new AABB(componentAbs).inflate(2)).isEmpty();
 			if (stabilizer.getEnergy() <= 0) {
@@ -5684,7 +5725,7 @@ public class ThaumcraftGameTests {
 	 * snap back to 0 the very next real tick after it goes false - real, deterministic, no randomness
 	 * involved, so exact counts are asserted directly rather than just "> 0".
 	 */
-	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
 	public static void infusionMatrixActivatedAndCraftTickRampAndResetWithRealState(GameTestHelper helper) {
 		BlockPos matrixPos = new BlockPos(4, 4, 4);
 		BlockPos centralPos = matrixPos.below(2);
@@ -5711,7 +5752,7 @@ public class ThaumcraftGameTests {
 		// recipe state needed) and keep the tick count under BASE_CYCLE_TIME/2 (5) so the real
 		// craftCycle-triggering countDelay branch never fires; that machinery has its own dedicated coverage
 		// above, this test only cares about the derived counter itself.
-		BlockPos matrix2Pos = new BlockPos(4, 4, 8);
+		BlockPos matrix2Pos = new BlockPos(4, 20, 4); // inside its own structure (2026-09-28): blocks outside it land in a neighbouring test
 		helper.setBlock(matrix2Pos, BlocksTC.infusionMatrix.get());
 		placeInfusionMatrixPillars(helper, matrix2Pos);
 		BlockPos matrix2Abs = helper.absolutePos(matrix2Pos);
@@ -5764,6 +5805,7 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(matrix.active, "the matrix should be active after the first activation");
 		helper.assertTrue(matrix.activate(helper.getLevel(), player), "the second activation (with a valid recipe on the pedestals) should start crafting");
 		helper.assertTrue(matrix.crafting, "the matrix should be mid-craft after a successful craftingStart");
+		matrix.stability = 25.0f; // see stabilizeForTest
 
 		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
 		for (int i = 0; i < 2000 && matrix.crafting; i++) {
@@ -6138,14 +6180,12 @@ public class ThaumcraftGameTests {
 	 * Smelter's own real speed boost, since {@code cycleTime}/{@code countDelay} are private: run two otherwise
 	 * identical crafts (real demo recipe, glowstone dust -> glowstone) and compare real elapsed ticks.
 	 */
-	/** Disabled 2026-09-28 - 2nd failure ("both crafts should have completed within the test window", plain=-1, eldritch=86),
-	 * during an unrelated research-data chunk. Possibly worsened that same day when its shared craft switched from an invented
-	 * 6-essentia glowstone recipe to the real Charm of Undying (25 Victus, instability 2): instability events can stall a
-	 * craft. Not root-caused; re-enable (uncomment) once investigated, not just to recheck. */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	/** Was disabled as flaky 2026-09-28; root-caused the same day: instability events stalling a craft - see
+	 * stabilizeForTest. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
 	public static void uniformEldritchPillarsRealSpeedUpTheInfusionCycle(GameTestHelper helper) {
 		BlockPos plainPos = new BlockPos(4, 4, 4);
-		BlockPos boostedPos = new BlockPos(4, 4, 20);
+		BlockPos boostedPos = new BlockPos(4, 20, 4); // inside its own structure (2026-09-28): blocks outside it land in a neighbouring test
 
 		for (BlockPos matrixPos : new BlockPos[] { plainPos, boostedPos }) {
 			helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
@@ -6167,6 +6207,13 @@ public class ThaumcraftGameTests {
 				"4 real uniform pillarEldritch corners should really speed up the infusion cycle (eldritch=" + boostedTicks + " ticks, plain=" + plainTicks + " ticks)");
 		helper.succeed();
 	}
+
+	/*
+	 * stabilizeForTest (2026-09-28): every craft test here starts its craft at full stability (25, the cap). A freshly
+	 * activated matrix starts at 0, drifts below zero during the craft, and then rolls instability events - one of which
+	 * throws a component off its pedestal, after which the craft waits for it forever (the "-1" / "within 2000 ticks"
+	 * failures these tests used to have now and then), and another explodes. From 25 a ~35-cycle craft never gets there.
+	 */
 
 	/** Shared small infusion craft (a Totem of Undying + a brass plate -> Charm of Undying, 25 Victus - the original's
 	 * cheapest real infusion, standing in since 2026-09-28 for an invented glowstone "demo" recipe; same recipe as
@@ -6198,6 +6245,7 @@ public class ThaumcraftGameTests {
 
 		matrix.activate(helper.getLevel(), player);
 		matrix.activate(helper.getLevel(), player);
+		matrix.stability = 25.0f; // see stabilizeForTest
 
 		for (int i = 0; i < 2000; i++) {
 			thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(helper.getLevel(), matrixAbs, matrixState, matrix);
@@ -6206,14 +6254,12 @@ public class ThaumcraftGameTests {
 		return -1;
 	}
 
-	/** Disabled 2026-09-27 - failed a 2nd time with the same "both crafts should have completed within the test window"
-	 * symptom (this time plain=-1, matrixSpeed=23; 1st was 2026-09-17, plain=39, matrixSpeed=-1 - either side can miss the
-	 * window) while verifying the research progressResearch port, which touches nothing in infusion timing. Not root-caused;
-	 * re-enable (uncomment) once actually investigated, not just to recheck. */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	/** Was disabled as flaky 2026-09-27; root-caused 2026-09-28: instability events stalling one of the two crafts (either
+	 * side could get the -1) - see stabilizeForTest. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
 	public static void matrixSpeedCornersRealSpeedUpTheInfusionCycle(GameTestHelper helper) {
 		BlockPos plainPos = new BlockPos(4, 4, 4);
-		BlockPos boostedPos = new BlockPos(4, 4, 20);
+		BlockPos boostedPos = new BlockPos(4, 20, 4); // inside its own structure (2026-09-28): blocks outside it land in a neighbouring test
 
 		for (BlockPos matrixPos : new BlockPos[] { plainPos, boostedPos }) {
 			helper.setBlock(matrixPos, BlocksTC.infusionMatrix.get());
@@ -6827,7 +6873,7 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
-	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
 	public static void bellowsOnASmelterRealSpeedUpTheSmelt(GameTestHelper helper) {
 		BlockPos plainPos = new BlockPos(2, 2, 2);
 		BlockPos boostedPos = new BlockPos(2, 2, 8);
@@ -6877,7 +6923,7 @@ public class ThaumcraftGameTests {
 	 * (covered separately - efficiency is a per-unit random roll, not deterministic enough for a tick-count
 	 * comparison like this one).
 	 */
-	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
 	public static void thaumiumSmelterTierRealSmeltsFasterThanBasic(GameTestHelper helper) {
 		BlockPos basicPos = new BlockPos(2, 2, 2);
 		BlockPos thaumiumPos = new BlockPos(2, 2, 8);
@@ -6917,7 +6963,7 @@ public class ThaumcraftGameTests {
 	 * trials smelting a Flux-heavy item, the Void smelter should really retain more essentia (vent/pollute
 	 * less) than a Basic one, a real statistical difference from the true original's own per-unit random roll.
 	 */
-	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
 	public static void voidSmelterTierRealHasHigherEfficiencyThanBasic(GameTestHelper helper) {
 		BlockPos basicPos = new BlockPos(2, 2, 2);
 		BlockPos voidPos = new BlockPos(2, 2, 8);
@@ -8361,7 +8407,7 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
-	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
 	public static void grappleGunPullsThePlayerOnceItLands(GameTestHelper helper) {
 		BlockPos wallPos = new BlockPos(3, 5, 6);
 		helper.setBlock(wallPos, Blocks.STONE);
@@ -8424,7 +8470,7 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
-	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
 	public static void linkedMirrorsTransportAnItemToTheOtherSide(GameTestHelper helper) {
 		BlockPos posA = new BlockPos(3, 2, 3);
 		BlockPos posB = new BlockPos(3, 2, 10);
@@ -8487,7 +8533,7 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
-	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
 	public static void linkedMirrorEssentiaTakesFromARealSourceNearTheOtherSide(GameTestHelper helper) {
 		BlockPos posA = new BlockPos(3, 2, 3);
 		BlockPos posB = new BlockPos(3, 2, 10);
@@ -8518,7 +8564,7 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
-	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
 	public static void linkedMirrorEssentiaAddsToARealSinkNearTheOtherSide(GameTestHelper helper) {
 		BlockPos posA = new BlockPos(3, 2, 3);
 		BlockPos posB = new BlockPos(3, 2, 10);
@@ -10078,30 +10124,18 @@ public class ThaumcraftGameTests {
 	 * {@code linkedProvision} field. Not itself a bug (this test's own fetch task is SUPPOSED to become
 	 * suspended once completed and get reaped eventually) but confirms real ticks genuinely interleave with
 	 * this test's own synchronous method body, which the next point depends on.
-	 * <li><b>Not yet fixed, strongest remaining lead</b>: {@code EntityThaumcraftGolem} registers its own
-	 * real {@code AIGotoEntity}/{@code AIGotoBlock} goals in its own {@code GoalSelector} at construction
-	 * (real production behavior) - meaning any golem spawned in a GameTest is ALSO ticking its own automatic
-	 * AI in the background via real server ticks (confirmed real ticks do interleave mid-test, point 3
-	 * above), completely independent of this test's own manually-constructed {@code fetchGoal}/
-	 * {@code deliverGoal} instances used to drive {@code canUse()} directly. Direct instrumentation
-	 * confirmed: at the moment just before {@code deliverGoal.canUse()} is called, {@code deliverTask} passes
-	 * every individually-checkable gate ({@code canGolemPerformTask}, {@code isWithinRestriction}, real
-	 * distance, presence in {@code TaskHandler.getBlockTasksSorted}'s own returned list) - yet
-	 * {@code canUse()} still sometimes returns false. The one gate that couldn't be checked directly from
-	 * outside (it's {@code protected}) is {@code AIGoto#areGolemTagsValidForTask} - a real next step is either
-	 * a debugger-attached run, or temporarily loosening that method's visibility for one diagnostic session,
-	 * to see whether the golem's own automatic goal instance (not this test's manual one) is racing to
-	 * reserve the same task first, or whether that gate itself is rejecting it for a reason not yet found.
+	 * <li><b>The one that made it fail most runs, root-caused 2026-09-28</b>: {@code AIGotoBlock#canEasilyReach}
+	 * (private - which is why the gate-by-gate instrumentation above never caught it). The fetch task is at the
+	 * chest the golem stands on, close enough to skip pathfinding; the delivery task is 3 blocks off, so it needs a
+	 * computed path - and vanilla's ground navigation returns no path at all for a mob that isn't flagged on the
+	 * ground, which a golem the test has just placed (and that has never ticked) usually isn't. The test now marks it
+	 * on the ground. (The earlier note that ticks "interleave mid-test" was mistaken: a test body runs synchronously on
+	 * the server thread; nothing ticks in between.)
 	 * </ol>
 	 *
-	 * <p><b>Disabled 2026-09-15</b> ({@code @GameTest} commented out below, not deleted): still genuinely
-	 * flaky after all the above mitigations, and was singlehandedly failing (or contributing an unpredictable
-	 * failure to the mix) on the large majority of {@code runGameTestServer} runs this session, roughly
-	 * doubling how many runs were needed to get a clean verification pass on unrelated work. Re-enable
-	 * (uncomment the annotation) once the 4th mechanism above is actually root-caused and fixed - do not
-	 * re-enable "to see if it's still flaky", since it's already confirmed to be.
+	 * <p>Was disabled 2026-09-15 as flaky on most runs; re-enabled 2026-09-28 with the fix above.
 	 */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void sealProvideDeliversStockedItemsFromOneContainerToAnother(GameTestHelper helper) {
 		BlockPos provideChestPos = BlockPos.ZERO;
 		BlockPos provideChestAbs = helper.absolutePos(provideChestPos);
@@ -10144,6 +10178,9 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, provideChestAbs);
 		golem.initializeGolem(new thaumcraft.common.golems.GolemProperties(), 0);
 		golem.restrictTo(provideChestAbs, 5); // keep this test golem's real task-search scoped to its own GameTest structure - see AIGoto's own class docs
+		// It stands on the chest, but has never ticked, so it isn't flagged on the ground - and vanilla navigation
+		// refuses to compute any path for a mob that isn't (see this test's doc comment).
+		golem.setOnGround(true);
 
 		thaumcraft.common.golems.ai.AIGotoBlock fetchGoal = new thaumcraft.common.golems.ai.AIGotoBlock(golem);
 		helper.assertTrue(fetchGoal.canUse(), "the golem should be able to pick up the fetch task");
@@ -10612,13 +10649,11 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
-	 * Disabled 2026-09-17 - failed a 2nd time ("should really have 25 max health, was 125.0") during the
-	 * {@code MIRROR} renderer chunk's own verification (no plausible causal link - that chunk touched only
-	 * client-side rendering code). Already on the "watched" list from a first failure on 2026-09-15 with the
-	 * exact same 5x-multiple symptom - the strongest evidence yet for the static-state-leak hazard documented
-	 * in the gametest-framework-notes memory. Not root-caused yet. Re-enable (uncomment) once actually
-	 * investigated, not just to recheck. */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	 * Was disabled as flaky 2026-09-17; root-caused 2026-09-28: 125 = 25 + the champion health bonus. A freshly spawned
+	 * monster had a small chance of rolling as a champion; GameTests now switch natural rolls off
+	 * ({@link #noNaturalChampionRolls}).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void brainyZombieHasRealToughenedStatsAndRetaliatesWhenHurt(GameTestHelper helper) {
 		BlockPos pos = BlockPos.ZERO;
 		BlockPos abs = helper.absolutePos(pos);
@@ -10654,12 +10689,9 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
-	/** Disabled 2026-09-27 - failed a 2nd time with the identical symptom ("should really have 60 max health, was
-	 * 160.0" - an exact 8/3 multiple, the same static-state-leak shape documented in the gametest-framework-notes
-	 * memory; 1st was 2026-09-17, unrelated BELLOWS renderer chunk) while verifying jar/banner/mirror item-tooltip
-	 * restoration work, which touches none of this. Passed on both immediate reruns. Not root-caused yet.
-	 * Re-enable (uncomment) once actually investigated, not just to recheck. */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	/** Was disabled as flaky 2026-09-27; root-caused 2026-09-28: 160 = 60 + the champion health bonus - see
+	 * {@link #noNaturalChampionRolls}. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void giantBrainyZombieGrowsAndHitsHarderAsRealAngerRises(GameTestHelper helper) {
 		BlockPos pos = BlockPos.ZERO;
 		BlockPos abs = helper.absolutePos(pos);
@@ -10855,12 +10887,11 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
-	/** <b>Disabled 2026-09-15</b> ({@code @GameTest} commented out below, not deleted): recurred as a flaky
-	 * failure twice across unrelated verification runs the same day ("a real eldritch crab positioned above
-	 * its target should really climb onto it") - never on a run where this test's own file changed. Not
-	 * root-caused yet; see the flaky-GameTest human-check-list memory. Re-enable (uncomment) once actually
-	 * investigated, not just to recheck. */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	/** Was disabled as flaky 2026-09-15; root-caused 2026-09-28. The crab claws as soon as it mounts (its attack timer
+	 * starts at 0), and each claw has a 20% chance to make it hop off - after which vanilla's 60-tick boarding cooldown
+	 * stops it remounting, and this test only calls {@code aiStep()}, which never counts that cooldown down. So about
+	 * one run in five failed the riding check. The claw is held off (attack timer set) while riding is checked. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void eldritchCrabHasARealHelmThatBreaksAndRidesItsTarget(GameTestHelper helper) {
 		BlockPos pos = BlockPos.ZERO;
 		BlockPos abs = helper.absolutePos(pos);
@@ -10897,6 +10928,13 @@ public class ThaumcraftGameTests {
 		// condition's own "!onGround()" check can flakily see a leftover true from whenever this crab (or
 		// its bounding box) last touched a real block. Forcing both explicitly makes every attempt actually
 		// exercise the real mount condition instead of leaving it dependent on incidental physics state.
+		try {
+			java.lang.reflect.Field attackTime = thaumcraft.common.entities.monster.EntityEldritchCrab.class.getDeclaredField("attackTime");
+			attackTime.setAccessible(true);
+			attackTime.setInt(crab, 1000);
+		} catch (ReflectiveOperationException e) {
+			throw new IllegalStateException(e);
+		}
 		boolean mounted = false;
 		for (int i = 0; i < 20 && !mounted; i++) {
 			crab.setPos(target.getX(), target.getY() + 1.0, target.getZ());
@@ -10929,12 +10967,12 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
-	 * Disabled 2026-09-17 - failed a 2nd time ("a real cultist knight should really always wear the crimson
-	 * plate helm") during the {@code BELLOWS} renderer chunk's own verification (no plausible causal link -
-	 * that chunk touched only client-side rendering code). Already on the "watched" list from a first failure
-	 * on 2026-09-16 during the FXSwarm chunk. Not root-caused yet. Re-enable (uncomment) once actually
-	 * investigated, not just to recheck. */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	 * Was disabled as flaky 2026-09-17; root-caused 2026-09-28: the assertion was wrong, not the knight. As in the
+	 * original, 1% of knights (5% on hard) get a better sword, and then either the robe hood (void sword) or, half the
+	 * time, no helmet at all (thaumium sword) - about 1 knight in 250 fails "always wears the plate helm". The helmet
+	 * is now checked against the weapon.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void cultistKnightWearsCrimsonPlateAndAlliesWithItsOwnKind(GameTestHelper helper) {
 		BlockPos pos = BlockPos.ZERO;
 		BlockPos abs = helper.absolutePos(pos);
@@ -10948,8 +10986,14 @@ public class ThaumcraftGameTests {
 		knight.finalizeSpawn(helper.getLevel(), helper.getLevel().getCurrentDifficultyAt(abs),
 				net.minecraft.world.entity.MobSpawnType.NATURAL, null);
 
-		helper.assertTrue(knight.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).is(thaumcraft.api.items.ItemsTC.crimsonPlateHelm.get()),
-				"a real cultist knight should really always wear the crimson plate helm");
+		net.minecraft.world.item.ItemStack helm = knight.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD);
+		net.minecraft.world.item.ItemStack held = knight.getMainHandItem();
+		helper.assertTrue(held.is(thaumcraft.api.items.ItemsTC.voidSword.get()) ? helm.is(thaumcraft.api.items.ItemsTC.crimsonRobeHelm.get())
+						: held.is(thaumcraft.api.items.ItemsTC.thaumiumSword.get()) ? helm.isEmpty() || helm.is(thaumcraft.api.items.ItemsTC.crimsonPlateHelm.get())
+						: helm.is(thaumcraft.api.items.ItemsTC.crimsonPlateHelm.get()),
+				"a cultist knight's helmet should go with its sword: plate helm, robe hood with a void sword, maybe none with a thaumium sword - got " + helm + " with " + held);
+		helper.assertTrue(knight.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET).is(thaumcraft.api.items.ItemsTC.crimsonBoots.get()),
+				"a cultist knight should always wear crimson boots, as in the original");
 		helper.assertTrue(knight.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).is(thaumcraft.api.items.ItemsTC.crimsonPlateChest.get()),
 				"a real cultist knight should really always wear the crimson plate chest");
 		helper.assertTrue(knight.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.LEGS).is(thaumcraft.api.items.ItemsTC.crimsonPlateLegs.get()),
@@ -11329,9 +11373,9 @@ public class ThaumcraftGameTests {
 		level.getBlockState(bannerAbs).useWithoutItem(level, player, hit);
 		helper.assertTrue(banner.getAspect() == null, "sneak-right-clicking a real tagged banner should really clear its real aspect");
 
-		BlockPos cratePos = new BlockPos(1, 0, -3);
+		BlockPos cratePos = new BlockPos(5, 1, 5); // inside its own structure (2026-09-28): blocks outside it land in a neighbouring test
 		BlockPos crateAbs = helper.absolutePos(cratePos);
-		helper.setBlock(new BlockPos(1, -1, -3), net.minecraft.world.level.block.Blocks.STONE);
+		helper.setBlock(new BlockPos(5, 0, 5), net.minecraft.world.level.block.Blocks.STONE);
 		level.setBlockAndUpdate(crateAbs, thaumcraft.api.blocks.BlocksTC.lootCrateCommon.get().defaultBlockState());
 		level.destroyBlock(crateAbs, true, player);
 		List<net.minecraft.world.entity.item.ItemEntity> drops =
@@ -11482,14 +11526,10 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
-	/** <b>Disabled 2026-09-16</b> ({@code @GameTest} commented out below, not deleted): recurred as a flaky
-	 * failure a second time ("a real living entity repeatedly walking a real taint fibre should really
-	 * eventually catch real Flux Taint") across an unrelated verification run (the {@code ELDRITCH_ORB}
-	 * particle-FX chunk, no plausible causal link to this test's own taint-fibre file) - was already on the
-	 * "watched" list from a first failure on 2026-09-15. Not root-caused yet; see the
-	 * flaky-GameTest-human-check-list memory. Re-enable (uncomment) once actually investigated, not just to
-	 * recheck. */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	/** Was disabled as flaky 2026-09-16; root-caused 2026-09-28, two ways: the Flux Taint check gave up after 3000 steps
+	 * at 1 in 750 each (missed ~1.8% of runs), and the "dies without a seed" check saw seeds other tests had left
+	 * registered (see {@link #noNaturalChampionRolls}). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void taintFibreConnectsSpreadsAndDiesWithoutARealSeed(GameTestHelper helper) {
 		BlockPos floorPos = BlockPos.ZERO;
 		BlockPos floorAbs = helper.absolutePos(floorPos);
@@ -11546,7 +11586,8 @@ public class ThaumcraftGameTests {
 		villager.moveTo(fibrePos.getX() + 0.5, fibrePos.getY() + 1.0, fibrePos.getZ() + 0.5, 0.0f, 0.0f);
 		level.addFreshEntity(villager);
 		net.minecraft.world.level.block.state.BlockState fibreState = level.getBlockState(fibrePos);
-		for (int i = 0; i < 3000 && !villager.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT); i++) {
+		// 1 in 750 per step: 3000 steps missed about 1.8% of the time (e^-4), 30000 practically never
+		for (int i = 0; i < 30000 && !villager.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT); i++) {
 			fibreState.getBlock().stepOn(level, fibrePos, fibreState, villager);
 		}
 		helper.assertTrue(villager.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT),
@@ -11622,7 +11663,7 @@ public class ThaumcraftGameTests {
 	 * hemmed-in-taint conversion branch, restored 2026-09-15 - a real nearby log/rock surface, once really
 	 * hemmed in by taint, converts into the matching real taint-terrain block.
 	 */
-	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
 	public static void spreadFibresHemmedInTaintBranchConvertsRealLogAndRockSurfaces(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 
@@ -11723,6 +11764,10 @@ public class ThaumcraftGameTests {
 		}
 		thaumcraft.common.blocks.world.taint.TaintHelper.removeTaintSeed(level, fringeSeedPos);
 		helper.assertTrue(sproutedSeed, "a real taint_soil patch at a real seed's own fringe with enough real flux should really eventually sprout a real new taint seed");
+		// Kill the sprouted seed (dying is what unregisters one): left alive it registers itself and spreads fibres into
+		// the neighbouring tests for the rest of the batch.
+		level.getEntitiesOfClass(thaumcraft.common.entities.monster.tainted.EntityTaintSeed.class, new AABB(soilPos).inflate(3))
+				.forEach(net.minecraft.world.entity.Entity::kill);
 		helper.succeed();
 	}
 
@@ -11886,13 +11931,11 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
-	 * Disabled 2026-09-24 - failed a 2nd time ("a real taint feature with no real seed nearby should really
-	 * die off within a handful of random ticks") during the {@code FXGenericGui} GUI-particle chunk's own
-	 * verification (no plausible causal link - that chunk touched only client-side GUI/particle rendering
-	 * code, nothing taint-related). Already on the "watched" list from 5 consecutive failures on 2026-09-15
-	 * during the Sounds sub-chunk. Not root-caused yet. Re-enable (uncomment) once actually investigated, not
-	 * just to recheck. */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	 * Was disabled as flaky 2026-09-24; root-caused 2026-09-28, two ways: seeds other tests left registered kept the
+	 * feature alive (see {@link #noNaturalChampionRolls}), and the death roll (1 in 10 per tick) was given only 50
+	 * ticks (missed ~0.5% of runs).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void taintFeatureAttachesSpreadsSelfRemovesAndPollutesOnBreak(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 
@@ -11939,7 +11982,8 @@ public class ThaumcraftGameTests {
 		// Real death without a real nearby seed.
 		level.setBlockAndUpdate(spreadFeaturePos, BlocksTC.taintFeature.get().defaultBlockState()
 				.setValue(thaumcraft.common.blocks.world.taint.BlockTaintFeature.FACING, net.minecraft.core.Direction.UP));
-		for (int i = 0; i < 50 && level.getBlockState(spreadFeaturePos).is(BlocksTC.taintFeature.get()); i++) {
+		// 1 in 10 per tick: 50 ticks missed about 0.5% of the time, 500 practically never
+		for (int i = 0; i < 500 && level.getBlockState(spreadFeaturePos).is(BlocksTC.taintFeature.get()); i++) {
 			level.getBlockState(spreadFeaturePos).randomTick(level, spreadFeaturePos, level.random);
 		}
 		helper.assertTrue(!level.getBlockState(spreadFeaturePos).is(BlocksTC.taintFeature.get()),
@@ -12270,12 +12314,11 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
-	 * Disabled 2026-09-17 - failed a 2nd time ("should really take real starvation damage over time") during
-	 * the {@code MIRROR} renderer chunk's own verification (no plausible causal link - that chunk touched only
-	 * client-side rendering code). Already on the "watched" list from a first failure on 2026-09-16 during the
-	 * tube-valve-family chunk. Not root-caused yet. Re-enable (uncomment) once actually investigated, not just
-	 * to recheck. */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	 * Was disabled as flaky 2026-09-17; root-caused 2026-09-28: the seed starves only at zero flux saturation, and flux
+	 * other tests put into the aura nearby reached its chunk, so it never starved. The chunk is drained before each tick
+	 * now; seeds left registered by other tests (the untrack check at the end) are cleared per batch too.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void taintSeedTracksItselfSpreadsFibresAndInflictsAreaFluxTaint(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 
@@ -12299,8 +12342,11 @@ public class ThaumcraftGameTests {
 		// ticks at all) can race this loop's own polluteAura calls arbitrarily many times between any two
 		// real reads, so "flux went up" isn't a reliable thing to assert against here; the real starvation
 		// damage is a reliable enough proxy that this real branch actually ran.
+		// The seed only starves at exactly zero flux saturation, and other tests running alongside pollute nearby chunks
+		// (flux also drifts between chunks on the aura thread), so its chunk is drained right before every tick.
 		float healthBefore = seed.getHealth();
 		for (int i = 0; i < 200; i++) {
+			thaumcraft.common.world.aura.AuraHandler.getAuraChunk(level, trackedPos.getX() >> 4, trackedPos.getZ() >> 4).setFlux(0.0f);
 			seed.tick();
 		}
 		helper.assertTrue(seed.getHealth() < healthBefore,
@@ -12360,13 +12406,10 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
-	 * Disabled 2026-09-24 - failed a 2nd time ("a real flux goo block blocked from falling further should
-	 * really eventually spread into a real horizontal neighbor") during the {@code ModelEldritchGuardian}
-	 * mesh-port chunk's own verification (no plausible causal link - that chunk touched only Eldritch
-	 * Guardian/Warden entity model/rendering code, nothing taint/flux-related). Already on the "watched" list
-	 * from a first failure on 2026-09-17 during the {@code MIRROR} renderer chunk. Not root-caused yet.
-	 * Re-enable (uncomment) once actually investigated, not just to recheck. */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
+	 * Was disabled as flaky 2026-09-24; root-caused 2026-09-28: the spreading goo turned into a slime (1 in 50 per tick)
+	 * before it first spread in ~2.6% of runs. That step now retries with fresh goo, as the fall step already did.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
 	public static void fluxGooFallsSpreadsDecaysAndAffectsEntities(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 		thaumcraft.common.blocks.world.taint.BlockFluxGoo goo = BlocksTC.fluxGoo.get();
@@ -12424,16 +12467,17 @@ public class ThaumcraftGameTests {
 		BlockPos spreadFloorRel = new BlockPos(5, 1, 2);
 		helper.setBlock(spreadFloorRel, Blocks.STONE);
 		BlockPos spreadPos = helper.absolutePos(spreadFloorRel).above();
-		level.setBlockAndUpdate(spreadPos, goo.defaultBlockState());
+		// Each tick the goo has a 1 in 50 chance to become a slime and vanish, which beat the first spread in ~2.6% of
+		// runs - so, like the fall above, a vanished goo is placed again (up to 8 times) rather than failing.
 		boolean spread = false;
-		for (int i = 0; i < 30 && !spread; i++) {
-			net.minecraft.world.level.block.state.BlockState s = level.getBlockState(spreadPos);
-			if (s.is(goo)) {
-				s.tick(level, spreadPos, level.random);
-			}
-			for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.Plane.HORIZONTAL) {
-				if (level.getBlockState(spreadPos.relative(dir)).is(goo)) {
-					spread = true;
+		for (int attempt = 0; attempt < 8 && !spread; attempt++) {
+			level.setBlockAndUpdate(spreadPos, goo.defaultBlockState());
+			for (int i = 0; i < 30 && !spread && level.getBlockState(spreadPos).is(goo); i++) {
+				level.getBlockState(spreadPos).tick(level, spreadPos, level.random);
+				for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+					if (level.getBlockState(spreadPos.relative(dir)).is(goo)) {
+						spread = true;
+					}
 				}
 			}
 		}
@@ -12470,7 +12514,7 @@ public class ThaumcraftGameTests {
 		helper.setBlock(slimeFloorRel, Blocks.STONE);
 		BlockPos slimePos = helper.absolutePos(slimeFloorRel).above();
 		boolean spawnedSlime = false;
-		for (int i = 0; i < 400 && !spawnedSlime; i++) {
+		for (int i = 0; i < 1000 && !spawnedSlime; i++) { // 1 in 50 per try; 400 tries still missed ~1 run in 3000
 			// Real-reset to a full, qualifying puddle before every real attempt - flow/decay (both also
 			// real, both competing for the same real tick "turn" as the slime-spawn roll) would otherwise
 			// eventually drain or move this exact position out of the real lvl>=2 qualifying range, leaving
@@ -12706,12 +12750,10 @@ public class ThaumcraftGameTests {
 	// comments.
 	// --------------------------------------------------------------------------------------------------
 
-	/** <b>Disabled 2026-09-15</b> ({@code @GameTest} commented out below, not deleted): recurred as a flaky
-	 * failure twice across unrelated verification runs the same day ("placing against a solid block should
-	 * succeed, got: PASS" - a self-contradictory message, worth a closer look) - never on a run where this
-	 * test's own file changed. Not root-caused yet; see the flaky-GameTest human-check-list memory.
-	 * Re-enable (uncomment) once actually investigated, not just to recheck. */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	/** Was disabled as flaky 2026-09-15; probable cause found 2026-09-28: the placer's PASS is its "something is in the
+	 * way" answer, and entities from neighbouring tests can end up in the placement spot - see the comment in the body.
+	 * Not proven (no failure caught since), so the message now names whatever was there. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void turretPlacerAdvancedPlacesARealTamedAdvancedTurret(GameTestHelper helper) {
 		BlockPos floorPos = new BlockPos(2, 1, 2);
 		BlockPos floorAbs = helper.absolutePos(floorPos);
@@ -12725,9 +12767,17 @@ public class ThaumcraftGameTests {
 		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
 				Vec3.atCenterOf(floorAbs), net.minecraft.core.Direction.UP, floorAbs, false);
 		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(player, hand, hit);
+		// The placer refuses (PASS) when anything stands in the two blocks above the floor. Tests sit close together
+		// and some put entities at negative offsets, i.e. in a neighbour's area - which is how this failed now and then
+		// ("got: PASS"). Strays there are cleared first; anything that was there is named if placing still fails.
+		AABB placeBox = new AABB(floorAbs.above()).expandTowards(0, 1, 0);
+		List<net.minecraft.world.entity.Entity> strays = helper.getLevel().getEntities((net.minecraft.world.entity.Entity) null, placeBox, e -> e != player);
+		if (!strays.isEmpty()) Thaumcraft.LOGGER.warn("turretPlacerAdvanced test: cleared stray entities from the placement spot: {}", strays);
+		strays.forEach(net.minecraft.world.entity.Entity::discard);
 		net.minecraft.world.InteractionResult result = player.getItemInHand(hand).getItem().useOn(context);
 
-		helper.assertTrue(result == net.minecraft.world.InteractionResult.SUCCESS, "placing against a solid block should succeed, got: " + result);
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.SUCCESS, "placing against a solid block should succeed, got: " + result
+				+ " (cleared strays: " + strays + ", still there: " + helper.getLevel().getEntities((net.minecraft.world.entity.Entity) null, placeBox) + ")");
 		helper.assertTrue(player.getItemInHand(hand).isEmpty(), "the single placer stack should be fully consumed");
 
 		List<thaumcraft.common.entities.construct.EntityTurretCrossbowAdvanced> found = helper.getLevel().getEntitiesOfClass(
@@ -13255,12 +13305,9 @@ public class ThaumcraftGameTests {
 	 * aspect cost (25 units) - no stabilizers needed, matching the same low-cost/low-instability crystal
 	 * recipes from the previous chunk that also needed none.
 	 *
-	 * Disabled 2026-09-25 - failed a 2nd time with the identical message ("the craft should have completed (or definitively
-	 * failed) within a generous tick budget"; 1st was during the crucible-functionality verification the same day) while
-	 * verifying the tooltip work, which touches only client tooltip code and a few item tooltip lines. Passed on each rerun
-	 * both times, so it looks timing-dependent under suite load. Not root-caused yet. Re-enable (uncomment) once actually
-	 * investigated, not just to recheck. */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	 * Was disabled as flaky 2026-09-25; root-caused 2026-09-28: instability events during the craft (see stabilizeForTest
+	 * above runDemoInfusionAndCountTicks). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void infusionMatrixCraftsCharmUndyingFromTotemAndPlateBrass(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 		BlockPos matrixPos = new BlockPos(4, 4, 4);
@@ -13287,6 +13334,7 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(matrix.activate(level, player), "activation should succeed with a central pedestal in place");
 		helper.assertTrue(matrix.activate(level, player), "the second activation (with a real, valid charm_undying recipe on the pedestals) should start crafting");
 		helper.assertTrue(matrix.crafting, "the matrix should be mid-craft after a successful craftingStart");
+		matrix.stability = 25.0f; // see stabilizeForTest
 
 		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
 		for (int i = 0; i < 2000 && matrix.crafting; i++) {
@@ -13463,7 +13511,7 @@ public class ThaumcraftGameTests {
 	 * unreachable-in-survival test either way (see {@code BlocksTC.stoneAncient}'s own doc comment), but real,
 	 * correct code worth confirming regardless.
 	 */
-	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
 	public static void infusionMatrixRealPedestalTierCostBonusesHaveOppositeSigns(GameTestHelper helper) {
 		BlockPos eldritchMatrixPos = new BlockPos(4, 3, 4);
 		helper.setBlock(eldritchMatrixPos.offset(3, -2, 0), BlocksTC.pedestalEldritch.get());
@@ -13472,7 +13520,7 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(helper.getLevel(), helper.absolutePos(eldritchMatrixPos), helper.getBlockState(eldritchMatrixPos), eldritchMatrix);
 		float eldritchCostMult = eldritchMatrix.getCostMult();
 
-		BlockPos ancientMatrixPos = new BlockPos(4, 3, 12);
+		BlockPos ancientMatrixPos = new BlockPos(4, 19, 4); // inside its own structure (2026-09-28): blocks outside it land in a neighbouring test
 		helper.setBlock(ancientMatrixPos.offset(3, -2, 0), BlocksTC.pedestalAncient.get());
 		helper.setBlock(ancientMatrixPos, BlocksTC.infusionMatrix.get());
 		thaumcraft.common.tiles.crafting.TileInfusionMatrix ancientMatrix = helper.getBlockEntity(ancientMatrixPos);
@@ -14708,12 +14756,19 @@ public class ThaumcraftGameTests {
 		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
 		Zombie zombie = new Zombie(EntityType.ZOMBIE, helper.getLevel());
 		zombie.setPos(origin.getX() + 0.5, origin.getY() + 1, origin.getZ() + 0.5);
-		helper.getLevel().addFreshEntity(zombie);
+		// the one test that wants the real dice (see noNaturalChampionRolls); the zombie is removed straight after
+		thaumcraft.common.lib.events.ChampionModEvents.naturalRolls = true;
+		try {
+			helper.getLevel().addFreshEntity(zombie);
+		} finally {
+			thaumcraft.common.lib.events.ChampionModEvents.naturalRolls = false;
+		}
 
 		net.minecraft.world.entity.ai.attributes.AttributeInstance championAttr =
 				zombie.getAttribute(thaumcraft.api.ThaumcraftAttributes.CHAMPION_MOD);
 		helper.assertTrue(championAttr != null, "a real zombie should carry the real CHAMPION_MOD attribute");
 		helper.assertTrue(championAttr.getValue() != -2.0, "a freshly-spawned real monster should have been rolled for champion status (either way) on join, found " + championAttr.getValue());
+		zombie.discard();
 		helper.succeed();
 	}
 
@@ -14984,7 +15039,7 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
-	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
 	public static void infernalFurnaceCooksFasterWithRealBellows(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 		BlockPos posA = new BlockPos(2, 2, 2);
@@ -15532,9 +15587,12 @@ public class ThaumcraftGameTests {
 	 * {@link thaumcraft.common.entities.monster.boss.EntityEldritchWarden}'s own doc comment for the full
 	 * real story and exact original formulas being reproduced.
 	 */
-	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	// "arena" (40x6x40, 2026-09-28): this test used to lay its 37x37 floor from an 8x8 template, i.e. right across the
+	// neighbouring tests at their own y=3 - which is what kept putting stone above the Barrier Stone test's paving stone.
+	// Its sap spiral reaches ~19 blocks out too, so it gets a template that big, with the warden in the middle.
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "arena")
 	public static void eldritchWardenFieldFrenzyTriggersOnceOnShieldDepletionAndSpiralsRealSap(GameTestHelper helper) {
-		BlockPos floorPos = new BlockPos(4, 3, 4);
+		BlockPos floorPos = new BlockPos(20, 3, 20);
 		BlockPos standPos = floorPos.above();
 		// A real wide, flat, solid floor with real open air above - room for the real expanding sap ring
 		// (radius grows up to ~17.5 blocks by the true original's own real formula) to actually land on solid
@@ -15694,14 +15752,10 @@ public class ThaumcraftGameTests {
 	// --------------------------------------------------------------------------------------------------
 
 	/**
-	 * Disabled 2026-09-25 - failed a 2nd time with the identical message ("a real taintacle giant should really
-	 * have 175 max health, found 275.0") during the golem-regrowth/sap-field/FXGeneric-blend verification (no
-	 * plausible causal link - those touched the eldritch golem, a decorative block, and client particle blending;
-	 * nothing about taintacle giant health). The first failure was 2026-09-17 during the {@code MIRROR} renderer
-	 * chunk. The 100-point excess is a champion-modifier-shaped health bonus on a freshly created entity, so this
-	 * is most likely an RNG/static-state leak between tests, not root-caused yet. Re-enable (uncomment) once
-	 * actually investigated, not just to recheck. */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	 * Was disabled as flaky 2026-09-25; root-caused 2026-09-28: 275 = 175 + the champion health bonus from a natural
+	 * roll on joining the level - see {@link #noNaturalChampionRolls}.
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void taintacleGiantIsARealBossThatEnragesAndSelfHeals(GameTestHelper helper) {
 		BlockPos pos = new BlockPos(2, 2, 2);
 		BlockPos abs = helper.absolutePos(pos);
@@ -16817,7 +16871,7 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
-	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
 	public static void handMirrorMenuDeliversAnItemThroughTheRealLinkedNetwork(GameTestHelper helper) {
 		BlockPos posA = new BlockPos(3, 2, 3);
 		BlockPos posB = new BlockPos(3, 2, 10);
@@ -16876,14 +16930,11 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
-	/** <b>Disabled 2026-09-15</b> ({@code @GameTest} commented out below, not deleted): recurred as a flaky
-	 * failure twice across unrelated verification runs the same day ("the real Barrier Stone tile should
-	 * really auto-place a real Barrier block 1 above itself within 105 ticks") - never on a run where this
-	 * test's own file changed. Not the same symptom as the earlier documented Barrier Stone hang (see
-	 * [[gametest-framework-notes]] - that was a full server stall, this is a plain timing assertion miss);
-	 * not root-caused yet, see the flaky-GameTest human-check-list memory. Re-enable (uncomment) once
-	 * actually investigated, not just to recheck. */
-	// @GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	/** Was disabled as flaky 2026-09-15; root-caused 2026-09-28. The tile heals within 100 ticks from any starting count,
+	 * but only into air, and the spot above it kept turning out to be plain stone: the Eldritch Warden frenzy test laid a
+	 * 37x37 stone floor at y=3 from an 8x8 template, straight across its neighbours (it has its own "arena" template now).
+	 * Whether this test failed depended on whether it happened to be placed next to that one. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void barrierStoneTileAutoPlacesAndHealsTheRealBarrierBlocksAboveIt(GameTestHelper helper) {
 		BlockPos pavingPos = new BlockPos(3, 2, 3);
 		helper.setBlock(pavingPos, thaumcraft.api.blocks.BlocksTC.pavingStoneBarrier.get());
@@ -16897,9 +16948,9 @@ public class ThaumcraftGameTests {
 		}
 
 		helper.assertTrue(level.getBlockState(abs.above(1)).is(thaumcraft.api.blocks.BlocksTC.barrier.get()),
-				"the real Barrier Stone tile should really auto-place a real Barrier block 1 above itself within 105 ticks");
+				"the real Barrier Stone tile should really auto-place a real Barrier block 1 above itself within 105 ticks, found " + level.getBlockState(abs.above(1)));
 		helper.assertTrue(level.getBlockState(abs.above(2)).is(thaumcraft.api.blocks.BlocksTC.barrier.get()),
-				"the real Barrier Stone tile should really auto-place a real Barrier block 2 above itself within 105 ticks");
+				"the real Barrier Stone tile should really auto-place a real Barrier block 2 above itself within 105 ticks, found " + level.getBlockState(abs.above(2)));
 
 		// Real healing: break the lower real Barrier block by hand, tick past the next real 100-cycle, confirm
 		// it comes back - matches the original's own real self-healing intent.
@@ -17288,7 +17339,7 @@ public class ThaumcraftGameTests {
 		bellGolem.mobInteract(player, hand);
 		helper.assertTrue(!bellGolem.isFollowingOwner() && bellGolem.hasRestriction(), "ringing again should make it stay, homed where it stands");
 
-		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, origin.offset(-2, 0, 0));
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, origin.offset(5, 0, 5));
 		golem.initializeGolem(props, 750);
 		golem.tame(player);
 		player.setItemInHand(hand, ItemStack.EMPTY);

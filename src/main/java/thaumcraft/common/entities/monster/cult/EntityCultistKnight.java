@@ -93,12 +93,12 @@ public class EntityCultistKnight extends EntityCultist {
 		setItemSlot(EquipmentSlot.HEAD, new ItemStack(ItemsTC.crimsonPlateHelm.get()));
 		setItemSlot(EquipmentSlot.CHEST, new ItemStack(ItemsTC.crimsonPlateChest.get()));
 		setItemSlot(EquipmentSlot.LEGS, new ItemStack(ItemsTC.crimsonPlateLegs.get()));
-		if (rand.nextFloat() < (hard ? 0.05f : 0.01f)) {
-			setItemSlot(EquipmentSlot.FEET, new ItemStack(ItemsTC.crimsonBoots.get()));
-		}
+		setItemSlot(EquipmentSlot.FEET, new ItemStack(ItemsTC.crimsonBoots.get()));
+		// the original's rare leader-ish knights: a void sword and the robe hood, or a thaumium sword and maybe bare-headed
 		if (rand.nextFloat() < (hard ? 0.05f : 0.01f)) {
 			if (rand.nextInt(5) == 0) {
 				setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ItemsTC.voidSword.get()));
+				setItemSlot(EquipmentSlot.HEAD, new ItemStack(ItemsTC.crimsonRobeHelm.get()));
 			}
 			else {
 				setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ItemsTC.thaumiumSword.get()));
