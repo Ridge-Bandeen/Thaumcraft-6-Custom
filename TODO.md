@@ -154,6 +154,26 @@ The port applies no discount. Decide: replicate (free), implement the intended p
 - The Eldritch Warden/bosses cap any hit at 35 damage and buff themselves on larger hits (faithful to the
   original) - `/kill` does NOT kill them; use `/data merge entity <sel> {Health:0f}`.
 
+## Research side brought to parity, 2026-09-28 (commits fb29477 .. 1dcbe05)
+
+Done: Thaumonomicon rebuilt as ports of GuiResearchBrowser/GuiResearchPage (requirement checklist + "complete stage",
+tabs, inserts, recipe bookmarks/pages, click-through, 3D multiblock construct pages); category backgrounds (JPEG -> PNG);
+all 338 original recipes regenerated from ConfigRecipes (`tools/original_recipes.py`), ~60 of them previously missing;
+Blank Seal, Grappler Head/Spool, copper/tin/silver/lead clusters registered; the seven curiosities incl. Crimson Rites;
+original onboarding (no default research, crystal -> dream journal -> Salis Mundus on a bookshelf -> Thaumonomicon) with
+the original research gates on every Salis Mundus trigger; Research Table screen ported (aids, cards, animations).
+
+Still open on this side:
+- Pech trade tables are a "representative" set, not the original's `ConfigEntities#tradeInventory` (only the curio
+  entry was restored).
+- Runic augment ignores baubles (original allowed IBauble); baubles live in the hotbar here.
+- Cheater's Thaumonomicon (original config-gated, off by default) not ported.
+- Tin/silver/lead clusters have no smelting output (no vanilla ingot); the original smelted them to whatever mod ingot
+  existed.
+- `liquid_death` blockstate has no model (log spam at startup).
+- Needs a human playtest: the whole new-player path, "complete stage" in the book, construct-page layer toggle,
+  research-table aid selection and card animations, recipe click-through in the book.
+
 ## Confirmed real gaps (actionable)
 
 ~~**Real crash-risk bug fixed 2026-09-16**: `EntityTaintacleGiant` (the Taint
