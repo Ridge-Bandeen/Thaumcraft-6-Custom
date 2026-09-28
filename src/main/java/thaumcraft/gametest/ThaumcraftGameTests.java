@@ -14209,13 +14209,12 @@ public class ThaumcraftGameTests {
 			"!INSTABILITY"); // TileInfusionMatrix
 
 	/** Every recipe bookmark in the research data (the original's catalog keys) opens a real recipe page - guards the
-	 * 2026-09-28 recipe transcription and ResearchRecipeCatalog. The exceptions are the multiblock "construct" pages
-	 * (drawn from blueprints, not recipes), two keys the original never registered either, and tin/silver/lead
+	 * 2026-09-28 recipe transcription and ResearchRecipeCatalog (multiblock keys count when they have a blueprint). The
+	 * exceptions are two keys the original never registered either, and tin/silver/lead
 	 * purification, which only load when some mod adds those ores. */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void everyResearchRecipeBookmarkResolvesToARealRecipe(GameTestHelper helper) {
-		java.util.Set<String> exempt = java.util.Set.of("thaumcraft:infernalfurnace", "thaumcraft:infusionaltar", "thaumcraft:infusionaltarancient",
-				"thaumcraft:infusionaltareldritch", "thaumcraft:thaumatorium", "thaumcraft:golempress", "thaumcraft:jarlabelessence",
+		java.util.Set<String> exempt = java.util.Set.of("thaumcraft:jarlabelessence",
 				"thaumcraft:nitorcolor", "thaumcraft:metal_purification_tin", "thaumcraft:metal_purification_silver", "thaumcraft:metal_purification_lead");
 		net.minecraft.world.item.crafting.RecipeManager recipes = helper.getLevel().getRecipeManager();
 		java.util.List<String> missing = new java.util.ArrayList<>();
@@ -14227,7 +14226,7 @@ public class ThaumcraftGameTests {
 				if (entry.getAddenda() != null) for (thaumcraft.api.research.ResearchAddendum ad : entry.getAddenda())
 					if (ad.getRecipes() != null) keys.addAll(java.util.Arrays.asList(ad.getRecipes()));
 				for (net.minecraft.resources.ResourceLocation key : keys) {
-					if (exempt.contains(key.toString())) continue;
+					if (exempt.contains(key.toString()) || thaumcraft.common.registry.ThaumcraftDustTriggers.BLUEPRINTS.containsKey(key.toString())) continue;
 					if (thaumcraft.common.lib.research.ResearchRecipeCatalog.resolve(recipes, key).isEmpty()) missing.add(entry.getKey() + ":" + key);
 				}
 			}

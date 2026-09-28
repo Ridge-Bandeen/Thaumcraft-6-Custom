@@ -218,6 +218,7 @@ sourceSets {
             include 'thaumcraft/client/gui/ThaumonomiconScreen.java'
             include 'thaumcraft/client/gui/ResearchPageView.java'
             include 'thaumcraft/client/gui/ResearchTooltip.java'
+            include 'thaumcraft/client/gui/BlueprintRenderer.java'
             include 'thaumcraft/common/lib/network/ClientboundPlayerKnowledgePacket.java'
             include 'thaumcraft/client/ClientPlayerKnowledgeCache.java'
             include 'thaumcraft/common/items/curios/ItemThaumonomicon.java'

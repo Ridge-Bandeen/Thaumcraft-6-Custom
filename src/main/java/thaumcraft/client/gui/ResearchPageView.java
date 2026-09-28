@@ -61,8 +61,9 @@ import thaumcraft.common.registry.ThaumcraftSounds;
  * <p>The stage text is re-read every two seconds (every quarter second after a "complete stage" click, until the server
  * reports the next stage) the same way the original polled, so the page follows the server's progress by itself.
  *
- * <p>Not reproduced: the multiblock "construct" pages (the original's 3D blueprint render of the infusion altar,
- * Thaumatorium and so on) - those bookmarks are simply absent for now.
+ * <p>Multiblocks (Infernal Furnace, the infusion altars, Thaumatorium, Golem Press) get the original's "construct" page: a
+ * 3D render of what to build ({@link BlueprintRenderer}), the materials underneath, and a toggle that peels the layers
+ * off one a second; their bookmark is a small render of the finished structure.
  */
 final class ResearchPageView {
 
@@ -88,6 +89,7 @@ final class ResearchPageView {
 	private static final LinkedList<ResourceLocation> history = new LinkedList<>();
 	private static ResourceLocation shownRecipe;
 	private static int aspectsPage;
+	private static boolean cycleMultiblockLines;
 
 	private final ThaumonomiconScreen screen;
 	private final ResearchEntry research;
@@ -111,9 +113,16 @@ final class ResearchPageView {
 	private boolean hasRecipePages;
 	private boolean allowWithPagePopup;
 	private List<?> tipText;
-	private final Map<ResourceLocation, List<RecipeHolder<?>>> recipeLists = new LinkedHashMap<>();
-	private final Map<ResourceLocation, List<ItemStack>> recipeOutputs = new LinkedHashMap<>();
-	private final Map<ResourceLocation, List<RecipeHolder<?>>> drilldownLists = new LinkedHashMap<>();
+	/** Recipe keys to what they show: {@link RecipeHolder}s, or a multiblock {@link thaumcraft.common.registry.ThaumcraftDustTriggers.Blueprint}. */
+	private final Map<ResourceLocation, List<Object>> recipeLists = new LinkedHashMap<>();
+	/** The bookmark icon for each entry of {@link #recipeLists}: an item, or a blueprint drawn small. */
+	private final Map<ResourceLocation, List<Object>> recipeOutputs = new LinkedHashMap<>();
+	private final Map<ResourceLocation, List<Object>> drilldownLists = new LinkedHashMap<>();
+	private final Map<ResourceLocation, BlueprintRenderer> blueprintIcons = new HashMap<>();
+	/** The open construct page's structure (the original's blockAccess), with its slice counter. */
+	private BlueprintRenderer blockAccess;
+	private int sliceLine;
+	private boolean renderingCompound;
 	/** Click-through targets registered while drawing: x, y, recipe key, page. */
 	private final List<Object[]> reference = new ArrayList<>();
 	private final Map<String, String> keyCache = new HashMap<>();
@@ -481,8 +490,16 @@ final class ResearchPageView {
 
 	/** One bookmark: every recipe the key stands for that the player may see (a Thaumcraft recipe whose research they
 	 * know strictly; any plain crafting recipe), with the item each shows on its bookmark. */
-	private void addRecipesToList(ResourceLocation rk, Map<ResourceLocation, List<RecipeHolder<?>>> lists, Map<ResourceLocation, List<ItemStack>> outputs) {
+	private void addRecipesToList(ResourceLocation rk, Map<ResourceLocation, List<Object>> lists, Map<ResourceLocation, List<Object>> outputs) {
 		if (mc().level == null) return;
+		thaumcraft.common.registry.ThaumcraftDustTriggers.Blueprint bp = thaumcraft.common.registry.ThaumcraftDustTriggers.BLUEPRINTS.get(rk.toString());
+		if (bp != null) {
+			if (screen.knowsStrict(bp.research())) {
+				lists.computeIfAbsent(rk, k -> new ArrayList<>()).add(bp);
+				outputs.computeIfAbsent(rk, k -> new ArrayList<>()).add(bp.display() != null ? bp.display() : bp);
+			}
+			return;
+		}
 		for (RecipeHolder<?> holder : ResearchRecipeCatalog.resolve(mc().level.getRecipeManager(), rk)) {
 			Recipe<?> recipe = holder.value();
 			String req = researchOf(recipe);
@@ -525,6 +542,11 @@ final class ResearchPageView {
 
 	void render(GuiGraphics graphics, int mx, int my, float partialTick) {
 		hasRecipePages = false;
+		renderingCompound = false;
+		if (shownRecipe != lastShownRecipe) {
+			blockAccess = null;
+			lastShownRecipe = shownRecipe;
+		}
 		int sw = (width() - PANE_W) / 2;
 		int sh = (height() - PANE_H) / 2;
 		float var10 = (width() - PANE_W * 1.3f) / 2.0f;
@@ -541,6 +563,7 @@ final class ResearchPageView {
 		if (lastCycle < System.currentTimeMillis()) {
 			cycle++;
 			lastCycle = System.currentTimeMillis() + 1000L;
+			if (cycleMultiblockLines && blockAccess != null) sliceLine = (sliceLine + 1) % (blockAccess.height() + 1);
 		}
 		int current = 0;
 		boolean drewPage = false;
@@ -574,6 +597,8 @@ final class ResearchPageView {
 			}
 		}
 	}
+
+	private ResourceLocation lastShownRecipe;
 
 	/** Where the last drawn page's text ended (relative to its top), for the warp warning that sits under it. */
 	private int lastPageY;
@@ -907,8 +932,8 @@ final class ResearchPageView {
 		allowWithPagePopup = true;
 		if (!recipeOutputs.isEmpty()) {
 			int space = Math.min(25, 200 / recipeOutputs.size());
-			for (Map.Entry<ResourceLocation, List<ItemStack>> e : recipeOutputs.entrySet()) {
-				List<ItemStack> list = e.getValue();
+			for (Map.Entry<ResourceLocation, List<Object>> e : recipeOutputs.entrySet()) {
+				List<Object> list = e.getValue();
 				if (list == null || list.isEmpty()) continue;
 				int i = Math.max(0, cycle) % list.size();
 				int sh = rng.nextInt(3);
@@ -919,7 +944,13 @@ final class ResearchPageView {
 				graphics.blit(TEX1, x + 280 + sh, y - 1, 120 + le, 232, 28, 16);
 				graphics.blit(TEX1, x + 280 + sh, y - 1, 116, 232, 4, 16);
 				graphics.setColor(1f, 1f, 1f, 1f);
-				drawStackAt(graphics, list.get(i), x + 287 + sh - le, y - 1, mx, my, false, false);
+				Object icon = list.get(i);
+				if (icon instanceof ItemStack stack) {
+					drawStackAt(graphics, stack, x + 287 + sh - le, y - 1, mx, my, false, false);
+				} else if (icon instanceof thaumcraft.common.registry.ThaumcraftDustTriggers.Blueprint bp) {
+					BlueprintRenderer r = blueprintIcons.computeIfAbsent(e.getKey(), k -> new BlueprintRenderer(bp.parts(), true));
+					r.render(graphics, x + 295 + sh - le, y + 6 + r.height(), 150, 4.0f, 25.0f, -45.0f, 0);
+				}
 				y += space;
 			}
 		}
@@ -934,14 +965,18 @@ final class ResearchPageView {
 		graphics.pose().pushPose();
 		graphics.pose().translate(0, 0, 200);
 		graphics.blit(TEX4, x, y, 0, 0, 255, 255);
-		List<RecipeHolder<?>> list = recipeLists.get(shownRecipe);
+		List<Object> list = recipeLists.get(shownRecipe);
 		if (list == null || list.isEmpty()) list = drilldownLists.get(shownRecipe);
 		if (list != null && !list.isEmpty()) {
 			hasRecipePages = list.size() > 1;
 			recipePageMax = list.size() - 1;
 			if (recipePage > recipePageMax) recipePage = recipePageMax;
-			Recipe<?> recipe = list.get(recipePage % list.size()).value();
-			if (recipe instanceof ArcaneRecipe ar) drawArcaneCraftingPage(graphics, x + 128, y + 128, mx, my, ar);
+			Object entry = list.get(recipePage % list.size());
+			Recipe<?> recipe = entry instanceof RecipeHolder<?> holder ? holder.value() : null;
+			if (entry instanceof thaumcraft.common.registry.ThaumcraftDustTriggers.Blueprint bp) {
+				drawCompoundCraftingPage(graphics, x + 128, y + 128, mx, my, bp);
+				renderingCompound = true;
+			} else if (recipe instanceof ArcaneRecipe ar) drawArcaneCraftingPage(graphics, x + 128, y + 128, mx, my, ar);
 			else if (recipe instanceof CraftingRecipe cr) drawCraftingPage(graphics, x + 128, y + 128, mx, my, cr);
 			else if (recipe instanceof CrucibleRecipe cr) drawCruciblePage(graphics, x + 128, y + 128, mx, my, cr);
 			else if (recipe instanceof InfusionRecipe ir) drawInfusionPage(graphics, x + 128, y + 128, mx, my, ir);
@@ -953,6 +988,24 @@ final class ResearchPageView {
 		}
 		graphics.pose().popPose();
 		allowWithPagePopup = false;
+	}
+
+	/** The original's drawCompoundCraftingPage: the structure to build, the materials along the bottom, and the layer toggle. */
+	private void drawCompoundCraftingPage(GuiGraphics graphics, int x, int y, int mx, int my, thaumcraft.common.registry.ThaumcraftDustTriggers.Blueprint bp) {
+		if (blockAccess == null) {
+			blockAccess = new BlueprintRenderer(bp.parts(), false);
+			sliceLine = 0;
+		}
+		drawTitle(graphics, "recipe.type.construct", x, y);
+		int s = Math.max(Math.max(bp.parts()[0].length, bp.parts()[0][0].length), bp.parts().length) * 2;
+		blockAccess.render(graphics, x, y, 300, 38 - s, 25.0f, -45.0f, sliceLine);
+		for (int a = 0; a < bp.ingredients().size(); a++) {
+			drawStackAt(graphics, bp.ingredients().get(a), x - 85 + a * 17, y + 90, mx, my, true);
+		}
+		RenderSystem.enableBlend();
+		graphics.setColor(1f, 1f, 1f, mouseInside(x + 80, y + 100, 8, 8, mx, my) ? 1.0f : 0.75f);
+		graphics.blit(TEX1, x + 80, y + 100, cycleMultiblockLines ? 168 : 160, 224, 8, 8);
+		graphics.setColor(1f, 1f, 1f, 1f);
 	}
 
 	private void drawTitle(GuiGraphics graphics, String key, int x, int y) {
@@ -1474,6 +1527,12 @@ final class ResearchPageView {
 		mx = par1 - (var4 + 118);
 		my = par2 - (var5 + 190);
 		if (mx >= 0 && my >= 0 && mx < 20 && my < 12) goBack();
+		mx = par1 - (var4 + 210);
+		my = par2 - (var5 + 190);
+		if (renderingCompound && mx >= 0 && my >= 0 && mx < 10 && my < 10) {
+			screen.playSound(ThaumcraftSounds.CLACK.get(), 0.66f, 1.0f);
+			cycleMultiblockLines = !cycleMultiblockLines;
+		}
 		for (Object[] coords : reference) {
 			int rx = (int) coords[0];
 			int ry = (int) coords[1];

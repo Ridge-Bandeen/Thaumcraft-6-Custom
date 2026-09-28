@@ -1,5 +1,9 @@
 package thaumcraft.common.registry;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -23,7 +27,30 @@ import thaumcraft.common.lib.crafting.DustTriggerSimple;
  */
 public final class ThaumcraftDustTriggers {
 
+	/** One multiblock as the Thaumonomicon shows it - the original's {@code ThaumcraftApi.BluePrint} catalog entries: the
+	 * research it needs, the structure, the item shown on its bookmark ({@code null}: a small render of the finished
+	 * structure) and the materials listed under the picture. */
+	public record Blueprint(String research, Part[][][] parts, ItemStack display, List<ItemStack> ingredients) {
+	}
+
+	/** The original's multiblock catalog, by its (lower-cased) research recipe key. */
+	public static final Map<String, Blueprint> BLUEPRINTS = new LinkedHashMap<>();
+
 	public static void register() {
+		BLUEPRINTS.clear();
+		BLUEPRINTS.put("thaumcraft:infernalfurnace", new Blueprint("INFERNALFURNACE", infernalFurnaceBlueprint(), null,
+				List.of(new ItemStack(Blocks.NETHER_BRICKS, 12), new ItemStack(Blocks.OBSIDIAN, 12), new ItemStack(Blocks.IRON_BARS), new ItemStack(net.minecraft.world.item.Items.LAVA_BUCKET))));
+		BLUEPRINTS.put("thaumcraft:infusionaltar", new Blueprint("INFUSION", infusionAltarBlueprint(), null,
+				List.of(new ItemStack(BlocksTC.stoneArcane.get(), 8), new ItemStack(BlocksTC.pedestal.get()), new ItemStack(BlocksTC.infusionMatrix.get()))));
+		BLUEPRINTS.put("thaumcraft:infusionaltarancient", new Blueprint("INFUSIONANCIENT", infusionAltarAncientBlueprint(), null,
+				List.of(new ItemStack(BlocksTC.stoneAncient.get(), 8), new ItemStack(BlocksTC.pedestalAncient.get()), new ItemStack(BlocksTC.infusionMatrix.get()))));
+		BLUEPRINTS.put("thaumcraft:infusionaltareldritch", new Blueprint("INFUSIONELDRITCH", infusionAltarEldritchBlueprint(), null,
+				List.of(new ItemStack(BlocksTC.stoneEldritchTile.get(), 8), new ItemStack(BlocksTC.pedestalEldritch.get()), new ItemStack(BlocksTC.infusionMatrix.get()))));
+		BLUEPRINTS.put("thaumcraft:thaumatorium", new Blueprint("THAUMATORIUM", thaumatoriumBlueprint(), null,
+				List.of(new ItemStack(BlocksTC.metalAlchemical.get(), 2), new ItemStack(BlocksTC.crucible.get()))));
+		BLUEPRINTS.put("thaumcraft:golempress", new Blueprint("MINDCLOCKWORK", golemPressBlueprint(), new ItemStack(BlocksTC.golemBuilder.get()),
+				List.of(new ItemStack(Blocks.IRON_BARS), new ItemStack(Blocks.CAULDRON), new ItemStack(Blocks.PISTON), new ItemStack(Blocks.ANVIL), new ItemStack(BlocksTC.tableStone.get()))));
+
 		IDustTrigger.registerDustTrigger(new DustTriggerSimple("!gotdream", Blocks.BOOKSHELF, new ItemStack(thaumcraft.api.items.ItemsTC.thaumonomicon.get())));
 		IDustTrigger.registerDustTrigger(new DustTriggerSimple("!gotdream", net.minecraft.tags.BlockTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("c", "bookshelves")),
 				new ItemStack(thaumcraft.api.items.ItemsTC.thaumonomicon.get())));
