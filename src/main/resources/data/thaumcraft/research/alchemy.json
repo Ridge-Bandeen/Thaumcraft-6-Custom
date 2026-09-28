@@ -124,7 +124,7 @@
                 },
                 {
                     "text": "research.LIQUIDDEATH.stage.2",
-                    "recipes": ["thaumcraft:liquid_death"]
+                    "recipes": ["thaumcraft:LiquidDeath"]
                 }
             ]
         },

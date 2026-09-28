@@ -138,6 +138,10 @@ public class ResearchRequirements {
 			Map.entry("thaumcraft:amulet_vis;0", "thaumcraft:amulet_vis_stone"),
 			Map.entry("thaumcraft:amulet_vis;1", "thaumcraft:amulet_vis"),
 			Map.entry("thaumcraft:seal", "thaumcraft:seal_blank"),
+			// the original's blank foci (ItemFocus focus_1/2/3) are focus_blank_1/2/3 here - this port's own focus_1 is a fire focus
+			Map.entry("thaumcraft:focus_1", "thaumcraft:focus_blank_1"),
+			Map.entry("thaumcraft:focus_2", "thaumcraft:focus_blank_2"),
+			Map.entry("thaumcraft:focus_3", "thaumcraft:focus_blank_3"),
 			// ItemCurio("curio", {arcane, preserved, ancient, eldritch, knowledge, twisted, rites})
 			Map.entry("thaumcraft:curio;1", "thaumcraft:curio_preserved"),
 			Map.entry("thaumcraft:curio;2", "thaumcraft:curio_ancient"),
@@ -204,8 +208,7 @@ public class ResearchRequirements {
 	 * metal blocks are {@code metal_brass}/{@code metal_thaumium}/…, its nitor is {@code nitor_<dye>}, and
 	 * there is no tallow-adjacent "leather" item at all). Those specs resolve to nothing here for exactly the
 	 * reason they resolved to nothing upstream, so skipping them is the faithful behaviour, not a porting gap.
-	 * {@code focus_2}/{@code focus_3} are real items in the original but genuinely aren't ported yet, so those
-	 * still resolve to nothing. {@code enchanted_placeholder} (well-formed, i.e. the two entries in
+	 * {@code enchanted_placeholder} (well-formed, i.e. the two entries in
 	 * {@code auromancy.json}) now resolves to a real {@link EnchantSpec} instead - see that record's own doc
 	 * comment; the two malformed double-namespace copies in {@code infusion.json} are left unresolved, matching
 	 * a confirmed typo in Thaumcraft 6's own shipped data (see this class's own doc comment).

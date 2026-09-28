@@ -14291,6 +14291,43 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** Every research item/craft requirement resolves to something real - a spec that doesn't is silently dropped by
+	 * the loader, which quietly loosens that stage's gate. The exceptions are ids the original itself never registered
+	 * (so those gates were already dead there): thaumcraft:metal, thaumcraft:nitor, thaumcraft:leather, and a
+	 * double-namespaced enchanted_placeholder typo. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void everyResearchRequirementSpecResolves(GameTestHelper helper) {
+		java.util.Set<String> deadInTheOriginal = java.util.Set.of("thaumcraft:metal", "thaumcraft:nitor", "thaumcraft:leather", "minecraft:thaumcraft:enchanted_placeholder");
+		java.util.List<String> unresolved = new java.util.ArrayList<>();
+		var resources = helper.getLevel().getServer().getResourceManager().listResources("research", rl -> rl.getPath().endsWith(".json"));
+		for (var e : resources.entrySet()) {
+			if (!e.getKey().getNamespace().equals(Thaumcraft.MODID)) continue;
+			try (var reader = e.getValue().openAsReader()) {
+				com.google.gson.JsonObject root = com.google.gson.JsonParser.parseReader(reader).getAsJsonObject();
+				for (var entryEl : root.getAsJsonArray("entries")) {
+					var entry = entryEl.getAsJsonObject();
+					if (!entry.has("stages")) continue;
+					for (var stageEl : entry.getAsJsonArray("stages")) {
+						var stage = stageEl.getAsJsonObject();
+						for (String field : new String[] {"required_item", "required_craft"}) {
+							if (!stage.has(field)) continue;
+							for (var spec : stage.getAsJsonArray(field)) {
+								String s = spec.getAsString();
+								if (deadInTheOriginal.contains(s.split(";")[0])) continue;
+								if (thaumcraft.common.lib.research.ResearchRequirements.resolveSpec(s) == null) unresolved.add(entry.get("key").getAsString() + ": " + s);
+							}
+						}
+					}
+				}
+			} catch (Exception ex) {
+				unresolved.add(e.getKey() + " unreadable: " + ex);
+			}
+		}
+		helper.assertTrue(!resources.isEmpty(), "the research data should be readable");
+		helper.assertTrue(unresolved.isEmpty(), "research requirements that resolve to nothing: " + unresolved);
+		helper.succeed();
+	}
+
 	/** Salis Mundus follows the original's RecipeMagicDust: three crystals of three different aspects. */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void salisMundusNeedsThreeDifferentCrystals(GameTestHelper helper) {
