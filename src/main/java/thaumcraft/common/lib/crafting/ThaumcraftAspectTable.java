@@ -525,7 +525,14 @@ final class ThaumcraftAspectTable {
 		item(ItemsTC.crimsonBoots.get(), () -> of(Items.IRON_BOOTS).add(Aspect.ELDRITCH, 5));
 		item(ItemsTC.crimsonBlade.get(), () -> of(Items.IRON_SWORD).add(Aspect.ELDRITCH, 10).add(Aspect.DEATH, 10));
 		// the original's Curio meta 4 (the plain one); its other six variants share this one item here
-		item(ItemsTC.curio.get(), new AspectList().add(Aspect.MIND, 30));
+		// the seven curiosities, as the original ConfigAspects registered them by metadata
+		item(ItemsTC.curio.get(), new AspectList().add(Aspect.MIND, 15).add(Aspect.MAGIC, 15));
+		item(ItemsTC.curioPreserved.get(), new AspectList().add(Aspect.MIND, 15).add(Aspect.BEAST, 15));
+		item(ItemsTC.curioAncient.get(), new AspectList().add(Aspect.MIND, 15).add(Aspect.DEATH, 15));
+		item(ItemsTC.curioEldritch.get(), new AspectList().add(Aspect.MIND, 15).add(Aspect.ELDRITCH, 15));
+		item(ItemsTC.curioKnowledge.get(), new AspectList().add(Aspect.MIND, 30));
+		item(ItemsTC.curioTwisted.get(), new AspectList().add(Aspect.MIND, 15).add(Aspect.FLUX, 15));
+		item(ItemsTC.curioRites.get(), new AspectList().add(Aspect.MIND, 15).add(Aspect.ELDRITCH, 5).add(Aspect.SOUL, 5).add(Aspect.MAGIC, 5));
 		item(ItemsTC.primordialPearl.get(), new AspectList().add(Aspect.AIR, 10).add(Aspect.FIRE, 10).add(Aspect.WATER, 10)
 				.add(Aspect.EARTH, 10).add(Aspect.ORDER, 10).add(Aspect.ENTROPY, 10));
 	}

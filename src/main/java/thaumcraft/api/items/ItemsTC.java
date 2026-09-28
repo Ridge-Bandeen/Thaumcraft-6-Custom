@@ -347,8 +347,22 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.golems.ItemSealPlacer> sealEmptyAdvanced =
 			ITEMS.registerItem("seal_empty_advanced", props -> new thaumcraft.common.golems.ItemSealPlacer(props, thaumcraft.common.golems.seals.SealEmptyAdvanced::new));
 
+	/** The Arcane Curiosity - kept on the old {@code curio} id so existing worlds keep their curios. The other six of the
+	 * original's curiosities follow. */
 	public static final DeferredItem<ItemCurio> curio =
-			ITEMS.registerItem("curio", ItemCurio::new);
+			ITEMS.registerItem("curio", props -> new ItemCurio(props, ItemCurio.Variant.ARCANE));
+	public static final DeferredItem<ItemCurio> curioPreserved =
+			ITEMS.registerItem("curio_preserved", props -> new ItemCurio(props, ItemCurio.Variant.PRESERVED));
+	public static final DeferredItem<ItemCurio> curioAncient =
+			ITEMS.registerItem("curio_ancient", props -> new ItemCurio(props, ItemCurio.Variant.ANCIENT));
+	public static final DeferredItem<ItemCurio> curioEldritch =
+			ITEMS.registerItem("curio_eldritch", props -> new ItemCurio(props, ItemCurio.Variant.ELDRITCH));
+	public static final DeferredItem<ItemCurio> curioKnowledge =
+			ITEMS.registerItem("curio_knowledge", props -> new ItemCurio(props, ItemCurio.Variant.KNOWLEDGE));
+	public static final DeferredItem<ItemCurio> curioTwisted =
+			ITEMS.registerItem("curio_twisted", props -> new ItemCurio(props, ItemCurio.Variant.TWISTED));
+	public static final DeferredItem<ItemCurio> curioRites =
+			ITEMS.registerItem("curio_rites", props -> new ItemCurio(props, ItemCurio.Variant.RITES));
 
 	/** The real Thaumonomicon research browser's item - see {@code ItemThaumonomicon}'s own doc comment. One
 	 * registry entry, not the original's two damage-value variants (normal/creative "cheat sheet" - modern

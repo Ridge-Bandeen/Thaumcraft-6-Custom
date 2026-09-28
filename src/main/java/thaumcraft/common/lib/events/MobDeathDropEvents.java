@@ -37,15 +37,9 @@ import thaumcraft.common.items.resources.ItemCrystalEssence;
  * original's own two-tier rate, adapted to that entry's real single-stage shape in this port's data - see
  * below).
  *
- * Real, documented adaptations from the original: the original checked {@code "!CrimsonCultist@2"} (stage 2)
- * and used a metadata-6 curio variant ("Crimson Rites") for this specific drop; this port's real
- * {@code !CrimsonCultist} scan entry only has 1 stage (see {@code data/thaumcraft/research/scans.json}), so
- * the check here is the real unqualified {@code knowsResearch} (any progress at all) instead of a stage-2
- * check that could never be satisfied, and the drop is a plain {@link ItemsTC#curio} - {@code ItemCurio}'s
- * own doc comment already explains why the metadata-variant system (and its Crimson-Rites-specific branch)
- * isn't ported. The original's extra "already carrying one, make it rarer still" dampener
- * ({@code InventoryUtils.getPlayerSlotFor}) is dropped - that whole utility class isn't ported, and without
- * the metadata-6 variant to specifically check for, there's nothing left to key the dampener off.
+ * The drop is the Crimson Rites curiosity, and - as in the original - carrying one already makes another 1-in-50.
+ * One adaptation: the original tested {@code "!CrimsonCultist@2"}, but that scan key has a single stage in this
+ * port's data, so the check is plain "known".
  *
  * A third real fragment from the same original handler: a kill by {@link ThaumcraftDamageTypes#DISSOLVE}
  * (the Primal Crusher's own real disintegration effect) drops the victim's real {@link AspectHelper}-derived
@@ -67,8 +61,10 @@ public class MobDeathDropEvents {
 
 		if (entity instanceof EntityCultist && event.getSource().getEntity() instanceof Player player) {
 			int chance = ThaumcraftCapabilities.knowsResearch(player, "!CrimsonCultist") ? 20 : 4;
+			// the original's dampener: already carrying a copy of the Rites makes another much rarer
+			if (player.getInventory().items.stream().anyMatch(s -> s.is(ItemsTC.curioRites.get()))) chance = 50;
 			if (player.getRandom().nextInt(chance) == 0) {
-				drop(event, new ItemStack(ItemsTC.curio.get()));
+				drop(event, new ItemStack(ItemsTC.curioRites.get()));
 			}
 		}
 

@@ -75,7 +75,7 @@
   "focus.common.radius": "Radius (blocks)",
   "block.thaumcraft.ore_amber": "Amber Bearing Stone",
   "item.thaumcraft.amber": "Amber",
-  "item.thaumcraft.curio": "Curio",
+  "item.thaumcraft.curio": "Arcane Curiosity",
   "item.thaumcraft.thaumonomicon": "Thaumonomicon",
   "item.thaumcraft.pech_wand": "Pech Wand",
   "item.thaumcraft.enchanted_placeholder": "Any enchanted item",
@@ -1902,5 +1902,11 @@
   "item.thaumcraft.cluster_lead": "Native Lead Cluster",
   "item.thaumcraft.seal_blank": "Blank Seal",
   "item.thaumcraft.grapple_gun_tip": "Grappler Head",
-  "item.thaumcraft.grapple_gun_spool": "Grappler Spool"
+  "item.thaumcraft.grapple_gun_spool": "Grappler Spool",
+  "item.thaumcraft.curio_preserved": "Preserved Curiosity",
+  "item.thaumcraft.curio_ancient": "Ancient Curiosity",
+  "item.thaumcraft.curio_eldritch": "Eldritch Curiosity",
+  "item.thaumcraft.curio_knowledge": "Illuminating Curiosity",
+  "item.thaumcraft.curio_twisted": "Twisted Curiosity",
+  "item.thaumcraft.curio_rites": "Crimson Rites"
 }

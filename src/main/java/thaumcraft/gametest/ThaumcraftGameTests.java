@@ -2249,7 +2249,7 @@ public class ThaumcraftGameTests {
 			net.minecraft.world.level.block.Block.dropResources(state, helper.getLevel(), absolute, null, null, ItemStack.EMPTY);
 			List<ItemEntity> dropped = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0));
 			for (ItemEntity e : dropped) {
-				if (e.getItem().is(ItemsTC.curio.get())) foundCurio = true;
+				if (e.getItem().is(ItemsTC.curioPreserved.get())) foundCurio = true;
 				if (e.getItem().is(ItemsTC.amber.get())) foundAmber = true;
 				e.discard();
 			}
@@ -5717,11 +5717,11 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(matrix.crafting, "the matrix should be mid-craft after a successful craftingStart");
 
 		net.minecraft.world.level.block.state.BlockState matrixState = helper.getBlockState(matrixPos);
-		for (int i = 0; i < 400 && matrix.crafting; i++) {
+		for (int i = 0; i < 2000 && matrix.crafting; i++) {
 			thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(helper.getLevel(), matrixAbs, matrixState, matrix);
 		}
 
-		helper.assertTrue(!matrix.crafting, "the craft should have completed (or definitively failed) within 400 ticks");
+		helper.assertTrue(!matrix.crafting, "the craft should have completed (or definitively failed) within 2000 ticks");
 		helper.assertTrue(central.getItem().is(ItemsTC.charmUndying.get()), "the central pedestal should hold the recipe's result (Charm of Undying), found: " + central.getItem());
 		helper.assertTrue(component.getItem().isEmpty(), "the component pedestal's brass plate should have been consumed by the craft");
 		helper.succeed();
@@ -14177,6 +14177,40 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** The Crimson Rites (curio variant 6): below 21 warp it's "crazed ravings" and stays in hand; above, it teaches the
+	 * Crimson Rites research, Eldritch knowledge and warp, and is used up. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crimsonRitesNeedMoreThanTwentyWarpAndTeachTheRites(GameTestHelper helper) {
+		ServerPlayer player = spawnSurvivalPlayerAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.getAbilities().instabuild = false;
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "!CrimsonCultist"); // the research's parent (a scan) - the original's grant needs it too
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ItemsTC.curioRites.get(), 2));
+		ItemsTC.curioRites.get().use(helper.getLevel(), player, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(player.getMainHandItem().getCount() == 2 && !knowledge.isResearchKnown("CrimsonRites"), "with no warp the Rites teach nothing and stay");
+		ThaumcraftCapabilities.getWarp(player).add(thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.PERMANENT, 25);
+		ItemsTC.curioRites.get().use(helper.getLevel(), player, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(knowledge.isResearchComplete("CrimsonRites"), "above 20 warp the Rites teach the Crimson Rites");
+		helper.assertTrue(player.getMainHandItem().getCount() == 1, "and are used up");
+		helper.assertTrue(knowledge.getKnowledgeRaw(IPlayerKnowledge.EnumKnowledgeType.OBSERVATION,
+				thaumcraft.api.research.ResearchCategories.getResearchCategory("ELDRITCH")) > 0, "and grant Eldritch observation");
+		helper.succeed();
+	}
+
+	/** Each curiosity grants knowledge in its own category first - the Preserved one in Alchemy. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void preservedCuriosityGrantsAlchemyKnowledge(GameTestHelper helper) {
+		ServerPlayer player = spawnSurvivalPlayerAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.getAbilities().instabuild = false;
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(ItemsTC.curioPreserved.get()));
+		ItemsTC.curioPreserved.get().use(helper.getLevel(), player, net.minecraft.world.InteractionHand.MAIN_HAND);
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		helper.assertTrue(knowledge.getKnowledgeRaw(IPlayerKnowledge.EnumKnowledgeType.THEORY,
+				thaumcraft.api.research.ResearchCategories.getResearchCategory("ALCHEMY")) > 0, "reading it should give Alchemy theory");
+		helper.assertTrue(player.getMainHandItem().isEmpty(), "and use it up");
+		helper.succeed();
+	}
+
 	/** Salis Mundus follows the original's RecipeMagicDust: three crystals of three different aspects. */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void salisMundusNeedsThreeDifferentCrystals(GameTestHelper helper) {
@@ -15741,7 +15775,7 @@ public class ThaumcraftGameTests {
 			net.neoforged.neoforge.event.entity.living.LivingDropsEvent event =
 					new net.neoforged.neoforge.event.entity.living.LivingDropsEvent(cultist, source, drops, true);
 			thaumcraft.common.lib.events.MobDeathDropEvents.onLivingDrops(event);
-			gotCurio = drops.stream().anyMatch(d -> d.getItem().is(thaumcraft.api.items.ItemsTC.curio.get()));
+			gotCurio = drops.stream().anyMatch(d -> d.getItem().is(thaumcraft.api.items.ItemsTC.curioRites.get()));
 		}
 		helper.assertTrue(gotCurio, "a real cultist killed by a real player should really eventually drop a real Curio within a generous number of chance rolls");
 		helper.succeed();

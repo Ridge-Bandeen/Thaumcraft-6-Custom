@@ -138,6 +138,13 @@ public class ResearchRequirements {
 			Map.entry("thaumcraft:amulet_vis;0", "thaumcraft:amulet_vis_stone"),
 			Map.entry("thaumcraft:amulet_vis;1", "thaumcraft:amulet_vis"),
 			Map.entry("thaumcraft:seal", "thaumcraft:seal_blank"),
+			// ItemCurio("curio", {arcane, preserved, ancient, eldritch, knowledge, twisted, rites})
+			Map.entry("thaumcraft:curio;1", "thaumcraft:curio_preserved"),
+			Map.entry("thaumcraft:curio;2", "thaumcraft:curio_ancient"),
+			Map.entry("thaumcraft:curio;3", "thaumcraft:curio_eldritch"),
+			Map.entry("thaumcraft:curio;4", "thaumcraft:curio_knowledge"),
+			Map.entry("thaumcraft:curio;5", "thaumcraft:curio_twisted"),
+			Map.entry("thaumcraft:curio;6", "thaumcraft:curio_rites"),
 			Map.entry("minecraft:hardened_clay", "minecraft:terracotta"),
 			Map.entry("thaumcraft:smelter_basic", "thaumcraft:smelter"),
 			Map.entry("thaumcraft:wand_workbench", "thaumcraft:focal_manipulator"),

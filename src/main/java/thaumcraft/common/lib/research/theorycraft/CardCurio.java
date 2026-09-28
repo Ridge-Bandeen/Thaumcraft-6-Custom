@@ -85,7 +85,16 @@ public class CardCurio extends TheorycraftCard {
 		if (cats.length > 0) {
 			data.addTotal(cats[player.getRandom().nextInt(cats.length)], 5);
 		}
-		data.addTotal("BASICS", Mth.nextInt(player.getRandom(), 25, 35));
+		// the curio's own field: the original switched on the variant name
+		ItemCurio.Variant variant = curio.getItem() instanceof ItemCurio c ? c.getVariant() : null;
+		if (variant == null) {
+			data.addTotal("BASICS", Mth.nextInt(player.getRandom(), 25, 35));
+		} else if (variant == ItemCurio.Variant.RITES) {
+			data.addTotal("ELDRITCH", Mth.nextInt(player.getRandom(), 15, 20));
+			data.addTotal("AUROMANCY", Mth.nextInt(player.getRandom(), 10, 15));
+		} else {
+			data.addTotal(variant.category, Mth.nextInt(player.getRandom(), 25, 35));
+		}
 		if (player.getRandom().nextBoolean()) data.bonusDraws++;
 		if (player.getRandom().nextBoolean()) data.bonusDraws++;
 		return true;

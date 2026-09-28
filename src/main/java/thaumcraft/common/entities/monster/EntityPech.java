@@ -150,7 +150,9 @@ public class EntityPech extends Monster implements RangedAttackMob {
 					new TradeReward(4, () -> new ItemStack(thaumcraft.api.items.ItemsTC.thaumiumPick.get())),
 					new TradeReward(4, () -> new ItemStack(thaumcraft.api.items.ItemsTC.thaumiumAxe.get())),
 					new TradeReward(5, () -> new ItemStack(Items.TOTEM_OF_UNDYING)),
-					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.curiosityBand.get()))),
+					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.curiosityBand.get())),
+					// every pech type offered the Illuminating Curiosity at tier 5 in the original
+					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.curioKnowledge.get()))),
 			1, List.of( // thaum/wand
 					new TradeReward(1, () -> EntityPech.makeCrystal(Aspect.AIR)),
 					new TradeReward(1, () -> EntityPech.makeCrystal(Aspect.EARTH)),
@@ -166,7 +168,9 @@ public class EntityPech extends Monster implements RangedAttackMob {
 					new TradeReward(4, () -> new ItemStack(thaumcraft.api.items.ItemsTC.clothLegs.get())),
 					new TradeReward(5, () -> new ItemStack(Items.ENCHANTED_GOLDEN_APPLE)),
 					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.pechWand.get())),
-					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.amuletVisCrafted.get()))),
+					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.amuletVisCrafted.get())),
+					// every pech type offered the Illuminating Curiosity at tier 5 in the original
+					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.curioKnowledge.get()))),
 			2, List.of( // stalker/bow
 					new TradeReward(1, () -> new ItemStack(thaumcraft.api.blocks.BlocksTC.candles.get(DyeColor.WHITE).get())),
 					new TradeReward(2, () -> new ItemStack(Items.GHAST_TEAR)),
@@ -175,7 +179,9 @@ public class EntityPech extends Monster implements RangedAttackMob {
 					new TradeReward(3, () -> new ItemStack(Items.GOLDEN_APPLE)),
 					new TradeReward(4, () -> new ItemStack(Items.SPECTRAL_ARROW, 8)),
 					new TradeReward(4, () -> new ItemStack(Items.ENCHANTED_GOLDEN_APPLE)),
-					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.voidseerCharm.get()))));
+					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.voidseerCharm.get())),
+					// every pech type offered the Illuminating Curiosity at tier 5 in the original
+					new TradeReward(5, () -> new ItemStack(thaumcraft.api.items.ItemsTC.curioKnowledge.get()))));
 
 	/** Small, local stand-in for the original's {@code ThaumcraftApiHelper.makeCrystal} - same duplicate
 	 * {@code EntityWisp}/{@code ToolEvents} already carry locally rather than porting the whole unconverted
