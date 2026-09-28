@@ -86,11 +86,17 @@ public final class EnderShader {
 		float pitch = (float) -Math.toRadians(player.getXRot());
 		float time = player.tickCount;
 
-		RenderSystem.setShaderTexture(0, END_PORTAL_TEXTURE);
-		RenderSystem.setShader(() -> instance);
-		setUniform("Yaw", yaw);
-		setUniform("Pitch", pitch);
-		setUniform("Time", time);
+		if (thaumcraft.common.config.ThaumcraftConfig.client(thaumcraft.common.config.ThaumcraftConfig.DISABLE_SHADERS)) {
+			// the disableShaders option: the same shapes, flat starless void
+			RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionShader);
+			RenderSystem.setShaderColor(0.06f, 0.03f, 0.1f, 1.0f);
+		} else {
+			RenderSystem.setShaderTexture(0, END_PORTAL_TEXTURE);
+			RenderSystem.setShader(() -> instance);
+			setUniform("Yaw", yaw);
+			setUniform("Pitch", pitch);
+			setUniform("Time", time);
+		}
 		// Every caller draws thin, camera-facing-ish quads from both sides of a wall/tunnel - the shader's
 		// own output is fully opaque either way (see this class's own doc comment), so there's no reason to
 		// respect whatever the ambient cull state happened to be left at by unrelated rendering just before.
@@ -122,6 +128,7 @@ public final class EnderShader {
 		if (mesh != null) {
 			BufferUploader.drawWithShader(mesh);
 		}
+		RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 		RenderSystem.enableCull();
 		RenderSystem.disableDepthTest();
 		RenderSystem.disableBlend();

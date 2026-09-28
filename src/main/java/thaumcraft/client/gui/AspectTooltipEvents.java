@@ -36,7 +36,7 @@ public final class AspectTooltipEvents {
 	@SubscribeEvent
 	static void onGatherComponents(RenderTooltipEvent.GatherComponents event) {
 		Screen screen = Minecraft.getInstance().screen;
-		if (!(screen instanceof AbstractContainerScreen) || !Screen.hasShiftDown()) return;
+		if (!(screen instanceof AbstractContainerScreen) || Screen.hasShiftDown() == thaumcraft.common.config.ThaumcraftConfig.client(thaumcraft.common.config.ThaumcraftConfig.SHOW_TAGS)) return; // showTags inverts shift
 		ItemStack stack = event.getItemStack();
 		if (stack.isEmpty()) return;
 		AspectList aspects = AspectHelper.getObjectAspects(stack);

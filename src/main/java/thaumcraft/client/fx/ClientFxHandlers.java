@@ -712,6 +712,50 @@ public final class ClientFxHandlers {
 	 * sentinel means "no category", matching the true original's own real convention), hands the gain off to
 	 * {@link thaumcraft.client.gui.KnowledgeGainOverlay}, and plays the real {@code learn} sound at the
 	 * player's own position (matches the true original's own real ambient-category playback exactly). */
+	/** The original golem's {@code handleStatusUpdate} emotes: particle-sheet icons popping up over its head. */
+	public static void golemEmote(Entity golem, byte id) {
+		if (!(golem.level() instanceof ClientLevel level)) return;
+		double x = golem.getX(), y = golem.getY() + golem.getBbHeight() + 0.1, z = golem.getZ();
+		switch (id) {
+			case 5 -> emoteParticle(level, x, y, z, 0, 0, 0, 1f, 1f, 1f, 704 + (level.random.nextBoolean() ? 0 : 3), 3, 1, 6, 2.0f);
+			case 6 -> emoteParticle(level, x, y, z, 0, 0.025, 0, 0.1f, 1f, 1f, 15, 1, 1, 10, 2.0f);
+			case 7 -> emoteParticle(level, x, y, z, 0, 0.05, 0, 1f, 1f, 1f, 640, 10, 1, 10, 2.0f);
+			case 8 -> emoteParticle(level, x, y, z, 0, 0.01, 0, 1f, 1f, 0.1f, 14, 1, 1, 20, 2.0f);
+			case 9 -> {
+				for (int a = 0; a < 5; ++a) {
+					emoteParticle(level, x, y - 0.1, z, level.random.nextGaussian() * 0.01, level.random.nextFloat() * 0.02, level.random.nextGaussian() * 0.01,
+							1f, 1f, 1f, 13, 1, 1, 20 + level.random.nextInt(20), 0.3f + level.random.nextFloat() * 0.4f);
+				}
+			}
+			default -> {
+			}
+		}
+	}
+
+	/** The original's {@code FXDispatcher#drawGenericParticles} at alpha 0.5, no loop, layer 1. */
+	private static void emoteParticle(ClientLevel level, double x, double y, double z, double mx, double my, double mz, float r, float g, float b,
+			int start, int num, int inc, int age, float scale) {
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(level, x, y, z, mx, my, mz);
+		fb.setMaxAge(age);
+		fb.setRBGColorF(r, g, b);
+		fb.setAlphaF(0.5f);
+		fb.setLoop(false);
+		fb.setParticles(start, num, inc);
+		fb.setScale(scale);
+		fb.setLayer(1);
+		fb.setRotationSpeed(0.0f);
+		addDelayed(fb, 0);
+	}
+
+	public static void handleMiscEvent(thaumcraft.common.lib.network.ClientboundMiscEventPacket payload) {
+		var mc = net.minecraft.client.Minecraft.getInstance();
+		if (payload.kind() == thaumcraft.common.lib.network.ClientboundMiscEventPacket.HEARTBEAT && mc.player != null && mc.level != null
+				&& !thaumcraft.common.config.ThaumcraftConfig.client(thaumcraft.common.config.ThaumcraftConfig.NO_STRESS)) {
+			mc.level.playLocalSound(mc.player.getX(), mc.player.getY(), mc.player.getZ(), thaumcraft.common.registry.ThaumcraftSounds.HEARTBEAT.get(),
+					net.minecraft.sounds.SoundSource.AMBIENT, 1.0f, 1.0f, false);
+		}
+	}
+
 	public static void handleKnowledgeGain(thaumcraft.common.lib.network.misc.PacketKnowledgeGain payload) {
 		var mc = Minecraft.getInstance();
 		var player = mc.player;

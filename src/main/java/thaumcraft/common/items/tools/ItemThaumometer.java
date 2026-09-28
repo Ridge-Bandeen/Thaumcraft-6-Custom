@@ -40,9 +40,8 @@ import thaumcraft.api.research.ScanningManager;
  * on something adjacent now reaches out the way the original did (an entity up to 9 blocks, else a block in reach,
  * else the sky), and the scan sound plays.
  *
- * Simplified vs the original: no aura-chunk HUD overlay (the original's {@code onUpdate} pushed a client
- * aura-display packet every 20 ticks while held) - real client HUD work, same boundary as every other device
- * this session. The scan-target highlight particles ({@code drawFX}) ARE restored (2026-09-17, was dropped
+ * While held it sends the chunk's aura to the client every 20 ticks for the gauge, and starts the Flux research
+ * in a flux-heavy chunk, as the original's {@code onUpdate} did. The scan-target highlight particles ({@code drawFX}) ARE restored (2026-09-17, was dropped
  * under this port's old blanket "no client FX" rule) - routed through
  * {@link thaumcraft.client.fx.ClientFxHandlers#spawnBlockRunes} for the same real dist-crash-avoidance reason
  * every other client-only trigger in this port uses.
@@ -56,6 +55,10 @@ public class ItemThaumometer extends Item {
 	@Override
 	public void inventoryTick(ItemStack stack, Level level, Entity entity, int slot, boolean selected) {
 		super.inventoryTick(stack, level, entity, slot, selected);
+		if (!level.isClientSide && entity.tickCount % 20 == 0 && entity instanceof net.minecraft.server.level.ServerPlayer sp
+				&& (selected || sp.getOffhandItem() == stack)) {
+			updateAura(sp);
+		}
 		if (!level.isClientSide || !(entity instanceof Player player) || entity.tickCount % 5 != 0) return;
 		if (!selected && player.getOffhandItem() != stack) return;
 
@@ -74,6 +77,23 @@ public class ItemThaumometer extends Item {
 			AABB box = level.getBlockState(pos).getShape(level, pos).isEmpty() ? new AABB(0, 0, 0, 1, 1, 1) : level.getBlockState(pos).getShape(level, pos).bounds();
 			thaumcraft.client.fx.ClientFxHandlers.scanHighlight(level, box.move(pos));
 		}
+	}
+
+	/** The original's {@code updateAura}: a flux-heavy chunk starts the Flux research (with its warning), and the chunk's
+	 * aura goes to the client for the gauge ({@link thaumcraft.client.gui.HudOverlays}). */
+	private static void updateAura(net.minecraft.server.level.ServerPlayer player) {
+		var ac = thaumcraft.common.world.aura.AuraHandler.getAuraChunk(player.level(), player.blockPosition().getX() >> 4, player.blockPosition().getZ() >> 4);
+		if (ac == null) return;
+		if ((ac.getFlux() > ac.getVis() || ac.getFlux() > ac.getBase() / 3) && !thaumcraft.api.capabilities.ThaumcraftCapabilities.knowsResearch(player, "FLUX")) {
+			if (thaumcraft.api.ThaumcraftApi.internalMethods.progressResearch(player, "FLUX")) {
+				var knowledge = thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player);
+				knowledge.setResearchFlag("FLUX", thaumcraft.api.capabilities.IPlayerKnowledge.EnumResearchFlag.POPUP);
+				knowledge.setResearchFlag("FLUX", thaumcraft.api.capabilities.IPlayerKnowledge.EnumResearchFlag.RESEARCH);
+				knowledge.sync(player);
+			}
+			player.displayClientMessage(net.minecraft.network.chat.Component.translatable("research.FLUX.warn").withStyle(net.minecraft.ChatFormatting.DARK_PURPLE), true);
+		}
+		thaumcraft.common.lib.network.ClientboundAuraPacket.sendLocal(player);
 	}
 
 	/**

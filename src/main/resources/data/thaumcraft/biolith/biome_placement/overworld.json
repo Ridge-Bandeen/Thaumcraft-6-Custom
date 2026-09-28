@@ -2,27 +2,32 @@
   "additions": [
     {
       "dimension": "minecraft:overworld",
-      "biome": "thaumcraft:magical_forest",
-      "noise": {
-        "temperature": { "min": 0.2, "max": 0.55 },
-        "humidity": { "min": 0.0, "max": 0.6 },
-        "continentalness": { "min": 0.0, "max": 1.0 },
-        "erosion": { "min": -0.5, "max": 0.3 },
-        "depth": { "min": 0.0, "max": 0.0 },
-        "weirdness": { "min": 0.3, "max": 1.0 },
-        "offset": 0.0
-      }
-    },
-    {
-      "dimension": "minecraft:overworld",
       "biome": "thaumcraft:eerie",
       "noise": {
-        "temperature": { "min": 0.2, "max": 0.55 },
-        "humidity": { "min": -1.0, "max": -0.2 },
-        "continentalness": { "min": 0.0, "max": 1.0 },
-        "erosion": { "min": -0.5, "max": 0.3 },
-        "depth": { "min": 0.0, "max": 0.0 },
-        "weirdness": { "min": -0.65, "max": -0.3 },
+        "temperature": {
+          "min": 0.2,
+          "max": 0.55
+        },
+        "humidity": {
+          "min": -1.0,
+          "max": -0.2
+        },
+        "continentalness": {
+          "min": 0.0,
+          "max": 1.0
+        },
+        "erosion": {
+          "min": -0.5,
+          "max": 0.3
+        },
+        "depth": {
+          "min": 0.0,
+          "max": 0.0
+        },
+        "weirdness": {
+          "min": -0.65,
+          "max": -0.3
+        },
         "offset": 0.0
       }
     },
@@ -30,12 +35,30 @@
       "dimension": "minecraft:overworld",
       "biome": "thaumcraft:eldritch",
       "noise": {
-        "temperature": { "min": -0.2, "max": 0.3 },
-        "humidity": { "min": -1.0, "max": -0.3 },
-        "continentalness": { "min": 0.2, "max": 1.0 },
-        "erosion": { "min": -1.0, "max": -0.5 },
-        "depth": { "min": 0.0, "max": 0.0 },
-        "weirdness": { "min": -1.0, "max": -0.7 },
+        "temperature": {
+          "min": -0.2,
+          "max": 0.3
+        },
+        "humidity": {
+          "min": -1.0,
+          "max": -0.3
+        },
+        "continentalness": {
+          "min": 0.2,
+          "max": 1.0
+        },
+        "erosion": {
+          "min": -1.0,
+          "max": -0.5
+        },
+        "depth": {
+          "min": 0.0,
+          "max": 0.0
+        },
+        "weirdness": {
+          "min": -1.0,
+          "max": -0.7
+        },
         "offset": 0.0
       }
     }

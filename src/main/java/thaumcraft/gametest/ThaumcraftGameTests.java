@@ -822,12 +822,10 @@ public class ThaumcraftGameTests {
 				.anyMatch(entry -> entry.type == thaumcraft.common.registry.ThaumcraftEntities.BRAINY_ZOMBIE.get());
 		helper.assertTrue(eerieHasBrainyZombie, "eerie's real monster spawn list should really include the true original's own real Brainy Zombie");
 
-		// Pech's own real registered MobCategory is CREATURE, not MONSTER - NeoForge itself warns if a
-		// biome's spawn list disagrees with an entity's own real registered category, so this really has to
-		// match that, not the true original's own 1.12.2 "monster list" membership.
-		boolean magicalForestHasPech = magicalForest.get().value().getMobSettings().getMobs(net.minecraft.world.entity.MobCategory.CREATURE).unwrap().stream()
+		// Pech spawn from the monster list, as in the original (added by WorldConfigHooks.ConfigSpawns)
+		boolean magicalForestHasPech = magicalForest.get().value().getMobSettings().getMobs(net.minecraft.world.entity.MobCategory.MONSTER).unwrap().stream()
 				.anyMatch(entry -> entry.type == thaumcraft.common.registry.ThaumcraftEntities.PECH.get());
-		helper.assertTrue(magicalForestHasPech, "magical_forest's real creature spawn list should really include the true original's own real Pech");
+		helper.assertTrue(magicalForestHasPech, "magical_forest's monster spawn list should include the Pech");
 		helper.succeed();
 	}
 
@@ -16538,9 +16536,7 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
-	// ThaumcraftConfig - the real modern (ModConfigSpec) replacement for the old (1.12.2) ModConfig's real
-	// remaining open thread. See ThaumcraftConfig's own doc comment for why every OTHER old ModConfig field
-	// is left out (zero real modern consumer). RunicShieldEvents' own real config coverage (shieldRecharge/
+	// ThaumcraftConfig - every option of the original's ModConfig (see its doc comment). RunicShieldEvents' own real config coverage (shieldRecharge/
 	// shieldWait/shieldCost) is exercised indirectly by the existing runicShieldEventsDrawsRealVisOnlyWhenWearingRealRunicArmor
 	// test above; the 3 tests below cover the newly-wired WUSS_MODE/ALLOW_CHAMPION_MOBS/TAINT_SPREAD_* gates.
 	// --------------------------------------------------------------------------------------------------
@@ -17213,6 +17209,97 @@ public class ThaumcraftGameTests {
 							&& sound.getLocation().getNamespace().equals(Thaumcraft.MODID),
 					"the real sound's own resource location should really be thaumcraft:" + entry.getKey() + ", got " + sound.getLocation());
 		}
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// World config (2026-09-28): WorldConfigHooks - feature switches/density, natural spawns - and the golem
+	// interactions restored alongside the golem emotes.
+	// --------------------------------------------------------------------------------------------------
+
+	private static long configPlacementCount(GameTestHelper helper, thaumcraft.common.world.WorldConfigHooks.ConfigPlacement placement) {
+		ServerLevel level = helper.getLevel();
+		var context = new net.minecraft.world.level.levelgen.placement.PlacementContext(level, level.getChunkSource().getGenerator(), java.util.Optional.empty());
+		return placement.getPositions(context, net.minecraft.util.RandomSource.create(1), helper.absolutePos(BlockPos.ZERO)).count();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void configPlacementFollowsTheGenerateOreDensityAndOverworldOptions(GameTestHelper helper) {
+		var cinnabar = new thaumcraft.common.world.WorldConfigHooks.ConfigPlacement(thaumcraft.common.world.WorldConfigHooks.Gen.CINNABAR, true);
+		var structure = new thaumcraft.common.world.WorldConfigHooks.ConfigPlacement(thaumcraft.common.world.WorldConfigHooks.Gen.STRUCTURE, false);
+		try {
+			helper.assertTrue(configPlacementCount(helper, cinnabar) == 1, "at the default oreDensity of 100 a cinnabar position should pass once");
+			thaumcraft.common.config.ThaumcraftConfig.ORE_DENSITY.set(300);
+			helper.assertTrue(configPlacementCount(helper, cinnabar) == 3, "at oreDensity 300 it should pass three times");
+			thaumcraft.common.config.ThaumcraftConfig.GENERATE_CINNABAR.set(false);
+			helper.assertTrue(configPlacementCount(helper, cinnabar) == 0, "with generateCinnabar off nothing should pass");
+			thaumcraft.common.config.ThaumcraftConfig.OVERWORLD_DIM.set("minecraft:the_nether");
+			helper.assertTrue(configPlacementCount(helper, structure) == 0, "structures should only pass in the overworldDim");
+		} finally {
+			thaumcraft.common.config.ThaumcraftConfig.ORE_DENSITY.set(100);
+			thaumcraft.common.config.ThaumcraftConfig.GENERATE_CINNABAR.set(true);
+			thaumcraft.common.config.ThaumcraftConfig.OVERWORLD_DIM.set("minecraft:overworld");
+		}
+		helper.succeed();
+	}
+
+	private static java.util.List<net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData> monsterSpawns(GameTestHelper helper, net.minecraft.resources.ResourceKey<net.minecraft.world.level.biome.Biome> biome) {
+		return helper.getLevel().registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.BIOME).getHolderOrThrow(biome).value()
+				.getMobSettings().getMobs(net.minecraft.world.entity.MobCategory.MONSTER).unwrap();
+	}
+
+	private static boolean spawns(java.util.List<net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData> list, net.minecraft.world.entity.EntityType<?> type, int weight) {
+		return list.stream().anyMatch(s -> s.type == type && s.getWeight().asInt() == weight);
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumcraftMobsSpawnNaturallyWhereTheOriginalPutThem(GameTestHelper helper) {
+		var plains = monsterSpawns(helper, net.minecraft.world.level.biome.Biomes.PLAINS);
+		var nether = monsterSpawns(helper, net.minecraft.world.level.biome.Biomes.NETHER_WASTES);
+		var eerie = monsterSpawns(helper, thaumcraft.common.world.WorldConfigHooks.EERIE);
+		var forest = monsterSpawns(helper, thaumcraft.common.world.WorldConfigHooks.MAGICAL_FOREST);
+		helper.assertTrue(spawns(plains, thaumcraft.common.registry.ThaumcraftEntities.BRAINY_ZOMBIE.get(), 10), "plains should spawn angry zombies at weight 10");
+		helper.assertTrue(spawns(nether, thaumcraft.common.registry.ThaumcraftEntities.FIRE_BAT.get(), 10), "the nether should spawn firebats at weight 10");
+		helper.assertTrue(spawns(nether, thaumcraft.common.registry.ThaumcraftEntities.WISP.get(), 5), "the nether should spawn wisps at weight 5");
+		helper.assertTrue(spawns(eerie, thaumcraft.common.registry.ThaumcraftEntities.BRAINY_ZOMBIE.get(), 32)
+				&& spawns(eerie, thaumcraft.common.registry.ThaumcraftEntities.GIANT_BRAINY_ZOMBIE.get(), 8)
+				&& spawns(eerie, thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_GUARDIAN.get(), 1), "the Eerie biome should have its own spawn list");
+		helper.assertTrue(spawns(forest, thaumcraft.common.registry.ThaumcraftEntities.PECH.get(), 20)
+				&& spawns(forest, thaumcraft.common.registry.ThaumcraftEntities.WISP.get(), 20), "the Magical Forest should spawn pech and wisps at weight 20");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sneakClickingAGolemTakesItBackAndTheBellTogglesFollowing(GameTestHelper helper) {
+		thaumcraft.api.golems.parts.GolemMaterial iron = findPartByKey(thaumcraft.api.golems.parts.GolemMaterial.getMaterials(), m -> m.key, "IRON");
+		thaumcraft.api.golems.IGolemProperties props = new thaumcraft.common.golems.GolemProperties();
+		props.setMaterial(iron);
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+
+		thaumcraft.common.golems.EntityThaumcraftGolem bellGolem = spawnGolem(helper, origin.offset(2, 0, 0));
+		bellGolem.initializeGolem(props, 0);
+		bellGolem.tame(player);
+		forceResearch(player, "GOLEMDIRECT");
+		player.setItemInHand(hand, new ItemStack(ItemsTC.golemBell.get()));
+		bellGolem.mobInteract(player, hand);
+		helper.assertTrue(bellGolem.isFollowingOwner() && !bellGolem.hasRestriction(), "the bell should set the golem following, with no home");
+		bellGolem.mobInteract(player, hand);
+		helper.assertTrue(!bellGolem.isFollowingOwner() && bellGolem.hasRestriction(), "ringing again should make it stay, homed where it stands");
+
+		thaumcraft.common.golems.EntityThaumcraftGolem golem = spawnGolem(helper, origin.offset(-2, 0, 0));
+		golem.initializeGolem(props, 750);
+		golem.tame(player);
+		player.setItemInHand(hand, ItemStack.EMPTY);
+		player.setShiftKeyDown(true);
+		golem.mobInteract(player, hand);
+		helper.assertTrue(golem.isRemoved(), "a sneak-click by its owner should take the golem away");
+		var drops = helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(origin).inflate(6),
+				e -> e.getItem().is(ItemsTC.golemPlacer.get()));
+		helper.assertTrue(drops.size() == 1, "it should drop one placer, found " + drops.size());
+		var data = drops.get(0).getItem().get(thaumcraft.api.items.ThaumcraftDataComponents.GOLEM_PLACER_DATA.get());
+		helper.assertTrue(data != null && data.props() == props.toLong() && data.xp() == 750, "the placer should keep the golem's parts and rank progress");
 		helper.succeed();
 	}
 }

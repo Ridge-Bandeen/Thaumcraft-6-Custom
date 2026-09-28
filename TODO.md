@@ -163,16 +163,29 @@ Blank Seal, Grappler Head/Spool, copper/tin/silver/lead clusters registered; the
 original onboarding (no default research, crystal -> dream journal -> Salis Mundus on a bookshelf -> Thaumonomicon) with
 the original research gates on every Salis Mundus trigger; Research Table screen ported (aids, cards, animations).
 
-Still open on this side:
-- Pech trade tables are a "representative" set, not the original's `ConfigEntities#tradeInventory` (only the curio
-  entry was restored).
-- Runic augment ignores baubles (original allowed IBauble); baubles live in the hotbar here.
-- Cheater's Thaumonomicon (original config-gated, off by default) not ported.
-- Tin/silver/lead clusters have no smelting output (no vanilla ingot); the original smelted them to whatever mod ingot
-  existed.
-- `liquid_death` blockstate has no model (log spam at startup).
+Closed in 40bec6e: original Pech trade tables, runic augment on baubles (`thaumcraft:baubles` tag), Cheater's
+Thaumonomicon, tin/silver/lead cluster smelting via `c:ingots/*`, `liquid_death` model.
 - Needs a human playtest: the whole new-player path, "complete stage" in the book, construct-page layer toggle,
   research-table aid selection and card animations, recipe click-through in the book.
+
+## Configuration brought to parity, 2026-09-28
+
+Every option of the original `ModConfig` is in `ThaumcraftConfig` (client file: the six client-read graphics options;
+common file: the rest) and in the mod list's Config screen. Wired: largeTagText (all tag drawers), disableShaders (the
+ender shader falls back to flat void), nostress (heartbeat packet + warp scare sounds), crooked (jar labels),
+dialBottom (new `HudOverlays`: caster vis dial, Thaumometer gauge, Sanity Checker gauge - original art, replacing the
+old simplified sanity bars; aura now synced to the client), showTags, blueBiome (biome modifier), showGolemEmotes
+(golem emote particles), overworldDim/oreDensity/generate*/regenKey/regen* (`WorldConfigHooks`: `thaumcraft:config`
+placement modifier + chunk regen queue), generateMagicForest/biomeMagicalForestWeight (Biolith, in code),
+allowSpawn* (`thaumcraft:config_spawns` biome modifier, original natural spawns restored; Pech is a MONSTER again).
+Inert as in the original or here: dimensionOuterId, generateAura, regenAura, allowSpawnTaintacle.
+Also restored on the way: golem sneak-pickup + Golem Bell follow/stay, Thaumometer starting the FLUX research.
+
+Still open:
+- The original's potion post-shaders (Death Gaze desaturate, Blurred Vision blur, Unnatural Hunger, Sun Scorned) and
+  the warp fog packets aren't ported - disableShaders would gate them too.
+- Needs a human check: config screen editing, the three HUD gauges, dialBottom, heartbeat, golem emotes, blue biome,
+  regen with a new regenKey on an old world, and Magical Forest frequency at different weights.
 
 ## Confirmed real gaps (actionable)
 

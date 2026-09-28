@@ -30,7 +30,8 @@ import thaumcraft.common.container.ThaumonomiconMenu;
  * at all unless that property is set.
  *
  * <p>Plan: comma-separated steps - {@code book}, {@code all} (grant all research), {@code cat:KEY},
- * {@code entry:KEY}, {@code page:N}, {@code recipe:KEY}, {@code aspects:}, {@code back}, {@code shot:name}, {@code wait:ticks}.
+ * {@code entry:KEY}, {@code page:N}, {@code recipe:KEY}, {@code aspects:}, {@code back}, {@code shot:name}, {@code wait:ticks},
+ * {@code config} (the mod's config screen), {@code close}, {@code hold:ITEM}/{@code offhand:ITEM}, {@code sneak:true|false}.
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID, value = Dist.CLIENT)
 public final class ScreenshotHarness {
@@ -123,6 +124,18 @@ public final class ScreenshotHarness {
 					}
 				}
 			}
+			case "config" -> mc.setScreen(new net.neoforged.neoforge.client.gui.ConfigurationScreen(
+					net.neoforged.fml.ModList.get().getModContainerById(Thaumcraft.MODID).orElseThrow(), null));
+			case "close" -> mc.setScreen(null);
+			case "hold", "offhand" -> mc.getSingleplayerServer().execute(() -> {
+				// hold:thaumcraft:thaumometer - put an item in the main (or off) hand
+				ServerPlayer sp = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+				if (sp == null) return;
+				var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(arg));
+				sp.setItemInHand(step.startsWith("hold") ? net.minecraft.world.InteractionHand.MAIN_HAND : net.minecraft.world.InteractionHand.OFF_HAND,
+						new net.minecraft.world.item.ItemStack(item));
+			});
+			case "sneak" -> mc.options.keyShift.setDown(Boolean.parseBoolean(arg));
 			case "wait" -> wait = Integer.parseInt(arg);
 			case "shot" -> {
 				File dir = new File(mc.gameDirectory, "screenshots");

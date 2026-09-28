@@ -94,6 +94,24 @@ public class ItemCaster extends Item implements ICaster {
 		return AuraHandler.drainVis(level, player.blockPosition(), amount, false) >= amount - 0.001f;
 	}
 
+	/** The original's {@code onUpdate}: every 10 ticks, while a caster is in either hand, the aura of the player's chunk
+	 * goes to their client for the vis dial ({@link thaumcraft.client.gui.HudOverlays}). */
+	@Override
+	public void inventoryTick(ItemStack stack, net.minecraft.world.level.Level level, net.minecraft.world.entity.Entity entity, int slot, boolean selected) {
+		super.inventoryTick(stack, level, entity, slot, selected);
+		if (!level.isClientSide && entity.tickCount % 10 == 0 && entity instanceof net.minecraft.server.level.ServerPlayer player) {
+			for (ItemStack h : player.getHandSlots()) {
+				if (!h.isEmpty() && h.getItem() instanceof ICaster) {
+					var ac = AuraHandler.getAuraChunk(level, player.blockPosition().getX() >> 4, player.blockPosition().getZ() >> 4);
+					thaumcraft.common.lib.network.ClientboundAuraPacket.send(player, ac == null
+							? new thaumcraft.common.lib.network.ClientboundAuraPacket((short) 0, 0f, 0f)
+							: new thaumcraft.common.lib.network.ClientboundAuraPacket(ac.getBase(), ac.getVis(), ac.getFlux()));
+					break;
+				}
+			}
+		}
+	}
+
 	@Override
 	public Item getFocus(ItemStack stack) {
 		ItemStack focus = getFocusStack(stack);

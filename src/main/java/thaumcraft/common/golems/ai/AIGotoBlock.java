@@ -47,6 +47,7 @@ public class AIGotoBlock extends AIGoto {
 				targetBlock = getAdjacentSpace(pos);
 				golem.setTask(ticket);
 				ticket.setReserved(true);
+				golem.emote(thaumcraft.common.golems.EntityThaumcraftGolem.EMOTE_ORDER);
 				return true;
 			}
 		}

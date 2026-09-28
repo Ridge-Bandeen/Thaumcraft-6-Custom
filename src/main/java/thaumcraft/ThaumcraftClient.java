@@ -40,6 +40,9 @@ import thaumcraft.common.registry.ThaumcraftMenus;
 @EventBusSubscriber(modid = Thaumcraft.MODID, value = Dist.CLIENT)
 public class ThaumcraftClient {
     public ThaumcraftClient(ModContainer container) {
+        // the mod list's "Config" button: NeoForge's own screen over both of Thaumcraft's config files
+        container.registerExtensionPoint(net.neoforged.neoforge.client.gui.IConfigScreenFactory.class,
+                net.neoforged.neoforge.client.gui.ConfigurationScreen::new);
     }
 
     @SubscribeEvent

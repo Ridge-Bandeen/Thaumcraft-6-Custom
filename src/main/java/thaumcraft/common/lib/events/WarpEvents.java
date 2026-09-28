@@ -40,9 +40,9 @@ import thaumcraft.common.registry.ThaumcraftMobEffects;
  * keeps the real sound/message/screen-mist cue but spawns no guardians. {@code EntityMindSpider} and {@code
  * EntityCultistPortalLesser} (the other two "something is coming for you" spawns) ARE already real, modern
  * entities from earlier this session and are ported in full.</li>
- * <li>The original synced a client-side packet on several tiers purely to trigger a screen-shake/vignette
- * VFX - that packet/handler pair was never built (this port has no client-side warp VFX at all yet), so
- * those cues are dropped; every real gameplay consequence (potions, messages, spawns, research) is kept.</li>
+ * <li>Every warp event sends the heartbeat to the player (unless their {@code nostress} option is on), and the two
+ * mildest tiers play the original's creeper hiss / distant explosion. The original's fog-thickening packet codes
+ * have no client effect here.</li>
  * </ul>
  * {@code getWarpFromGear} is rebuilt around {@link WornGearHelper} (hotbar/offhand) plus armor, replacing
  * the original's Baubles-slot scan - same real substitution this session's whole bauble-adaptation pass
@@ -97,14 +97,32 @@ public class WarpEvents {
 			}
 		}
 
+		if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+			try {
+				net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(sp,
+						new thaumcraft.common.lib.network.ClientboundMiscEventPacket(thaumcraft.common.lib.network.ClientboundMiscEventPacket.HEARTBEAT));
+			} catch (Exception e) {
+				Thaumcraft.LOGGER.debug("Heartbeat packet failed to send (no real client connection?)", e);
+			}
+		}
+		// The two mildest tiers are scare sounds. As in the original they're played to everyone nearby *except* the
+		// warped player themselves (Level#playSound with a player excludes that player), and skipped under nostress.
+		boolean stress = !ThaumcraftConfig.client(ThaumcraftConfig.NO_STRESS);
 		if (eff <= 0) {
 			// Nothing else to do - the original still ran the research-unlock checks below unconditionally.
-		} else if (eff <= 12) {
-			if (eff <= 8) {
-				// Original tiers 1-8 were purely the (dropped) client screen-shake/sound VFX.
-			} else {
-				message(player, "warp.text.11");
+		} else if (eff <= 4) {
+			if (stress) {
+				player.level().playSound(player, player.blockPosition(), net.minecraft.sounds.SoundEvents.CREEPER_PRIMED, net.minecraft.sounds.SoundSource.AMBIENT, 1.0f, 0.5f);
 			}
+		} else if (eff <= 8) {
+			if (stress) {
+				player.level().playSound(player, player.getX() + (random.nextFloat() - random.nextFloat()) * 10.0f,
+						player.getY() + (random.nextFloat() - random.nextFloat()) * 10.0f, player.getZ() + (random.nextFloat() - random.nextFloat()) * 10.0f,
+						net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE.value(), net.minecraft.sounds.SoundSource.AMBIENT, 4.0f,
+						(1.0f + (random.nextFloat() - random.nextFloat()) * 0.2f) * 0.7f);
+			}
+		} else if (eff <= 12) {
+			message(player, "warp.text.11");
 		} else if (eff <= 16) {
 			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.VIS_EXHAUST, 5000, Math.min(3, warp / 15), false, true));
 			message(player, "warp.text.1");

@@ -19,16 +19,27 @@
   "carvers": {},
   "spawners": {
     "monster": [
-      { "type": "minecraft:witch", "weight": 8, "minCount": 1, "maxCount": 1 },
-      { "type": "minecraft:enderman", "weight": 4, "minCount": 1, "maxCount": 1 },
-      { "type": "thaumcraft:brainy_zombie", "weight": 32, "minCount": 1, "maxCount": 1 },
-      { "type": "thaumcraft:giant_brainy_zombie", "weight": 8, "minCount": 1, "maxCount": 1 },
-      { "type": "thaumcraft:wisp", "weight": 3, "minCount": 1, "maxCount": 1 },
-      { "type": "thaumcraft:eldritch_guardian", "weight": 1, "minCount": 1, "maxCount": 1 }
+      {
+        "type": "minecraft:witch",
+        "weight": 8,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "minecraft:enderman",
+        "weight": 4,
+        "minCount": 1,
+        "maxCount": 1
+      }
     ],
     "creature": [],
     "ambient": [
-      { "type": "minecraft:bat", "weight": 3, "minCount": 1, "maxCount": 1 }
+      {
+        "type": "minecraft:bat",
+        "weight": 3,
+        "minCount": 1,
+        "maxCount": 1
+      }
     ],
     "axolotls": [],
     "underground_water_creature": [],

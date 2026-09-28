@@ -44,10 +44,8 @@ import thaumcraft.common.tiles.essentia.TileJarFillable;
  * <p>Real, disclosed simplifications: this port's own {@link thaumcraft.common.blocks.essentia.BlockJar} has
  * no facing/orientation state at all (the true original's own jar could apparently face a direction the label
  * rotated around; this port's jar always sits the same way), so the label sticker always faces a single fixed
- * direction rather than the true original's own real per-facing rotation. The true original's own
- * {@code ModConfig.CONFIG_GRAPHICS.crooked} cosmetic toggle (small random per-jar label tilt, on by default)
- * is applied unconditionally rather than resurrecting the whole dropped graphics-config surface for one
- * single-purpose boolean - same real tilt formula, just not user-disableable.
+ * direction rather than the true original's own real per-facing rotation. The label's small per-jar tilt follows
+ * the {@code crooked} client option, as in the original.
  */
 public class TileJarRenderer implements BlockEntityRenderer<BlockEntity> {
 
@@ -97,7 +95,9 @@ public class TileJarRenderer implements BlockEntityRenderer<BlockEntity> {
 
 		Aspect filter = tile.getAspectFilter();
 		if (filter != null) {
-			float rot = (filter.getTag().hashCode() + pos.getX()) % 4 - 2;
+			// the crooked option: labels stuck on a little askew, per jar
+			float rot = thaumcraft.common.config.ThaumcraftConfig.client(thaumcraft.common.config.ThaumcraftConfig.CROOKED)
+					? (filter.getTag().hashCode() + pos.getX()) % 4 - 2 : 0;
 
 			VertexConsumer labelConsumer = bufferSource.getBuffer(RenderType.entityTranslucent(TEX_LABEL));
 			poseStack.pushPose();

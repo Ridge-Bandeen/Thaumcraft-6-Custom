@@ -107,6 +107,9 @@ public abstract class AIGoto extends Goal {
 	public void stop() {
 		Task task = golem.getTask();
 		if (task != null) {
+			if (!task.isCompleted() && task.isReserved()) {
+				golem.emote(thaumcraft.common.golems.EntityThaumcraftGolem.EMOTE_GAVE_UP);
+			}
 			if (task.isCompleted() && !task.isSuspended()) {
 				task.setSuspended(true);
 			}

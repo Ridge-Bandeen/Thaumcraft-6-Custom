@@ -102,6 +102,7 @@ public class SealPickup extends SealFiltered implements ISealConfigArea {
 						&& ticket.canGolemPerformTask(golem) && realGolem.isWithinRestriction(ticket.getEntity().blockPosition())) {
 					realGolem.setTask(ticket);
 					ticket.setReserved(true);
+					realGolem.emote(EntityThaumcraftGolem.EMOTE_ORDER);
 					break;
 				}
 			}

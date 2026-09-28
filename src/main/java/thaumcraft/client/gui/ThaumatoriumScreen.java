@@ -153,14 +153,7 @@ public class ThaumatoriumScreen extends AbstractContainerScreen<ThaumatoriumMenu
 			graphics.blit(image, x, y, 0, 0, 16, 16, 16, 16);
 			graphics.setColor(1f, 1f, 1f, 1f);
 		}
-		if (amount > 0) {
-			String s = String.valueOf(amount);
-			graphics.pose().pushPose();
-			graphics.pose().translate(x + 16 - font.width(s) * 0.6f, y + 10, 200);
-			graphics.pose().scale(0.6f, 0.6f, 1f);
-			graphics.drawString(font, s, 0, 0, 0xFFFFFFFF);
-			graphics.pose().popPose();
-		}
+		ClientAspectsTooltip.drawAmount(graphics, font, x, y, 200, amount);
 	}
 
 	private void drawOutputs(GuiGraphics graphics, long time) {

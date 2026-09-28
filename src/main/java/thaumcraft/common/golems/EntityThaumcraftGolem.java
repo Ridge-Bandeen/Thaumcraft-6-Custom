@@ -93,9 +93,8 @@ import thaumcraft.api.golems.IGolemProperties;
  *   <li>Melee damage no longer hand-rolls enchantment/knockback math (fire aspect, sharpness, knockback
  *       enchants) - modern enchantments are data-driven and apply automatically through
  *       {@code super.doHurtTarget}; only the on-kill rank-XP hook is added on top.</li>
- *   <li>{@code processInteract}'s sneak-to-retrieve-as-item and golem-bell follow-toggle are dropped -
- *       both need items this chunk doesn't ship yet ({@code ItemGolemPlacer}/{@code ItemGolemBell}, see
- *       the future {@code TileGolemBuilder} chunk). Dye-based recolouring is real and kept.</li>
+ *   <li>{@code processInteract} is all there (restored 2026-09-28): sneak-click to take the golem back as its
+ *       placer item, the Golem Bell's follow/stay toggle (GOLEMDIRECT), and dye recolouring.</li>
  *   <li>The in-wall/out-of-world "teleport home" damage-source special case, the PVP-config attack-target
  *       clear, and the {@code HEAVY}-trait footstep-sound/eye-height tweaks are all dropped as minor
  *       polish, not core behaviour.</li>
@@ -417,13 +416,76 @@ public class EntityThaumcraftGolem extends TamableAnimal implements IGolemAPI, R
 			return super.mobInteract(player, hand);
 		}
 		ItemStack held = player.getItemInHand(hand);
+		if (held.getItem() instanceof net.minecraft.world.item.NameTagItem) {
+			return super.mobInteract(player, hand);
+		}
+		if (player.isShiftKeyDown()) {
+			// back into a placer item, keeping its parts and rank progress
+			playSound(thaumcraft.common.registry.ThaumcraftSounds.ZAP.get(), 1.0f, 1.0f);
+			if (getTask() != null) getTask().setReserved(false);
+			for (int a = 0; a < CARRY_SLOTS.length; a++) {
+				ItemStack carried = getItemBySlot(CARRY_SLOTS[a]);
+				if (!carried.isEmpty()) {
+					spawnAtLocation(carried.copy(), 0.25f);
+					setItemSlot(CARRY_SLOTS[a], ItemStack.EMPTY);
+				}
+			}
+			ItemStack placer = new ItemStack(thaumcraft.api.items.ItemsTC.golemPlacer.get());
+			placer.set(thaumcraft.api.items.ThaumcraftDataComponents.GOLEM_PLACER_DATA.get(),
+					new thaumcraft.api.items.ThaumcraftDataComponents.GolemPlacerData(getProperties().toLong(), rankXp));
+			spawnAtLocation(placer, 0.5f);
+			discard();
+			player.swing(hand, true);
+			return InteractionResult.SUCCESS;
+		}
+		if (held.getItem() instanceof thaumcraft.common.golems.ItemGolemBell
+				&& thaumcraft.api.capabilities.ThaumcraftCapabilities.knowsResearch(player, "GOLEMDIRECT")) {
+			if (getTask() != null) getTask().setReserved(false);
+			playSound(thaumcraft.common.registry.ThaumcraftSounds.SCAN.get(), 1.0f, 1.0f);
+			setFollowingOwner(!isFollowingOwner());
+			if (isFollowingOwner()) {
+				player.displayClientMessage(net.minecraft.network.chat.Component.translatable("golem.follow", ""), true);
+				emote(EMOTE_ORDER);
+				clearRestriction();
+			} else {
+				player.displayClientMessage(net.minecraft.network.chat.Component.translatable("golem.stay", ""), true);
+				emote(EMOTE_STAY);
+				restrictTo(blockPosition(), getProperties().hasTrait(EnumGolemTrait.SCOUT) ? 48 : 32);
+			}
+			player.swing(hand, true);
+			return InteractionResult.SUCCESS;
+		}
 		if (held.getItem() instanceof DyeItem dye) {
 			setGolemColor((byte) (16 - dye.getDyeColor().getId()));
 			held.shrink(1);
-			playSound(SoundEvents.ANVIL_USE, 1.0f, 1.0f);
+			playSound(thaumcraft.common.registry.ThaumcraftSounds.ZAP.get(), 1.0f, 1.0f);
+			player.swing(hand, true);
 			return InteractionResult.SUCCESS;
 		}
 		return InteractionResult.SUCCESS;
+	}
+
+	/** Emote particles over the golem's head (the original's entity states 5-9): an order taken, a task given up, the
+	 * golem told to stay, a rank gained. */
+	public static final byte EMOTE_ORDER = 5;
+	public static final byte EMOTE_GAVE_UP = 6;
+	public static final byte EMOTE_STAY = 8;
+	public static final byte EMOTE_RANK_UP = 9;
+
+	/** Shows an emote to everyone nearby - if the {@code showGolemEmotes} option allows. */
+	public void emote(byte emote) {
+		if (!level().isClientSide && thaumcraft.common.config.ThaumcraftConfig.SHOW_GOLEM_EMOTES.get()) {
+			level().broadcastEntityEvent(this, emote);
+		}
+	}
+
+	@Override
+	public void handleEntityEvent(byte id) {
+		if (id >= EMOTE_ORDER && id <= EMOTE_RANK_UP) {
+			thaumcraft.client.fx.ClientFxHandlers.golemEmote(this, id);
+		} else {
+			super.handleEntityEvent(id);
+		}
 	}
 
 	@Override
@@ -505,7 +567,10 @@ public class EntityThaumcraftGolem extends TamableAnimal implements IGolemAPI, R
 			rankXp -= xn;
 			props.setRank(rank + 1);
 			setProperties(props);
-			playSound(SoundEvents.PLAYER_LEVELUP, 0.25f, 1.0f);
+			if (thaumcraft.common.config.ThaumcraftConfig.SHOW_GOLEM_EMOTES.get()) {
+				emote(EMOTE_RANK_UP);
+				playSound(SoundEvents.PLAYER_LEVELUP, 0.25f, 1.0f);
+			}
 		}
 	}
 

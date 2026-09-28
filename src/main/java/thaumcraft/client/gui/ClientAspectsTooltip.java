@@ -46,6 +46,18 @@ public class ClientAspectsTooltip implements ClientTooltipComponent {
 		}
 	}
 
+	/** A tag's amount in its lower right corner - small, or full size with the {@code largeTagText} option. */
+	public static void drawAmount(GuiGraphics graphics, Font font, int x, int y, float z, int amount) {
+		if (amount <= 0) return;
+		String s = String.valueOf(amount);
+		float scale = thaumcraft.common.config.ThaumcraftConfig.client(thaumcraft.common.config.ThaumcraftConfig.LARGE_TAG_TEXT) ? 1.0f : 0.6f;
+		graphics.pose().pushPose();
+		graphics.pose().translate(x + 16 - font.width(s) * scale, y + 15.4f - font.lineHeight * scale, z);
+		graphics.pose().scale(scale, scale, 1f);
+		graphics.drawString(font, s, 0, 0, 0xFFFFFFFF);
+		graphics.pose().popPose();
+	}
+
 	/** An aspect icon with its amount; shared look with the sprayer's own tag drawing. */
 	public static void drawTag(GuiGraphics graphics, Font font, int x, int y, Aspect aspect, int amount) {
 		ResourceLocation image = aspect.getImage();
@@ -55,13 +67,6 @@ public class ClientAspectsTooltip implements ClientTooltipComponent {
 			graphics.blit(image, x, y, 0, 0, 16, 16, 16, 16);
 			graphics.setColor(1f, 1f, 1f, 1f);
 		}
-		if (amount > 0) {
-			String s = String.valueOf(amount);
-			graphics.pose().pushPose();
-			graphics.pose().translate(x + 16 - font.width(s) * 0.6f, y + 10, 10);
-			graphics.pose().scale(0.6f, 0.6f, 1f);
-			graphics.drawString(font, s, 0, 0, 0xFFFFFFFF);
-			graphics.pose().popPose();
-		}
+		drawAmount(graphics, font, x, y, 10, amount);
 	}
 }

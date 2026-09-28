@@ -1,16 +1,32 @@
 {
   "feature": "thaumcraft:cinderpearl",
   "placement": [
-    { "type": "minecraft:rarity_filter", "chance": 30 },
-    { "type": "minecraft:in_square" },
-    { "type": "minecraft:heightmap", "heightmap": "WORLD_SURFACE" },
+    {
+      "type": "thaumcraft:config",
+      "feature": "trees"
+    },
+    {
+      "type": "minecraft:rarity_filter",
+      "chance": 30
+    },
+    {
+      "type": "minecraft:in_square"
+    },
+    {
+      "type": "minecraft:heightmap",
+      "heightmap": "WORLD_SURFACE"
+    },
     {
       "type": "minecraft:block_predicate_filter",
       "predicate": {
         "type": "minecraft:would_survive",
-        "state": { "Name": "thaumcraft:cinderpearl" }
+        "state": {
+          "Name": "thaumcraft:cinderpearl"
+        }
       }
     },
-    { "type": "minecraft:biome" }
+    {
+      "type": "minecraft:biome"
+    }
   ]
 }

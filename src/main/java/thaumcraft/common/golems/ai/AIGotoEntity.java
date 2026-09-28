@@ -42,6 +42,7 @@ public class AIGotoEntity extends AIGoto {
 					&& canEasilyReach(target)) {
 				golem.setTask(ticket);
 				ticket.setReserved(true);
+				golem.emote(thaumcraft.common.golems.EntityThaumcraftGolem.EMOTE_ORDER);
 				minDist = 3.5 + target.getBbWidth() / 2.0 * (target.getBbWidth() / 2.0);
 				return true;
 			}

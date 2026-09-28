@@ -96,6 +96,7 @@ public class Thaumcraft {
         ThaumcraftEntities.ENTITY_TYPES.register(modEventBus);
         thaumcraft.common.registry.ThaumcraftMobEffects.MOB_EFFECTS.register(modEventBus);
         thaumcraft.common.registry.ThaumcraftFeatures.FEATURES.register(modEventBus);
+        thaumcraft.common.world.WorldConfigHooks.register(modEventBus);
         thaumcraft.common.registry.ThaumcraftSounds.SOUNDS.register(modEventBus);
         thaumcraft.common.registry.ThaumcraftCreativeTabs.TABS.register(modEventBus);
         thaumcraft.common.registry.ThaumcraftParticleTypes.PARTICLE_TYPES.register(modEventBus);
@@ -111,6 +112,8 @@ public class Thaumcraft {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
+        // generateMagicForest / biomeMagicalForestWeight - see WorldConfigHooks
+        event.enqueueWork(thaumcraft.common.world.WorldConfigHooks::placeMagicalForest);
         LOGGER.info("Thaumcraft {} common setup (1.21.1 port in progress)", VERSION);
 
         // Research category metadata (thaumcraft.api.research.ResearchCategories) - see
@@ -336,6 +339,12 @@ public class Thaumcraft {
         registrar.playToClient(thaumcraft.common.lib.network.misc.PacketKnowledgeGain.TYPE,
                 thaumcraft.common.lib.network.misc.PacketKnowledgeGain.STREAM_CODEC,
                 (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.handleKnowledgeGain(payload));
+        registrar.playToClient(thaumcraft.common.lib.network.ClientboundAuraPacket.TYPE,
+                thaumcraft.common.lib.network.ClientboundAuraPacket.STREAM_CODEC,
+                (payload, context) -> thaumcraft.client.gui.HudOverlays.handleAura(payload));
+        registrar.playToClient(thaumcraft.common.lib.network.ClientboundMiscEventPacket.TYPE,
+                thaumcraft.common.lib.network.ClientboundMiscEventPacket.STREAM_CODEC,
+                (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.handleMiscEvent(payload));
         registrar.playToClient(thaumcraft.common.lib.network.fx.PacketFXTaintLand.TYPE,
                 thaumcraft.common.lib.network.fx.PacketFXTaintLand.STREAM_CODEC,
                 (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.handleTaintLand(payload));
@@ -437,12 +446,16 @@ public class Thaumcraft {
         event.register(ThaumcraftEntities.ELDRITCH_GUARDIAN.get(), net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND,
                 net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 net.minecraft.world.entity.monster.Monster::checkMonsterSpawnRules, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
+        // the original's own getCanSpawnHere rules for these three - see WorldConfigHooks
         event.register(ThaumcraftEntities.PECH.get(), net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND,
                 net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                net.minecraft.world.entity.Mob::checkMobSpawnRules, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
+                thaumcraft.common.world.WorldConfigHooks::checkPechSpawn, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
         event.register(ThaumcraftEntities.WISP.get(), net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND,
                 net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                net.minecraft.world.entity.Mob::checkMobSpawnRules, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
+                thaumcraft.common.world.WorldConfigHooks::checkWispSpawn, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
+        event.register(ThaumcraftEntities.FIRE_BAT.get(), net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND,
+                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                thaumcraft.common.world.WorldConfigHooks::checkFireBatSpawn, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
     }
 
     /**

@@ -1201,9 +1201,14 @@ final class ResearchPageView {
 			int sw = font().width(am);
 			graphics.pose().pushPose();
 			graphics.pose().translate(0, 0, 10);
-			graphics.pose().scale(0.5f, 0.5f, 0.5f);
-			int tx = 32 - sw + x * 2;
-			int ty = 32 - font().lineHeight + y * 2;
+			// the original's largeTagText: figures at full size instead of half
+			float q = 0.5f;
+			if (!thaumcraft.common.config.ThaumcraftConfig.client(thaumcraft.common.config.ThaumcraftConfig.LARGE_TAG_TEXT)) {
+				graphics.pose().scale(0.5f, 0.5f, 0.5f);
+				q = 1.0f;
+			}
+			int tx = (int) ((32 - sw + x * 2) * q);
+			int ty = (int) ((32 - font().lineHeight + y * 2) * q);
 			graphics.drawString(font(), am, tx + 1, ty, 0, false);
 			graphics.drawString(font(), am, tx - 1, ty, 0, false);
 			graphics.drawString(font(), am, tx, ty + 1, 0, false);

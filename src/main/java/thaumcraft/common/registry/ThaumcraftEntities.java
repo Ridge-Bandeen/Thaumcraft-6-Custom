@@ -353,11 +353,10 @@ public final class ThaumcraftEntities {
 					.build("arcane_bore"));
 
 	/** The Pech - see {@code EntityPech}'s own doc comment. {@code sized(0.6f, 1.8f)} matches the original's
-	 * own constructor-time {@code setSize(0.6f, 1.8f)} exactly. {@code MobCategory.CREATURE} (not {@code
-	 * MONSTER}) since it starts passive-until-provoked rather than innately hostile, matching the original's
-	 * own lack of any natural-spawn hostility flag (it's {@code EntityMob} for AI/combat plumbing only). */
+	 * own constructor-time {@code setSize(0.6f, 1.8f)} exactly. {@code MobCategory.MONSTER}: the original's pech was
+	 * an {@code EntityMob} spawned from the monster lists, in the dark - see {@code WorldConfigHooks}. */
 	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.EntityPech>> PECH = ENTITY_TYPES.register("pech",
-			() -> EntityType.Builder.<thaumcraft.common.entities.monster.EntityPech>of(thaumcraft.common.entities.monster.EntityPech::new, MobCategory.CREATURE)
+			() -> EntityType.Builder.<thaumcraft.common.entities.monster.EntityPech>of(thaumcraft.common.entities.monster.EntityPech::new, MobCategory.MONSTER)
 					.sized(0.6f, 1.8f)
 					.clientTrackingRange(64)
 					.build("pech"));

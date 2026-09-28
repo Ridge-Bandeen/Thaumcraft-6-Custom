@@ -19,15 +19,38 @@
   "carvers": {},
   "spawners": {
     "monster": [
-      { "type": "minecraft:witch", "weight": 3, "minCount": 1, "maxCount": 1 },
-      { "type": "minecraft:enderman", "weight": 3, "minCount": 1, "maxCount": 1 },
-      { "type": "minecraft:vex", "weight": 1, "minCount": 1, "maxCount": 1 },
-      { "type": "thaumcraft:wisp", "weight": 20, "minCount": 1, "maxCount": 2 }
+      {
+        "type": "minecraft:witch",
+        "weight": 3,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "minecraft:enderman",
+        "weight": 3,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "minecraft:vex",
+        "weight": 1,
+        "minCount": 1,
+        "maxCount": 1
+      }
     ],
     "creature": [
-      { "type": "minecraft:wolf", "weight": 2, "minCount": 1, "maxCount": 3 },
-      { "type": "minecraft:horse", "weight": 2, "minCount": 1, "maxCount": 3 },
-      { "type": "thaumcraft:pech", "weight": 20, "minCount": 1, "maxCount": 2 }
+      {
+        "type": "minecraft:wolf",
+        "weight": 2,
+        "minCount": 1,
+        "maxCount": 3
+      },
+      {
+        "type": "minecraft:horse",
+        "weight": 2,
+        "minCount": 1,
+        "maxCount": 3
+      }
     ],
     "ambient": [],
     "axolotls": [],
@@ -53,10 +76,10 @@
       "minecraft:patch_waterlily",
       "minecraft:brown_mushroom_normal",
       "minecraft:red_mushroom_normal",
-      "thaumcraft:silverwood_tree",
-      "thaumcraft:silverwood_tree",
-      "thaumcraft:greatwood_tree",
-      "thaumcraft:greatwood_tree",
+      "thaumcraft:magical_forest_silverwood_tree",
+      "thaumcraft:magical_forest_silverwood_tree",
+      "thaumcraft:magical_forest_greatwood_tree",
+      "thaumcraft:magical_forest_greatwood_tree",
       "thaumcraft:shimmerleaf",
       "thaumcraft:vishroom"
     ],
