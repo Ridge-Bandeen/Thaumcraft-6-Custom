@@ -280,6 +280,23 @@ public class ResearchRequirements {
 				if (!isCarrying(player, target)) return false;
 			}
 		}
+
+		// required_research and required_knowledge - the other two of the original's four stage gates, checked in
+		// the same pass there (PacketSyncProgressToServer#checkRequisites). Every listed research key must be known
+		// (strictly - a bare key needs completion, "KEY@n" only stage n), and every knowledge requirement met in
+		// whole points (the same getKnowledge the original compared against).
+		String[] research = stage.getResearch();
+		if (research != null) {
+			for (String key : research) {
+				if (!ThaumcraftCapabilities.knowsResearchStrict(player, key)) return false;
+			}
+		}
+		ResearchStage.Knowledge[] know = stage.getKnow();
+		if (know != null) {
+			for (ResearchStage.Knowledge k : know) {
+				if (knowledge.getKnowledge(k.type, k.category) < k.amount) return false;
+			}
+		}
 		return true;
 	}
 

@@ -148,6 +148,8 @@ sourceSets {
             include 'thaumcraft/api/research/ScanBlock.java'
             include 'thaumcraft/api/research/ScanAspect.java'
             include 'thaumcraft/api/research/ScanEntity.java'
+            include 'thaumcraft/api/research/ScanOreDictionary.java'
+            include 'thaumcraft/common/lib/research/ThaumcraftScans.java'
             include 'thaumcraft/common/items/tools/ItemThaumometer.java'
             include 'thaumcraft/common/items/tools/ItemScribingTools.java'
             include 'thaumcraft/common/lib/research/ScanSky.java'

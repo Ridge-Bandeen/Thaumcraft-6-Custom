@@ -151,48 +151,9 @@ public class Thaumcraft {
         // object-tag table above.
         thaumcraft.api.potions.MobEffectFluxTaint.instance = thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT.get();
 
-        // A small, real scan target for ItemThaumometer - see ScanningManager's own doc comment for the
-        // overall scope of this "headless" (no book UI) slice of the research system. Scanning the Runic
-        // Matrix is an invented substitute trigger for BOOTSTRAVELLER (the original granted it via a
-        // Thaumonomicon research-tree node, not ported) - it's the one already-shipped recipe this session
-        // has that's real but currently unreachable outside creative mode (TileInfusionMatrix#craftingStart
-        // checks its research key against player knowledge, and nothing before this granted BOOTSTRAVELLER
-        // to anyone).
-        thaumcraft.api.research.ScanningManager.addScannableThing(
-                new thaumcraft.api.research.ScanBlock("BOOTSTRAVELLER", BlocksTC.infusionMatrix.get()));
-
-        // ScanAspect (thaumcraft.api.research) registers itself once per real aspect directly from Aspect's
-        // own constructor now - see that class's own doc comment for why, and thaumcraft.api.aspects.Aspect's
-        // constructor for the real call site. ScanEntity has no such auto-registration in the original (it
-        // was always registered per-mob by hand); two real examples here, both real vanilla mobs
-        // ThaumcraftEntityTags already carries real aspect data for.
-        thaumcraft.api.research.ScanningManager.addScannableThing(
-                new thaumcraft.api.research.ScanEntity("!ZOMBIE", net.minecraft.world.entity.EntityType.ZOMBIE));
-        thaumcraft.api.research.ScanningManager.addScannableThing(
-                new thaumcraft.api.research.ScanEntity("!PIG", net.minecraft.world.entity.EntityType.PIG));
-
-        // ScanSky - the real producer behind ItemCelestialNotes/CardCelestial (see ScanSky's own doc
-        // comment). Triggered by the thaumometer's own real "scan nothing" action, restored specifically
-        // for this real mechanic - see ItemThaumometer#use's own doc comment.
-        thaumcraft.api.research.ScanningManager.addScannableThing(new thaumcraft.common.lib.research.ScanSky());
-
-        // ScanGeneric - the real general-purpose catch-all: anything with real aspects at all grants real
-        // OBSERVATION progress toward every real research category on its first scan. See its own doc
-        // comment; this is what makes the thaumometer a real research tool rather than a lookup for the
-        // handful of hardcoded targets above.
-        thaumcraft.api.research.ScanningManager.addScannableThing(new thaumcraft.common.lib.research.ScanGeneric());
-
-        // ScanEnchantment/ScanPotion - real "discovering an enchantment/effect" scan targets, both reachable
-        // now that ScanningManager's own real inventory recursion and item resolution are ported. The
-        // original registered one instance per enchantment AND per potion; modern enchantments are
-        // data-driven (nothing to enumerate at setup) so that one is a single dynamic instance instead,
-        // while mob effects are still a real code-registered registry and keep the original's own
-        // one-instance-per-effect shape. Both classes' own doc comments cover the difference.
-        thaumcraft.api.research.ScanningManager.addScannableThing(new thaumcraft.common.lib.research.ScanEnchantment());
-        for (net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> effect
-                : net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.asHolderIdMap()) {
-            thaumcraft.api.research.ScanningManager.addScannableThing(new thaumcraft.common.lib.research.ScanPotion(effect));
-        }
+        // Every Thaumometer scan target the original registers (its own ConfigResearch#initScannables), in its own
+        // order - see ThaumcraftScans' own doc comment. Aspect scans register themselves from Aspect's constructor.
+        thaumcraft.common.lib.research.ThaumcraftScans.register();
 
         // Warp-on-craft costs (thaumcraft.api.ThaumcraftApi#addWarpToItem). Shipped Thaumcraft 6 registers
         // exactly one, and this is it: crafting a Brain in a Jar costs 1 real permanent warp (the original's
@@ -240,15 +201,17 @@ public class Thaumcraft {
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.api.research.theorycraft.CardBalance.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.api.research.theorycraft.AidBookshelf());
 
+        // Not registered, matching the original's own ConfigResearch#initTheorycraft exactly (2026-09-27): AidDragonEgg and
+        // CardDragonEgg exist in its source but were never registered, and CardTruth is only listed by AidBasicEldritch's
+        // getCards() - the original's generateCard looks every card up in this registry, so an unregistered one is never
+        // drawn, even through its aid. An earlier pass here had registered all three, putting cards in play the original never showed.
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardCalibrate.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardMeasure.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardSynergy.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardBeacon.class);
-        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardDragonEgg.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardEnchantment.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardPortal.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidBeacon());
-        thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidDragonEgg());
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidEnchantmentTable());
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidPortal.AidPortalEnd());
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidPortal.AidPortalNether());
@@ -274,7 +237,6 @@ public class Thaumcraft {
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardRevelation.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardSculpting.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardSpellbinding.class);
-        thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardTruth.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardDarkWhispers.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardChannel.class);
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerCard(thaumcraft.common.lib.research.theorycraft.CardConcentrate.class);

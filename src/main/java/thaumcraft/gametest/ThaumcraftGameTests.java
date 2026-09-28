@@ -7673,44 +7673,39 @@ public class ThaumcraftGameTests {
 				"an amplifier-0 infectious carrier should eventually hand a nearby entity plain vis_exhaust"));
 	}
 
-	// --------------------------------------------------------------------------------------------------
-	// ScanningManager + ItemThaumometer - a headless (no book UI) slice of the research system. Real
-	// consumer: TileInfusionMatrix#craftingStart already checks a recipe's research key against player
-	// knowledge, so granting BOOTSTRAVELLER for real closes a genuine existing gap (that recipe was
-	// otherwise unreachable outside creative mode).
-	// --------------------------------------------------------------------------------------------------
-
+	/** The original's own real block scan targets (ThaumcraftScans, restored 2026-09-27): scanning a crystal cluster
+	 * grants both {@code ORE} (the research entry itself) and {@code !ORECRYSTAL} (the key CRYSTALFARMER waits on) -
+	 * before, nothing in the port could grant either. Replaces an old test of an invented Runic Matrix -> Boots of the
+	 * Traveller scan that the original never had. */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
-	public static void scanningTheRunicMatrixGrantsBootsTravellerResearch(GameTestHelper helper) {
+	public static void scanningACrystalClusterGrantsOreAndCrystalKeys(GameTestHelper helper) {
 		BlockPos pos = new BlockPos(2, 2, 2);
-		helper.setBlock(pos, BlocksTC.infusionMatrix.get());
-		placeInfusionMatrixPillars(helper, pos);
+		helper.setBlock(pos.below(), Blocks.STONE);
+		helper.setBlock(pos, BlocksTC.crystals.get(thaumcraft.api.aspects.Aspect.AIR).get());
 		BlockPos absolute = helper.absolutePos(pos);
-
 		ServerPlayer player = spawnCasterAt(helper, absolute.above());
-		// BOOTSTRAVELLER's real parents (INFUSION, RECHARGEPEDESTAL - now actually enforced, see
-		// ThaumcraftInternalMethodHandler's own doc comment) each sit behind their own real chain back to
-		// UNLOCKALCHEMY; FIRSTSTEPS itself is already complete by default for every fresh player.
-		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "UNLOCKALCHEMY");
-		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "UNLOCKAUROMANCY");
-		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "BASEAUROMANCY");
-		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "RECHARGEPEDESTAL");
-		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "UNLOCKINFUSION");
-		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "BASEINFUSION");
-		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "INFUSION");
-		helper.assertTrue(!thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("BOOTSTRAVELLER"),
-				"the player shouldn't know BOOTSTRAVELLER yet");
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		helper.assertFalse(knowledge.isResearchKnown("!ORECRYSTAL"), "not scanned yet");
 
-		ItemStack thaumometer = new ItemStack(ItemsTC.thaumometer.get());
-		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
-		net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
-				Vec3.atCenterOf(absolute), net.minecraft.core.Direction.UP, absolute, false);
-		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(helper.getLevel(), player, hand, thaumometer, hit);
+		thaumcraft.api.research.ScanningManager.scanTheThing(player, absolute);
+		helper.assertTrue(knowledge.isResearchKnown("!ORECRYSTAL"), "scanning a crystal cluster should grant !ORECRYSTAL");
+		helper.assertTrue(knowledge.isResearchKnown("ORE"), "and the ORE research entry itself");
+		helper.succeed();
+	}
 
-		thaumometer.getItem().onItemUseFirst(thaumometer, context);
-
-		helper.assertTrue(thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("BOOTSTRAVELLER"),
-				"scanning the runic matrix with a thaumometer should have granted BOOTSTRAVELLER");
+	/** Class-based entity scans with inheritance, as the original had them: a cave spider is a spider ({@code f_SPIDER}),
+	 * an iron golem is a golem ({@code f_golem}). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void entityScansMatchSubclassesLikeTheOriginal(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		net.minecraft.world.entity.monster.CaveSpider caveSpider = EntityType.CAVE_SPIDER.create(helper.getLevel());
+		net.minecraft.world.entity.animal.IronGolem golem = EntityType.IRON_GOLEM.create(helper.getLevel());
+		thaumcraft.api.research.ScanningManager.scanTheThing(player, caveSpider);
+		thaumcraft.api.research.ScanningManager.scanTheThing(player, golem);
+		helper.assertTrue(knowledge.isResearchKnown("f_SPIDER"), "a cave spider should count as a spider");
+		helper.assertTrue(knowledge.isResearchKnown("f_golem"), "an iron golem should count as a golem");
 		helper.succeed();
 	}
 
@@ -7935,28 +7930,25 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
-	/** Real (not ad-hoc) scan targets - {@code ScanAspect} (auto-registered once per real aspect straight
-	 * from {@code Aspect}'s own constructor) and {@code ScanEntity} (two real examples registered in
-	 * {@code Thaumcraft#commonSetup}). {@code ScanningManager#scanTheThing} matches ALL registered things,
-	 * not just the first - so scanning a real Zombie should grant its entity-type key ("!ZOMBIE") AND every
-	 * aspect key it's really tagged with in ThaumcraftEntityTags (UNDEAD/MAN/EARTH -> "!exanimis"/"!ordo... */
+	/** {@code ScanningManager#scanTheThing} matches ALL registered things, not just the first - so scanning a Firebat
+	 * grants the original's own entity key ({@code "!Firebat"}, which FOCUSSPELLBAT waits on) AND {@code f_BAT} AND every
+	 * aspect key it's tagged with. */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
-	public static void scanningARealZombieGrantsItsEntityAndAspectResearch(GameTestHelper helper) {
+	public static void scanningAFirebatGrantsItsEntityAndAspectResearch(GameTestHelper helper) {
 		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
 		ServerPlayer player = spawnCasterAt(helper, origin);
-		Zombie zombie = spawnFacedBy(helper, player, origin, EntityType.ZOMBIE);
-
+		thaumcraft.common.entities.monster.EntityFireBat bat = thaumcraft.common.registry.ThaumcraftEntities.FIRE_BAT.get().create(helper.getLevel());
 		IPlayerKnowledge knowledge = thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player);
-		helper.assertTrue(!knowledge.isResearchKnown("!ZOMBIE") && !knowledge.isResearchKnown("!" + thaumcraft.api.aspects.Aspect.UNDEAD.getTag()),
-				"the player shouldn't know either research key yet");
+		helper.assertFalse(knowledge.isResearchKnown("!Firebat"), "not scanned yet");
 
-		ItemStack thaumometer = new ItemStack(ItemsTC.thaumometer.get());
-		thaumometer.getItem().interactLivingEntity(thaumometer, player, zombie, net.minecraft.world.InteractionHand.MAIN_HAND);
-
-		helper.assertTrue(knowledge.isResearchKnown("!ZOMBIE"),
-				"scanning a real Zombie should grant the real registered ScanEntity(\"!ZOMBIE\") research key");
-		helper.assertTrue(knowledge.isResearchKnown("!" + thaumcraft.api.aspects.Aspect.UNDEAD.getTag()),
-				"scanning a real Zombie should also grant the real ScanAspect research key for its real UNDEAD aspect (from ThaumcraftEntityTags)");
+		thaumcraft.api.research.ScanningManager.scanTheThing(player, bat);
+		helper.assertTrue(knowledge.isResearchKnown("!Firebat"), "scanning a firebat should grant !Firebat");
+		helper.assertTrue(knowledge.isResearchKnown("f_BAT") && knowledge.isResearchKnown("f_FLY"), "and the bat/flyer observations");
+		boolean anyAspect = false;
+		for (thaumcraft.api.aspects.Aspect a : thaumcraft.api.aspects.AspectHelper.getEntityAspects(bat).getAspects()) {
+			if (knowledge.isResearchKnown("!" + a.getTag())) anyAspect = true;
+		}
+		helper.assertTrue(anyAspect, "and its aspect scan keys too");
 		helper.succeed();
 	}
 
@@ -14079,6 +14071,88 @@ public class ThaumcraftGameTests {
 		}
 	}
 
+	/** Keys granted by an event rather than a scan target - each confirmed against its own live grant site. */
+	private static final java.util.Set<String> EVENT_GRANTED_RESEARCH_KEYS = java.util.Set.of(
+			"m_deepdown", "m_endoftheworld", "m_hellandback", "m_jumper", "m_runner", "m_swimmer", "m_uphigh", "m_walker", // PassiveResearchEvents
+			"f_arrow", "f_fireball", "f_spit", "f_onfire", // PassiveResearchEvents (being hit by / set on fire)
+			"f_toomuchflux", // EntityFluxRift
+			"!gotthaumonomicon", // ItemThaumonomicon / PassiveResearchEvents
+			"!BATHSALTS", // WarpEvents
+			"!INSTABILITY"); // TileInfusionMatrix
+
+	/** The reachability guard (2026-09-27): every virtual key a research entry waits on - a parent, a stage's
+	 * required_research, an addendum's required_research - must be a real research entry, an aspect scan, a key some
+	 * registered scan target grants, or one of {@link #EVENT_GRANTED_RESEARCH_KEYS}. Before ThaumcraftScans restored the
+	 * original's full scan list, 55 of 148 entries depended (directly or downstream) on keys nothing could grant. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void everyResearchPrerequisiteKeyHasARealGrantSource(GameTestHelper helper) throws Exception {
+		java.util.Set<String> grantable = new java.util.HashSet<>(EVENT_GRANTED_RESEARCH_KEYS);
+		for (thaumcraft.api.research.ResearchCategory cat : thaumcraft.api.research.ResearchCategories.researchCategories.values()) {
+			grantable.addAll(cat.research.keySet());
+		}
+		for (thaumcraft.api.aspects.Aspect aspect : thaumcraft.api.aspects.Aspect.aspects.values()) grantable.add("!" + aspect.getTag());
+		java.lang.reflect.Field f = thaumcraft.api.research.ScanningManager.class.getDeclaredField("things");
+		f.setAccessible(true);
+		@SuppressWarnings("unchecked")
+		java.util.List<thaumcraft.api.research.IScanThing> things = (java.util.List<thaumcraft.api.research.IScanThing>) f.get(null);
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		for (thaumcraft.api.research.IScanThing thing : things) {
+			if (thing instanceof thaumcraft.api.research.ScanEntity || thing instanceof thaumcraft.api.research.ScanBlock
+					|| thing instanceof thaumcraft.api.research.ScanItem || thing instanceof thaumcraft.api.research.ScanOreDictionary) {
+				String key = thing.getResearchKey(player, null);
+				if (key != null) grantable.add(key);
+			}
+		}
+
+		java.util.List<String> unreachable = new java.util.ArrayList<>();
+		for (thaumcraft.api.research.ResearchCategory cat : thaumcraft.api.research.ResearchCategories.researchCategories.values()) {
+			for (thaumcraft.api.research.ResearchEntry entry : cat.research.values()) {
+				java.util.List<String> needs = new java.util.ArrayList<>();
+				if (entry.getParentsClean() != null) needs.addAll(java.util.Arrays.asList(entry.getParentsClean()));
+				if (entry.getStages() != null) for (thaumcraft.api.research.ResearchStage st : entry.getStages()) {
+					if (st.getResearch() != null) needs.addAll(java.util.Arrays.asList(st.getResearch()));
+				}
+				if (entry.getAddenda() != null) for (thaumcraft.api.research.ResearchAddendum ad : entry.getAddenda()) {
+					if (ad.getResearch() != null) needs.addAll(java.util.Arrays.asList(ad.getResearch()));
+				}
+				for (String need : needs) {
+					for (String part : need.split("&&")) {
+						String key = part.split("@")[0];
+						if (!grantable.contains(key)) unreachable.add(entry.getKey() + " <- " + key);
+					}
+				}
+			}
+		}
+		helper.assertTrue(unreachable.isEmpty(), "research waiting on keys nothing can grant: " + unreachable);
+		helper.succeed();
+	}
+
+	/** required_knowledge and required_research are now checked too (the other two of the original's four stage gates). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void stageSatisfiedChecksKnowledgeAndResearchToo(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		thaumcraft.api.research.ResearchCategory basics = thaumcraft.api.research.ResearchCategories.getResearchCategory("BASICS");
+
+		thaumcraft.api.research.ResearchStage knowStage = new thaumcraft.api.research.ResearchStage();
+		knowStage.setKnow(new thaumcraft.api.research.ResearchStage.Knowledge[] {
+				new thaumcraft.api.research.ResearchStage.Knowledge(IPlayerKnowledge.EnumKnowledgeType.OBSERVATION, basics, 2) });
+		helper.assertFalse(thaumcraft.common.lib.research.ResearchRequirements.isStageSatisfied(player, knowStage), "no observation yet");
+		knowledge.addKnowledge(IPlayerKnowledge.EnumKnowledgeType.OBSERVATION, basics, IPlayerKnowledge.EnumKnowledgeType.OBSERVATION.getProgression());
+		helper.assertFalse(thaumcraft.common.lib.research.ResearchRequirements.isStageSatisfied(player, knowStage), "one point of two");
+		knowledge.addKnowledge(IPlayerKnowledge.EnumKnowledgeType.OBSERVATION, basics, IPlayerKnowledge.EnumKnowledgeType.OBSERVATION.getProgression());
+		helper.assertTrue(thaumcraft.common.lib.research.ResearchRequirements.isStageSatisfied(player, knowStage), "two points of two");
+		thaumcraft.common.lib.research.ResearchRequirements.consumeStage(player, knowStage);
+		helper.assertTrue(knowledge.getKnowledge(IPlayerKnowledge.EnumKnowledgeType.OBSERVATION, basics) == 0, "studying should spend both points");
+
+		thaumcraft.api.research.ResearchStage researchStage = new thaumcraft.api.research.ResearchStage();
+		researchStage.setResearch(new String[] {"!TEST_NEEDED_FLAG"});
+		helper.assertFalse(thaumcraft.common.lib.research.ResearchRequirements.isStageSatisfied(player, researchStage), "the required flag isn't known yet");
+		knowledge.addResearch("!TEST_NEEDED_FLAG");
+		helper.assertTrue(thaumcraft.common.lib.research.ResearchRequirements.isStageSatisfied(player, researchStage), "now it is");
+		helper.succeed();
+	}
+
 	/** Real per-stage research gating (2026-09-27): a stage listing several required items/crafts needs ALL of them,
 	 * not just one - see {@code ResearchRequirements}'s own doc comment for the correction against an earlier, wrong
 	 * "any one" assumption, checked directly against the true original's own source this time. */
@@ -16598,7 +16672,7 @@ public class ThaumcraftGameTests {
 	public static void newTheorycraftContentIsRegistered(GameTestHelper helper) {
 		String[] cardKeys = {
 				"CardAwareness", "CardFocus", "CardGlyphs", "CardRealization", "CardRevelation", "CardSculpting",
-				"CardSpellbinding", "CardTruth", "CardDarkWhispers", "CardChannel", "CardConcentrate", "CardReactions",
+				"CardSpellbinding", "CardDarkWhispers", "CardChannel", "CardConcentrate", "CardReactions",
 				"CardSynthesis", "CardInfuse", "CardTinker", "CardMindOverMatter", "CardCurio", "CardScripting",
 		};
 		for (String simpleName : cardKeys) {
@@ -16606,6 +16680,13 @@ public class ThaumcraftGameTests {
 			helper.assertTrue(thaumcraft.api.research.theorycraft.TheorycraftManager.cards.containsKey(fqcn),
 					"the real registered deck should really contain " + simpleName + ", found keys: " + thaumcraft.api.research.theorycraft.TheorycraftManager.cards.keySet());
 		}
+		// Never registered in the original (see Thaumcraft.java's own comment), so never drawn there either.
+		for (String simpleName : new String[] {"CardTruth", "CardDragonEgg"}) {
+			helper.assertFalse(thaumcraft.api.research.theorycraft.TheorycraftManager.cards.containsKey("thaumcraft.common.lib.research.theorycraft." + simpleName),
+					simpleName + " should not be in the deck - the original never registered it");
+		}
+		helper.assertFalse(thaumcraft.api.research.theorycraft.TheorycraftManager.aids.values().stream()
+				.anyMatch(a -> a instanceof thaumcraft.common.lib.research.theorycraft.AidDragonEgg), "AidDragonEgg was never registered in the original");
 		helper.assertTrue(thaumcraft.api.research.theorycraft.TheorycraftManager.aids.values().stream()
 						.anyMatch(a -> a instanceof thaumcraft.common.lib.research.theorycraft.AidBasicAlchemy),
 				"AidBasicAlchemy should really be registered");

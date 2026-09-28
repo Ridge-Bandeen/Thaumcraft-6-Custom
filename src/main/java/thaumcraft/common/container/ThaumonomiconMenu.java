@@ -137,6 +137,27 @@ public class ThaumonomiconMenu extends AbstractContainerMenu {
 			if (!missing.isEmpty()) missing.append(", ");
 			missing.append(obtain.length == 1 ? "an item you must be carrying" : "items you must be carrying");
 		}
+		String[] research = stage.getResearch();
+		if (research != null) {
+			for (String key : research) {
+				if (ThaumcraftCapabilities.knowsResearchStrict(player, key)) continue;
+				if (!missing.isEmpty()) missing.append(", ");
+				missing.append("more research or observation first");
+				break;
+			}
+		}
+		ResearchStage.Knowledge[] know = stage.getKnow();
+		if (know != null) {
+			IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+			for (ResearchStage.Knowledge k : know) {
+				int have = knowledge.getKnowledge(k.type, k.category);
+				if (have >= k.amount) continue;
+				if (!missing.isEmpty()) missing.append(", ");
+				String kind = k.type.name().charAt(0) + k.type.name().substring(1).toLowerCase();
+				missing.append(k.amount - have).append(" more ").append(kind);
+				if (k.category != null) missing.append(" (").append(ResearchCategories.getCategoryName(k.category.key).getString()).append(")");
+			}
+		}
 		if (missing.isEmpty()) missing.append("its requirements");
 		player.sendSystemMessage(Component.literal("You still need " + missing + " for this.").withStyle(ChatFormatting.DARK_PURPLE, ChatFormatting.ITALIC));
 	}

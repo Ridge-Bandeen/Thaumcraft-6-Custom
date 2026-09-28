@@ -1,66 +1,50 @@
 package thaumcraft.api.research;
-import java.util.concurrent.ConcurrentHashMap;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraftforge.oredict.OreDictionary;
-import thaumcraft.api.internal.CommonInternals;
 
+import java.util.List;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
+/**
+ * Replaces the old (1.12.2) {@code ScanOreDictionary} - restored 2026-09-27 with the original's full scan list
+ * (see {@code thaumcraft.common.lib.research.ThaumcraftScans}). The original matched a block/item/dropped item by
+ * ore-dictionary name ({@code "ingotIron"}, {@code "plateBrass"}...); the ore dictionary is gone, so each entry here
+ * is either an item tag (the modern {@code c:} tags cover the vanilla names) or a specific {@link Item} (for
+ * Thaumcraft's own plates and metals, which the original registered under ore names nothing else used). Same three
+ * things matched as the original: a block in the world (by its item form), an item stack, a dropped item.
+ */
 public class ScanOreDictionary implements IScanThing {
-	
-	String research;	
-	String[] entries;	
-	
-	public ConcurrentHashMap<Integer,Boolean> cache = new ConcurrentHashMap<>();
 
-	public ScanOreDictionary(String research, String ... entries) {
+	private final String research;
+	private final List<Object> entries;
+
+	/** @param entries each a {@code TagKey<Item>} or an {@link Item} */
+	public ScanOreDictionary(String research, Object... entries) {
 		this.research = research;
-		this.entries = entries;
+		this.entries = List.of(entries);
 	}
-	
+
 	@Override
-	public boolean checkThing(EntityPlayer player, Object obj) {	
-		ItemStack stack = null;
-		if (obj!=null) {
-			if (obj instanceof BlockPos) {
-				IBlockState state = player.world.getBlockState((BlockPos) obj);
-				stack = state.getBlock().getItem(player.world, (BlockPos) obj, state);			
-			}
-			else
-			if (obj instanceof ItemStack) 
-				stack = (ItemStack) obj;
-			else
-			if (obj instanceof EntityItem && ((EntityItem)obj).getItem()!=null) 
-				stack = ((EntityItem)obj).getItem();
+	@SuppressWarnings("unchecked")
+	public boolean checkThing(Player player, Object obj) {
+		ItemStack stack = ItemStack.EMPTY;
+		if (obj instanceof BlockPos pos) stack = new ItemStack(player.level().getBlockState(pos).getBlock().asItem());
+		else if (obj instanceof ItemStack is) stack = is;
+		else if (obj instanceof ItemEntity item) stack = item.getItem();
+		if (stack.isEmpty()) return false;
+		for (Object entry : entries) {
+			if (entry instanceof TagKey<?> tag && stack.is((TagKey<Item>) tag)) return true;
+			if (entry instanceof Item item && stack.is(item)) return true;
 		}
-		
-		if (stack!=null && !stack.isEmpty()) {			
-			int hid = CommonInternals.generateUniqueItemstackId(stack);
-			if (cache.containsKey(hid)) {
-				return cache.get(hid);
-			}
-			
-			int[] ids = OreDictionary.getOreIDs(stack);
-			for (String entry:entries) {
-				for (int id:ids) {
-					if (OreDictionary.getOreName(id).equals(entry)) {
-						synchronized(cache) { cache.put(hid,true); }
-						return true;
-					}
-				}
-			}
-			synchronized(cache) { cache.put(hid,false); }
-		}
-		
 		return false;
 	}
-	
+
 	@Override
-	public String getResearchKey(EntityPlayer player, Object object) {		
+	public String getResearchKey(Player player, Object object) {
 		return research;
 	}
 }

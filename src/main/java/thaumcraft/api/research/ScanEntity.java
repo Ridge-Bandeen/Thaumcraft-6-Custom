@@ -5,32 +5,47 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 
 /**
- * Replaces the old (1.12.2) {@code ScanEntity} - a scan target that matches by entity type. Re-keyed from a
- * raw {@code Class} (with a separate {@code inheritedClasses} flag for "or any subclass") to a real
- * {@link EntityType}, the same idiom {@code ThaumcraftEntityTags} already established for this port's other
- * entity-keyed lookup - compiler-checked, no raw-class/subclass-inheritance matching needed since a modern
- * {@link EntityType} is already the canonical "what kind of entity is this" identity.
+ * Replaces the old (1.12.2) {@code ScanEntity} - a scan target that matches a kind of entity.
  *
- * Drops the original's generic {@code EntityTagsNBT} condition system (matching by an NBT sub-tag, e.g. a
- * powered Creeper) rather than porting it - {@code ThaumcraftEntityTags} already chose to special-case its
- * own one real NBT-driven case (a powered Creeper) as a direct field check instead of a generic mechanism,
- * once Elder Guardian turned out to be its own real {@link EntityType} rather than an NBT flag; this class
- * follows the same precedent. A future scan target that genuinely needs a live-state condition (not just
- * "which entity type") can filter in its own {@code checkThing} override directly.
+ * <p>Two real forms, matching the original's own two:
+ * <ul>
+ * <li>{@link #ScanEntity(String, Class, boolean)} - the original's own real shape (restored 2026-09-27): an entity
+ * class, plus whether subclasses/implementers count too. Several of the original's own real scan targets depend on
+ * that inheritance - {@code "!ORMOB"} is any {@code IEldritchMob}, {@code "!ORBOSS"} any Thaumcraft boss,
+ * {@code "f_SPIDER"} any spider (cave spiders and mind spiders included), {@code "f_arrow"} any arrow - which an
+ * exact-type match could never express.</li>
+ * <li>{@link #ScanEntity(String, EntityType)} - an exact {@link EntityType}, kept for callers that want one.</li>
+ * </ul>
+ *
+ * Drops the original's generic {@code EntityTagsNBT} condition system (matching by an NBT sub-tag): no scan
+ * target the original actually registers uses it.
  */
 public class ScanEntity implements IScanThing {
 
 	private final String research;
 	private final EntityType<?> entityType;
+	private final Class<?> entityClass;
+	private final boolean inherited;
 
 	public ScanEntity(String research, EntityType<?> entityType) {
 		this.research = research;
 		this.entityType = entityType;
+		this.entityClass = null;
+		this.inherited = false;
+	}
+
+	public ScanEntity(String research, Class<?> entityClass, boolean inheritedClasses) {
+		this.research = research;
+		this.entityType = null;
+		this.entityClass = entityClass;
+		this.inherited = inheritedClasses;
 	}
 
 	@Override
 	public boolean checkThing(Player player, Object obj) {
-		return obj instanceof Entity entity && entity.getType() == entityType;
+		if (!(obj instanceof Entity entity)) return false;
+		if (entityType != null) return entity.getType() == entityType;
+		return inherited ? entityClass.isInstance(entity) : entityClass == entity.getClass();
 	}
 
 	@Override
