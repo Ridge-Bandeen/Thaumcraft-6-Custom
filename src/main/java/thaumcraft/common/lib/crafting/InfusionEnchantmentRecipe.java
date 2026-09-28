@@ -52,15 +52,26 @@ import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
 public class InfusionEnchantmentRecipe extends InfusionRecipe {
 
 	private final EnumInfusionEnchantment enchantment;
+	/** Set only on the book's display copies (the original's {@code IE...FAKE} catalog recipes): the tool the page shows
+	 * the enchantment going onto. A recipe with one never matches - the real recipe does the crafting. */
+	private final ItemStack display;
 
 	public InfusionEnchantmentRecipe(String group, String research, AspectList aspects, int instability,
 			NonNullList<Ingredient> components, EnumInfusionEnchantment enchantment) {
-		super(group, research, aspects, instability, Ingredient.EMPTY, components, ItemStack.EMPTY);
+		this(group, research, aspects, instability, components, enchantment, ItemStack.EMPTY);
+	}
+
+	public InfusionEnchantmentRecipe(String group, String research, AspectList aspects, int instability,
+			NonNullList<Ingredient> components, EnumInfusionEnchantment enchantment, ItemStack display) {
+		super(group, research, aspects, instability, display.isEmpty() ? Ingredient.EMPTY : Ingredient.of(display.getItem()),
+				components, ItemStack.EMPTY);
 		this.enchantment = enchantment;
+		this.display = display;
 	}
 
 	@Override
 	public boolean matches(InfusionRecipeInput input, Level level) {
+		if (!display.isEmpty()) return false;
 		ItemStack central = input.central();
 		if (central.isEmpty()) {
 			return false;
@@ -124,10 +135,11 @@ public class InfusionEnchantmentRecipe extends InfusionRecipe {
 								: DataResult.success(NonNullList.of(Ingredient.EMPTY, list.toArray(new Ingredient[0]))),
 						DataResult::success
 				).forGetter(InfusionEnchantmentRecipe::getComponents),
-				Codec.STRING.fieldOf("enchantment").forGetter(r -> r.enchantment.name())
-			).apply(inst, (group, research, aspects, instability, components, enchantmentName) ->
+				Codec.STRING.fieldOf("enchantment").forGetter(r -> r.enchantment.name()),
+				ItemStack.OPTIONAL_CODEC.optionalFieldOf("display", ItemStack.EMPTY).forGetter(r -> r.display)
+			).apply(inst, (group, research, aspects, instability, components, enchantmentName, display) ->
 					new InfusionEnchantmentRecipe(group, research, aspects, instability, components,
-							EnumInfusionEnchantment.valueOf(enchantmentName))));
+							EnumInfusionEnchantment.valueOf(enchantmentName), display)));
 
 		public static final StreamCodec<RegistryFriendlyByteBuf, InfusionEnchantmentRecipe> STREAM_CODEC = StreamCodec.of(
 				Serializer::toNetwork, Serializer::fromNetwork
@@ -152,8 +164,9 @@ public class InfusionEnchantmentRecipe extends InfusionRecipe {
 			NonNullList<Ingredient> components = NonNullList.withSize(count, Ingredient.EMPTY);
 			components.replaceAll(ignored -> Ingredient.CONTENTS_STREAM_CODEC.decode(buf));
 			String enchantmentName = ByteBufCodecs.STRING_UTF8.decode(buf);
+			ItemStack display = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
 			return new InfusionEnchantmentRecipe(group, research, aspects, instability, components,
-					EnumInfusionEnchantment.valueOf(enchantmentName));
+					EnumInfusionEnchantment.valueOf(enchantmentName), display);
 		}
 
 		private static void toNetwork(RegistryFriendlyByteBuf buf, InfusionEnchantmentRecipe recipe) {
@@ -166,6 +179,7 @@ public class InfusionEnchantmentRecipe extends InfusionRecipe {
 				Ingredient.CONTENTS_STREAM_CODEC.encode(buf, ingredient);
 			}
 			ByteBufCodecs.STRING_UTF8.encode(buf, recipe.enchantment.name());
+			ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, recipe.display);
 		}
 	}
 }

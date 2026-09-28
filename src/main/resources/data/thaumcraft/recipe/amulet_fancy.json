@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "thaumcraft:baubles_stuff",
+  "pattern": [
+    " S ",
+    "SGS",
+    " I "
+  ],
+  "key": {
+    "S": {
+      "tag": "c:strings"
+    },
+    "G": {
+      "tag": "c:gems/diamond"
+    },
+    "I": {
+      "tag": "c:ingots/gold"
+    }
+  },
+  "result": {
+    "id": "thaumcraft:amulet_fancy"
+  }
+}

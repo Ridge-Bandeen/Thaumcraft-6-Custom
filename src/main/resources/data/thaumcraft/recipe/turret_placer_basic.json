@@ -11,12 +11,26 @@
     "S S"
   ],
   "key": {
-    "B": { "item": "minecraft:bow" },
-    "G": { "item": "thaumcraft:mechanism_simple" },
-    "I": { "item": "thaumcraft:plate_iron" },
-    "W": { "item": "thaumcraft:plank_greatwood" },
-    "M": { "item": "thaumcraft:mind_clockwork" },
-    "S": { "item": "minecraft:stick" }
+    "G": {
+      "item": "thaumcraft:mechanism_simple"
+    },
+    "I": {
+      "item": "thaumcraft:plate_iron"
+    },
+    "S": {
+      "tag": "c:rods/wooden"
+    },
+    "M": {
+      "item": "thaumcraft:mind_clockwork"
+    },
+    "B": {
+      "item": "minecraft:bow"
+    },
+    "W": {
+      "item": "thaumcraft:plank_greatwood"
+    }
   },
-  "result": { "id": "thaumcraft:turret_placer_basic" }
+  "result": {
+    "id": "thaumcraft:turret_placer_basic"
+  }
 }

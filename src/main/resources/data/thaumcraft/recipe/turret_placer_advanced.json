@@ -7,12 +7,21 @@
   },
   "pattern": [
     "PMP",
-    "PTP"
+    "PTP",
+    "   "
   ],
   "key": {
-    "P": { "item": "thaumcraft:plate_iron" },
-    "M": { "item": "thaumcraft:mind_biothaumic" },
-    "T": { "item": "thaumcraft:turret_placer_basic" }
+    "T": {
+      "item": "thaumcraft:turret_placer_basic"
+    },
+    "P": {
+      "item": "thaumcraft:plate_iron"
+    },
+    "M": {
+      "item": "thaumcraft:mind_biothaumic"
+    }
   },
-  "result": { "id": "thaumcraft:turret_placer_advanced" }
+  "result": {
+    "id": "thaumcraft:turret_placer_advanced"
+  }
 }

@@ -1,13 +1,18 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "equipment",
+  "category": "misc",
+  "group": "thaumcraft:thaumium_stuff",
   "pattern": [
     "I I",
     "III",
     "III"
   ],
   "key": {
-    "I": { "item": "thaumcraft:ingot_thaumium" }
+    "I": {
+      "item": "thaumcraft:ingot_thaumium"
+    }
   },
-  "result": { "id": "thaumcraft:thaumium_chest", "count": 1 }
+  "result": {
+    "id": "thaumcraft:thaumium_chest"
+  }
 }

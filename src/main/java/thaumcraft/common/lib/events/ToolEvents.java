@@ -172,6 +172,7 @@ public class ToolEvents {
 		SPECIAL_MINING.put(Items.RAW_GOLD, new ItemStack(ItemsTC.clusterGold.get()));
 		SPECIAL_MINING.put(BlocksTC.oreCinnabar.get().asItem(), new ItemStack(ItemsTC.clusterCinnabar.get()));
 		SPECIAL_MINING.put(Items.QUARTZ, new ItemStack(ItemsTC.clusterQuartz.get()));
+		SPECIAL_MINING.put(Items.RAW_COPPER, new ItemStack(ItemsTC.clusterCopper.get()));
 	}
 
 	@SubscribeEvent

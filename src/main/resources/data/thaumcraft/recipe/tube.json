@@ -1,6 +1,6 @@
 {
   "type": "thaumcraft:arcane_shaped",
-  "research": "FIRSTSTEPS",
+  "research": "TUBES",
   "vis": 10,
   "pattern": [
     " Q ",
@@ -8,10 +8,21 @@
     " B "
   ],
   "key": {
-    "Q": { "item": "thaumcraft:quicksilver" },
-    "I": { "item": "minecraft:iron_ingot" },
-    "G": { "item": "minecraft:glass" },
-    "B": { "item": "minecraft:gold_nugget" }
+    "I": {
+      "item": "thaumcraft:plate_iron"
+    },
+    "B": {
+      "item": "thaumcraft:nugget_brass"
+    },
+    "G": {
+      "tag": "c:glass_blocks"
+    },
+    "Q": {
+      "item": "thaumcraft:nugget_quicksilver"
+    }
   },
-  "result": { "id": "thaumcraft:tube", "count": 8 }
+  "result": {
+    "id": "thaumcraft:tube",
+    "count": 8
+  }
 }

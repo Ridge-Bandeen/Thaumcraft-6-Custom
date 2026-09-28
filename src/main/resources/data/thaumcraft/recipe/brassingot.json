@@ -1,9 +1,13 @@
 {
   "type": "thaumcraft:crucible",
-  "research": "METALLURGY",
-  "catalyst": { "item": "minecraft:iron_ingot" },
+  "research": "METALLURGY@1",
+  "catalyst": {
+    "tag": "c:ingots/iron"
+  },
   "aspects": {
     "instrumentum": 5
   },
-  "result": { "id": "thaumcraft:ingot_brass" }
+  "result": {
+    "id": "thaumcraft:ingot_brass"
+  }
 }

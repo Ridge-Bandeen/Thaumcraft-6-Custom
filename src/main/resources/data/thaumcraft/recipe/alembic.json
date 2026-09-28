@@ -11,10 +11,20 @@
     "WFW"
   ],
   "key": {
-    "W": { "item": "thaumcraft:plank_greatwood" },
-    "F": { "item": "thaumcraft:filter" },
-    "S": { "item": "minecraft:iron_ingot" },
-    "B": { "item": "minecraft:bucket" }
+    "W": {
+      "item": "thaumcraft:plank_greatwood"
+    },
+    "B": {
+      "item": "minecraft:bucket"
+    },
+    "F": {
+      "item": "thaumcraft:filter"
+    },
+    "S": {
+      "item": "thaumcraft:plate_brass"
+    }
   },
-  "result": { "id": "thaumcraft:alembic" }
+  "result": {
+    "id": "thaumcraft:alembic"
+  }
 }

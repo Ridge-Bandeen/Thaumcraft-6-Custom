@@ -104,6 +104,22 @@ public final class ItemsTC {
 	public static final DeferredItem<Item> clusterGold =
 			ITEMS.registerSimpleItem("cluster_gold");
 
+	/** The original's copper/tin/silver/lead native clusters (its {@code clusters} metadata 2-5), registered 2026-09-28 for
+	 * the Metal Purification crucible recipes, which - like the original's {@code ModConfig.found*Ore} checks - only load
+	 * when that ore exists. Copper also comes from Refining and smelts into two copper ingots. */
+	public static final DeferredItem<Item> clusterCopper = ITEMS.registerSimpleItem("cluster_copper");
+	public static final DeferredItem<Item> clusterTin = ITEMS.registerSimpleItem("cluster_tin");
+	public static final DeferredItem<Item> clusterSilver = ITEMS.registerSimpleItem("cluster_silver");
+	public static final DeferredItem<Item> clusterLead = ITEMS.registerSimpleItem("cluster_lead");
+
+	/** The original's Blank Seal ({@code ItemSealPlacer} metadata 0): the base every Control Seal is made from, and
+	 * places nothing itself. Registered 2026-09-28 along with the seal recipes. */
+	public static final DeferredItem<Item> sealBlank = ITEMS.registerSimpleItem("seal_blank");
+
+	/** The Arcane Grappler's two crafted parts, registered 2026-09-28 with the original's grappler recipe. */
+	public static final DeferredItem<Item> grappleGunTip = ITEMS.registerSimpleItem("grapple_gun_tip");
+	public static final DeferredItem<Item> grappleGunSpool = ITEMS.registerSimpleItem("grapple_gun_spool");
+
 	/** The original's 4th complete-loop cluster - unlike iron/cinnabar/gold, it has no Crucible recipe at
 	 * all in the original, only reachable there via the pickaxe {@code REFINING} infusion enchantment (a
 	 * fortune-like chance to get a cluster back instead of the plain ore drop). Now that {@code ToolEvents}

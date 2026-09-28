@@ -7,8 +7,15 @@
     "NSN"
   ],
   "key": {
-    "N": { "item": "thaumcraft:nugget_brass" },
-    "S": { "item": "minecraft:stick" }
+    "N": {
+      "item": "thaumcraft:nugget_brass"
+    },
+    "S": {
+      "tag": "c:rods/wooden"
+    }
   },
-  "result": { "id": "thaumcraft:jar_brace", "count": 2 }
+  "result": {
+    "id": "thaumcraft:jar_brace",
+    "count": 2
+  }
 }

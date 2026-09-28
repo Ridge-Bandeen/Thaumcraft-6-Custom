@@ -1,13 +1,18 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "building",
+  "category": "misc",
   "pattern": [
     "K  ",
     "KK ",
     "KKK"
   ],
   "key": {
-    "K": { "item": "thaumcraft:stone_ancient" }
+    "K": {
+      "item": "thaumcraft:stone_ancient"
+    }
   },
-  "result": { "id": "thaumcraft:stairs_ancient", "count": 4 }
+  "result": {
+    "id": "thaumcraft:stairs_ancient",
+    "count": 4
+  }
 }

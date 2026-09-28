@@ -1,6 +1,6 @@
 {
   "type": "thaumcraft:arcane_shaped",
-  "research": "FIRSTSTEPS",
+  "research": "GRAPPLEGUN",
   "vis": 75,
   "crystals": {
     "aer": 1,
@@ -8,14 +8,27 @@
   },
   "pattern": [
     "  S",
-    "III",
-    " RW"
+    "TII",
+    " BW"
   ],
   "key": {
-    "I": { "item": "minecraft:iron_ingot" },
-    "S": { "item": "minecraft:string" },
-    "R": { "item": "minecraft:redstone" },
-    "W": { "tag": "minecraft:planks" }
+    "B": {
+      "item": "thaumcraft:plate_brass"
+    },
+    "I": {
+      "item": "thaumcraft:plate_iron"
+    },
+    "T": {
+      "item": "thaumcraft:grapple_gun_tip"
+    },
+    "W": {
+      "tag": "minecraft:planks"
+    },
+    "S": {
+      "item": "thaumcraft:grapple_gun_spool"
+    }
   },
-  "result": { "id": "thaumcraft:grapple_gun" }
+  "result": {
+    "id": "thaumcraft:grapple_gun"
+  }
 }

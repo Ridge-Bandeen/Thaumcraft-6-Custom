@@ -11,11 +11,23 @@
     "WGW"
   ],
   "key": {
-    "W": { "tag": "minecraft:planks" },
-    "I": { "item": "thaumcraft:plate_thaumium" },
-    "N": { "item": "minecraft:glowstone" },
-    "B": { "item": "thaumcraft:plate_iron" },
-    "G": { "item": "thaumcraft:mechanism_simple" }
+    "I": {
+      "item": "thaumcraft:plate_thaumium"
+    },
+    "N": {
+      "tag": "thaumcraft:nitor"
+    },
+    "W": {
+      "tag": "minecraft:planks"
+    },
+    "B": {
+      "item": "thaumcraft:plate_iron"
+    },
+    "G": {
+      "item": "thaumcraft:mechanism_simple"
+    }
   },
-  "result": { "id": "thaumcraft:levitator" }
+  "result": {
+    "id": "thaumcraft:levitator"
+  }
 }

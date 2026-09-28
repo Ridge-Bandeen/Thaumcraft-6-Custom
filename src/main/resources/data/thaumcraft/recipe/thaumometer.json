@@ -16,8 +16,14 @@
     " I "
   ],
   "key": {
-    "I": { "item": "minecraft:gold_ingot" },
-    "G": { "item": "minecraft:glass_pane" }
+    "I": {
+      "tag": "c:ingots/gold"
+    },
+    "G": {
+      "item": "minecraft:glass_pane"
+    }
   },
-  "result": { "id": "thaumcraft:thaumometer" }
+  "result": {
+    "id": "thaumcraft:thaumometer"
+  }
 }

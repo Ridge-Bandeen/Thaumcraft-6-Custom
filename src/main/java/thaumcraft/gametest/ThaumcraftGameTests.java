@@ -549,7 +549,7 @@ public class ThaumcraftGameTests {
 				"plank_greatwood", "greatwood_stairs", "greatwood_slab",
 				"arcane_ear", "arcane_ear_toggle",
 				"jar_normal",
-				"lamp_growth", "lamp_fertility",
+				"infusion_lamp_growth", "infusion_lamp_fertility",
 				"tube",
 				"ingot_thaumium", "nugget_thaumium", "ingot_thaumium_from_nuggets",
 				"metal_block_thaumium", "ingot_thaumium_from_block", "plate_thaumium",
@@ -1174,6 +1174,7 @@ public class ThaumcraftGameTests {
 			if (research == null) continue;
 			for (String key : research.split("&&|\\|\\|")) {
 				if (key.isEmpty()) continue;
+				key = key.split("@")[0]; // "METALLURGY@1" means stage 1 of METALLURGY
 				knowledge.addResearch(key);
 				knowledge.setResearchStage(key, 99);
 			}
@@ -5697,14 +5698,14 @@ public class ThaumcraftGameTests {
 		helper.setBlock(jarIgnisPos, BlocksTC.jarNormal.get());
 
 		thaumcraft.common.tiles.crafting.TilePedestal central = helper.getBlockEntity(centralPos);
-		central.setItem(new ItemStack(Items.GLOWSTONE_DUST));
+		central.setItem(new ItemStack(Items.TOTEM_OF_UNDYING));
 		thaumcraft.common.tiles.crafting.TilePedestal component = helper.getBlockEntity(componentPos);
-		component.setItem(new ItemStack(Items.REDSTONE));
+		component.setItem(new ItemStack(ItemsTC.plateBrass.get()));
 
 		thaumcraft.common.tiles.essentia.TileJarFillable jarOrdo = helper.getBlockEntity(jarOrdoPos);
-		jarOrdo.addToContainer(Aspect.ORDER, 10);
+		jarOrdo.addToContainer(Aspect.LIFE, 25);
 		thaumcraft.common.tiles.essentia.TileJarFillable jarIgnis = helper.getBlockEntity(jarIgnisPos);
-		jarIgnis.addToContainer(Aspect.FIRE, 10);
+		jarIgnis.addToContainer(Aspect.LIFE, 25);
 
 		BlockPos matrixAbs = helper.absolutePos(matrixPos);
 		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
@@ -5721,8 +5722,8 @@ public class ThaumcraftGameTests {
 		}
 
 		helper.assertTrue(!matrix.crafting, "the craft should have completed (or definitively failed) within 400 ticks");
-		helper.assertTrue(central.getItem().is(Items.GLOWSTONE), "the central pedestal should hold the demo recipe's result (glowstone), found: " + central.getItem());
-		helper.assertTrue(component.getItem().isEmpty(), "the component pedestal's redstone should have been consumed by the craft");
+		helper.assertTrue(central.getItem().is(ItemsTC.charmUndying.get()), "the central pedestal should hold the recipe's result (Charm of Undying), found: " + central.getItem());
+		helper.assertTrue(component.getItem().isEmpty(), "the component pedestal's brass plate should have been consumed by the craft");
 		helper.succeed();
 	}
 
@@ -5750,8 +5751,8 @@ public class ThaumcraftGameTests {
 				matrixPos.offset(0, 0, -2), matrixPos.offset(2, 0, 2), matrixPos.offset(-2, 0, -2)
 		};
 		ItemStack[] componentItems = {
-				new ItemStack(Items.GOLD_INGOT), new ItemStack(Items.WHITE_DYE), new ItemStack(ItemsTC.crystalEssence.get()),
-				new ItemStack(Items.GOLD_INGOT), new ItemStack(Items.WHITE_DYE), new ItemStack(ItemsTC.crystalEssence.get())
+				new ItemStack(Items.GOLD_INGOT), new ItemStack(Items.BONE_MEAL), makeAspectCrystal(Aspect.EARTH),
+				new ItemStack(Items.GOLD_INGOT), new ItemStack(Items.BONE_MEAL), makeAspectCrystal(Aspect.EARTH)
 		};
 		for (int i = 0; i < componentPositions.length; i++) {
 			helper.setBlock(componentPositions[i], BlocksTC.pedestal.get());
@@ -5826,8 +5827,8 @@ public class ThaumcraftGameTests {
 				matrixPos.offset(0, 0, -2), matrixPos.offset(2, 0, 2), matrixPos.offset(-2, 0, -2)
 		};
 		ItemStack[] componentItems = {
-				new ItemStack(Items.GOLD_INGOT), new ItemStack(Items.WHEAT), new ItemStack(ItemsTC.crystalEssence.get()),
-				new ItemStack(Items.GOLD_INGOT), new ItemStack(Items.CARROT), new ItemStack(ItemsTC.crystalEssence.get())
+				new ItemStack(Items.GOLD_INGOT), new ItemStack(Items.WHEAT), makeAspectCrystal(Aspect.FIRE),
+				new ItemStack(Items.GOLD_INGOT), new ItemStack(Items.CARROT), makeAspectCrystal(Aspect.FIRE)
 		};
 		for (int i = 0; i < componentPositions.length; i++) {
 			helper.setBlock(componentPositions[i], BlocksTC.pedestal.get());
@@ -6114,7 +6115,8 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
-	/** Shared demo-recipe craft (glowstone dust + redstone -> glowstone, same real recipe as
+	/** Shared small infusion craft (a Totem of Undying + a brass plate -> Charm of Undying, 25 Victus - the original's
+	 * cheapest real infusion, standing in since 2026-09-28 for an invented glowstone "demo" recipe; same recipe as
 	 * {@code infusionMatrixCraftsADemoInfusionRecipeEndToEnd}, including its own real ordo/ignis essentia jars
 	 * - the demo recipe has a real essentia cost, not just ingredients) for the pillar/accelerator
 	 * speed-comparison tests - returns real elapsed ticks to completion, or -1 if it didn't finish within the
@@ -6123,18 +6125,18 @@ public class ThaumcraftGameTests {
 		BlockPos centralPos = matrixPos.below(2);
 		BlockPos componentPos = centralPos.east(2);
 		thaumcraft.common.tiles.crafting.TilePedestal central = helper.getBlockEntity(centralPos);
-		central.setItem(new ItemStack(Items.GLOWSTONE_DUST));
+		central.setItem(new ItemStack(Items.TOTEM_OF_UNDYING));
 		thaumcraft.common.tiles.crafting.TilePedestal component = helper.getBlockEntity(componentPos);
-		component.setItem(new ItemStack(Items.REDSTONE));
+		component.setItem(new ItemStack(ItemsTC.plateBrass.get()));
 
 		BlockPos jarOrdoPos = matrixPos.north(2);
 		BlockPos jarIgnisPos = matrixPos.south(2);
 		helper.setBlock(jarOrdoPos, BlocksTC.jarNormal.get());
 		helper.setBlock(jarIgnisPos, BlocksTC.jarNormal.get());
 		thaumcraft.common.tiles.essentia.TileJarFillable jarOrdo = helper.getBlockEntity(jarOrdoPos);
-		jarOrdo.addToContainer(Aspect.ORDER, 10);
+		jarOrdo.addToContainer(Aspect.LIFE, 25);
 		thaumcraft.common.tiles.essentia.TileJarFillable jarIgnis = helper.getBlockEntity(jarIgnisPos);
-		jarIgnis.addToContainer(Aspect.FIRE, 10);
+		jarIgnis.addToContainer(Aspect.LIFE, 25);
 
 		BlockPos matrixAbs = helper.absolutePos(matrixPos);
 		thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix = helper.getBlockEntity(matrixPos);
@@ -6194,10 +6196,10 @@ public class ThaumcraftGameTests {
 		ItemStack pickaxe = new ItemStack(Items.IRON_PICKAXE);
 		thaumcraft.api.crafting.InfusionRecipeInput input = new thaumcraft.api.crafting.InfusionRecipeInput(
 				pickaxe,
+				// the original's IELAMPLIGHT: an enchanted book and a nitor
 				java.util.List.of(
-						new ItemStack(ItemsTC.crystalEssence.get()),
-						new ItemStack(Items.GLOWSTONE_DUST),
-						new ItemStack(Items.TORCH)));
+						new ItemStack(Items.ENCHANTED_BOOK),
+						new ItemStack(thaumcraft.api.blocks.BlocksTC.nitor.get(net.minecraft.world.item.DyeColor.YELLOW).get())));
 
 		var match = helper.getLevel().getRecipeManager().getRecipeFor(thaumcraft.api.crafting.ThaumcraftRecipeTypes.INFUSION_TYPE.get(), input, helper.getLevel());
 		helper.assertTrue(match.isPresent(), "the infusion_enchant_lamplight recipe should match a plain pickaxe with its real components");
@@ -6216,8 +6218,7 @@ public class ThaumcraftGameTests {
 		thaumcraft.api.crafting.InfusionRecipeInput input = new thaumcraft.api.crafting.InfusionRecipeInput(
 				new ItemStack(Items.LEATHER_BOOTS),
 				java.util.List.of(
-						new ItemStack(ItemsTC.crystalEssence.get()),
-						new ItemStack(ItemsTC.crystalEssence.get()),
+						new ItemStack(Items.ENCHANTED_BOOK),
 						new ItemStack(Items.TNT)));
 
 		var match = helper.getLevel().getRecipeManager().getRecipeFor(thaumcraft.api.crafting.ThaumcraftRecipeTypes.INFUSION_TYPE.get(), input, helper.getLevel());
@@ -7234,8 +7235,8 @@ public class ThaumcraftGameTests {
 		thaumcraft.api.crafting.InfusionRecipeInput input = new thaumcraft.api.crafting.InfusionRecipeInput(
 				new ItemStack(Items.LEATHER_BOOTS),
 				java.util.List.of(
-						new ItemStack(ItemsTC.crystalEssence.get()),
-						new ItemStack(ItemsTC.crystalEssence.get()),
+						makeAspectCrystal(Aspect.AIR),
+						makeAspectCrystal(Aspect.AIR),
 						new ItemStack(ItemsTC.fabric.get()),
 						new ItemStack(ItemsTC.fabric.get()),
 						new ItemStack(Items.FEATHER),
@@ -13745,8 +13746,8 @@ public class ThaumcraftGameTests {
 
 		ItemStack central = new ItemStack(ItemsTC.verdantCharm.get());
 		ItemStack goldenApple = new ItemStack(Items.GOLDEN_APPLE);
-		ItemStack crystal1 = new ItemStack(ItemsTC.crystalEssence.get());
-		ItemStack crystal2 = new ItemStack(ItemsTC.crystalEssence.get());
+		ItemStack crystal1 = makeAspectCrystal(Aspect.LIFE);
+		ItemStack crystal2 = makeAspectCrystal(Aspect.MAN);
 
 		ItemStack wrongPotion = new ItemStack(Items.POTION);
 		wrongPotion.set(net.minecraft.core.component.DataComponents.POTION_CONTENTS,
@@ -14147,6 +14148,52 @@ public class ThaumcraftGameTests {
 			"!gotthaumonomicon", // ItemThaumonomicon / PassiveResearchEvents
 			"!BATHSALTS", // WarpEvents
 			"!INSTABILITY"); // TileInfusionMatrix
+
+	/** Every recipe bookmark in the research data (the original's catalog keys) opens a real recipe page - guards the
+	 * 2026-09-28 recipe transcription and ResearchRecipeCatalog. The exceptions are the multiblock "construct" pages
+	 * (drawn from blueprints, not recipes), two keys the original never registered either, and tin/silver/lead
+	 * purification, which only load when some mod adds those ores. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void everyResearchRecipeBookmarkResolvesToARealRecipe(GameTestHelper helper) {
+		java.util.Set<String> exempt = java.util.Set.of("thaumcraft:infernalfurnace", "thaumcraft:infusionaltar", "thaumcraft:infusionaltarancient",
+				"thaumcraft:infusionaltareldritch", "thaumcraft:thaumatorium", "thaumcraft:golempress", "thaumcraft:jarlabelessence",
+				"thaumcraft:nitorcolor", "thaumcraft:metal_purification_tin", "thaumcraft:metal_purification_silver", "thaumcraft:metal_purification_lead");
+		net.minecraft.world.item.crafting.RecipeManager recipes = helper.getLevel().getRecipeManager();
+		java.util.List<String> missing = new java.util.ArrayList<>();
+		for (thaumcraft.api.research.ResearchCategory category : thaumcraft.api.research.ResearchCategories.researchCategories.values()) {
+			for (thaumcraft.api.research.ResearchEntry entry : category.research.values()) {
+				java.util.List<net.minecraft.resources.ResourceLocation> keys = new java.util.ArrayList<>();
+				if (entry.getStages() != null) for (thaumcraft.api.research.ResearchStage st : entry.getStages())
+					if (st.getRecipes() != null) keys.addAll(java.util.Arrays.asList(st.getRecipes()));
+				if (entry.getAddenda() != null) for (thaumcraft.api.research.ResearchAddendum ad : entry.getAddenda())
+					if (ad.getRecipes() != null) keys.addAll(java.util.Arrays.asList(ad.getRecipes()));
+				for (net.minecraft.resources.ResourceLocation key : keys) {
+					if (exempt.contains(key.toString())) continue;
+					if (thaumcraft.common.lib.research.ResearchRecipeCatalog.resolve(recipes, key).isEmpty()) missing.add(entry.getKey() + ":" + key);
+				}
+			}
+		}
+		helper.assertTrue(missing.isEmpty(), "research recipe keys with no recipe: " + missing);
+		helper.succeed();
+	}
+
+	/** Salis Mundus follows the original's RecipeMagicDust: three crystals of three different aspects. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void salisMundusNeedsThreeDifferentCrystals(GameTestHelper helper) {
+		thaumcraft.common.lib.crafting.RecipeMagicDust recipe = new thaumcraft.common.lib.crafting.RecipeMagicDust(net.minecraft.world.item.crafting.CraftingBookCategory.MISC);
+		java.util.function.Function<String[], net.minecraft.world.item.crafting.CraftingInput> grid = aspects -> {
+			java.util.List<ItemStack> items = new java.util.ArrayList<>(java.util.List.of(new ItemStack(Items.BOWL), new ItemStack(Items.FLINT), new ItemStack(Items.REDSTONE)));
+			for (String a : aspects) {
+				ItemStack c = new ItemStack(thaumcraft.api.items.ItemsTC.crystalEssence.get());
+				((thaumcraft.api.aspects.IEssentiaContainerItem) c.getItem()).setAspects(c, new thaumcraft.api.aspects.AspectList().add(thaumcraft.api.aspects.Aspect.getAspect(a), 1));
+				items.add(c);
+			}
+			return net.minecraft.world.item.crafting.CraftingInput.of(3, 2, items);
+		};
+		helper.assertTrue(recipe.matches(grid.apply(new String[] {"aer", "ignis", "terra"}), helper.getLevel()), "three different crystals make Salis Mundus");
+		helper.assertFalse(recipe.matches(grid.apply(new String[] {"aer", "aer", "terra"}), helper.getLevel()), "two of the same crystal must not");
+		helper.succeed();
+	}
 
 	/** The reachability guard (2026-09-27): every virtual key a research entry waits on - a parent, a stage's
 	 * required_research, an addendum's required_research - must be a real research entry, an aspect scan, a key some

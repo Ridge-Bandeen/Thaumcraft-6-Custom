@@ -1,11 +1,17 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "misc",
+  "group": "thaumcraft:void_stuff",
   "pattern": [
-    "###"
+    "BBB"
   ],
   "key": {
-    "#": { "item": "thaumcraft:ingot_void" }
+    "B": {
+      "item": "thaumcraft:ingot_void"
+    }
   },
-  "result": { "id": "thaumcraft:plate_void", "count": 3 }
+  "result": {
+    "id": "thaumcraft:plate_void",
+    "count": 3
+  }
 }

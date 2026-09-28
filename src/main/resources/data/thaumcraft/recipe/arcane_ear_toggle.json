@@ -1,9 +1,15 @@
 {
   "type": "minecraft:crafting_shapeless",
-  "category": "redstone",
+  "category": "misc",
   "ingredients": [
-    { "item": "thaumcraft:arcane_ear" },
-    { "item": "minecraft:lever" }
+    {
+      "item": "thaumcraft:arcane_ear"
+    },
+    {
+      "item": "minecraft:lever"
+    }
   ],
-  "result": { "id": "thaumcraft:arcane_ear_toggle" }
+  "result": {
+    "id": "thaumcraft:arcane_ear_toggle"
+  }
 }

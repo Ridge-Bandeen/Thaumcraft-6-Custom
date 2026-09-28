@@ -1,0 +1,13 @@
+{
+  "type": "thaumcraft:arcane_shapeless",
+  "research": "FIRSTSTEPS",
+  "vis": 10,
+  "ingredients": [
+    {
+      "item": "minecraft:activator_rail"
+    }
+  ],
+  "result": {
+    "id": "thaumcraft:activator_rail"
+  }
+}

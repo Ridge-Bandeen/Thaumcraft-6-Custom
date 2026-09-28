@@ -1,13 +1,18 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "building",
+  "category": "misc",
   "pattern": [
     "K  ",
     "KK ",
     "KKK"
   ],
   "key": {
-    "K": { "item": "thaumcraft:plank_greatwood" }
+    "K": {
+      "item": "thaumcraft:plank_greatwood"
+    }
   },
-  "result": { "id": "thaumcraft:greatwood_stairs", "count": 4 }
+  "result": {
+    "id": "thaumcraft:greatwood_stairs",
+    "count": 4
+  }
 }

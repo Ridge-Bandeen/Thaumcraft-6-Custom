@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "thaumcraft:baubles_stuff",
+  "pattern": [
+    " L ",
+    "LGL",
+    " I "
+  ],
+  "key": {
+    "L": {
+      "tag": "c:leathers"
+    },
+    "G": {
+      "tag": "c:gems/diamond"
+    },
+    "I": {
+      "tag": "c:ingots/gold"
+    }
+  },
+  "result": {
+    "id": "thaumcraft:girdle_fancy"
+  }
+}

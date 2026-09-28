@@ -1,0 +1,21 @@
+{
+  "type": "thaumcraft:infusion_enchantment",
+  "research": "INFUSIONENCHANTMENT",
+  "instability": 4,
+  "aspects": {
+    "potentia": 40,
+    "aer": 60
+  },
+  "components": [
+    {
+      "item": "minecraft:enchanted_book"
+    },
+    {
+      "item": "minecraft:redstone_block"
+    }
+  ],
+  "enchantment": "ARCING",
+  "display": {
+    "id": "minecraft:wooden_sword"
+  }
+}

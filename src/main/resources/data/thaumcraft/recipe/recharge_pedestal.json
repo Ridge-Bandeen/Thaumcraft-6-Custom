@@ -1,17 +1,31 @@
 {
   "type": "thaumcraft:arcane_shaped",
-  "research": "FIRSTSTEPS",
+  "research": "RECHARGEPEDESTAL",
   "vis": 100,
+  "crystals": {
+    "aer": 1,
+    "ordo": 1
+  },
   "pattern": [
     " R ",
     "DID",
     "SSS"
   ],
   "key": {
-    "R": { "item": "thaumcraft:vis_resonator" },
-    "D": { "item": "minecraft:diamond" },
-    "I": { "item": "minecraft:gold_ingot" },
-    "S": { "item": "minecraft:stone" }
+    "I": {
+      "tag": "c:ingots/gold"
+    },
+    "D": {
+      "tag": "c:gems/diamond"
+    },
+    "R": {
+      "item": "thaumcraft:vis_resonator"
+    },
+    "S": {
+      "tag": "c:stones"
+    }
   },
-  "result": { "id": "thaumcraft:recharge_pedestal" }
+  "result": {
+    "id": "thaumcraft:recharge_pedestal"
+  }
 }

@@ -1,17 +1,35 @@
 {
   "type": "thaumcraft:arcane_shaped",
-  "research": "FIRSTSTEPS",
+  "research": "UNLOCKAUROMANCY@2",
   "vis": 100,
+  "crystals": {
+    "aer": 1,
+    "terra": 1,
+    "aqua": 1,
+    "ignis": 1,
+    "ordo": 1,
+    "perditio": 1
+  },
   "pattern": [
     "III",
     "LRL",
     "LTL"
   ],
   "key": {
-    "I": { "item": "minecraft:iron_ingot" },
-    "L": { "item": "minecraft:leather" },
-    "R": { "item": "thaumcraft:vis_resonator" },
-    "T": { "item": "thaumcraft:thaumometer" }
+    "T": {
+      "item": "thaumcraft:thaumometer"
+    },
+    "R": {
+      "item": "thaumcraft:vis_resonator"
+    },
+    "L": {
+      "tag": "c:leathers"
+    },
+    "I": {
+      "tag": "c:ingots/iron"
+    }
   },
-  "result": { "id": "thaumcraft:caster_basic" }
+  "result": {
+    "id": "thaumcraft:caster_basic"
+  }
 }

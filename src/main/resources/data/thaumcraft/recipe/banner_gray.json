@@ -8,9 +8,17 @@
     "WB"
   ],
   "key": {
-    "W": { "item": "minecraft:gray_wool" },
-    "S": { "item": "minecraft:stick" },
-    "B": { "tag": "minecraft:wooden_slabs" }
+    "W": {
+      "item": "minecraft:gray_wool"
+    },
+    "S": {
+      "tag": "c:rods/wooden"
+    },
+    "B": {
+      "tag": "minecraft:wooden_slabs"
+    }
   },
-  "result": { "id": "thaumcraft:banner_gray" }
+  "result": {
+    "id": "thaumcraft:banner_gray"
+  }
 }

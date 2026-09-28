@@ -1,6 +1,6 @@
 {
   "type": "thaumcraft:arcane_shaped",
-  "research": "ESSENTIASMELTER",
+  "research": "ESSENTIASMELTER@2",
   "vis": 50,
   "crystals": {
     "ignis": 1
@@ -11,10 +11,20 @@
     "SSS"
   ],
   "key": {
-    "B": { "item": "minecraft:iron_ingot" },
-    "C": { "item": "thaumcraft:crucible" },
-    "S": { "item": "minecraft:cobblestone" },
-    "F": { "item": "minecraft:furnace" }
+    "C": {
+      "item": "thaumcraft:crucible"
+    },
+    "F": {
+      "item": "minecraft:furnace"
+    },
+    "S": {
+      "tag": "c:cobblestones"
+    },
+    "B": {
+      "item": "thaumcraft:plate_brass"
+    }
   },
-  "result": { "id": "thaumcraft:smelter" }
+  "result": {
+    "id": "thaumcraft:smelter"
+  }
 }

@@ -1,5 +1,6 @@
 {
   "type": "thaumcraft:infusion_crystal",
+  "research": "CRYSTALFARMER",
   "instability": 0,
   "aspects": {
     "aqua": 10,
@@ -8,8 +9,14 @@
   },
   "centralAspect": "aqua",
   "components": [
-    { "item": "minecraft:wheat_seeds" },
-    { "item": "thaumcraft:salis_mundus" }
+    {
+      "item": "minecraft:wheat_seeds"
+    },
+    {
+      "item": "thaumcraft:salis_mundus"
+    }
   ],
-  "result": { "id": "thaumcraft:crystal_aqua" }
+  "result": {
+    "id": "thaumcraft:crystal_aqua"
+  }
 }

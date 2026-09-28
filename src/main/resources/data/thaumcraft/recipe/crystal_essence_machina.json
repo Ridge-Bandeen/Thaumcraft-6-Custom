@@ -1,15 +1,18 @@
 {
-  "type": "thaumcraft:arcane_shapeless",
-  "research": "FIRSTSTEPS",
-  "vis": 5,
-  "ingredients": [
-    { "item": "minecraft:quartz" },
-    { "item": "minecraft:piston" }
-  ],
+  "type": "thaumcraft:crucible",
+  "research": "BASEALCHEMY",
+  "catalyst": {
+    "item": "thaumcraft:nugget_quartz"
+  },
+  "aspects": {
+    "machina": 2
+  },
   "result": {
     "id": "thaumcraft:crystal_essence",
     "components": {
-      "thaumcraft:aspects": { "machina": 1 }
+      "thaumcraft:aspects": {
+        "machina": 1
+      }
     }
   }
 }

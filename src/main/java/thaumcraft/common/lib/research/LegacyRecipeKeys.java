@@ -58,7 +58,7 @@ final class LegacyRecipeKeys {
 		put("voidingot", "ingot_void");
 		put("hedge_tallow", "tallow");
 		put("hedge_leather", "hedge_leather");
-		put("focus_1", "focus_1_crucible");
+		put("focus_1", "focus_blank_1");
 		put("metal_purification_iron", "cluster_iron");
 		put("metal_purification_gold", "cluster_gold");
 		put("metal_purification_cinnabar", "cluster_cinnabar");
@@ -184,9 +184,9 @@ final class LegacyRecipeKeys {
 		put("focus_3", "infusion_focus_blank_3");
 		put("JarBrain", "jar_brain");
 		put("VisAmulet", "infusion_vis_amulet");
-		put("RunicArmorFake0", "runic_armor_fake_0");
-		put("RunicArmorFake1", "runic_armor_fake_1");
-		put("RunicArmorFake2", "runic_armor_fake_2");
+		put("RunicArmorFake0", "runic_armor");
+		put("RunicArmorFake1", "runic_armor");
+		put("RunicArmorFake2", "runic_armor");
 		put("Mirror", "mirror");
 		put("MirrorHand", "hand_mirror");
 		put("MirrorEssentia", "mirror_essentia");
@@ -230,15 +230,15 @@ final class LegacyRecipeKeys {
 		put("VoidseerPearl", "infusion_voidseer_pearl");
 
 		// crafting, by name and by group
-		put("thaumium_stuff", "thaumium_ingots_to_block", "ingot_thaumium_from_block", "plate_thaumium", "thaumium_helm", "thaumium_chest",
+		put("thaumium_stuff", "metal_block_thaumium", "ingot_thaumium_from_block", "plate_thaumium", "thaumium_helm", "thaumium_chest",
 				"thaumium_legs", "thaumium_boots", "thaumium_shovel", "thaumium_pick", "thaumium_axe", "thaumium_hoe", "thaumium_sword");
-		put("void_stuff", "void_ingots_to_block", "ingot_void_from_block", "plate_void", "void_helm", "void_chest", "void_legs", "void_boots",
+		put("void_stuff", "metal_block_void", "ingot_void_from_block", "plate_void", "void_helm", "void_chest", "void_legs", "void_boots",
 				"void_shovel", "void_pick", "void_axe", "void_hoe", "void_sword");
-		put("brass_stuff", "brass_ingots_to_block", "ingot_brass_from_block", "plate_brass");
+		put("brass_stuff", "metal_block_brass", "ingot_brass_from_block", "plate_brass");
 		put("baubles_stuff", "amulet_mundane", "ring_mundane", "girdle_mundane", "amulet_fancy", "ring_fancy", "girdle_fancy");
 		put("ironplate", "plate_iron");
-		put("triplemeattreatfake", "triple_meat_treat");
-		put("salismundusfake", "salis_mundus");
+		put("triplemeattreatfake", "triple_meat_treat_display");
+		put("salismundusfake", "salis_mundus_display");
 		put("JarLabel", "label");
 		put("StoneArcane", "stone_arcane");
 		put("BrickArcane", "stone_arcane_brick");

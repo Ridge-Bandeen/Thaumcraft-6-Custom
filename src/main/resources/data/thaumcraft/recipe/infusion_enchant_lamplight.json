@@ -1,14 +1,18 @@
 {
   "type": "thaumcraft:infusion_enchantment",
+  "research": "INFUSIONENCHANTMENT",
   "instability": 4,
   "aspects": {
-    "lux": 20,
-    "terra": 10
+    "lux": 80,
+    "aer": 20
   },
   "components": [
-    { "item": "thaumcraft:crystal_essence" },
-    { "item": "minecraft:glowstone_dust" },
-    { "item": "minecraft:torch" }
+    {
+      "item": "minecraft:enchanted_book"
+    },
+    {
+      "tag": "thaumcraft:nitor"
+    }
   ],
   "enchantment": "LAMPLIGHT"
 }

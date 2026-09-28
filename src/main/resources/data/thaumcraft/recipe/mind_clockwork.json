@@ -12,10 +12,20 @@
     "BCB"
   ],
   "key": {
-    "G": { "item": "thaumcraft:mechanism_simple" },
-    "B": { "item": "thaumcraft:plate_brass" },
-    "P": { "item": "minecraft:glass_pane" },
-    "C": { "item": "minecraft:comparator" }
+    "G": {
+      "item": "thaumcraft:mechanism_simple"
+    },
+    "B": {
+      "item": "thaumcraft:plate_brass"
+    },
+    "P": {
+      "tag": "c:glass_panes"
+    },
+    "C": {
+      "item": "minecraft:comparator"
+    }
   },
-  "result": { "id": "thaumcraft:mind_clockwork" }
+  "result": {
+    "id": "thaumcraft:mind_clockwork"
+  }
 }

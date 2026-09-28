@@ -1,10 +1,20 @@
 {
   "type": "thaumcraft:crucible",
-  "research": "FIRSTSTEPS",
-  "catalyst": { "item": "thaumcraft:phial" },
+  "research": "BOTTLETAINT",
+  "catalyst": {
+    "type": "neoforge:components",
+    "items": "thaumcraft:phial",
+    "components": {
+      "thaumcraft:aspects": {
+        "vitium": 10
+      }
+    }
+  },
   "aspects": {
     "vitium": 30,
     "aqua": 30
   },
-  "result": { "id": "thaumcraft:bottle_taint" }
+  "result": {
+    "id": "thaumcraft:bottle_taint"
+  }
 }

@@ -1,6 +1,6 @@
 {
   "type": "thaumcraft:arcane_shaped",
-  "research": "FIRSTSTEPS",
+  "research": "FLUXCLEANUP",
   "vis": 100,
   "crystals": {
     "terra": 3,
@@ -12,9 +12,17 @@
     "QTQ"
   ],
   "key": {
-    "T": { "item": "thaumcraft:plate_thaumium" },
-    "F": { "item": "thaumcraft:filter" },
-    "Q": { "item": "minecraft:quartz" }
+    "T": {
+      "item": "thaumcraft:plate_thaumium"
+    },
+    "F": {
+      "item": "thaumcraft:filter"
+    },
+    "Q": {
+      "tag": "c:gems/quartz"
+    }
   },
-  "result": { "id": "thaumcraft:condenser_lattice" }
+  "result": {
+    "id": "thaumcraft:condenser_lattice"
+  }
 }

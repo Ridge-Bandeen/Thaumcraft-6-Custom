@@ -1,15 +1,25 @@
 {
   "type": "thaumcraft:arcane_shaped",
-  "research": "FIRSTSTEPS",
+  "research": "ARCANELAMP",
   "vis": 50,
+  "crystals": {
+    "aer": 1,
+    "ignis": 1
+  },
   "pattern": [
     " I ",
     "IAI",
     " I "
   ],
   "key": {
-    "I": { "item": "minecraft:iron_ingot" },
-    "A": { "item": "thaumcraft:amber_block" }
+    "A": {
+      "item": "thaumcraft:amber_block"
+    },
+    "I": {
+      "item": "thaumcraft:plate_iron"
+    }
   },
-  "result": { "id": "thaumcraft:lamp_arcane" }
+  "result": {
+    "id": "thaumcraft:lamp_arcane"
+  }
 }

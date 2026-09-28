@@ -382,6 +382,11 @@ final class ThaumcraftAspectTable {
 		item(ItemsTC.clusterGold.get(), new AspectList().add(Aspect.ORDER, 5).add(Aspect.METAL, 15).add(Aspect.EARTH, 5).add(Aspect.DESIRE, 10));
 		item(ItemsTC.clusterCinnabar.get(), new AspectList().add(Aspect.ORDER, 5).add(Aspect.METAL, 15).add(Aspect.EARTH, 5).add(Aspect.ALCHEMY, 5).add(Aspect.DEATH, 5));
 		item(ItemsTC.clusterQuartz.get(), new AspectList().add(Aspect.ORDER, 5).add(Aspect.CRYSTAL, 10));
+		item(ItemsTC.clusterCopper.get(), new AspectList().add(Aspect.ORDER, 5).add(Aspect.METAL, 15).add(Aspect.EARTH, 5).add(Aspect.EXCHANGE, 10));
+		item(ItemsTC.clusterTin.get(), new AspectList().add(Aspect.ORDER, 5).add(Aspect.METAL, 15).add(Aspect.EARTH, 5).add(Aspect.CRYSTAL, 10));
+		item(ItemsTC.clusterSilver.get(), new AspectList().add(Aspect.ORDER, 5).add(Aspect.METAL, 15).add(Aspect.EARTH, 5).add(Aspect.DESIRE, 10));
+		// the original registered ORDER twice for lead (5 then 10); AspectList#add sums them
+		item(ItemsTC.clusterLead.get(), new AspectList().add(Aspect.ORDER, 5).add(Aspect.METAL, 15).add(Aspect.EARTH, 5).add(Aspect.ORDER, 10));
 		item(ItemsTC.oreCinnabar.get(), new AspectList().add(Aspect.EARTH, 5).add(Aspect.METAL, 10).add(Aspect.ALCHEMY, 5).add(Aspect.DEATH, 5));
 		item(ItemsTC.oreAmber.get(), new AspectList().add(Aspect.EARTH, 5).add(Aspect.TRAP, 10).add(Aspect.CRYSTAL, 10));
 		item(ItemsTC.quicksilver.get(), new AspectList().add(Aspect.METAL, 10).add(Aspect.DEATH, 5).add(Aspect.ALCHEMY, 5));

@@ -1,0 +1,21 @@
+{
+  "type": "thaumcraft:display_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "tag": "thaumcraft:meat_chunks"
+    },
+    {
+      "tag": "thaumcraft:meat_chunks"
+    },
+    {
+      "tag": "thaumcraft:meat_chunks"
+    },
+    {
+      "item": "minecraft:sugar"
+    }
+  ],
+  "result": {
+    "id": "thaumcraft:triple_meat_treat"
+  }
+}

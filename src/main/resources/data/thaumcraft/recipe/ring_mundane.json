@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "thaumcraft:baubles_stuff",
+  "pattern": [
+    "NNN",
+    "N N",
+    "NNN"
+  ],
+  "key": {
+    "N": {
+      "item": "thaumcraft:nugget_brass"
+    }
+  },
+  "result": {
+    "id": "thaumcraft:ring_mundane"
+  }
+}

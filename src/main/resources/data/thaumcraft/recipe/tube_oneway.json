@@ -1,12 +1,16 @@
 {
   "type": "thaumcraft:arcane_shapeless",
-  "research": "FIRSTSTEPS",
+  "research": "TUBES",
   "vis": 10,
   "crystals": {
     "aqua": 1
   },
   "ingredients": [
-    { "item": "thaumcraft:tube" }
+    {
+      "item": "thaumcraft:tube"
+    }
   ],
-  "result": { "id": "thaumcraft:tube_oneway" }
+  "result": {
+    "id": "thaumcraft:tube_oneway"
+  }
 }

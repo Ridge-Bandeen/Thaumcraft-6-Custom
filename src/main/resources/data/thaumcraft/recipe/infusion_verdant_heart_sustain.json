@@ -1,17 +1,42 @@
 {
   "type": "thaumcraft:infusion_potion",
+  "research": "VERDANTCHARMS",
   "instability": 5,
   "aspects": {
     "desiderium": 80,
     "aer": 80
   },
-  "central": { "item": "thaumcraft:verdant_charm" },
+  "central": {
+    "item": "thaumcraft:verdant_charm"
+  },
   "components": [
-    { "item": "minecraft:golden_carrot" },
-    { "item": "thaumcraft:crystal_essence" },
-    { "item": "minecraft:potion" },
-    { "item": "thaumcraft:crystal_essence" }
+    {
+      "item": "thaumcraft:triple_meat_treat"
+    },
+    {
+      "type": "neoforge:components",
+      "items": "thaumcraft:crystal_essence",
+      "components": {
+        "thaumcraft:aspects": {
+          "desiderium": 1
+        }
+      }
+    },
+    {
+      "item": "minecraft:potion"
+    },
+    {
+      "type": "neoforge:components",
+      "items": "thaumcraft:crystal_essence",
+      "components": {
+        "thaumcraft:aspects": {
+          "aer": 1
+        }
+      }
+    }
   ],
-  "result": { "id": "thaumcraft:verdant_charm_sustain" },
+  "result": {
+    "id": "thaumcraft:verdant_charm_sustain"
+  },
   "potion": "minecraft:strong_regeneration"
 }

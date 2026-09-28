@@ -7,8 +7,15 @@
     " G "
   ],
   "key": {
-    "C": { "item": "minecraft:clay_ball" },
-    "G": { "item": "minecraft:glass" }
+    "G": {
+      "tag": "c:glass_blocks"
+    },
+    "C": {
+      "item": "minecraft:clay_ball"
+    }
   },
-  "result": { "id": "thaumcraft:phial", "count": 8 }
+  "result": {
+    "id": "thaumcraft:phial",
+    "count": 8
+  }
 }

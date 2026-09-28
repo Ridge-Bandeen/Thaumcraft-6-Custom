@@ -77,6 +77,15 @@ public final class ThaumcraftRecipeTypes {
 			RECIPE_SERIALIZERS.register("triple_meat_treat",
 					() -> new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>(thaumcraft.common.lib.crafting.RecipeTripleMeatTreat::new));
 
+	/** Salis Mundus - see {@link thaumcraft.common.lib.crafting.RecipeMagicDust}. */
+	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.RecipeMagicDust>> MAGIC_DUST_SERIALIZER =
+			RECIPE_SERIALIZERS.register("magic_dust",
+					() -> new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>(thaumcraft.common.lib.crafting.RecipeMagicDust::new));
+
+	/** Book-only shapeless recipes - see {@link thaumcraft.common.lib.crafting.DisplayShapelessRecipe}. */
+	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.DisplayShapelessRecipe>> DISPLAY_SHAPELESS_SERIALIZER =
+			RECIPE_SERIALIZERS.register("display_shapeless", thaumcraft.common.lib.crafting.DisplayShapelessRecipe.Serializer::new);
+
 	/** Same real {@link net.minecraft.world.item.crafting.CustomRecipe} shape as {@link #TRIPLE_MEAT_TREAT_SERIALIZER}
 	 * - see {@link thaumcraft.common.lib.crafting.LabelDyeRecipe}'s own doc comment. */
 	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.LabelDyeRecipe>> LABEL_DYE_SERIALIZER =

@@ -1,6 +1,6 @@
 {
   "type": "thaumcraft:arcane_shaped",
-  "research": "FIRSTSTEPS",
+  "research": "WORKBENCHCHARGER",
   "vis": 200,
   "crystals": {
     "aer": 2,
@@ -12,9 +12,17 @@
     "I I"
   ],
   "key": {
-    "R": { "item": "thaumcraft:vis_resonator" },
-    "W": { "item": "thaumcraft:plank_greatwood" },
-    "I": { "item": "minecraft:iron_ingot" }
+    "I": {
+      "tag": "c:ingots/iron"
+    },
+    "R": {
+      "item": "thaumcraft:vis_resonator"
+    },
+    "W": {
+      "item": "thaumcraft:plank_greatwood"
+    }
   },
-  "result": { "id": "thaumcraft:arcane_workbench_charger" }
+  "result": {
+    "id": "thaumcraft:arcane_workbench_charger"
+  }
 }

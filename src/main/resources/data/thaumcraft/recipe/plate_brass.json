@@ -1,11 +1,17 @@
 {
   "type": "minecraft:crafting_shaped",
   "category": "misc",
+  "group": "thaumcraft:brass_stuff",
   "pattern": [
-    "###"
+    "BBB"
   ],
   "key": {
-    "#": { "item": "thaumcraft:ingot_brass" }
+    "B": {
+      "item": "thaumcraft:ingot_brass"
+    }
   },
-  "result": { "id": "thaumcraft:plate_brass", "count": 3 }
+  "result": {
+    "id": "thaumcraft:plate_brass",
+    "count": 3
+  }
 }

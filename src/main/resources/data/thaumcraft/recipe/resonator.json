@@ -8,9 +8,17 @@
     " S "
   ],
   "key": {
-    "I": { "item": "minecraft:iron_ingot" },
-    "N": { "item": "minecraft:quartz" },
-    "S": { "item": "minecraft:stick" }
+    "I": {
+      "item": "thaumcraft:plate_iron"
+    },
+    "N": {
+      "item": "minecraft:quartz"
+    },
+    "S": {
+      "tag": "c:rods/wooden"
+    }
   },
-  "result": { "id": "thaumcraft:resonator" }
+  "result": {
+    "id": "thaumcraft:resonator"
+  }
 }

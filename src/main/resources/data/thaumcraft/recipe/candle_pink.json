@@ -1,9 +1,16 @@
 {
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
+  "group": "thaumcraft:tallowcandles",
   "ingredients": [
-    { "item": "minecraft:pink_dye" },
-    { "tag": "thaumcraft:candles" }
+    {
+      "tag": "c:dyes/pink"
+    },
+    {
+      "tag": "thaumcraft:candles"
+    }
   ],
-  "result": { "id": "thaumcraft:candle_pink" }
+  "result": {
+    "id": "thaumcraft:candle_pink"
+  }
 }

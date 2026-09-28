@@ -11,10 +11,20 @@
     "PGP"
   ],
   "key": {
-    "R": { "item": "minecraft:glass_pane" },
-    "T": { "item": "minecraft:blaze_powder" },
-    "P": { "item": "thaumcraft:plate_brass" },
-    "G": { "item": "thaumcraft:mechanism_simple" }
+    "R": {
+      "tag": "c:glass_panes"
+    },
+    "T": {
+      "item": "minecraft:blaze_powder"
+    },
+    "P": {
+      "item": "thaumcraft:plate_brass"
+    },
+    "G": {
+      "item": "thaumcraft:mechanism_simple"
+    }
   },
-  "result": { "id": "thaumcraft:module_aggression" }
+  "result": {
+    "id": "thaumcraft:module_aggression"
+  }
 }

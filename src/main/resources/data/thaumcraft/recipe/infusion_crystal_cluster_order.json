@@ -1,5 +1,6 @@
 {
   "type": "thaumcraft:infusion_crystal",
+  "research": "CRYSTALFARMER",
   "instability": 0,
   "aspects": {
     "ordo": 10,
@@ -8,8 +9,14 @@
   },
   "centralAspect": "ordo",
   "components": [
-    { "item": "minecraft:wheat_seeds" },
-    { "item": "thaumcraft:salis_mundus" }
+    {
+      "item": "minecraft:wheat_seeds"
+    },
+    {
+      "item": "thaumcraft:salis_mundus"
+    }
   ],
-  "result": { "id": "thaumcraft:crystal_ordo" }
+  "result": {
+    "id": "thaumcraft:crystal_ordo"
+  }
 }

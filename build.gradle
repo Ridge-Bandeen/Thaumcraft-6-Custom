@@ -729,6 +729,8 @@ sourceSets {
             include 'thaumcraft/client/gui/FocusRadialOverlay.java'
             include 'thaumcraft/common/lib/crafting/RunicArmorRecipe.java'
             include 'thaumcraft/common/lib/crafting/RecipeTripleMeatTreat.java'
+            include 'thaumcraft/common/lib/crafting/RecipeMagicDust.java'
+            include 'thaumcraft/common/lib/crafting/DisplayShapelessRecipe.java'
             include 'thaumcraft/common/lib/crafting/LabelDyeRecipe.java'
             include 'thaumcraft/common/lib/crafting/LabelClearRecipe.java'
             include 'thaumcraft/common/lib/events/RunicShieldEvents.java'

@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "thaumcraft:baubles_stuff",
+  "pattern": [
+    " S ",
+    "S S",
+    " I "
+  ],
+  "key": {
+    "S": {
+      "tag": "c:strings"
+    },
+    "I": {
+      "item": "thaumcraft:ingot_brass"
+    }
+  },
+  "result": {
+    "id": "thaumcraft:amulet_mundane"
+  }
+}

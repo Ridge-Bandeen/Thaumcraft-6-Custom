@@ -1,6 +1,6 @@
 {
   "type": "thaumcraft:arcane_shaped",
-  "research": "FIRSTSTEPS",
+  "research": "VISGENERATOR",
   "vis": 25,
   "crystals": {
     "ignis": 1,
@@ -12,11 +12,23 @@
     "WRW"
   ],
   "key": {
-    "W": { "tag": "minecraft:planks" },
-    "S": { "item": "minecraft:redstone" },
-    "E": { "item": "minecraft:iron_nugget" },
-    "P": { "item": "minecraft:piston" },
-    "R": { "item": "thaumcraft:vis_resonator" }
+    "R": {
+      "item": "thaumcraft:vis_resonator"
+    },
+    "E": {
+      "item": "thaumcraft:nugget_rareearth"
+    },
+    "S": {
+      "tag": "c:dusts/redstone"
+    },
+    "P": {
+      "item": "minecraft:piston"
+    },
+    "W": {
+      "tag": "minecraft:planks"
+    }
   },
-  "result": { "id": "thaumcraft:vis_generator" }
+  "result": {
+    "id": "thaumcraft:vis_generator"
+  }
 }

@@ -1,14 +1,18 @@
 {
   "type": "thaumcraft:infusion_enchantment",
+  "research": "INFUSIONENCHANTMENT",
   "instability": 4,
   "aspects": {
-    "perditio": 30,
-    "instrumentum": 20
+    "aversio": 200,
+    "perditio": 250
   },
   "components": [
-    { "item": "thaumcraft:crystal_essence" },
-    { "item": "thaumcraft:crystal_essence" },
-    { "item": "minecraft:tnt" }
+    {
+      "item": "minecraft:enchanted_book"
+    },
+    {
+      "item": "minecraft:tnt"
+    }
   ],
   "enchantment": "DESTRUCTIVE"
 }

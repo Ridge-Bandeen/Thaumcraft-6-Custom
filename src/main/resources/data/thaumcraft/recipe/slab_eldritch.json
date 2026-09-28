@@ -1,11 +1,16 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "building",
+  "category": "misc",
   "pattern": [
     "KKK"
   ],
   "key": {
-    "K": { "item": "thaumcraft:stone_eldritch_tile" }
+    "K": {
+      "item": "thaumcraft:stone_eldritch_tile"
+    }
   },
-  "result": { "id": "thaumcraft:slab_eldritch", "count": 6 }
+  "result": {
+    "id": "thaumcraft:slab_eldritch",
+    "count": 6
+  }
 }

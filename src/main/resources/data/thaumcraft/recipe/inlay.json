@@ -6,8 +6,15 @@
     "aqua": 1
   },
   "ingredients": [
-    { "item": "minecraft:redstone" },
-    { "item": "minecraft:gold_ingot" }
+    {
+      "tag": "c:dusts/redstone"
+    },
+    {
+      "tag": "c:ingots/gold"
+    }
   ],
-  "result": { "id": "thaumcraft:inlay", "count": 2 }
+  "result": {
+    "id": "thaumcraft:inlay",
+    "count": 2
+  }
 }

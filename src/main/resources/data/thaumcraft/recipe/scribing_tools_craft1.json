@@ -3,9 +3,17 @@
   "category": "misc",
   "group": "thaumcraft:inkwell",
   "ingredients": [
-    { "item": "thaumcraft:phial" },
-    { "item": "minecraft:feather" },
-    [ { "item": "minecraft:ink_sac" }, { "item": "minecraft:black_dye" } ]
+    {
+      "item": "thaumcraft:phial"
+    },
+    {
+      "item": "minecraft:feather"
+    },
+    {
+      "tag": "c:dyes/black"
+    }
   ],
-  "result": { "id": "thaumcraft:scribing_tools" }
+  "result": {
+    "id": "thaumcraft:scribing_tools"
+  }
 }

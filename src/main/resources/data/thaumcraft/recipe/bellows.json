@@ -1,6 +1,6 @@
 {
   "type": "thaumcraft:arcane_shaped",
-  "research": "FIRSTSTEPS",
+  "research": "BELLOWS",
   "vis": 25,
   "crystals": {
     "aer": 1
@@ -11,9 +11,17 @@
     "WW "
   ],
   "key": {
-    "W": { "tag": "minecraft:planks" },
-    "L": { "item": "minecraft:leather" },
-    "I": { "item": "minecraft:iron_ingot" }
+    "W": {
+      "tag": "minecraft:planks"
+    },
+    "I": {
+      "tag": "c:ingots/iron"
+    },
+    "L": {
+      "tag": "c:leathers"
+    }
   },
-  "result": { "id": "thaumcraft:bellows" }
+  "result": {
+    "id": "thaumcraft:bellows"
+  }
 }

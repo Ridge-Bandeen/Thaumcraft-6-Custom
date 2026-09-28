@@ -1,9 +1,16 @@
 {
   "type": "minecraft:crafting_shapeless",
   "category": "misc",
+  "group": "thaumcraft:tallowcandles",
   "ingredients": [
-    { "item": "minecraft:lime_dye" },
-    { "tag": "thaumcraft:candles" }
+    {
+      "tag": "c:dyes/lime"
+    },
+    {
+      "tag": "thaumcraft:candles"
+    }
   ],
-  "result": { "id": "thaumcraft:candle_lime" }
+  "result": {
+    "id": "thaumcraft:candle_lime"
+  }
 }

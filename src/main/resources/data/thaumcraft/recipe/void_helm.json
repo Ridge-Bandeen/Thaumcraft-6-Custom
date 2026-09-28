@@ -1,12 +1,17 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "equipment",
+  "category": "misc",
+  "group": "thaumcraft:void_stuff",
   "pattern": [
     "III",
     "I I"
   ],
   "key": {
-    "I": { "item": "thaumcraft:ingot_void" }
+    "I": {
+      "item": "thaumcraft:ingot_void"
+    }
   },
-  "result": { "id": "thaumcraft:void_helm", "count": 1 }
+  "result": {
+    "id": "thaumcraft:void_helm"
+  }
 }

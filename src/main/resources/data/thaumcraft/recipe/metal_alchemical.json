@@ -1,6 +1,6 @@
 {
   "type": "thaumcraft:arcane_shaped",
-  "research": "FIRSTSTEPS",
+  "research": "TUBES",
   "vis": 75,
   "crystals": {
     "aqua": 1,
@@ -13,10 +13,21 @@
     "IVI"
   ],
   "key": {
-    "I": { "item": "thaumcraft:plate_iron" },
-    "V": { "item": "thaumcraft:tube_valve" },
-    "T": { "item": "thaumcraft:tube" },
-    "W": { "item": "thaumcraft:plank_greatwood" }
+    "W": {
+      "item": "thaumcraft:plank_greatwood"
+    },
+    "V": {
+      "item": "thaumcraft:tube_valve"
+    },
+    "T": {
+      "item": "thaumcraft:tube"
+    },
+    "I": {
+      "item": "thaumcraft:plate_iron"
+    }
   },
-  "result": { "id": "thaumcraft:metal_alchemical", "count": 2 }
+  "result": {
+    "id": "thaumcraft:metal_alchemical",
+    "count": 2
+  }
 }

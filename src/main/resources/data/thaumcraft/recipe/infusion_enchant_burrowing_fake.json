@@ -1,0 +1,21 @@
+{
+  "type": "thaumcraft:infusion_enchantment",
+  "research": "INFUSIONENCHANTMENT",
+  "instability": 4,
+  "aspects": {
+    "sensus": 80,
+    "terra": 150
+  },
+  "components": [
+    {
+      "item": "minecraft:enchanted_book"
+    },
+    {
+      "item": "minecraft:rabbit_foot"
+    }
+  ],
+  "enchantment": "BURROWING",
+  "display": {
+    "id": "minecraft:wooden_pickaxe"
+  }
+}

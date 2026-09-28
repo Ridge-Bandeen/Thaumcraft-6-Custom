@@ -1,14 +1,21 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "equipment",
+  "category": "misc",
+  "group": "thaumcraft:void_stuff",
   "pattern": [
     "III",
     " S ",
     " S "
   ],
   "key": {
-    "I": { "item": "thaumcraft:ingot_void" },
-    "S": { "item": "minecraft:stick" }
+    "I": {
+      "item": "thaumcraft:ingot_void"
+    },
+    "S": {
+      "tag": "c:rods/wooden"
+    }
   },
-  "result": { "id": "thaumcraft:void_pick", "count": 1 }
+  "result": {
+    "id": "thaumcraft:void_pick"
+  }
 }

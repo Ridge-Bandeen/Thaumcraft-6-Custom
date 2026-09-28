@@ -6,14 +6,42 @@
     "volatus": 100,
     "motus": 100
   },
-  "central": { "item": "minecraft:leather_boots" },
+  "central": {
+    "item": "minecraft:leather_boots"
+  },
   "components": [
-    { "item": "thaumcraft:crystal_essence" },
-    { "item": "thaumcraft:crystal_essence" },
-    { "item": "thaumcraft:fabric" },
-    { "item": "thaumcraft:fabric" },
-    { "item": "minecraft:feather" },
-    { "item": "minecraft:cod" }
+    {
+      "type": "neoforge:components",
+      "items": "thaumcraft:crystal_essence",
+      "components": {
+        "thaumcraft:aspects": {
+          "aer": 1
+        }
+      }
+    },
+    {
+      "type": "neoforge:components",
+      "items": "thaumcraft:crystal_essence",
+      "components": {
+        "thaumcraft:aspects": {
+          "aer": 1
+        }
+      }
+    },
+    {
+      "item": "thaumcraft:fabric"
+    },
+    {
+      "item": "thaumcraft:fabric"
+    },
+    {
+      "item": "minecraft:feather"
+    },
+    {
+      "tag": "minecraft:fishes"
+    }
   ],
-  "result": { "id": "thaumcraft:traveller_boots" }
+  "result": {
+    "id": "thaumcraft:traveller_boots"
+  }
 }

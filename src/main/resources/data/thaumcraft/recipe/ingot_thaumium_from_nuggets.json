@@ -7,7 +7,11 @@
     "###"
   ],
   "key": {
-    "#": { "item": "thaumcraft:nugget_thaumium" }
+    "#": {
+      "item": "thaumcraft:nugget_thaumium"
+    }
   },
-  "result": { "id": "thaumcraft:ingot_thaumium", "count": 1 }
+  "result": {
+    "id": "thaumcraft:ingot_thaumium"
+  }
 }

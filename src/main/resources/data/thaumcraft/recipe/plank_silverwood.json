@@ -1,8 +1,16 @@
 {
-  "type": "minecraft:crafting_shapeless",
-  "category": "building",
-  "ingredients": [
-    { "item": "thaumcraft:log_silverwood" }
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "W"
   ],
-  "result": { "id": "thaumcraft:plank_silverwood", "count": 4 }
+  "key": {
+    "W": {
+      "item": "thaumcraft:log_silverwood"
+    }
+  },
+  "result": {
+    "id": "thaumcraft:plank_silverwood",
+    "count": 4
+  }
 }

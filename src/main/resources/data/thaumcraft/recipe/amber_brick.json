@@ -1,12 +1,17 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "building",
+  "category": "misc",
   "pattern": [
     "##",
     "##"
   ],
   "key": {
-    "#": { "item": "thaumcraft:amber_block" }
+    "#": {
+      "item": "thaumcraft:amber_block"
+    }
   },
-  "result": { "id": "thaumcraft:amber_brick", "count": 4 }
+  "result": {
+    "id": "thaumcraft:amber_brick",
+    "count": 4
+  }
 }

@@ -1,5 +1,6 @@
 {
   "type": "thaumcraft:infusion_crystal",
+  "research": "CRYSTALFARMER",
   "instability": 4,
   "aspects": {
     "vitium": 10,
@@ -8,8 +9,14 @@
   },
   "centralAspect": "vitium",
   "components": [
-    { "item": "minecraft:wheat_seeds" },
-    { "item": "thaumcraft:salis_mundus" }
+    {
+      "item": "minecraft:wheat_seeds"
+    },
+    {
+      "item": "thaumcraft:salis_mundus"
+    }
   ],
-  "result": { "id": "thaumcraft:crystal_vitium" }
+  "result": {
+    "id": "thaumcraft:crystal_vitium"
+  }
 }

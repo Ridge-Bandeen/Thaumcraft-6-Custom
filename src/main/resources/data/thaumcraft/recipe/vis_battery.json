@@ -1,6 +1,6 @@
 {
   "type": "thaumcraft:arcane_shaped",
-  "research": "FIRSTSTEPS",
+  "research": "VISBATTERY",
   "vis": 50,
   "crystals": {
     "aer": 2,
@@ -16,8 +16,14 @@
     "SSS"
   ],
   "key": {
-    "S": { "item": "thaumcraft:stone_arcane_slab" },
-    "R": { "item": "thaumcraft:vis_resonator" }
+    "R": {
+      "item": "thaumcraft:vis_resonator"
+    },
+    "S": {
+      "item": "thaumcraft:stone_arcane_slab"
+    }
   },
-  "result": { "id": "thaumcraft:vis_battery" }
+  "result": {
+    "id": "thaumcraft:vis_battery"
+  }
 }

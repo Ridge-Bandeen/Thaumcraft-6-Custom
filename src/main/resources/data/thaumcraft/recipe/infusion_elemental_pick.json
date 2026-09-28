@@ -1,17 +1,42 @@
 {
   "type": "thaumcraft:infusion",
+  "research": "ELEMENTALTOOLS",
   "instability": 1,
   "aspects": {
     "ignis": 30,
     "metallum": 30,
     "sensus": 30
   },
-  "central": { "item": "thaumcraft:thaumium_pick" },
+  "central": {
+    "item": "thaumcraft:thaumium_pick"
+  },
   "components": [
-    { "item": "thaumcraft:crystal_essence" },
-    { "item": "thaumcraft:crystal_essence" },
-    { "item": "thaumcraft:nugget_thaumium" },
-    { "item": "thaumcraft:plank_greatwood" }
+    {
+      "type": "neoforge:components",
+      "items": "thaumcraft:crystal_essence",
+      "components": {
+        "thaumcraft:aspects": {
+          "ignis": 1
+        }
+      }
+    },
+    {
+      "type": "neoforge:components",
+      "items": "thaumcraft:crystal_essence",
+      "components": {
+        "thaumcraft:aspects": {
+          "ignis": 1
+        }
+      }
+    },
+    {
+      "item": "thaumcraft:nugget_rareearth"
+    },
+    {
+      "item": "thaumcraft:plank_greatwood"
+    }
   ],
-  "result": { "id": "thaumcraft:elemental_pick" }
+  "result": {
+    "id": "thaumcraft:elemental_pick"
+  }
 }

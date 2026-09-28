@@ -1,13 +1,18 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "equipment",
+  "category": "misc",
+  "group": "thaumcraft:void_stuff",
   "pattern": [
     "I I",
     "III",
     "III"
   ],
   "key": {
-    "I": { "item": "thaumcraft:ingot_void" }
+    "I": {
+      "item": "thaumcraft:ingot_void"
+    }
   },
-  "result": { "id": "thaumcraft:void_chest", "count": 1 }
+  "result": {
+    "id": "thaumcraft:void_chest"
+  }
 }

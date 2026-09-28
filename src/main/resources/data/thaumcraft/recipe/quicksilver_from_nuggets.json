@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "###",
+    "###",
+    "###"
+  ],
+  "key": {
+    "#": {
+      "item": "thaumcraft:nugget_quicksilver"
+    }
+  },
+  "result": {
+    "id": "thaumcraft:quicksilver"
+  }
+}

@@ -1,13 +1,19 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "building",
+  "category": "misc",
   "pattern": [
     "SSS",
     "W W"
   ],
   "key": {
-    "S": { "tag": "minecraft:wooden_slabs" },
-    "W": { "tag": "minecraft:planks" }
+    "S": {
+      "tag": "minecraft:wooden_slabs"
+    },
+    "W": {
+      "tag": "minecraft:planks"
+    }
   },
-  "result": { "id": "thaumcraft:table_wood" }
+  "result": {
+    "id": "thaumcraft:table_wood"
+  }
 }

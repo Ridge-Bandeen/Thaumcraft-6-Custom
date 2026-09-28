@@ -1,13 +1,18 @@
 {
   "type": "minecraft:crafting_shaped",
-  "category": "building",
+  "category": "misc",
+  "group": "thaumcraft:brass_stuff",
   "pattern": [
     "###",
     "###",
     "###"
   ],
   "key": {
-    "#": { "item": "thaumcraft:ingot_brass" }
+    "#": {
+      "item": "thaumcraft:ingot_brass"
+    }
   },
-  "result": { "id": "thaumcraft:metal_block_brass", "count": 1 }
+  "result": {
+    "id": "thaumcraft:metal_block_brass"
+  }
 }
