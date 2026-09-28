@@ -817,7 +817,7 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 
 	/** Real icon cycling (1 second per frame, matching the original) across all 3 real icon types this port
 	 * loads - see {@code ThaumcraftResearchLoader#parseIcons}'s own doc comment. */
-	private void renderEntryIcon(GuiGraphics graphics, ResearchEntry entry, int ix, int iy, boolean grayscale) {
+	static void renderEntryIcon(GuiGraphics graphics, ResearchEntry entry, int ix, int iy, boolean grayscale) {
 		Object[] icons = entry.getIcons();
 		if (icons == null || icons.length == 0) return;
 		Object icon = icons[(int) (System.currentTimeMillis() / 1000L % icons.length)];

@@ -177,6 +177,11 @@ public class PlayerKnowledge implements IPlayerKnowledge {
 	public void sync(ServerPlayer player) {
 		try {
 			CompoundTag tag = serializeNBT(player.level().registryAccess());
+			// The original's own PacketSyncKnowledge: the POPUP flags go out once (the client toasts them) and are then
+			// cleared server-side, so a later sync doesn't pop the same "Research Completed!" toast again.
+			for (String key : getResearchList().toArray(new String[0])) {
+				clearResearchFlag(key, EnumResearchFlag.POPUP);
+			}
 			PacketDistributor.sendToPlayer(player, new ClientboundPlayerKnowledgePacket(tag));
 		} catch (Exception e) {
 			// Same defensive catch ResearchTableMenu/ThaumonomiconMenu's own sync already uses - a genuinely

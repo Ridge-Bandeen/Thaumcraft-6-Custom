@@ -101,6 +101,7 @@ public class ThaumonomiconMenu extends AbstractContainerMenu {
 		if (!ThaumcraftApi.internalMethods.doesPlayerHaveRequisites(player, target.getKey())) {
 			return false;
 		}
+		thaumcraft.common.ThaumcraftInternalMethodHandler.noFlags = true; // the original's own node-click sent noFlags=true
 		return ThaumcraftApi.internalMethods.progressResearch(player, target.getKey());
 	}
 
@@ -121,6 +122,7 @@ public class ThaumonomiconMenu extends AbstractContainerMenu {
 		if (player instanceof ServerPlayer serverPlayer) {
 			ResearchRequirements.consumeStage(serverPlayer, stage);
 		}
+		thaumcraft.common.ThaumcraftInternalMethodHandler.noFlags = true; // the original's own study click sent noFlags=true
 		return ThaumcraftApi.internalMethods.progressResearch(player, entry.getKey());
 	}
 

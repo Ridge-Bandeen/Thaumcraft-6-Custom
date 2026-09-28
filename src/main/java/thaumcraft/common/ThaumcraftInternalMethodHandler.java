@@ -83,64 +83,129 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 		return progressResearch(player, researchkey, true);
 	}
 
-	/** {@code sync}: push the player's knowledge to their client afterwards - the original did ({@code syncResearch}); without it the
+	/** The original's own static {@code ResearchManager.noFlags}: set by the Thaumonomicon before a player-driven advance
+	 * (both its "open" and "study" clicks sent {@code noFlags=true}) so research the player just clicked through
+	 * doesn't also get a "new research" badge; consumed (reset) by the next completion, exactly as there. */
+	public static boolean noFlags = false;
+
+	/** Pushes the player's knowledge to their client afterwards - the original did ({@code syncResearch}); without it the
 	 * client never learned of a scan's result, so the Thaumometer glow on already-scanned things never went away. */
-	private boolean progressResearch(Player player, String researchkey, boolean sync) {
-		boolean progressed = progressResearchNoSync(player, researchkey);
-		if (progressed && sync && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+	private boolean progressResearch(Player player, String researchkey, boolean push) {
+		boolean progressed = progressResearchNoSync(player, researchkey, true);
+		if (progressed && push && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
 			ThaumcraftCapabilities.getKnowledge(player).sync(serverPlayer);
 		}
 		return progressed;
 	}
 
-	private boolean progressResearchNoSync(Player player, String researchkey) {
+	/**
+	 * A faithful port of the original's own {@code ResearchManager#progressResearch(player, key, sync)} (restored in full
+	 * 2026-09-27 - an earlier version here was a simplification that added a completed stage's warp as plain NORMAL warp,
+	 * dropped the completion popup, addendum notices and the 5 XP, and always badged new research):
+	 * <ul>
+	 * <li>the auto-skip: a stage with none of the four requirement kinds completes in the same call;</li>
+	 * <li>warp: the stage just completed, plus - when the entry finishes - the final stage (the original's own
+	 * arithmetic, which counts the final stage twice when it is also the one just completed); split half permanent, half
+	 * normal (all permanent when it is 1), none in wuss mode;</li>
+	 * <li>on finishing ({@code sync}): the POPUP flag (the client shows a "Research Completed!" toast for it), the
+	 * RESEARCH ("new") badge unless {@link #noFlags}, reward items/knowledge; then, for every completed entry with an
+	 * addendum that waits on this key, a chat notice and a PAGE badge;</li>
+	 * <li>siblings complete alongside; 5 experience points per advance of a real entry.</li>
+	 * </ul>
+	 */
+	private boolean progressResearchNoSync(Player player, String researchkey, boolean sync) {
 		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
 		ResearchEntry entry = ResearchCategories.getResearch(researchkey);
 		ResearchStage[] stages = entry != null ? entry.getStages() : null;
-		// A key with no research entry at all - the per-item/per-mob "!..." scan keys - is a one-shot flag: known means done. (Nothing
-		// capped it, so scanning the same thing forever said "learned something new" and kept handing out knowledge.)
+		// A key with no research entry at all - the per-item/per-mob "!..." scan keys - is a one-shot flag: known means done.
+		// (The original's own isResearchComplete treats a known entry-less key as complete for the same reason.)
 		if (stages == null && researchkey != null && researchkey.startsWith("!") && knowledge.isResearchKnown(researchkey)) return false;
-		// Only a real, loaded multi-stage entry has an actual cap to refuse progressing past - an
-		// entry-less key (a "!virtualFlag", or an ad-hoc test/reference key with no ResearchEntry at all)
-		// has no such cap, matching the old placeholder implementation's fully unconditional increment for
-		// every key. completeResearch (below) is what stops calling this repeatedly for those.
 		if (stages != null && knowledge.isResearchComplete(researchkey)) return false;
 		if (!doesPlayerHaveRequisites(player, researchkey)) return false;
 
 		if (!knowledge.isResearchKnown(researchkey)) knowledge.addResearch(researchkey);
 
-		int stage = Math.max(0, knowledge.getResearchStage(researchkey));
+		boolean popups = true;
 		if (stages != null) {
-			ResearchStage completedStage = stage > 0 ? stages[Math.min(stage, stages.length) - 1] : null;
-			// Restored 2026-09-27 - the original's own real auto-skip (ResearchManager#progressResearch): a stage with
-			// NO requirement fields at all is silently counted as done in the same call rather than needing its own
-			// separate click. Without this, EVERY research entry (not just gated ones) would need one extra click to
-			// finish - the vast majority of entries are one stage with no requirements at all, and used to instant-
-			// complete on a single click only because the old code path here ignored per-stage gating entirely.
-			boolean autoSkip = (stages.length == 1 && stage == 0 && hasNoRequirements(stages[0]))
-					|| (stages.length > 1 && stages.length <= stage + 1 && stage < stages.length && hasNoRequirements(stages[stage]));
-			int cs = stage + (autoSkip ? 1 : 0);
-			int newStage = Math.min(stages.length + 1, cs + 1);
-			knowledge.setResearchStage(researchkey, newStage);
-			if (completedStage != null && completedStage.getWarp() > 0) {
-				addWarpToPlayer(player, completedStage.getWarp(), IPlayerWarp.EnumWarpType.NORMAL);
+			int cs = Math.max(0, knowledge.getResearchStage(researchkey));
+			ResearchStage currentStage = null;
+			if (cs > 0) {
+				cs = Math.min(cs, stages.length);
+				currentStage = stages[cs - 1];
 			}
-			if (newStage > stages.length) {
-				// Real "new research" badge - the hex-grid browser's own real per-entry/per-category
-				// indicator. The original's paired POPUP flag (triggers an in-game GUI popup) is dropped -
-				// no popup UI exists in this port.
-				knowledge.setResearchFlag(researchkey, IPlayerKnowledge.EnumResearchFlag.RESEARCH);
+			if (stages.length == 1 && cs == 0 && hasNoRequirements(stages[0])) {
+				++cs;
+			} else if (stages.length > 1 && stages.length <= cs + 1 && cs < stages.length && hasNoRequirements(stages[cs])) {
+				++cs;
 			}
-		} else {
-			knowledge.setResearchStage(researchkey, Math.max(1, stage + 1));
+			knowledge.setResearchStage(researchkey, Math.min(stages.length + 1, cs + 1));
+			popups = cs >= stages.length;
+			int warp = currentStage != null ? currentStage.getWarp() : 0;
+			if (popups) {
+				cs = Math.min(cs, stages.length);
+				currentStage = stages[cs - 1];
+			}
+			if (currentStage != null) {
+				warp += currentStage.getWarp();
+				if (warp > 0 && !thaumcraft.common.config.ThaumcraftConfig.WUSS_MODE.get() && !player.level().isClientSide) {
+					if (warp > 1) {
+						int w2 = warp / 2;
+						if (warp - w2 > 0) addWarpToPlayer(player, warp - w2, IPlayerWarp.EnumWarpType.PERMANENT);
+						if (w2 > 0) addWarpToPlayer(player, w2, IPlayerWarp.EnumWarpType.NORMAL);
+					} else {
+						addWarpToPlayer(player, warp, IPlayerWarp.EnumWarpType.PERMANENT);
+					}
+				}
+			}
+		} else if (entry == null) {
+			// an entry-less virtual key: its own one-shot "stage", as before
+			knowledge.setResearchStage(researchkey, Math.max(1, knowledge.getResearchStage(researchkey) + 1));
+		}
+
+		if (popups) {
+			if (sync) {
+				knowledge.setResearchFlag(researchkey, IPlayerKnowledge.EnumResearchFlag.POPUP);
+				if (!noFlags) {
+					knowledge.setResearchFlag(researchkey, IPlayerKnowledge.EnumResearchFlag.RESEARCH);
+				} else {
+					noFlags = false;
+				}
+				if (entry != null && entry.getRewardItem() != null) {
+					for (net.minecraft.world.item.ItemStack reward : entry.getRewardItem()) {
+						if (!player.getInventory().add(reward.copy())) player.drop(reward.copy(), false);
+					}
+				}
+				if (entry != null && entry.getRewardKnow() != null) {
+					for (ResearchStage.Knowledge rk : entry.getRewardKnow()) {
+						addKnowledge(player, rk.type, rk.category, rk.type.getProgression() * rk.amount);
+					}
+				}
+			}
+			for (ResearchCategory category : ResearchCategories.researchCategories.values()) {
+				for (ResearchEntry other : category.research.values()) {
+					if (other == null || other.getAddenda() == null || !knowledge.isResearchComplete(other.getKey())) continue;
+					for (thaumcraft.api.research.ResearchAddendum addendum : other.getAddenda()) {
+						if (addendum.getResearch() != null && java.util.Arrays.asList(addendum.getResearch()).contains(researchkey)) {
+							player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("tc.addaddendum", other.getLocalizedName()));
+							knowledge.setResearchFlag(other.getKey(), IPlayerKnowledge.EnumResearchFlag.PAGE);
+							break;
+						}
+					}
+				}
+			}
 		}
 
 		if (entry != null && entry.getSiblings() != null) {
 			for (String sibling : entry.getSiblings()) {
 				if (!knowledge.isResearchComplete(sibling) && doesPlayerHaveRequisites(player, sibling)) {
-					completeResearch(player, sibling);
+					while (progressResearchNoSync(player, sibling, sync)) {
+						// complete the sibling, same as the original's completeResearch(player, sibling, sync)
+					}
 				}
 			}
+		}
+		if (sync && entry != null) {
+			player.giveExperiencePoints(5);
 		}
 		return true;
 	}
@@ -161,7 +226,7 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 			return progressResearch(player, researchkey);
 		}
 		boolean any = false;
-		while (progressResearch(player, researchkey, false)) any = true;
+		while (progressResearchNoSync(player, researchkey, true)) any = true;
 		if (any && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
 			ThaumcraftCapabilities.getKnowledge(player).sync(serverPlayer);
 		}

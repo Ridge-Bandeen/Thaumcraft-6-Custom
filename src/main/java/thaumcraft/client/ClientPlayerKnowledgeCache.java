@@ -31,6 +31,17 @@ public final class ClientPlayerKnowledgeCache {
 		data = snapshot;
 		// Also make it the local player's own knowledge: ThaumcraftCapabilities.getKnowledge(player) reads the attachment, and on the client that
 		// stayed at its empty default - so client-side checks (the Thaumometer glow on unscanned things) never saw a scan's result.
+		// The original's own PacketSyncKnowledge#onMessage: every research entry flagged POPUP gets a "Research Completed!"
+		// toast, then the flag is cleared (the server cleared its own copy when it sent this).
+		for (String key : snapshot.getResearchList().toArray(new String[0])) {
+			if (snapshot.hasResearchFlag(key, IPlayerKnowledge.EnumResearchFlag.POPUP)) {
+				thaumcraft.api.research.ResearchEntry entry = thaumcraft.api.research.ResearchCategories.getResearch(key);
+				if (entry != null) {
+					net.minecraft.client.Minecraft.getInstance().getToasts().addToast(new thaumcraft.client.gui.ResearchToast(entry));
+				}
+			}
+			snapshot.clearResearchFlag(key, IPlayerKnowledge.EnumResearchFlag.POPUP);
+		}
 		net.minecraft.client.player.LocalPlayer player = net.minecraft.client.Minecraft.getInstance().player;
 		if (player != null) {
 			player.setData(thaumcraft.api.capabilities.ThaumcraftCapabilities.KNOWLEDGE, snapshot);
