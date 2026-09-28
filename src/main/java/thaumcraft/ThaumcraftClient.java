@@ -157,6 +157,7 @@ public class ThaumcraftClient {
 
     @SubscribeEvent
     static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerEntityRenderer(ThaumcraftEntities.SPECIAL_ITEM.get(), net.minecraft.client.renderer.entity.ItemEntityRenderer::new);
         event.registerEntityRenderer(ThaumcraftEntities.FOCUS_PROJECTILE.get(), RenderFocusProjectile::new);
         // Real caltrop-shaped geometry + pulsing red tint restored 2026-09-16 - see RenderFocusMine's own doc
         // comment. This was a real, previously-undocumented gap (not the same permanent "no client FX" case

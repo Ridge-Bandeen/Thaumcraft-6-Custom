@@ -27,25 +27,11 @@ class PlayerKnowledgeTest {
 	}
 
 	@Test
-	void newPlayerDefaultsToKnowingFirstStepsFully() {
-		// The constructor's own real FIRSTSTEPS default now looks up the real ResearchEntry via
-		// ResearchCategories to grant full completion (stage = real stage count + 1) - see that
-		// constructor's own doc comment. Plain JUnit never runs ThaumcraftResearchLoader (no mod/datapack
-		// environment here), so ResearchCategories.getResearch("FIRSTSTEPS") stays null and the constructor
-		// falls back to a flat stage 1, which is what this test actually locks in. (In the real running game,
-		// the same constructor grants stage 4 - past FIRSTSTEPS's real 3 stages - once the real entry has
-		// loaded; that full-game behavior is covered by the GameTest suite instead, where the real loader
-		// actually runs.) This test exists so changing that fallback forces updating it too, same pattern as
-		// AspectListTest's ItemStack-constructor-stub canary.
-		assertTrue(knowledge.isResearchKnown("FIRSTSTEPS"));
-		assertTrue(knowledge.isResearchComplete("FIRSTSTEPS"), "with no real entry loaded, any known stage counts as complete");
-		assertEquals(1, knowledge.getResearchStage("FIRSTSTEPS"));
-	}
-
-	@Test
-	void clearWipesTheDefaultTooForTestIsolation() {
-		knowledge.clear();
-		assertFalse(knowledge.isResearchKnown("FIRSTSTEPS"), "clear() should remove even the constructor's default grant");
+	void newPlayerKnowsNoResearch() {
+		// As in the original: nothing is known until the dream and the Thaumonomicon (the constructor pre-completed
+		// First Steps until 2026-09-28).
+		assertFalse(knowledge.isResearchKnown("FIRSTSTEPS"));
+		assertTrue(knowledge.getResearchList().isEmpty());
 	}
 
 	@Test
@@ -162,6 +148,6 @@ class PlayerKnowledgeTest {
 		assertTrue(restored.hasResearchFlag("FOCUSADVANCED", EnumResearchFlag.RESEARCH));
 		assertFalse(restored.hasResearchFlag("FOCUSADVANCED", EnumResearchFlag.POPUP));
 		assertEquals(40, restored.getKnowledgeRaw(EnumKnowledgeType.THEORY, null));
-		assertFalse(restored.isResearchKnown("FIRSTSTEPS"), "deserializeNBT clears first, so the constructor's default grant should not survive a round trip that didn't include it");
+		assertFalse(restored.isResearchKnown("FIRSTSTEPS"), "a round trip that didn't include FIRSTSTEPS must not produce it");
 	}
 }

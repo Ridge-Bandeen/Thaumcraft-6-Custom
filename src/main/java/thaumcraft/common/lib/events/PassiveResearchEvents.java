@@ -88,8 +88,10 @@ public class PassiveResearchEvents {
 	public static void onItemPickup(ItemEntityPickupEvent.Post event) {
 		if (!(event.getPlayer() instanceof ServerPlayer player)) return;
 
-		if (event.getOriginalStack().getItem() instanceof ItemCrystalEssence) {
-			grant(player, "!gotcrystals", "got.crystals");
+		if (event.getOriginalStack().getItem() instanceof ItemCrystalEssence
+				&& !ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("!gotcrystals")) {
+			grant(player, "!gotcrystals", null);
+			player.sendSystemMessage(Component.translatable("got.crystals").withStyle(ChatFormatting.DARK_PURPLE));
 		}
 		if (event.getOriginalStack().getItem() instanceof ItemThaumonomicon) {
 			grant(player, "!gotthaumonomicon", null);
@@ -126,6 +128,40 @@ public class PassiveResearchEvents {
 
 	private static boolean statAtLeast(ServerPlayer player, net.minecraft.resources.ResourceLocation stat, int threshold) {
 		return player.getStats().getValue(Stats.CUSTOM.get(stat)) > threshold;
+	}
+
+	/** The original's {@code PlayerEvents#wakeUp}: the first sleep after touching an essence crystal brings the dream -
+	 * the {@code !gotdream} flag (which lets Salis Mundus turn a bookshelf into the Thaumonomicon) and "Strange Dreams",
+	 * a written journal describing how to make Salis Mundus and what to do with it. */
+	@SubscribeEvent
+	public static void onWakeUp(net.neoforged.neoforge.event.entity.player.PlayerWakeUpEvent event) {
+		if (!(event.getEntity() instanceof ServerPlayer player)) return;
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		if (knowledge.isResearchKnown("!gotcrystals") && !knowledge.isResearchKnown("!gotdream")) giveDreamJournal(player);
+	}
+
+	public static void giveDreamJournal(ServerPlayer player) {
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		knowledge.addResearch("!gotdream");
+		knowledge.sync(player);
+		net.minecraft.world.item.ItemStack book = dreamJournal(player.getGameProfile().getName());
+		if (!player.getInventory().add(book)) player.drop(book, false);
+		player.sendSystemMessage(Component.translatable("got.dream").withStyle(ChatFormatting.DARK_PURPLE));
+	}
+
+	/** ConfigItems.startBook: a written book, generation 3 ("tattered"), titled "Strange Dreams", three pages. */
+	public static net.minecraft.world.item.ItemStack dreamJournal(String author) {
+		net.minecraft.world.item.ItemStack book = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WRITTEN_BOOK);
+		java.util.List<net.minecraft.server.network.Filterable<Component>> pages = new java.util.ArrayList<>();
+		for (int i = 1; i <= 3; i++) {
+			// the lang strings are the original's JSON-text pages: quoted, with escaped newlines
+			String page = Component.translatable("book.start." + i).getString();
+			if (page.length() >= 2 && page.startsWith("\"") && page.endsWith("\"")) page = page.substring(1, page.length() - 1);
+			pages.add(net.minecraft.server.network.Filterable.passThrough(Component.literal(page.replace("\\n", "\n"))));
+		}
+		book.set(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT, new net.minecraft.world.item.component.WrittenBookContent(
+				net.minecraft.server.network.Filterable.passThrough(Component.translatable("book.start.title").getString()), author, 3, pages, true));
+		return book;
 	}
 
 	private static void grant(ServerPlayer player, String researchKey, String messageKey) {

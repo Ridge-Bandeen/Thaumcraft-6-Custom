@@ -1166,6 +1166,17 @@ public class ThaumcraftGameTests {
 
 	/** A mock player who has completed the research behind every crucible recipe (recipes are research-gated,
 	 * as in the original - and need a player at all: nobody thrown it means no recipe). */
+	/** Marks research complete outright, bypassing parents and stage gates. Since 2026-09-28 a new player starts with no
+	 * research (as in the original), so tests of later mechanics grant what that mechanic is gated on. */
+	private static void forceResearch(net.minecraft.world.entity.player.Player player, String... keys) {
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		for (String key : keys) {
+			thaumcraft.api.research.ResearchEntry entry = thaumcraft.api.research.ResearchCategories.getResearch(key);
+			knowledge.addResearch(key);
+			knowledge.setResearchStage(key, entry != null && entry.getStages() != null ? entry.getStages().length + 1 : 1);
+		}
+	}
+
 	private static ServerPlayer researchingPlayerAt(GameTestHelper helper, BlockPos relPos) {
 		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(relPos).above());
 		var knowledge = thaumcraft.api.capabilities.ThaumcraftCapabilities.getKnowledge(player);
@@ -1548,6 +1559,7 @@ public class ThaumcraftGameTests {
 	public static void workbenchCraftsAMatchingRecipeAndConsumesVisAndIngredients(GameTestHelper helper) {
 		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
 		ServerPlayer player = spawnCasterAt(helper, origin);
+		forceResearch(player, "FIRSTSTEPS");
 		float visBefore = AuraHandler.getVis(helper.getLevel(), origin);
 
 		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
@@ -1593,6 +1605,7 @@ public class ThaumcraftGameTests {
 	public static void workbenchChargerDrawsVisFromNeighbouringChunksToo(GameTestHelper helper) {
 		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
 		ServerPlayer player = spawnCasterAt(helper, origin);
+		forceResearch(player, "FIRSTSTEPS");
 		// Drain the workbench's own chunk below focus_1's 15-vis cost, same setup as the insufficient-vis
 		// test above, but seed a real neighbouring chunk (16 blocks over) with plenty instead.
 		AuraHandler.drainVis(helper.getLevel(), origin, AuraHandler.getVis(helper.getLevel(), origin), false);
@@ -1647,6 +1660,7 @@ public class ThaumcraftGameTests {
 	public static void workbenchDiscountGearReducesTheVisCostInsteadOfMakingCraftsFree(GameTestHelper helper) {
 		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
 		ServerPlayer player = spawnCasterAt(helper, origin);
+		forceResearch(player, "FIRSTSTEPS");
 		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new ItemStack(ItemsTC.clothChest.get()));
 		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.LEGS, new ItemStack(ItemsTC.clothLegs.get()));
 		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, new ItemStack(ItemsTC.clothBoots.get()));
@@ -1670,6 +1684,7 @@ public class ThaumcraftGameTests {
 	public static void workbenchVisExhaustMakesCraftsDearer(GameTestHelper helper) {
 		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
 		ServerPlayer player = spawnCasterAt(helper, origin);
+		forceResearch(player, "FIRSTSTEPS");
 		player.addEffect(new net.minecraft.world.effect.MobEffectInstance(thaumcraft.common.registry.ThaumcraftMobEffects.VIS_EXHAUST, 600, 0));
 		float visBefore = AuraHandler.getVis(helper.getLevel(), origin);
 
@@ -2543,6 +2558,7 @@ public class ThaumcraftGameTests {
 		BlockPos relPos = new BlockPos(2, 1, 2);
 		helper.setBlock(relPos, Blocks.CRAFTING_TABLE);
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		forceResearch(player, "FIRSTSTEPS");
 		player.getAbilities().instabuild = false;
 
 		useSalisMundusOn(helper, player, relPos);
@@ -2554,11 +2570,40 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** The original's way in: the dream (after touching a crystal and sleeping) gives the "Strange Dreams" journal, and
+	 * then Salis Mundus on a bookshelf makes the Thaumonomicon. Without the dream the bookshelf stays a bookshelf. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void theDreamLeadsFromABookshelfToTheThaumonomicon(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(2, 1, 2);
+		helper.setBlock(relPos, Blocks.BOOKSHELF);
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		player.getAbilities().instabuild = false;
+		useSalisMundusOn(helper, player, relPos);
+		tickSchedulerPastDustTriggerDelay(helper);
+		helper.assertTrue(helper.getBlockState(relPos).is(Blocks.BOOKSHELF), "without the dream a bookshelf ignores Salis Mundus");
+
+		thaumcraft.common.lib.events.PassiveResearchEvents.giveDreamJournal(player);
+		helper.assertTrue(ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("!gotdream"), "the dream sets !gotdream");
+		boolean journal = player.getInventory().items.stream().anyMatch(s -> s.is(Items.WRITTEN_BOOK)
+				&& s.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT) != null
+				&& s.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT).pages().size() == 3);
+		helper.assertTrue(journal, "the dream leaves a three-page journal in the inventory");
+
+		useSalisMundusOn(helper, player, relPos);
+		tickSchedulerPastDustTriggerDelay(helper);
+		boolean book = !helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+				new net.minecraft.world.phys.AABB(helper.absolutePos(relPos)).inflate(3), e -> e.getItem().is(ItemsTC.thaumonomicon.get())).isEmpty()
+				|| player.getInventory().contains(new ItemStack(ItemsTC.thaumonomicon.get()));
+		helper.assertTrue(book, "after the dream, Salis Mundus on a bookshelf makes a Thaumonomicon");
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void salisMundusConvertsACauldronIntoACrucible(GameTestHelper helper) {
 		BlockPos relPos = new BlockPos(2, 1, 2);
 		helper.setBlock(relPos, Blocks.CAULDRON);
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		forceResearch(player, "UNLOCKALCHEMY");
 
 		useSalisMundusOn(helper, player, relPos);
 		tickSchedulerPastDustTriggerDelay(helper);
@@ -2621,6 +2666,7 @@ public class ThaumcraftGameTests {
 		BlockPos shellCornerPos = base.offset(0, 2, 0);
 
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		forceResearch(player, "INFERNALFURNACE");
 		useSalisMundusOn(helper, player, lavaPos);
 		helper.assertTrue(helper.getBlockState(lavaPos).is(Blocks.LAVA), "the lava core should still be real lava the same tick - the real conversion is delayed, not instant");
 
@@ -2656,6 +2702,7 @@ public class ThaumcraftGameTests {
 		helper.setBlock(barsPos, Blocks.IRON_BARS);
 
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		forceResearch(player, "MINDCLOCKWORK");
 		useSalisMundusOn(helper, player, pistonPos);
 		helper.assertTrue(helper.getBlockState(pistonPos).is(Blocks.PISTON), "the piston core should still be a real piston the same tick - the real conversion is delayed, not instant");
 
@@ -2696,6 +2743,7 @@ public class ThaumcraftGameTests {
 		}
 
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		forceResearch(player, "INFUSION");
 		useSalisMundusOn(helper, player, base.offset(1, 2, 1));
 		tickSchedulerPastDustTriggerDelay(helper);
 
@@ -2746,6 +2794,7 @@ public class ThaumcraftGameTests {
 		}
 
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		forceResearch(player, "INFUSIONANCIENT");
 		useSalisMundusOn(helper, player, base.offset(1, 2, 1));
 		tickSchedulerPastDustTriggerDelay(helper);
 
@@ -2785,6 +2834,7 @@ public class ThaumcraftGameTests {
 		}
 
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		forceResearch(player, "INFUSIONELDRITCH");
 		useSalisMundusOn(helper, player, base.offset(1, 2, 1));
 		tickSchedulerPastDustTriggerDelay(helper);
 
@@ -2815,6 +2865,7 @@ public class ThaumcraftGameTests {
 		helper.setBlock(base.above(2), BlocksTC.metalAlchemical.get());
 
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		forceResearch(player, "THAUMATORIUM");
 		useSalisMundusOn(helper, player, base.above());
 		helper.assertTrue(helper.getBlockState(base.above()).is(BlocksTC.metalAlchemical.get()), "the middle block should still be real metalAlchemical the same tick - the real conversion is delayed, not instant");
 
@@ -8236,6 +8287,7 @@ public class ThaumcraftGameTests {
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void pechWandGrantsFocusResearchAndConsumesItself(GameTestHelper helper) {
 		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		forceResearch(player, "BASEAUROMANCY");
 		player.getAbilities().instabuild = false;
 		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
 		ItemStack wand = new ItemStack(ItemsTC.pechWand.get());
@@ -8624,6 +8676,7 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.tiles.crafting.TileFocalManipulator tile = helper.getBlockEntity(pos);
 
 		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+		forceResearch(player, "FIRSTSTEPS");
 		// BASEAUROMANCY's real prerequisite chain - see focalManipulatorMenusCraftButtonTriggersARealStartCraft's
 		// own comment on this same chain.
 		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "UNLOCKALCHEMY");
@@ -8685,6 +8738,7 @@ public class ThaumcraftGameTests {
 				"with no real craft staged, the real update tag should carry no real crystal entries, found " + emptyTag);
 
 		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+		forceResearch(player, "FIRSTSTEPS");
 		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "UNLOCKALCHEMY");
 		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "UNLOCKAUROMANCY");
 		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "BASEAUROMANCY");
@@ -8732,6 +8786,7 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.focalManipulator.get());
 		thaumcraft.common.tiles.crafting.TileFocalManipulator tile = helper.getBlockEntity(pos);
 		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+		forceResearch(player, "FIRSTSTEPS");
 		thaumcraft.common.container.FocalManipulatorMenu menu = new thaumcraft.common.container.FocalManipulatorMenu(0, player.getInventory(), tile);
 
 		boolean failed = menu.clickMenuButton(player, 0);
@@ -8814,6 +8869,7 @@ public class ThaumcraftGameTests {
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void freshPlayerGetsBaselineInspirationAndOnlyBasicsIsAvailable(GameTestHelper helper) {
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		forceResearch(player, "FIRSTSTEPS");
 		int inspiration = thaumcraft.api.research.theorycraft.ResearchTableData.getAvailableInspiration(player);
 		// 5 base + the real .5 SPIKY bonus (ResearchEntry.EnumResearchMeta's own doc comment) from the
 		// default-complete FIRSTSTEPS entry, rounded up - now that ThaumcraftResearchLoader actually loads
@@ -8830,6 +8886,7 @@ public class ThaumcraftGameTests {
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void initializeSpendsOneInspirationPerAidAndDrawCardsPullsFromTheRealRegisteredDeck(GameTestHelper helper) {
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		forceResearch(player, "FIRSTSTEPS");
 		thaumcraft.api.research.theorycraft.ResearchTableData data = new thaumcraft.api.research.theorycraft.ResearchTableData(player, null);
 		data.initialize(player, java.util.Set.of());
 		// 6, not 5 - see freshPlayerGetsBaselineInspirationAndOnlyBasicsIsAvailable's own comment on the real
@@ -8898,6 +8955,7 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.researchTable.get());
 		thaumcraft.common.tiles.crafting.TileResearchTable tile = helper.getBlockEntity(pos);
 		ServerPlayer player = spawnCasterAt(helper, absPos.above());
+		forceResearch(player, "FIRSTSTEPS");
 
 		tile.getItemHandler().setStackInSlot(0, new ItemStack(ItemsTC.scribingTools.get()));
 		tile.getItemHandler().setStackInSlot(1, new ItemStack(Items.PAPER, 5));
@@ -14001,12 +14059,13 @@ public class ThaumcraftGameTests {
 	/** {@link thaumcraft.common.lib.research.PlayerKnowledge}'s own real FIRSTSTEPS default is now stage-count
 	 * aware (see that class's own doc comment) - this locks in that it actually resolves to real, full
 	 * completion once the real 3-stage entry is loaded, not just "known". */
+	/** A new player knows nothing, as in the original - First Steps opens once the Thaumonomicon is picked up. */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
-	public static void freshPlayerHasFirstStepsFullyComplete(GameTestHelper helper) {
+	public static void freshPlayerStartsKnowingNoResearch(GameTestHelper helper) {
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
 		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
-		helper.assertTrue(knowledge.isResearchComplete("FIRSTSTEPS"), "a fresh player should start with FIRSTSTEPS fully complete");
-		helper.assertTrue(knowledge.isResearchKnown("FIRSTSTEPS@3"), "a fresh player should be at least at FIRSTSTEPS stage 3");
+		helper.assertFalse(knowledge.isResearchKnown("FIRSTSTEPS"), "a fresh player must not start with First Steps");
+		helper.assertTrue(knowledge.getResearchList().isEmpty(), "a fresh player should know no research at all, found " + knowledge.getResearchList());
 		helper.succeed();
 	}
 

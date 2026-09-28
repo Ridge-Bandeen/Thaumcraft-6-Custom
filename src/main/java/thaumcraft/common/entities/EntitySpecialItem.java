@@ -1,39 +1,47 @@
 package thaumcraft.common.entities;
-import net.minecraft.entity.item.EntityItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.DamageSource;
-import net.minecraft.world.World;
 
+import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
+import thaumcraft.common.registry.ThaumcraftEntities;
 
-public class EntitySpecialItem extends EntityItem
-{
-    public EntitySpecialItem(World par1World, double par2, double par4, double par6, ItemStack par8ItemStack) {
-        super(par1World);
-        setSize(0.25f, 0.25f);
-        setPosition(par2, par4, par6);
-        setItem(par8ItemStack);
-        rotationYaw = (float)(Math.random() * 360.0);
-        motionX = (float)(Math.random() * 0.20000000298023224 - 0.10000000149011612);
-        motionY = 0.20000000298023224;
-        motionZ = (float)(Math.random() * 0.20000000298023224 - 0.10000000149011612);
-    }
-    
-    public EntitySpecialItem(World par1World) {
-        super(par1World);
-        setSize(0.25f, 0.25f);
-    }
-    
-    public void onUpdate() {
-        if (ticksExisted > 1) {
-            if (motionY > 0.0) {
-                motionY *= 0.8999999761581421;
-            }
-            motionY += 0.03999999910593033;
-            super.onUpdate();
-        }
-    }
-    
-    public boolean attackEntityFrom(DamageSource source, float damage) {
-        return !source.isExplosion() && super.attackEntityFrom(source, damage);
-    }
+/**
+ * The original's {@code EntitySpecialItem}: the item a Salis Mundus conversion leaves behind when its result isn't a
+ * block (a bookshelf turning into the Thaumonomicon). It pops up, then drifts slowly upward instead of falling, and
+ * explosions don't destroy it.
+ */
+public class EntitySpecialItem extends ItemEntity {
+
+	public EntitySpecialItem(EntityType<? extends EntitySpecialItem> type, Level level) {
+		super(type, level);
+	}
+
+	public EntitySpecialItem(Level level, double x, double y, double z, ItemStack stack) {
+		this(ThaumcraftEntities.SPECIAL_ITEM.get(), level);
+		setPos(x, y, z);
+		setItem(stack);
+		setYRot((float) (Math.random() * 360.0));
+		setDeltaMovement(Math.random() * 0.2 - 0.1, 0.2, Math.random() * 0.2 - 0.1);
+	}
+
+	@Override
+	public void tick() {
+		if (tickCount > 1) {
+			Vec3 m = getDeltaMovement();
+			double y = m.y;
+			if (y > 0.0) y *= 0.9;
+			y += 0.04; // cancels item gravity: it hangs and drifts rather than falls
+			setDeltaMovement(m.x, y, m.z);
+		}
+		super.tick();
+	}
+
+	@Override
+	public boolean hurt(DamageSource source, float amount) {
+		return !source.is(DamageTypeTags.IS_EXPLOSION) && super.hurt(source, amount);
+	}
 }

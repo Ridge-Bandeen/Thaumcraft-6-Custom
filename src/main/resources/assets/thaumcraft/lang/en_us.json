@@ -1908,5 +1908,6 @@
   "item.thaumcraft.curio_eldritch": "Eldritch Curiosity",
   "item.thaumcraft.curio_knowledge": "Illuminating Curiosity",
   "item.thaumcraft.curio_twisted": "Twisted Curiosity",
-  "item.thaumcraft.curio_rites": "Crimson Rites"
+  "item.thaumcraft.curio_rites": "Crimson Rites",
+  "entity.thaumcraft.special_item": "Item"
 }

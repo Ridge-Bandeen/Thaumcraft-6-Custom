@@ -16,24 +16,27 @@ import thaumcraft.common.lib.crafting.DustTriggerSimple;
  * The ore-dictionary-tag variant ({@code DustTriggerOre}, matching e.g. "any modded crafting table") still
  * isn't ported - no real registered trigger in the original ever needed it for anything this port has built.
  *
- * Research gates: the original's Arcane Workbench trigger used {@code FIRSTSTEPS@1}, already in every
- * player's default knowledge (see {@code PlayerKnowledge}), so it's reachable as-is. The Crucible
- * ({@code UNLOCKALCHEMY@1}), Infernal Furnace ({@code INFERNALFURNACE}), Infusion Altar ({@code INFUSION}),
- * and Thaumatorium ({@code THAUMATORIUM}) triggers all used research keys that aren't reachable with no
- * Thaumonomicon to grant them, so all four substitute {@code FIRSTSTEPS} instead, the same "stay reachable
- * given no research-granting path yet" deviation used everywhere else this session.
+ * Research gates are the original's own (restored 2026-09-28; they had all been swapped for {@code FIRSTSTEPS} while no
+ * research could be earned): the dream ({@code !gotdream}) for bookshelf -> Thaumonomicon, {@code FIRSTSTEPS@1} for
+ * the Arcane Workbench, {@code UNLOCKALCHEMY@1} for the Crucible, and each multiblock's own research. The original's
+ * ore-dictionary variants ({@code DustTriggerOre}: any "bookshelf", any "workbench") are block tags here.
  */
 public final class ThaumcraftDustTriggers {
 
 	public static void register() {
+		IDustTrigger.registerDustTrigger(new DustTriggerSimple("!gotdream", Blocks.BOOKSHELF, new ItemStack(thaumcraft.api.items.ItemsTC.thaumonomicon.get())));
+		IDustTrigger.registerDustTrigger(new DustTriggerSimple("!gotdream", net.minecraft.tags.BlockTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("c", "bookshelves")),
+				new ItemStack(thaumcraft.api.items.ItemsTC.thaumonomicon.get())));
 		IDustTrigger.registerDustTrigger(new DustTriggerSimple("FIRSTSTEPS@1", Blocks.CRAFTING_TABLE, new ItemStack(BlocksTC.arcaneWorkbench.get())));
-		IDustTrigger.registerDustTrigger(new DustTriggerSimple("FIRSTSTEPS", Blocks.CAULDRON, new ItemStack(BlocksTC.crucible.get())));
-		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", infernalFurnaceBlueprint()));
-		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", infusionAltarBlueprint()));
-		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", infusionAltarAncientBlueprint()));
-		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", infusionAltarEldritchBlueprint()));
-		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", thaumatoriumBlueprint()));
-		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("FIRSTSTEPS", golemPressBlueprint()));
+		IDustTrigger.registerDustTrigger(new DustTriggerSimple("FIRSTSTEPS@1", net.minecraft.tags.BlockTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("c", "player_workstations/crafting_tables")),
+				new ItemStack(BlocksTC.arcaneWorkbench.get())));
+		IDustTrigger.registerDustTrigger(new DustTriggerSimple("UNLOCKALCHEMY@1", Blocks.CAULDRON, new ItemStack(BlocksTC.crucible.get())));
+		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("INFERNALFURNACE", infernalFurnaceBlueprint()));
+		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("INFUSION", infusionAltarBlueprint()));
+		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("INFUSIONANCIENT", infusionAltarAncientBlueprint()));
+		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("INFUSIONELDRITCH", infusionAltarEldritchBlueprint()));
+		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("THAUMATORIUM", thaumatoriumBlueprint()));
+		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("MINDCLOCKWORK", golemPressBlueprint()));
 	}
 
 	/**

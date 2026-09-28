@@ -33,11 +33,8 @@ import thaumcraft.api.research.ResearchCategory;
  * true original's own {@code ConfigEntities#tradeInventory} placement exactly - nothing needed wiring here,
  * the doc comment just hadn't caught up to the Pech trading chunk landing.
  *
- * <b>Research gate loosened</b>: the original required {@code BASEAUROMANCY} - nothing grants that key yet
- * (only {@code FIRSTSTEPS} is a hardcoded default, per {@code PlayerKnowledge}'s own doc comment), so keeping
- * it would make this permanently unusable outside creative mode. Swapped to {@code FIRSTSTEPS}, the same
- * "loosen an otherwise-unreachable research gate" precedent several already-shipped recipes this session
- * used rather than leaving a real feature dead on arrival.
+ * Needs {@code BASEAUROMANCY}, as in the original (a stand-in {@code FIRSTSTEPS} gate was used until research could be
+ * earned, 2026-09-28).
  */
 public class ItemPechWand extends Item {
 
@@ -49,7 +46,7 @@ public class ItemPechWand extends Item {
 	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
 		ItemStack stack = player.getItemInHand(hand);
 		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
-		if (!knowledge.isResearchKnown("FIRSTSTEPS")) {
+		if (!knowledge.isResearchKnown("BASEAUROMANCY")) {
 			if (!level.isClientSide) {
 				player.displayClientMessage(Component.translatable("item.thaumcraft.pech_wand.locked").withStyle(ChatFormatting.RED), false);
 			}

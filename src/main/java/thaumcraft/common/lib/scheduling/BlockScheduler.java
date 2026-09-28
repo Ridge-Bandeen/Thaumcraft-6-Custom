@@ -265,7 +265,12 @@ public final class BlockScheduler {
 		} else if (entry.target.getItem() instanceof net.minecraft.world.item.BlockItem blockItem) {
 			level.setBlockAndUpdate(entry.pos, blockItem.getBlock().defaultBlockState());
 		} else {
+			// not a block (a bookshelf becoming the Thaumonomicon): the original left the result as a hovering item
 			level.removeBlock(entry.pos, false);
+			thaumcraft.common.entities.EntitySpecialItem item = new thaumcraft.common.entities.EntitySpecialItem(level,
+					entry.pos.getX() + 0.5, entry.pos.getY() + 0.1, entry.pos.getZ() + 0.5, entry.target.copy());
+			item.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+			level.addFreshEntity(item);
 		}
 
 		if (entry.life <= 0) return; // real match to the original's own "if (vs.lifespan <= 0) continue" - no further spread

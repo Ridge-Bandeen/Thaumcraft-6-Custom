@@ -41,14 +41,10 @@ public class PlayerKnowledge implements IPlayerKnowledge {
 
 	private static final String NO_CATEGORY = "NONE";
 
+	/** A new player knows nothing, as in the original: touching a crystal and sleeping brings the dream that leads to the
+	 * Thaumonomicon, and First Steps opens once the book is picked up (its parent is {@code !gotthaumonomicon}). Until
+	 * 2026-09-28 this pre-completed First Steps, from before the book or any research path existed. */
 	public PlayerKnowledge() {
-		// Every player starts able to craft the basics, matching the original's practical "always known"
-		// status for this entry (its own first stage requires nothing but opening the Thaumonomicon in the
-		// first place). Granted as real full completion now that real stage counts are loadable; falls back
-		// to a flat "known" stage of 1 if the real entry hasn't loaded yet (e.g. very early in datapack init).
-		ResearchEntry firstSteps = ResearchCategories.getResearch("FIRSTSTEPS");
-		int stageCount = (firstSteps != null && firstSteps.getStages() != null) ? firstSteps.getStages().length : 0;
-		researchProgress.put("FIRSTSTEPS", stageCount + 1);
 	}
 
 	@Override

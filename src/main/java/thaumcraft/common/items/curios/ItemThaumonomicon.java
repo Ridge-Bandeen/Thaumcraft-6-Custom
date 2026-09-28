@@ -42,11 +42,24 @@ public class ItemThaumonomicon extends Item {
 			if (!knowledge.isResearchKnown(GOT_THAUMONOMICON)) {
 				knowledge.addResearch(GOT_THAUMONOMICON);
 			}
+			// the original's onItemRightClick: every sibling of research you already know is completed on opening -
+			// how First Steps' own siblings (Knowledge Types, the dream) get filled in
+			for (thaumcraft.api.research.ResearchCategory cat : thaumcraft.api.research.ResearchCategories.researchCategories.values()) {
+				for (thaumcraft.api.research.ResearchEntry entry : new java.util.ArrayList<>(cat.research.values())) {
+					if (entry.getSiblings() == null || !ThaumcraftCapabilities.knowsResearch(player, entry.getKey())) continue;
+					for (String sibling : entry.getSiblings()) {
+						if (!ThaumcraftCapabilities.knowsResearch(player, sibling)) {
+							thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, sibling);
+						}
+					}
+				}
+			}
+			if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) knowledge.sync(serverPlayer);
 			player.openMenu(new SimpleMenuProvider((id, inv, p) -> new ThaumonomiconMenu(id, inv),
 					Component.translatable("item.thaumcraft.thaumonomicon")));
 		} else {
 			level.playSound(player, player.getX(), player.getY(), player.getZ(),
-					SoundEvents.BOOK_PAGE_TURN, SoundSource.PLAYERS, 1.0f, 1.0f);
+					thaumcraft.common.registry.ThaumcraftSounds.PAGE.get(), SoundSource.PLAYERS, 1.0f, 1.0f);
 		}
 		return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
 	}

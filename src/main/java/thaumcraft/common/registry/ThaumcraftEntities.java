@@ -384,6 +384,12 @@ public final class ThaumcraftEntities {
 	/** The Eldritch dimension's real boss - see {@code EntityEldritchWarden}'s own doc comment. Same
 	 * {@code sized(0.8f, 2.25f)} as {@link #ELDRITCH_GUARDIAN} - the original's own constructor never called
 	 * {@code setSize} differently for this subclass either. */
+	/** A Salis Mundus conversion's non-block result, hovering - see {@link thaumcraft.common.entities.EntitySpecialItem}. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.EntitySpecialItem>> SPECIAL_ITEM = ENTITY_TYPES.register("special_item",
+			() -> EntityType.Builder.<thaumcraft.common.entities.EntitySpecialItem>of(thaumcraft.common.entities.EntitySpecialItem::new, MobCategory.MISC)
+					.sized(0.25f, 0.25f).clientTrackingRange(6).updateInterval(20)
+					.build("special_item"));
+
 	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.boss.EntityEldritchWarden>> ELDRITCH_WARDEN = ENTITY_TYPES.register("eldritch_warden",
 			() -> EntityType.Builder.<thaumcraft.common.entities.monster.boss.EntityEldritchWarden>of(thaumcraft.common.entities.monster.boss.EntityEldritchWarden::new, MobCategory.MONSTER)
 					.sized(0.8f, 2.25f)

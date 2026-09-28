@@ -26,18 +26,29 @@ import thaumcraft.common.lib.scheduling.BlockScheduler;
 public class DustTriggerSimple implements IDustTrigger {
 
 	private final Block target;
+	/** The original's {@code DustTriggerOre}: any block in this tag instead of one block. */
+	private final net.minecraft.tags.TagKey<Block> targetTag;
 	private final ItemStack result;
 	private final String research;
 
 	public DustTriggerSimple(String research, Block target, ItemStack result) {
 		this.target = target;
+		this.targetTag = null;
+		this.result = result;
+		this.research = research;
+	}
+
+	public DustTriggerSimple(String research, net.minecraft.tags.TagKey<Block> targetTag, ItemStack result) {
+		this.target = null;
+		this.targetTag = targetTag;
 		this.result = result;
 		this.research = research;
 	}
 
 	@Override
 	public Placement getValidFace(Level world, Player player, BlockPos pos, Direction face) {
-		if (world.getBlockState(pos).getBlock() != target) return null;
+		BlockState here = world.getBlockState(pos);
+		if (target != null ? here.getBlock() != target : !here.is(targetTag)) return null;
 		if (research != null && !ThaumcraftCapabilities.getKnowledge(player).isResearchKnown(research)) return null;
 		return new Placement(0, 0, 0, null);
 	}
