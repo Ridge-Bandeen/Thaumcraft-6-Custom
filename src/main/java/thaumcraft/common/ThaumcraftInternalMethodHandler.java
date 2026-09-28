@@ -112,7 +112,15 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 		int stage = Math.max(0, knowledge.getResearchStage(researchkey));
 		if (stages != null) {
 			ResearchStage completedStage = stage > 0 ? stages[Math.min(stage, stages.length) - 1] : null;
-			int newStage = Math.min(stages.length + 1, stage + 1);
+			// Restored 2026-09-27 - the original's own real auto-skip (ResearchManager#progressResearch): a stage with
+			// NO requirement fields at all is silently counted as done in the same call rather than needing its own
+			// separate click. Without this, EVERY research entry (not just gated ones) would need one extra click to
+			// finish - the vast majority of entries are one stage with no requirements at all, and used to instant-
+			// complete on a single click only because the old code path here ignored per-stage gating entirely.
+			boolean autoSkip = (stages.length == 1 && stage == 0 && hasNoRequirements(stages[0]))
+					|| (stages.length > 1 && stages.length <= stage + 1 && stage < stages.length && hasNoRequirements(stages[stage]));
+			int cs = stage + (autoSkip ? 1 : 0);
+			int newStage = Math.min(stages.length + 1, cs + 1);
 			knowledge.setResearchStage(researchkey, newStage);
 			if (completedStage != null && completedStage.getWarp() > 0) {
 				addWarpToPlayer(player, completedStage.getWarp(), IPlayerWarp.EnumWarpType.NORMAL);
@@ -135,6 +143,12 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 			}
 		}
 		return true;
+	}
+
+	/** A stage with none of the original's own four gate kinds at all - the condition {@code ResearchManager
+	 * #progressResearch} auto-skips on, see the caller's own doc comment. */
+	private static boolean hasNoRequirements(ResearchStage stage) {
+		return stage.getCraft() == null && stage.getObtain() == null && stage.getKnow() == null && stage.getResearch() == null;
 	}
 
 	@Override

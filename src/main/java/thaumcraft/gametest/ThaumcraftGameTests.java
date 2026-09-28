@@ -14079,6 +14079,143 @@ public class ThaumcraftGameTests {
 		}
 	}
 
+	/** Real per-stage research gating (2026-09-27): a stage listing several required items/crafts needs ALL of them,
+	 * not just one - see {@code ResearchRequirements}'s own doc comment for the correction against an earlier, wrong
+	 * "any one" assumption, checked directly against the true original's own source this time. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void stageSatisfiedRequiresEveryListedItemAndCraftReferenceNotJustOne(GameTestHelper helper) {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+
+		thaumcraft.api.research.ResearchStage itemStage = new thaumcraft.api.research.ResearchStage();
+		itemStage.setObtain(new Object[] {Items.STICK, Items.DIAMOND});
+		helper.assertFalse(thaumcraft.common.lib.research.ResearchRequirements.isStageSatisfied(player, itemStage), "neither item carried yet");
+		player.getInventory().add(new ItemStack(Items.STICK));
+		helper.assertFalse(thaumcraft.common.lib.research.ResearchRequirements.isStageSatisfied(player, itemStage), "only one of the two required items carried");
+		player.getInventory().add(new ItemStack(Items.DIAMOND));
+		helper.assertTrue(thaumcraft.common.lib.research.ResearchRequirements.isStageSatisfied(player, itemStage), "both required items now carried");
+
+		int codeA = thaumcraft.common.lib.research.ResearchRequirements.registerCraftReference(Items.EMERALD);
+		int codeB = thaumcraft.common.lib.research.ResearchRequirements.registerCraftReference(Items.GOLD_INGOT);
+		thaumcraft.api.research.ResearchStage craftStage = new thaumcraft.api.research.ResearchStage();
+		craftStage.setCraftReference(new int[] {codeA, codeB});
+		helper.assertFalse(thaumcraft.common.lib.research.ResearchRequirements.isStageSatisfied(player, craftStage), "neither craft reference known yet");
+		thaumcraft.common.lib.research.ResearchRequirements.onItemCrafted(player, new ItemStack(Items.EMERALD));
+		helper.assertFalse(thaumcraft.common.lib.research.ResearchRequirements.isStageSatisfied(player, craftStage), "only one of the two craft references known");
+		thaumcraft.common.lib.research.ResearchRequirements.onItemCrafted(player, new ItemStack(Items.GOLD_INGOT));
+		helper.assertTrue(thaumcraft.common.lib.research.ResearchRequirements.isStageSatisfied(player, craftStage), "both craft references now known");
+		helper.succeed();
+	}
+
+	/** The {@code enchanted_placeholder} legacy item-spec resolves to a real requirement matching any tool bearing
+	 * that vanilla enchantment (the original's own {@code InventoryUtils#checkEnchantedPlaceholder}), and
+	 * {@code consumeStage} really consumes the matched real tool, not a copy of the fake spec item. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void enchantmentPlaceholderMatchesAndConsumesAnyRealToolWithThatEnchantment(GameTestHelper helper) {
+		Object resolved = thaumcraft.common.lib.research.ResearchRequirements.resolveSpec("thaumcraft:enchanted_placeholder;1;0;{ench:[{id:33s,lvl:1s}]}");
+		helper.assertTrue(resolved instanceof thaumcraft.common.lib.research.ResearchRequirements.EnchantSpec, "a well-formed enchanted_placeholder spec should resolve to a real EnchantSpec, got " + resolved);
+
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		thaumcraft.api.research.ResearchStage stage = new thaumcraft.api.research.ResearchStage();
+		stage.setObtain(new Object[] {resolved});
+
+		player.getInventory().add(new ItemStack(Items.DIAMOND_PICKAXE));
+		helper.assertFalse(thaumcraft.common.lib.research.ResearchRequirements.isStageSatisfied(player, stage), "a plain, unenchanted pickaxe shouldn't satisfy a Silk Touch requirement");
+
+		ItemStack silkTouch = new ItemStack(Items.DIAMOND_PICKAXE);
+		var registry = helper.getLevel().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT);
+		silkTouch.enchant(registry.getOrThrow(net.minecraft.world.item.enchantment.Enchantments.SILK_TOUCH), 1);
+		player.getInventory().add(silkTouch);
+		helper.assertTrue(thaumcraft.common.lib.research.ResearchRequirements.isStageSatisfied(player, stage), "a Silk Touch pickaxe should satisfy it, whatever the tool actually is");
+
+		thaumcraft.common.lib.research.ResearchRequirements.consumeStage((ServerPlayer) player, stage);
+		boolean stillHasSilkTouchTool = false;
+		for (ItemStack s : player.getInventory().items) {
+			if (s.is(Items.DIAMOND_PICKAXE) && !s.getTagEnchantments().isEmpty()) stillHasSilkTouchTool = true;
+		}
+		helper.assertFalse(stillHasSilkTouchTool, "consuming the stage should have really consumed the matched Silk Touch pickaxe");
+
+		// The two malformed double-namespace copies of this spec are a confirmed typo in Thaumcraft 6's own
+		// shipped data (see ResearchRequirements' own doc comment) - faithfully left unresolvable, not "fixed".
+		helper.assertTrue(thaumcraft.common.lib.research.ResearchRequirements.resolveSpec(
+				"minecraft:thaumcraft:enchanted_placeholder;1;0;{ench:[{id:0s,lvl:1s}]}") == null, "the malformed double-namespace copy should stay unresolved");
+		helper.succeed();
+	}
+
+	/** End-to-end: {@code ThaumonomiconMenu} now really gates and consumes a multi-stage entry one stage at a time,
+	 * matching the true original's own two-click model (an ungated "open" reveals stage 1, then a real "study"
+	 * click gates+consumes it) - see that menu's own doc comment. Uses a synthetic fixture, same style as
+	 * {@link #completingResearchCascadesToSiblings}. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumonomiconStudyGatesConsumesAndAdvancesOneStageAtATime(GameTestHelper helper) {
+		thaumcraft.api.research.ResearchCategory category = thaumcraft.api.research.ResearchCategories.getResearchCategory("BASICS");
+
+		thaumcraft.api.research.ResearchEntry entry = new thaumcraft.api.research.ResearchEntry();
+		entry.setKey("TEST_STUDY_GATE");
+		entry.setCategory("BASICS");
+		entry.setName("research.TEST_STUDY_GATE.title");
+		thaumcraft.api.research.ResearchStage gatedStage = new thaumcraft.api.research.ResearchStage();
+		gatedStage.setText("research.TEST_STUDY_GATE.stage.1");
+		gatedStage.setObtain(new Object[] {Items.NETHER_STAR});
+		thaumcraft.api.research.ResearchStage freeStage = new thaumcraft.api.research.ResearchStage();
+		freeStage.setText("research.TEST_STUDY_GATE.stage.2");
+		entry.setStages(new thaumcraft.api.research.ResearchStage[] {gatedStage, freeStage});
+		category.research.put("TEST_STUDY_GATE", entry);
+
+		try {
+			ServerPlayer player = helper.makeMockServerPlayerInLevel();
+			IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+			thaumcraft.common.container.ThaumonomiconMenu menu = new thaumcraft.common.container.ThaumonomiconMenu(0, player.getInventory());
+			int id = "TEST_STUDY_GATE".hashCode();
+
+			helper.assertTrue(menu.clickMenuButton(player, id), "the first (open) click should succeed unconditionally");
+			helper.assertTrue(knowledge.isResearchKnown("TEST_STUDY_GATE") && !knowledge.isResearchComplete("TEST_STUDY_GATE"),
+					"opening it should reveal stage 1 without completing the entry");
+			helper.assertTrue(knowledge.getResearchStage("TEST_STUDY_GATE") == 1, "exactly stage 1 should be marked reached");
+
+			helper.assertFalse(menu.clickMenuButton(player, id), "studying without the required nether star should fail");
+			helper.assertTrue(knowledge.getResearchStage("TEST_STUDY_GATE") == 1, "and not advance the stage count");
+
+			player.getInventory().add(new ItemStack(Items.NETHER_STAR));
+			helper.assertTrue(menu.clickMenuButton(player, id), "studying with the nether star present should succeed");
+			boolean stillHasStar = false;
+			for (ItemStack s : player.getInventory().items) if (s.is(Items.NETHER_STAR)) stillHasStar = true;
+			helper.assertFalse(stillHasStar, "the nether star should have really been consumed");
+			// stage 2 has no requirements of its own, so the original's own auto-skip finishes the entry in this
+			// same click - see ThaumcraftInternalMethodHandler#hasNoRequirements.
+			helper.assertTrue(knowledge.isResearchComplete("TEST_STUDY_GATE"), "with stage 2 free, satisfying stage 1 should complete the whole entry in the same click");
+			helper.succeed();
+		} finally {
+			category.research.remove("TEST_STUDY_GATE");
+		}
+	}
+
+	/** Regression guard: the vast majority of research entries are one stage with no requirements at all, and
+	 * must still complete on a single click - the true original's own real auto-skip (restored in
+	 * {@code ThaumcraftInternalMethodHandler#progressResearchNoSync}) is what makes that still true now that
+	 * stages are gated for real. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void aSingleRequirementFreeStageStillCompletesOnOneClick(GameTestHelper helper) {
+		thaumcraft.api.research.ResearchCategory category = thaumcraft.api.research.ResearchCategories.getResearchCategory("BASICS");
+		thaumcraft.api.research.ResearchEntry entry = new thaumcraft.api.research.ResearchEntry();
+		entry.setKey("TEST_ONE_CLICK");
+		entry.setCategory("BASICS");
+		entry.setName("research.TEST_ONE_CLICK.title");
+		thaumcraft.api.research.ResearchStage onlyStage = new thaumcraft.api.research.ResearchStage();
+		onlyStage.setText("research.TEST_ONE_CLICK.stage.1");
+		entry.setStages(new thaumcraft.api.research.ResearchStage[] {onlyStage});
+		category.research.put("TEST_ONE_CLICK", entry);
+		try {
+			ServerPlayer player = helper.makeMockServerPlayerInLevel();
+			IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+			thaumcraft.common.container.ThaumonomiconMenu menu = new thaumcraft.common.container.ThaumonomiconMenu(0, player.getInventory());
+			helper.assertTrue(menu.clickMenuButton(player, "TEST_ONE_CLICK".hashCode()), "the single click should succeed");
+			helper.assertTrue(knowledge.isResearchComplete("TEST_ONE_CLICK"), "a one-stage, requirement-free entry should complete on that one click, not need a second");
+			helper.succeed();
+		} finally {
+			category.research.remove("TEST_ONE_CLICK");
+		}
+	}
+
 	/** Real coverage for {@code ItemThaumonomicon}'s real "!gotthaumonomicon" grant - the small, deliberate
 	 * substitute for the original's item-pickup hook (see that item's own doc comment). */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")

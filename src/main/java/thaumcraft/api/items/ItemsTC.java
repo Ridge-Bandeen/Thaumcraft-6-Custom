@@ -344,6 +344,10 @@ public final class ItemsTC {
 	public static final DeferredItem<ItemPechWand> pechWand =
 			ITEMS.registerItem("pech_wand", ItemPechWand::new);
 
+	/** Restored 2026-09-27 - see {@link thaumcraft.common.items.curios.ItemEnchantmentPlaceholder}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.curios.ItemEnchantmentPlaceholder> enchantedPlaceholder =
+			ITEMS.registerItem("enchanted_placeholder", thaumcraft.common.items.curios.ItemEnchantmentPlaceholder::new);
+
 	/** A collapsed {@link thaumcraft.common.entities.EntityFluxRift}'s degraded fragment - see that item's
 	 * own doc comment. */
 	public static final DeferredItem<thaumcraft.common.items.curios.ItemPrimordialPearl> primordialPearl =

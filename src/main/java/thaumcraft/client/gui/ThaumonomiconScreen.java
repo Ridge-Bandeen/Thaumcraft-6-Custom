@@ -234,6 +234,19 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 		// Page-turning uses real book-arrow graphics hit-tested directly against the mouse (see
 		// prevArrowRect/nextArrowRect + mouseClicked) instead of Button widgets, matching the original's
 		// own non-widget click handling for these.
+
+		// Restored 2026-09-27: real per-stage progression needs a real "study this stage" action once an
+		// entry is known but not yet complete - the original drew this as a clickable quill icon baked into the
+		// page art itself with a graphical requirement checklist around it (see ResearchRequirements' own doc
+		// comment for why the checklist isn't reproduced); a plain button that reports what's missing in chat
+		// on failure is the honest stand-in used here instead.
+		IPlayerKnowledge knowledge = knowledge();
+		if (openEntry != null && knowledge.isResearchKnown(openEntry.getKey()) && !knowledge.isResearchComplete(openEntry.getKey())) {
+			int sw = (width - BOOK_W) / 2;
+			int sh = (height - BOOK_H) / 2;
+			addRenderableWidget(Button.builder(Component.translatable("tc.study"), b -> sendButtonClick(openEntry.getKey().hashCode()))
+					.bounds(sw + BOOK_W / 2 - 40, sh + BOOK_H + 6, 80, 18).build());
+		}
 	}
 
 	// --------------------------------------------------------------------------------------------------
@@ -307,10 +320,26 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 	// Tick / smoothing - mirrors the original's own real curMouseX/guiMapX two-tick lerp.
 	// --------------------------------------------------------------------------------------------------
 
+	/** The open entry's own stage count last time the reader was rebuilt - see {@link #containerTick}. */
+	private int lastReaderStage = -1;
+
 	@Override
 	protected void containerTick() {
 		super.containerTick();
-		if (openEntry != null) return;
+		if (openEntry != null) {
+			// Restored 2026-09-27 alongside the "Study" button: a successful study advances the entry's own
+			// stage count on the server and syncs it back, but nothing here was watching for that while the
+			// reader stayed open - the next stage's text/recipes, and the button itself once the entry
+			// completes, only ever appeared after closing and reopening the book.
+			int stage = knowledge().getResearchStage(openEntry.getKey());
+			if (stage != lastReaderStage) {
+				lastReaderStage = stage;
+				buildReaderPages();
+				readerPage = Math.min(readerPage, Math.max(0, readerPages.size() - 1));
+				rebuild();
+			}
+			return;
+		}
 		panPrevX = panX;
 		panPrevY = panY;
 		double dx = panTargetX - panX;
@@ -470,6 +499,7 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 		openEntry = entry;
 		readerPage = 0;
 		shownRecipe = null;
+		lastReaderStage = knowledge().getResearchStage(entry.getKey());
 		buildReaderPages();
 		rebuild();
 	}
@@ -934,19 +964,15 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 	// "insert" popups) is a separate, later restoration pass - see this class's own doc comment.
 	// --------------------------------------------------------------------------------------------------
 
-	/** Builds {@link #readerPages} from {@link #openEntry}'s real stage text. Since this port's own
-	 * {@code ThaumcraftInternalMethodHandler#completeResearch} advances a multi-stage entry through every
-	 * stage in one click (see its doc comment) rather than gating each stage on live crafting/possession
-	 * requirements the way the original did, the reader can never observe a partially-progressed entry -
-	 * by the time it opens, the entry is always complete. So instead of showing only the "current" stage
-	 * (which would always be the last one, silently discarding every earlier stage's authored text), this
-	 * concatenates every real stage's text back-to-back as one browsable document, stage boundaries marked
-	 * with the same real page-break behavior the original itself already uses between addenda. Real
-	 * addenda are appended the same way, gated on the same {@code required_research} check. The original's
-	 * live per-stage requirements checklist ({@code drawRequirements}, its icon rows and "complete stage"
-	 * button) is dropped outright rather than ported: with completion already atomic, it would render
-	 * against an already-satisfied gate and never be interactible - real dead code under this port's own
-	 * already-shipped progression model, not a visual shortcut. */
+	/** Builds {@link #readerPages} from {@link #openEntry}'s real stage text - restored 2026-09-27 to only show
+	 * stages the player has actually reached (see {@link ThaumonomiconMenu}'s own doc comment for the real
+	 * per-stage progression this now reflects): concatenating every stage unconditionally, as this did before,
+	 * would spoil an entry's later stages before a single {@code required_item}/{@code required_craft} gate on
+	 * an earlier one was ever met. Stage boundaries are marked with the same real page-break behavior the
+	 * original itself already uses between addenda. Real addenda are appended the same way, gated on the same
+	 * {@code required_research} check. The original's own live per-stage requirements checklist
+	 * ({@code drawRequirements}, its icon rows and quill-icon "complete stage" hotspot) is still not ported -
+	 * see {@link ThaumonomiconMenu}'s own doc comment for the plain "Study" button standing in for it instead. */
 	private void buildReaderPages() {
 		readerPages.clear();
 		ResearchStage[] stages = openEntry.getStages();
@@ -955,8 +981,9 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 			return;
 		}
 
-		for (ResearchStage stage : stages) {
-			readerPages.addAll(paginateSegment(stage.getTextLocalized().getString(), stage.getRecipes()));
+		int reached = Math.min(stages.length, Math.max(0, knowledge().getResearchStage(openEntry.getKey())));
+		for (int i = 0; i < reached; i++) {
+			readerPages.addAll(paginateSegment(stages[i].getTextLocalized().getString(), stages[i].getRecipes()));
 		}
 		if (openEntry.getAddenda() != null) {
 			int ac = 0;
