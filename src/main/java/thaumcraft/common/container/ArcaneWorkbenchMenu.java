@@ -42,11 +42,10 @@ import thaumcraft.common.world.aura.AuraHandler;
  * order, entropy - as the original's SlotCrystal did). The available vis, cost and discount % are synced to the
  * client through data slots for the screen's readout, and the result re-evaluates when the vis level crosses the cost.
  *
- * Simplifications still remaining versus the original for this pass (see TileArcaneWorkbench):
- * - No fallback to plain vanilla 3x3 crafting-table recipes if no arcane recipe matches.
- * - No vanilla recipe-book integration (extends AbstractContainerMenu directly, not RecipeBookMenu).
- * - Taking the result only decrements grid ingredients by 1 each; doesn't swap in "crafting remainder"
- *   items (buckets etc.) the way vanilla's ResultSlot does - most Thaumcraft recipe inputs don't have one.
+ * As the original (restored 2026-09-29 after a playtest): a known arcane recipe wins, otherwise the grid works as a
+ * plain crafting table (no vis); taking a result counts as crafting it (the crafted event - research that asks you to
+ * craft something, crafting warp - and the item's own onCraftedBy), and leftovers like empty buckets go back into the
+ * grid. Still no vanilla recipe-book integration (extends AbstractContainerMenu directly, not RecipeBookMenu).
  */
 public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 
@@ -63,6 +62,11 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 	private final Player player;
 	@Nullable
 	private RecipeHolder<ArcaneRecipe> currentRecipe;
+	/** The plain crafting recipe the grid makes when no known arcane recipe does, or null. */
+	@Nullable
+	private RecipeHolder<net.minecraft.world.item.crafting.CraftingRecipe> vanillaRecipe;
+	/** Whether the result showing is the arcane recipe's (so taking it costs vis and crystals). */
+	private boolean arcaneResult;
 	private final DataSlot availableVis = DataSlot.standalone();
 	private final DataSlot shownCost = DataSlot.standalone();
 	private final DataSlot shownDiscount = DataSlot.standalone();
@@ -94,6 +98,9 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 
 			@Override
 			public void onTake(Player p, ItemStack stack) {
+				// what the original's SlotCraftingArcaneWorkbench did through onCrafting: this counts as crafting
+				stack.onCraftedBy(p.level(), p, stack.getCount());
+				net.neoforged.neoforge.event.EventHooks.firePlayerCraftingEvent(p, stack, container);
 				consumeIngredients();
 				super.onTake(p, stack);
 				slotsChanged(container); // the grid changed: work out what it makes now (or clear the result)
@@ -233,8 +240,21 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 		currentRecipe = level.getRecipeManager().getRecipeFor(ThaumcraftRecipeTypes.ARCANE_TYPE.get(), input, level).orElse(null);
 		boolean hasVis = currentRecipe == null || availableVisAt(level, pos) >= visCost(currentRecipe.value(), player);
 		lastHadVis = hasVis;
-		boolean known = currentRecipe == null || thaumcraft.api.capabilities.ThaumcraftCapabilities.knowsResearchStrict(player, currentRecipe.value().getResearch());
-		ItemStack result = currentRecipe != null && hasVis && known ? currentRecipe.value().assemble(input, level.registryAccess()) : ItemStack.EMPTY;
+		boolean known = currentRecipe != null && thaumcraft.api.capabilities.ThaumcraftCapabilities.knowsResearchStrict(player, currentRecipe.value().getResearch());
+		ItemStack result = ItemStack.EMPTY;
+		arcaneResult = false;
+		vanillaRecipe = null;
+		if (hasVis) { // as the original: an arcane recipe short of vis shows nothing at all
+			if (known) {
+				result = currentRecipe.value().assemble(input, level.registryAccess());
+				arcaneResult = true;
+			} else {
+				// otherwise the grid is a plain crafting table (also when the arcane recipe's research is unknown)
+				net.minecraft.world.item.crafting.CraftingInput grid = input.grid();
+				vanillaRecipe = level.getRecipeManager().getRecipeFor(net.minecraft.world.item.crafting.RecipeType.CRAFTING, grid, level).orElse(null);
+				if (vanillaRecipe != null) result = vanillaRecipe.value().assemble(grid, level.registryAccess());
+			}
+		}
 		resultContainer.setItem(0, result);
 		setRemoteSlot(RESULT_SLOT, result);
 		// setRemoteSlot only records that the client "already has" this stack, so it has to be sent explicitly - as vanilla's
@@ -262,9 +282,21 @@ public class ArcaneWorkbenchMenu extends AbstractContainerMenu {
 
 	private void consumeIngredients() {
 		for (int i = 0; i < TileArcaneWorkbench.GRID_SIZE; i++) {
-			if (!container.getItem(i).isEmpty()) container.removeItem(i, 1);
+			ItemStack used = container.getItem(i);
+			if (used.isEmpty()) continue;
+			// a container item's leftover (an empty bucket, a glass bottle) goes back into the grid, or to the player
+			ItemStack leftover = used.getCraftingRemainingItem();
+			container.removeItem(i, 1);
+			if (leftover.isEmpty()) continue;
+			if (container.getItem(i).isEmpty()) {
+				container.setItem(i, leftover);
+			} else if (ItemStack.isSameItemSameComponents(container.getItem(i), leftover)) {
+				container.getItem(i).grow(leftover.getCount());
+			} else if (!player.getInventory().add(leftover)) {
+				player.drop(leftover, false);
+			}
 		}
-		if (currentRecipe != null) {
+		if (currentRecipe != null && arcaneResult) {
 				int cost = visCost(currentRecipe.value(), player);
 			access.execute((level, pos) -> {
 				if (hasCharger(level, pos)) {

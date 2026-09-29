@@ -26,9 +26,8 @@ import thaumcraft.common.tiles.crafting.TileResearchTable;
  * slot - matches the original's own real {@code onBlockActivated} exactly (the Stone Table has no such
  * upgrade - matches the original, whose own check was hardcoded to the wood variant specifically).
  *
- * Real, documented cut: the original's own {@code FMLCommonHandler.firePlayerCraftingEvent} call (a
- * "count this as a craft" stat/achievement hook) has no real modern equivalent wired up anywhere else in
- * this port either - dropped, purely a stats-tracking side effect.
+ * The upgrade counts as crafting a Research Table (the original's {@code firePlayerCraftingEvent}) - which is what
+ * completes the research stage that asks you to craft one. (It had been dropped as "stats only" until 2026-09-29.)
  */
 public class BlockTable extends Block {
 
@@ -58,6 +57,9 @@ public class BlockTable extends Block {
 		}
 
 		ItemStack scribingTool = stack.copy();
+		if (!level.isClientSide) {
+			net.neoforged.neoforge.event.EventHooks.firePlayerCraftingEvent(player, new ItemStack(BlocksTC.researchTable.get()), new net.minecraft.world.SimpleContainer(1));
+		}
 		BlockState upgraded = BlocksTC.researchTable.get().defaultBlockState();
 		level.setBlockAndUpdate(pos, upgraded);
 		if (level.getBlockEntity(pos) instanceof TileResearchTable tile) {

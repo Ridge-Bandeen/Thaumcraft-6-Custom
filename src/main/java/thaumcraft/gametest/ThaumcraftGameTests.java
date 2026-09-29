@@ -16056,11 +16056,23 @@ public class ThaumcraftGameTests {
 		thaumcraft.api.capabilities.IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
 		knowledge.setResearchStage("UNLOCKAUROMANCY", 1);
 
-		player.setPos(player.getX(), 5.0, player.getZ());
+		// thresholds re-anchored for tall worlds (2026-09-29): deep = within 10 of the world floor, high = 40 above sea level
+		ServerLevel level = helper.getLevel();
 		net.neoforged.neoforge.event.tick.PlayerTickEvent.Post tickEvent = new net.neoforged.neoforge.event.tick.PlayerTickEvent.Post(player);
+		player.setPos(player.getX(), 5.0, player.getZ());
 		thaumcraft.common.lib.events.PassiveResearchEvents.onTick(tickEvent);
-		helper.assertTrue(knowledge.isResearchKnown("m_deepdown"), "standing below Y=10 with only UNLOCKAUROMANCY stage 1 should really grant m_deepdown");
-		helper.assertFalse(knowledge.isResearchKnown("m_uphigh"), "standing below Y=10 should not also grant m_uphigh");
+		helper.assertFalse(knowledge.isResearchKnown("m_deepdown"), "Y 5 isn't deep any more in a world whose floor is " + level.getMinBuildHeight());
+		player.setPos(player.getX(), level.getMinBuildHeight() + 5.0, player.getZ());
+		thaumcraft.common.lib.events.PassiveResearchEvents.onTick(tickEvent);
+		helper.assertTrue(knowledge.isResearchKnown("m_deepdown"), "5 blocks above the world floor with only UNLOCKAUROMANCY stage 1 should grant m_deepdown");
+		helper.assertFalse(knowledge.isResearchKnown("m_uphigh"), "being deep down should not also grant m_uphigh");
+		player.setPos(player.getX(), level.getSeaLevel() + 30.0, player.getZ());
+		thaumcraft.common.lib.events.PassiveResearchEvents.onTick(tickEvent);
+		helper.assertFalse(knowledge.isResearchKnown("m_uphigh"), "30 above sea level isn't high enough yet");
+		player.setPos(player.getX(), level.getSeaLevel() + 45.0, player.getZ());
+		thaumcraft.common.lib.events.PassiveResearchEvents.onTick(tickEvent);
+		helper.assertTrue(knowledge.isResearchKnown("m_uphigh"), "45 above sea level should grant m_uphigh");
+		player.setPos(player.getX(), 5.0, player.getZ());
 
 		player.getStats().setValue(player, net.minecraft.stats.Stats.CUSTOM.get(net.minecraft.stats.Stats.WALK_ONE_CM), 200000);
 		player.getStats().setValue(player, net.minecraft.stats.Stats.CUSTOM.get(net.minecraft.stats.Stats.JUMP), 600);
@@ -17352,6 +17364,115 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(drops.size() == 1, "it should drop one placer, found " + drops.size());
 		var data = drops.get(0).getItem().get(thaumcraft.api.items.ThaumcraftDataComponents.GOLEM_PLACER_DATA.get());
 		helper.assertTrue(data != null && data.props() == props.toLong() && data.xp() == 750, "the placer should keep the golem's parts and rank progress");
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Conversions that count as crafting (2026-09-29, playtest: First Steps never advanced past the workbench).
+	// --------------------------------------------------------------------------------------------------
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void salisMundusOnACraftingTableCompletesFirstStepsFirstStage(GameTestHelper helper) {
+		BlockPos tablePos = new BlockPos(2, 1, 2);
+		helper.setBlock(tablePos, Blocks.CRAFTING_TABLE);
+		BlockPos tableAbs = helper.absolutePos(tablePos);
+		ServerPlayer player = spawnCasterAt(helper, tableAbs.above());
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		knowledge.clear();
+		knowledge.addResearch("FIRSTSTEPS");
+		knowledge.setResearchStage("FIRSTSTEPS", 1); // where a player holding the Thaumonomicon is; the trigger needs FIRSTSTEPS@1
+		thaumcraft.api.research.ResearchStage stage = thaumcraft.api.research.ResearchCategories.getResearch("FIRSTSTEPS").getStages()[0];
+		helper.assertFalse(ResearchRequirements.isStageSatisfied(player, stage), "First Steps' first stage shouldn't be satisfied before the workbench exists");
+
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, new ItemStack(ItemsTC.salisMundus.get()));
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(player, hand,
+				new net.minecraft.world.phys.BlockHitResult(Vec3.atCenterOf(tableAbs), net.minecraft.core.Direction.UP, tableAbs, false));
+		// onItemUseFirst: what the game calls before the table's own right-click (which would open its menu)
+		net.minecraft.world.InteractionResult result = player.getItemInHand(hand).onItemUseFirst(context);
+		helper.assertTrue(result.consumesAction(), "Salis Mundus should act on a crafting table before the table opens, got " + result);
+		helper.assertTrue(ResearchRequirements.isStageSatisfied(player, stage),
+				"converting the table counts as crafting an Arcane Workbench, which is what First Steps' first stage asks for");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void scribingToolsOnATableCountAsCraftingAResearchTable(GameTestHelper helper) {
+		BlockPos tablePos = new BlockPos(2, 1, 2);
+		helper.setBlock(tablePos, BlocksTC.tableWood.get());
+		BlockPos tableAbs = helper.absolutePos(tablePos);
+		ServerPlayer player = spawnCasterAt(helper, tableAbs.above());
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		knowledge.clear();
+		String key = ResearchRequirements.researchKeyFor(ResearchRequirements.registerCraftReference(BlocksTC.researchTable.get().asItem()));
+		helper.assertFalse(knowledge.isResearchKnown(key), "no Research Table crafted yet");
+
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, new ItemStack(ItemsTC.scribingTools.get()));
+		helper.getBlockState(tablePos).useItemOn(player.getItemInHand(hand), helper.getLevel(), player, hand,
+				new net.minecraft.world.phys.BlockHitResult(Vec3.atCenterOf(tableAbs), net.minecraft.core.Direction.UP, tableAbs, false));
+		helper.assertTrue(helper.getBlockState(tablePos).is(BlocksTC.researchTable.get()), "the table should have become a Research Table");
+		helper.assertTrue(knowledge.isResearchKnown(key), "upgrading it counts as crafting a Research Table (Theory of Research asks for that)");
+		helper.succeed();
+	}
+
+	// Arcane Workbench as a crafting table, and its results counting as crafting (2026-09-29 playtest)
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void workbenchAlsoMakesPlainCraftingRecipesWithoutSpendingVis(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		helper.setBlock(BlockPos.ZERO, BlocksTC.arcaneWorkbench.get());
+		TileArcaneWorkbench tile = helper.getBlockEntity(BlockPos.ZERO);
+		tile.setItem(4, new ItemStack(Items.INK_SAC));
+		ArcaneWorkbenchMenu menu = new ArcaneWorkbenchMenu(0, player.getInventory(), tile);
+		menu.slotsChanged(tile);
+		ItemStack result = menu.slots.get(0).getItem();
+		helper.assertTrue(result.is(Items.BLACK_DYE), "an ink sac should make black dye, as on a crafting table - got " + result);
+		float visBefore = AuraHandler.getVis(helper.getLevel(), origin);
+		menu.slots.get(0).onTake(player, result);
+		helper.assertTrue(tile.getItem(4).isEmpty(), "the ink sac should be used up");
+		helper.assertTrue(Math.abs(AuraHandler.getVis(helper.getLevel(), origin) - visBefore) < 1.0f, "a plain recipe costs no vis");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void workbenchResultsCountAsCraftingForResearch(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		forceResearch(player, "FIRSTSTEPS");
+		String key = ResearchRequirements.researchKeyFor(ResearchRequirements.registerCraftReference(ItemsTC.focus1.get()));
+		ThaumcraftCapabilities.getKnowledge(player).removeResearch(key);
+		ensureChunkVis(helper, BlockPos.ZERO);
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+		ItemStack result = menu.slots.get(0).getItem();
+		helper.assertTrue(result.is(ItemsTC.focus1.get()), "sanity: the focus should be craftable here, got " + result);
+		menu.slots.get(0).onTake(player, result);
+		helper.assertTrue(ThaumcraftCapabilities.getKnowledge(player).isResearchKnown(key),
+				"taking an arcane result counts as crafting it (e.g. First Steps asks you to craft a Thaumometer)");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void workbenchLeavesContainerItemsInTheGrid(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		ServerPlayer player = spawnCasterAt(helper, origin);
+		helper.setBlock(BlockPos.ZERO, BlocksTC.arcaneWorkbench.get());
+		TileArcaneWorkbench tile = helper.getBlockEntity(BlockPos.ZERO);
+		// cake: milk x3 / sugar egg sugar / wheat x3
+		for (int i = 0; i < 3; i++) tile.setItem(i, new ItemStack(Items.MILK_BUCKET));
+		tile.setItem(3, new ItemStack(Items.SUGAR));
+		tile.setItem(4, new ItemStack(Items.EGG));
+		tile.setItem(5, new ItemStack(Items.SUGAR));
+		for (int i = 6; i < 9; i++) tile.setItem(i, new ItemStack(Items.WHEAT));
+		ArcaneWorkbenchMenu menu = new ArcaneWorkbenchMenu(0, player.getInventory(), tile);
+		menu.slotsChanged(tile);
+		ItemStack result = menu.slots.get(0).getItem();
+		helper.assertTrue(result.is(Items.CAKE), "sanity: a cake, got " + result);
+		menu.slots.get(0).onTake(player, result);
+		for (int i = 0; i < 3; i++) {
+			helper.assertTrue(tile.getItem(i).is(Items.BUCKET), "the milk buckets should leave empty buckets in the grid, slot " + i + " has " + tile.getItem(i));
+		}
 		helper.succeed();
 	}
 }

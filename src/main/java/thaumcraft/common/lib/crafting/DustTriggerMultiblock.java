@@ -158,6 +158,12 @@ public class DustTriggerMultiblock implements IDustTrigger {
 	@Override
 	public void execute(Level level, Player player, BlockPos pos, Placement placement, Direction side) {
 		if (level.isClientSide) return;
+		// As the original: every multiblock conversion counts as crafting an Infernal Furnace - its own hardcoded item,
+		// whichever structure was actually built (kept as it was).
+		if (player != null) {
+			net.neoforged.neoforge.event.EventHooks.firePlayerCraftingEvent(player, new ItemStack(thaumcraft.api.blocks.BlocksTC.infernalFurnace.get()),
+					new net.minecraft.world.SimpleContainer(1));
+		}
 		BlockPos anchor = pos.offset(placement.xOffset, placement.yOffset, placement.zOffset);
 		for (int y = 0; y < ySize; y++) {
 			Matrix matrix = new Matrix(blueprint[y]);

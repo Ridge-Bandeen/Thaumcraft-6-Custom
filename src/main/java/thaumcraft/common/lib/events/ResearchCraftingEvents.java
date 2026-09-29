@@ -19,8 +19,8 @@ import thaumcraft.common.lib.research.ResearchRequirements;
  * key, so the knowledge is recorded the moment the item is made rather than being re-derived later. All the
  * matching and granting lives in {@link ResearchRequirements} - this class is only the real event plumbing.
  *
- * <p>Note this fires for real crafting-table output only, which is the original's own scope too; the
- * Arcane Workbench and the Infusion Matrix have their own real completion paths and aren't routed here.
+ * <p>Fires for anything that posts the crafted event: crafting tables, the Arcane Workbench's result slot, and the
+ * Salis Mundus conversions (workbench, research table, multiblocks) - as in the original.
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID)
 public class ResearchCraftingEvents {

@@ -56,6 +56,11 @@ public class DustTriggerSimple implements IDustTrigger {
 	@Override
 	public void execute(Level world, Player player, BlockPos pos, Placement placement, Direction side) {
 		if (world.isClientSide) return;
+		// As the original: the conversion counts as crafting the result - which is what completes research stages that
+		// ask you to craft it (First Steps' Arcane Workbench). Missing until 2026-09-29, so that stage never advanced.
+		if (player != null) {
+			net.neoforged.neoforge.event.EventHooks.firePlayerCraftingEvent(player, result.copy(), new net.minecraft.world.SimpleContainer(1));
+		}
 		BlockState state = world.getBlockState(pos);
 		BlockScheduler.addRunnableServer(world, () ->
 				BlockScheduler.addSwapper(world, pos, state, result, false, 0, player, true, true, -9999, false, false, 0, BlockScheduler.DEFAULT_PREDICATE, 0.0f),

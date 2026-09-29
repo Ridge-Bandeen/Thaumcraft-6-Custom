@@ -763,6 +763,7 @@ final class ResearchPageView {
 			y -= 18;
 			b = true;
 			int shift = 24;
+			RenderSystem.enableBlend(); // the 25% alpha only shows with blending on - without it these labels drew solid black
 			graphics.setColor(1f, 1f, 1f, 0.25f);
 			graphics.blit(TEX1, x - 12, y - 1, 200, 232, 56, 16);
 			graphics.setColor(1f, 1f, 1f, 1f);
@@ -822,6 +823,7 @@ final class ResearchPageView {
 			y -= 18;
 			b = true;
 			int shift = 24;
+			RenderSystem.enableBlend(); // the 25% alpha only shows with blending on - without it these labels drew solid black
 			graphics.setColor(1f, 1f, 1f, 0.25f);
 			graphics.blit(TEX1, x - 12, y - 1, 200, 216, 56, 16);
 			graphics.setColor(1f, 1f, 1f, 1f);
@@ -841,6 +843,7 @@ final class ResearchPageView {
 			y -= 18;
 			b = true;
 			int shift = 24;
+			RenderSystem.enableBlend(); // the 25% alpha only shows with blending on - without it these labels drew solid black
 			graphics.setColor(1f, 1f, 1f, 0.25f);
 			graphics.blit(TEX1, x - 12, y - 1, 200, 200, 56, 16);
 			graphics.setColor(1f, 1f, 1f, 1f);
@@ -860,6 +863,7 @@ final class ResearchPageView {
 			y -= 18;
 			b = true;
 			int shift = 24;
+			RenderSystem.enableBlend(); // the 25% alpha only shows with blending on - without it these labels drew solid black
 			graphics.setColor(1f, 1f, 1f, 0.25f);
 			graphics.blit(TEX1, x - 12, y - 1, 200, 184, 56, 16);
 			graphics.setColor(1f, 1f, 1f, 1f);

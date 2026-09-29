@@ -55,8 +55,8 @@ import thaumcraft.common.items.resources.ItemCrystalEssence;
  * behind all 8 of these exact keys. {@link #onTick} real-ifies "visited the Nether"/"visited the End"
  * (checked directly against the real dimension key, the same simplification {@code ChampionModEvents} already
  * made for the same original {@code BiomeDictionary.Type.NETHER}/{@code END} check - no modern biome-tag
- * equivalent is any more precise for an entire-dimension condition like this), "gone below Y=10"/"climbed
- * above 40% world height" (both real, gated the same real way the original did - only once
+ * equivalent is any more precise for an entire-dimension condition like this), "gone deep" (10 blocks above the world
+ * floor)/"climbed high" (40 above sea level) (both real, gated the same real way the original did - only once
  * {@code UNLOCKAUROMANCY} stage 1 is known but stage 2 isn't), and 4 silent (no message, same as the
  * original) vanilla-stat thresholds (walked/sprinted/jumped/swum enough) via real {@link Stats}.
  */
@@ -115,10 +115,13 @@ public class PassiveResearchEvents {
 		}
 
 		if (ThaumcraftCapabilities.knowsResearchStrict(player, "UNLOCKAUROMANCY@1") && !ThaumcraftCapabilities.knowsResearchStrict(player, "UNLOCKAUROMANCY@2")) {
-			if (player.getY() < 10.0 && !ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("m_deepdown")) {
+			// The original's Y < 10 and Y > 40% of the (then 256-block) world, re-anchored for 1.18+'s taller worlds
+			// (agreed 2026-09-29): 10 blocks above the world floor (-54 in the overworld: the deep lava level again, as Y 10
+			// was in 1.12; still Y 10 in the Nether/End), and 40 blocks above sea level (Y 103 - the original's own ~102).
+			if (player.getY() < level.getMinBuildHeight() + 10 && !ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("m_deepdown")) {
 				grant(player, "m_deepdown", "got.deepdown");
 			}
-			if (player.getY() > level.getHeight() * 0.4 && !ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("m_uphigh")) {
+			if (player.getY() > level.getSeaLevel() + 40 && !ThaumcraftCapabilities.getKnowledge(player).isResearchKnown("m_uphigh")) {
 				grant(player, "m_uphigh", "got.uphigh");
 			}
 		}
