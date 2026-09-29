@@ -40,6 +40,12 @@ public class ItemGolemBell extends Item implements ISealDisplayer {
 		super(properties.stacksTo(1));
 	}
 
+	/** The original did this in {@code onItemUseFirst}, before the clicked block's own use - so ringing a seal on a chest opens the seal's settings, not the chest. (Fixed 2026-09-29: it was only on {@link #useOn}, which runs after the block.) */
+	@Override
+	public InteractionResult onItemUseFirst(net.minecraft.world.item.ItemStack stack, UseOnContext context) {
+		return useOn(context);
+	}
+
 	@Override
 	public InteractionResult useOn(UseOnContext context) {
 		Level level = context.getLevel();

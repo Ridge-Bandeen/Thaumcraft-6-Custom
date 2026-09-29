@@ -67,6 +67,12 @@ public class ItemGolemPlacer extends Item implements ISealDisplayer {
 		super.appendHoverText(stack, context, tooltip, flag);
 	}
 
+	/** The original did this in {@code onItemUseFirst}, before the clicked block's own use - so a golem can be placed against a chest or other usable block. (Fixed 2026-09-29: it was only on {@link #useOn}, which runs after the block.) */
+	@Override
+	public InteractionResult onItemUseFirst(net.minecraft.world.item.ItemStack stack, UseOnContext context) {
+		return useOn(context);
+	}
+
 	@Override
 	public InteractionResult useOn(UseOnContext context) {
 		Level level = context.getLevel();

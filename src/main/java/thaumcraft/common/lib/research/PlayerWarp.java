@@ -12,7 +12,8 @@ import thaumcraft.api.capabilities.IPlayerWarp;
 
 /**
  * The concrete {@link IPlayerWarp} implementation - see {@link PlayerKnowledge}'s doc for the general
- * story (this class didn't exist in the ported API either). {@link #sync} is a no-op for the same reason.
+ * story (this class didn't exist in the ported API either). {@link #sync} sends it to the client (was a no-op until
+ * 2026-09-29, so the client - and the Sanity Checker - always saw no warp).
  */
 public class PlayerWarp implements IPlayerWarp {
 
@@ -49,7 +50,18 @@ public class PlayerWarp implements IPlayerWarp {
 
 	@Override
 	public void sync(ServerPlayer player) {
-		// TODO: needs the not-yet-ported network layer to push this to the client.
+		send(player, (byte) -1, 0);
+	}
+
+	/** Sends the warp to the player's client, with the "gained/lost warp" message for {@code kind} (see
+	 * {@link thaumcraft.common.lib.network.ClientboundWarpPacket}). */
+	public void send(ServerPlayer player, byte kind, int amount) {
+		try {
+			net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+					new thaumcraft.common.lib.network.ClientboundWarpPacket(serializeNBT(player.registryAccess()), kind, amount));
+		} catch (Exception e) {
+			// a mock (GameTest) player has no connection to send to
+		}
 	}
 
 	@Override

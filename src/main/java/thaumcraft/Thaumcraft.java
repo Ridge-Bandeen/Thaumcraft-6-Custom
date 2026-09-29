@@ -339,6 +339,12 @@ public class Thaumcraft {
         registrar.playToClient(thaumcraft.common.lib.network.misc.PacketKnowledgeGain.TYPE,
                 thaumcraft.common.lib.network.misc.PacketKnowledgeGain.STREAM_CODEC,
                 (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.handleKnowledgeGain(payload));
+        registrar.playToClient(thaumcraft.common.lib.network.ClientboundSealPacket.TYPE,
+                thaumcraft.common.lib.network.ClientboundSealPacket.STREAM_CODEC,
+                (payload, context) -> thaumcraft.client.render.SealRenderer.handle(payload));
+        registrar.playToClient(thaumcraft.common.lib.network.ClientboundWarpPacket.TYPE,
+                thaumcraft.common.lib.network.ClientboundWarpPacket.STREAM_CODEC,
+                (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.handleWarp(payload));
         registrar.playToClient(thaumcraft.common.lib.network.ClientboundAuraPacket.TYPE,
                 thaumcraft.common.lib.network.ClientboundAuraPacket.STREAM_CODEC,
                 (payload, context) -> thaumcraft.client.gui.HudOverlays.handleAura(payload));
@@ -604,6 +610,15 @@ public class Thaumcraft {
         if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
             ThaumcraftCapabilities.getKnowledge(player).sync(player);
             ThaumcraftCapabilities.getWarp(player).sync(player);
+            thaumcraft.common.lib.network.ClientboundSealPacket.sendAll(player);
+        }
+    }
+
+    /** The seals of the dimension the player arrives in (the client only keeps the current dimension's). */
+    @SubscribeEvent
+    public void onChangeDimension(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerChangedDimensionEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            thaumcraft.common.lib.network.ClientboundSealPacket.sendAll(player);
         }
     }
 

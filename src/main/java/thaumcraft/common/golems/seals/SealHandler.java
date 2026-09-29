@@ -138,6 +138,9 @@ public final class SealHandler {
 		}
 		if (!level.isClientSide) {
 			markDirty(level.dimension());
+			if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+				thaumcraft.common.lib.network.ClientboundSealPacket.broadcast(serverLevel, thaumcraft.common.lib.network.ClientboundSealPacket.removed(pos));
+			}
 		}
 	}
 

@@ -136,6 +136,19 @@ public final class ScreenshotHarness {
 						new net.minecraft.world.item.ItemStack(item));
 			});
 			case "sneak" -> mc.options.keyShift.setDown(Boolean.parseBoolean(arg));
+			case "face" -> { // square up to the nearest cardinal direction, level
+				mc.player.setYRot(mc.player.getDirection().toYRot());
+				mc.player.setXRot(Float.parseFloat(arg.isEmpty() ? "0" : arg));
+			}
+			case "seal" -> mc.getSingleplayerServer().execute(() -> {
+				// a stone block 3 ahead at eye level with a Breaker seal (it has a work area) on the side facing the player
+				ServerPlayer sp = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+				if (sp == null) return;
+				net.minecraft.core.BlockPos pos = sp.blockPosition().above().relative(sp.getDirection(), arg.isEmpty() ? 3 : Integer.parseInt(arg));
+				sp.serverLevel().setBlockAndUpdate(pos, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+				thaumcraft.common.golems.seals.SealHandler.addSealEntity(sp.serverLevel(), pos, sp.getDirection().getOpposite(),
+						new thaumcraft.common.golems.seals.SealBreaker(), sp);
+			});
 			case "wait" -> wait = Integer.parseInt(arg);
 			case "shot" -> {
 				File dir = new File(mc.gameDirectory, "screenshots");

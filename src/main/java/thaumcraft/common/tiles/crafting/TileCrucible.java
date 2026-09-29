@@ -172,6 +172,8 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 			CrucibleRecipe recipe = hasWater() ? findRecipe(level, player, single) : null;
 			if (recipe != null) {
 				ItemStack out = recipe.assemble(new CrucibleRecipeInput(single, aspects), level.registryAccess());
+				// as the original: the thrower crafted it (research asking for an alchemy product, crafting warp)
+				if (player != null) net.neoforged.neoforge.event.EventHooks.firePlayerCraftingEvent(player, out.copy(), new net.minecraft.world.SimpleContainer(single));
 				aspects = recipe.removeMatching(aspects);
 				waterAmount = Math.max(0, waterAmount - CRAFT_WATER_COST);
 				ejectItem(level, out);

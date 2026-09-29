@@ -80,6 +80,8 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 	private int maxRecipes = 1;
 	/** The recipes the player curated, by recipe id. */
 	private final List<ResourceLocation> selected = new ArrayList<>();
+	/** Who selected each recipe - the original's recipePlayer list: they count as having crafted what it makes. */
+	private final java.util.Map<ResourceLocation, java.util.UUID> selectedBy = new java.util.HashMap<>();
 
 	public TileThaumatorium(BlockPos pos, BlockState state) {
 		super(ThaumcraftBlockEntities.THAUMATORIUM.get(), pos, state);
@@ -150,12 +152,14 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 		if (recipeIndex < 0 || recipeIndex >= all.size()) return;
 		RecipeHolder<CrucibleRecipe> holder = all.get(recipeIndex);
 		if (selected.remove(holder.id())) {
+			selectedBy.remove(holder.id());
 			setChanged();
 			return;
 		}
 		if (selected.size() >= maxRecipes) return;
 		if (!knows(player, holder.value()) || !holder.value().catalystMatches(getItem())) return;
 		selected.add(holder.id());
+		selectedBy.put(holder.id(), player.getUUID());
 		setChanged();
 	}
 
@@ -262,6 +266,10 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 			ItemStack out = recipe.assemble(input, level.registryAccess());
 			tile.aspects = new AspectList(); // the original wiped the whole store, not just the recipe's share
 			tile.catalyst.extractItem(0, 1, false);
+			java.util.UUID by = tile.selectedBy.get(match.get().id());
+			if (by != null && level.getPlayerByUUID(by) instanceof Player crafter) {
+				net.neoforged.neoforge.event.EventHooks.firePlayerCraftingEvent(crafter, out.copy(), new net.minecraft.world.SimpleContainer(held.copyWithCount(1)));
+			}
 			tile.ejectItem(level, pos, out);
 			tile.currentSuction = null;
 			level.playSound(null, pos, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.25f, 2.6f + (level.random.nextFloat() - level.random.nextFloat()) * 0.8f);
@@ -429,6 +437,9 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 		ListTag list = new ListTag();
 		for (ResourceLocation id : selected) list.add(StringTag.valueOf(id.toString()));
 		tag.put("Selected", list);
+		CompoundTag by = new CompoundTag();
+		selectedBy.forEach((id, uuid) -> by.putUUID(id.toString(), uuid));
+		tag.put("SelectedBy", by);
 	}
 
 	@Override
@@ -442,6 +453,12 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 		for (int i = 0; i < tag.getList("Selected", 8).size(); i++) {
 			ResourceLocation id = ResourceLocation.tryParse(tag.getList("Selected", 8).getString(i));
 			if (id != null) selected.add(id);
+		}
+		selectedBy.clear();
+		CompoundTag by = tag.getCompound("SelectedBy");
+		for (String key : by.getAllKeys()) {
+			ResourceLocation id = ResourceLocation.tryParse(key);
+			if (id != null && by.hasUUID(key)) selectedBy.put(id, by.getUUID(key));
 		}
 	}
 

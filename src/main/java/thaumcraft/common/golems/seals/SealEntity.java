@@ -22,9 +22,9 @@ import thaumcraft.api.golems.tasks.Task;
  * (1 wide along whichever axis the seal's own face points), redstone-sensitivity suspends every task tied
  * to this seal the moment it goes powered rather than removing them outright.
  *
- * Real, documented cut: {@link #syncToClient} is a real no-op - the original's {@code PacketSealToClient}
- * existed purely to drive in-world seal-icon rendering, which still doesn't exist in this port (unlike the
- * config GUI - see {@link #createMenu} below, real now).
+ * {@link #syncToClient} sends it to everyone in the dimension (the original's {@code PacketSealToClient}), for the
+ * in-world seal rendering while a seal or Golem Bell is held (restored 2026-09-29 - it had been a no-op, and seals were
+ * invisible once placed).
  *
  * <p>{@link MenuProvider} (matching {@code TileGolemBuilder}'s own established "the real backing object
  * IS the provider" pattern) opens a real {@link thaumcraft.common.container.SealConfigMenu} - see that
@@ -203,7 +203,9 @@ public class SealEntity implements ISealEntity, MenuProvider {
 
 	@Override
 	public void syncToClient(Level level) {
-		// no in-world seal-icon renderer exists yet - see this class's own doc comment.
+		if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+			thaumcraft.common.lib.network.ClientboundSealPacket.broadcast(serverLevel, thaumcraft.common.lib.network.ClientboundSealPacket.of(this));
+		}
 	}
 
 	@Override

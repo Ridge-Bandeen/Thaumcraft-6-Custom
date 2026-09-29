@@ -747,6 +747,29 @@ public final class ClientFxHandlers {
 		addDelayed(fb, 0);
 	}
 
+	/** The original's PacketSyncWarp + PacketWarpMessage client side - including its quirk that gaining permanent warp
+	 * only whispers (the message it built was never shown), while normal and temporary warp say so. */
+	public static void handleWarp(thaumcraft.common.lib.network.ClientboundWarpPacket payload) {
+		var mc = net.minecraft.client.Minecraft.getInstance();
+		if (mc.player == null) return;
+		thaumcraft.api.capabilities.ThaumcraftCapabilities.getWarp(mc.player).deserializeNBT(mc.player.registryAccess(), payload.data());
+		int amount = payload.amount();
+		switch (payload.kind()) {
+			case 0 -> {
+				if (amount > 0) mc.player.playSound(thaumcraft.common.registry.ThaumcraftSounds.WHISPERS.get(), 0.5f, 1.0f);
+			}
+			case 1 -> {
+				if (amount > 0) mc.player.playSound(thaumcraft.common.registry.ThaumcraftSounds.WHISPERS.get(), 0.5f, 1.0f);
+				mc.player.displayClientMessage(net.minecraft.network.chat.Component.translatable(amount < 0 ? "tc.removewarpsticky" : "tc.addwarpsticky"), true);
+			}
+			case 2 -> {
+				if (amount > 0) mc.player.displayClientMessage(net.minecraft.network.chat.Component.translatable("tc.addwarptemp"), true);
+			}
+			default -> {
+			}
+		}
+	}
+
 	public static void handleMiscEvent(thaumcraft.common.lib.network.ClientboundMiscEventPacket payload) {
 		var mc = net.minecraft.client.Minecraft.getInstance();
 		if (payload.kind() == thaumcraft.common.lib.network.ClientboundMiscEventPacket.HEARTBEAT && mc.player != null && mc.level != null

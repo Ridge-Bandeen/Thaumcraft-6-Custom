@@ -32,9 +32,20 @@ public class ItemSealPlacer extends Item implements ISealDisplayer {
 
 	private final Supplier<ISeal> sealFactory;
 
+	/** The key of the seal this places (e.g. {@code thaumcraft:provider}). */
+	public String getSealKey() {
+		return sealFactory.get().getKey();
+	}
+
 	public ItemSealPlacer(Properties properties, Supplier<ISeal> sealFactory) {
 		super(properties);
 		this.sealFactory = sealFactory;
+	}
+
+	/** The original did this in {@code onItemUseFirst}, before the clicked block's own use - so a seal goes onto a chest instead of opening it. (Fixed 2026-09-29: it was only on {@link #useOn}, which runs after the block.) */
+	@Override
+	public InteractionResult onItemUseFirst(net.minecraft.world.item.ItemStack stack, UseOnContext context) {
+		return useOn(context);
 	}
 
 	@Override

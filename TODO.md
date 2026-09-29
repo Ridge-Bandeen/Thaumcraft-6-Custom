@@ -187,6 +187,21 @@ Still open:
 - Needs a human check: config screen editing, the three HUD gauges, dialBottom, heartbeat, golem emotes, blue biome,
   regen with a new regenKey on an old world, and Magical Forest frequency at different weights.
 
+## Discrepancy sweep, 2026-09-29 (hooks the port had skipped)
+
+Fixed: items the original ran before the clicked block's own use (seal placer, Golem Bell, golem/turret placers - a
+seal couldn't be put on a chest); crafted events from the Crucible, Infusion Altar and Thaumatorium (research asking
+you to craft their products); `addWarpToPlayer` in full (warp counter - warp events never happened in play -, the
+WARP research, warp sync to the client and the gain messages); in-world seal rendering while holding a seal/Golem
+Bell (seals were invisible) with seal sync; internal seal/golem API methods forwarding to the real registries.
+
+Kept as the original: removing more warp than a player has ADDS their current warp (the clamp sets +cur).
+
+Still open:
+- Golems drawn as faint silhouettes through walls while sneaking with a seal/Golem Bell (original
+  RenderThaumcraftGolem) - not ported.
+- The seal icon is a flat quad, not the original's thin extruded item.
+
 ## Flaky GameTests root-caused, 2026-09-28
 
 All 16 disabled tests re-enabled (556 GameTests). Causes and fixes are listed in the memory file

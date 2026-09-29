@@ -17475,4 +17475,57 @@ public class ThaumcraftGameTests {
 		}
 		helper.succeed();
 	}
+
+	/** Gaining warp does what the original's addWarpToPlayer did (restored 2026-09-29): it winds up the counter that warp
+	 * events run on, and the first non-temporary warp unlocks the Warp research. It used to only add the number, so warp
+	 * events never happened in play and the Eldritch path never opened. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void gainingWarpWindsTheWarpCounterAndUnlocksWarpResearch(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		knowledge.clear();
+		forceResearch(player, "FIRSTSTEPS");
+		thaumcraft.api.capabilities.IPlayerWarp warp = ThaumcraftCapabilities.getWarp(player);
+		warp.clear();
+
+		thaumcraft.api.ThaumcraftApi.internalMethods.addWarpToPlayer(player, 3, thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.TEMPORARY);
+		helper.assertTrue(warp.getCounter() == 3, "gaining warp should set the counter to the total warp, was " + warp.getCounter());
+		helper.assertFalse(ThaumcraftCapabilities.knowsResearchStrict(player, "WARP"), "temporary warp alone doesn't unlock the Warp research");
+
+		thaumcraft.api.ThaumcraftApi.internalMethods.addWarpToPlayer(player, 2, thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.PERMANENT);
+		helper.assertTrue(warp.getCounter() == 5, "counter should follow the total, was " + warp.getCounter());
+		helper.assertTrue(ThaumcraftCapabilities.knowsResearchStrict(player, "WARP"), "the first non-temporary warp should unlock the Warp research");
+
+		// The original's clamp sets the amount to +current (not -current) when removing more than there is, so it ADDS
+		// the current warp - an original bug, kept as it was (see addWarpToPlayer).
+		thaumcraft.api.ThaumcraftApi.internalMethods.addWarpToPlayer(player, -10, thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.PERMANENT);
+		helper.assertTrue(warp.get(thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.PERMANENT) == 4,
+				"the original's over-removal quirk doubles the warp instead (2 -> 4), was " + warp.get(thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.PERMANENT));
+		helper.succeed();
+	}
+
+	/** A plain right-click with a seal on a chest places the seal (the original acted before the chest's own use; the
+	 * port had it after, so the chest just opened - found 2026-09-29). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealGoesOntoAChestInsteadOfOpeningIt(GameTestHelper helper) {
+		BlockPos chestPos = new BlockPos(2, 1, 2);
+		helper.setBlock(chestPos, Blocks.CHEST);
+		BlockPos chestAbs = helper.absolutePos(chestPos);
+		ServerPlayer player = spawnCasterAt(helper, chestAbs.above());
+		net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		player.setItemInHand(hand, new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+				net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "seal_provider"))));
+		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(player, hand,
+				new net.minecraft.world.phys.BlockHitResult(Vec3.atCenterOf(chestAbs), net.minecraft.core.Direction.UP, chestAbs, false));
+		net.minecraft.world.InteractionResult result = player.getItemInHand(hand).onItemUseFirst(context);
+		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(chestAbs, net.minecraft.core.Direction.UP);
+		try {
+			helper.assertTrue(result.consumesAction(), "placing a seal should happen before the chest's own right-click, got " + result);
+			helper.assertTrue(thaumcraft.api.ThaumcraftApi.internalMethods.getSealEntity(helper.getLevel().dimension(), sealPos) != null,
+					"the seal should be on the chest (checked through the API, which used to always say no)");
+		} finally {
+			thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos);
+		}
+		helper.succeed();
+	}
 }

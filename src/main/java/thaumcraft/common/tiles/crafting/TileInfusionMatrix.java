@@ -438,9 +438,9 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		if (targets.isEmpty()) return;
 		Player target = targets.get(rand.nextInt(targets.size()));
 		if (rand.nextFloat() < 0.25f) {
-			ThaumcraftCapabilities.getWarp(target).add(IPlayerWarp.EnumWarpType.NORMAL, 1);
+			thaumcraft.api.ThaumcraftApi.internalMethods.addWarpToPlayer(target, 1, IPlayerWarp.EnumWarpType.NORMAL);
 		} else {
-			ThaumcraftCapabilities.getWarp(target).add(IPlayerWarp.EnumWarpType.TEMPORARY, 2 + rand.nextInt(4));
+			thaumcraft.api.ThaumcraftApi.internalMethods.addWarpToPlayer(target, 2 + rand.nextInt(4), IPlayerWarp.EnumWarpType.TEMPORARY);
 		}
 	}
 
@@ -545,6 +545,10 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 			out.setDamageValue((int) (out.getMaxDamage() * ratio));
 		}
 		ped.setItem(out);
+		// as the original: the player who started the craft crafted it (research asking for an infusion product, warp)
+		if (recipePlayer != null && level.getPlayerByUUID(recipePlayer) instanceof Player crafter) {
+			net.neoforged.neoforge.event.EventHooks.firePlayerCraftingEvent(crafter, out.copy(), new net.minecraft.world.SimpleContainer(1));
+		}
 		recipeEssentia = new AspectList();
 		recipeInstability = 0;
 		recipeOutput = ItemStack.EMPTY;

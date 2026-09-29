@@ -337,7 +337,7 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 			target.addEffect(new MobEffectInstance(MobEffects.WITHER, 400, 0));
 			target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 400, 0));
 			if (target instanceof net.minecraft.server.level.ServerPlayer player) {
-				ThaumcraftCapabilities.getWarp(player).add(IPlayerWarp.EnumWarpType.TEMPORARY, 3 + random.nextInt(3));
+				thaumcraft.api.ThaumcraftApi.internalMethods.addWarpToPlayer(player, 3 + random.nextInt(3), IPlayerWarp.EnumWarpType.TEMPORARY);
 			}
 			playSound(SoundEvents.WARDEN_SONIC_BOOM, 4.0f, 1.0f + random.nextFloat() * 0.1f);
 			level().broadcastEntityEvent(this, SONIC_EVENT);

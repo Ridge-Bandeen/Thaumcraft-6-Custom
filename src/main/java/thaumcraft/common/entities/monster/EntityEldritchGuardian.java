@@ -165,7 +165,7 @@ public class EntityEldritchGuardian extends Monster implements RangedAttackMob, 
 		} else if (hasLineOfSight(target)) {
 			target.addEffect(new MobEffectInstance(MobEffects.WITHER, 400, 1));
 			if (target instanceof net.minecraft.server.level.ServerPlayer player) {
-				ThaumcraftCapabilities.getWarp(player).add(IPlayerWarp.EnumWarpType.TEMPORARY, 1 + random.nextInt(3));
+				thaumcraft.api.ThaumcraftApi.internalMethods.addWarpToPlayer(player, 1 + random.nextInt(3), IPlayerWarp.EnumWarpType.TEMPORARY);
 			}
 			playSound(net.minecraft.sounds.SoundEvents.WARDEN_SONIC_BOOM, 3.0f, 1.0f + random.nextFloat() * 0.1f);
 			level().broadcastEntityEvent(this, SONIC_EVENT);

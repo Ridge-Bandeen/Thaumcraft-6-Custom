@@ -255,7 +255,7 @@ public class SealConfigMenu extends AbstractContainerMenu implements IMenuProvid
 		// Screen just changes which section it renders/binds locally, no server round trip needed since the
 		// server holds nothing tab-specific. Every id from here down is a real state mutation.
 		if (isLockedForNonOwner(player) && id != BUTTON_LOCK) return false;
-		return switch (id) {
+		boolean changed = switch (id) {
 			case BUTTON_LOCK -> ownerOnly(player, () -> sealEntity.setLocked(!sealEntity.isLocked()));
 			case BUTTON_REDSTONE -> set(() -> sealEntity.setRedstoneSensitive(!sealEntity.isRedstoneSensitive()));
 			case BUTTON_BLACKLIST -> hasFilter && set(() -> filter().setBlacklist(!filter().isBlacklist()));
@@ -271,6 +271,9 @@ public class SealConfigMenu extends AbstractContainerMenu implements IMenuProvid
 			case BUTTON_AREA_Z_DOWN -> hasArea && resizeArea(0, 0, -1);
 			default -> id >= BUTTON_TOGGLE_BASE && flipToggle(id - BUTTON_TOGGLE_BASE);
 		};
+		// colour, area and redstone show in the world while a seal or Golem Bell is held - keep clients up to date
+		if (changed && !player.level().isClientSide) sealEntity.syncToClient(player.level());
+		return changed;
 	}
 
 	private boolean isLockedForNonOwner(Player player) {

@@ -43,8 +43,9 @@ import thaumcraft.common.world.aura.AuraHandler;
  * <li>{@code getObjectAspects}/{@code generateTags} now wire through to
  * {@link thaumcraft.common.lib.crafting.ThaumcraftObjectTags} - see that class's own doc comment for what's
  * simplified in the object-tag database it replaces. {@code getEntityAspects} wires through to its sibling
- * {@link thaumcraft.common.lib.crafting.ThaumcraftEntityTags} the same way. The seal/golem registry methods
- * stay no-ops (no seals/golems ported yet), same as the original's own {@code DummyInternalMethodHandler}.</li>
+ * {@link thaumcraft.common.lib.crafting.ThaumcraftEntityTags} the same way. The seal/golem methods forward to the
+ * real registries ({@code GolemHelper}, {@code TaskHandler}) - they were left as no-ops from before golems existed
+ * until 2026-09-29.</li>
  * </ul>
  */
 public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
@@ -243,7 +244,27 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 
 	@Override
 	public void addWarpToPlayer(Player player, int amount, IPlayerWarp.EnumWarpType type) {
-		ThaumcraftCapabilities.getWarp(player).add(type, amount);
+		// The original's InternalMethodHandler#addWarpToPlayer, in full (restored 2026-09-29 - it had only been adding
+		// the number, so the warp counter that drives warp events never moved, the WARP research never unlocked, and
+		// the client never heard of it).
+		if (player.level().isClientSide) return;
+		IPlayerWarp pw = ThaumcraftCapabilities.getWarp(player);
+		int cur = pw.get(type);
+		// The original's clamp - which sets +cur, not -cur, so removing more warp than there is ADDS the current amount.
+		// An original bug, kept as it was (2026-09-29).
+		if (amount < 0 && cur + amount < 0) amount = cur;
+		pw.add(type, amount);
+		if (amount > 0) {
+			pw.setCounter(pw.get(IPlayerWarp.EnumWarpType.TEMPORARY) + pw.get(IPlayerWarp.EnumWarpType.PERMANENT) + pw.get(IPlayerWarp.EnumWarpType.NORMAL));
+		}
+		if (type != IPlayerWarp.EnumWarpType.TEMPORARY && ThaumcraftCapabilities.knowsResearchStrict(player, "FIRSTSTEPS")
+				&& !ThaumcraftCapabilities.knowsResearchStrict(player, "WARP")) {
+			completeResearch(player, "WARP");
+			player.displayClientMessage(net.minecraft.network.chat.Component.translatable("research.WARP.warn"), true);
+		}
+		if (player instanceof net.minecraft.server.level.ServerPlayer sp && pw instanceof thaumcraft.common.lib.research.PlayerWarp warp) {
+			warp.send(sp, (byte) type.ordinal(), amount); // PERMANENT 0, NORMAL 1, TEMPORARY 2 - the original's message types
+		}
 	}
 
 	@Override
@@ -319,26 +340,29 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 
 	@Override
 	public void registerSeal(ISeal seal) {
-		// No seals ported yet.
+		thaumcraft.api.golems.GolemHelper.registerSeal(seal);
 	}
 
 	@Override
 	public ISeal getSeal(String key) {
-		return null;
+		return thaumcraft.api.golems.GolemHelper.getSeal(key);
 	}
 
 	@Override
 	public ISealEntity getSealEntity(ResourceKey<Level> dim, SealPos pos) {
-		return null;
+		return thaumcraft.api.golems.GolemHelper.getSealEntity(dim, pos);
 	}
 
 	@Override
 	public void addGolemTask(ResourceKey<Level> dim, Task task) {
-		// No golems ported yet.
+		thaumcraft.common.golems.tasks.TaskHandler.addTask(dim, task);
 	}
 
 	@Override
 	public ItemStack getSealStack(String key) {
-		return null;
+		for (net.minecraft.world.item.Item item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+			if (item instanceof thaumcraft.common.golems.ItemSealPlacer placer && placer.getSealKey().equals(key)) return new ItemStack(item);
+		}
+		return ItemStack.EMPTY;
 	}
 }
