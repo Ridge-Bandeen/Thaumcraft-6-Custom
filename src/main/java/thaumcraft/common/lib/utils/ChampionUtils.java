@@ -62,8 +62,9 @@ public final class ChampionUtils {
 			if (damage != null) damage.addOrReplacePermanentModifier(CHAMPION_DAMAGE);
 
 			entity.heal(25.0f);
+			// Name only, not "always visible": the original's champions showed their name only when looked at (1.12's
+			// rule for custom names), where always-visible tags render faintly through walls - giving champions away.
 			entity.setCustomName(mod.getModNameLocalized().copy().append(" ").append(entity.getType().getDescription()));
-			entity.setCustomNameVisible(true);
 		}
 
 		switch (type) {

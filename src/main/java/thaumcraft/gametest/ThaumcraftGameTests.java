@@ -14660,7 +14660,8 @@ public class ThaumcraftGameTests {
 		// real AttributeModifier, which never changes the raw base value.
 		double healthAfter = zombie.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH).getValue();
 		helper.assertTrue(healthAfter == baseHealthBefore + 100.0, "a champion should get the real +100 flat health buff, found " + healthAfter);
-		helper.assertTrue(zombie.getCustomName() != null && zombie.isCustomNameVisible(), "a champion should get a real visible custom name");
+		helper.assertTrue(zombie.getCustomName() != null && !zombie.isCustomNameVisible(),
+				"a champion should get a custom name, shown only when looked at (not always visible - that shows through walls)");
 		helper.succeed();
 	}
 

@@ -12,9 +12,8 @@ import thaumcraft.api.crafting.IDustTrigger;
 /**
  * Replaces the old (1.12.2) {@code ItemMagicDust} - Salis Mundus, a dust that converts specific blocks
  * into their Thaumcraft counterparts (see {@code thaumcraft.common.lib.crafting.DustTriggerSimple}'s own
- * doc comment). {@link Item#useOn} is the modern equivalent of the original's {@code onItemUseFirst} - it
- * runs before the clicked block's own interaction handler, letting this preempt (e.g.) the crafting
- * table's GUI the same way the original did.
+ * doc comment). Hooked on NeoForge's {@link #onItemUseFirst}, which runs before the clicked block's own
+ * interaction, so it preempts (e.g.) the crafting table's GUI the way the original did.
  *
  * Restored 2026-09-25 (a playtest noticed the missing effects): the client throws the original sparkle stream from the
  * player hand toward the target plus block sparkles over the structure, and the dust sound plays.
@@ -23,6 +22,14 @@ public class ItemMagicDust extends Item {
 
 	public ItemMagicDust(Properties properties) {
 		super(properties.stacksTo(64).rarity(Rarity.UNCOMMON));
+	}
+
+	/** The original's {@code onItemUseFirst}: runs before the clicked block's own use, so a plain right-click on a
+	 * crafting table converts it instead of opening it (fixed 2026-09-28 - this was on {@code useOn}, which runs after
+	 * the block, so the table's menu always won). Sneaking does nothing, as in the original. */
+	@Override
+	public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+		return useOn(context);
 	}
 
 	@Override
