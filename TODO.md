@@ -195,12 +195,10 @@ you to craft their products); `addWarpToPlayer` in full (warp counter - warp eve
 WARP research, warp sync to the client and the gain messages); in-world seal rendering while holding a seal/Golem
 Bell (seals were invisible) with seal sync; internal seal/golem API methods forwarding to the real registries.
 
-Kept as the original: removing more warp than a player has ADDS their current warp (the clamp sets +cur).
-
-Still open:
-- Golems drawn as faint silhouettes through walls while sneaking with a seal/Golem Bell (original
-  RenderThaumcraftGolem) - not ported.
-- The seal icon is a flat quad, not the original's thin extruded item.
+Fixed at the user's request: removing more warp than a player has took the original's +cur (ADDED warp); now it
+goes to 0. Also since: golem silhouettes through walls while sneaking with a seal/Golem Bell, the seal icon drawn
+from the seal item's own (extruded) model, the Thaumonomicon's tab/scroll/search buttons click again, and the Pech
+Wand plays the original "learn" sound.
 
 ## Flaky GameTests root-caused, 2026-09-28
 

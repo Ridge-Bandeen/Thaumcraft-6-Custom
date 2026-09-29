@@ -140,6 +140,28 @@ public final class ScreenshotHarness {
 				mc.player.setYRot(mc.player.getDirection().toYRot());
 				mc.player.setXRot(Float.parseFloat(arg.isEmpty() ? "0" : arg));
 			}
+			case "golem" -> mc.getSingleplayerServer().execute(() -> {
+				// a golem N blocks ahead (behind whatever is there), plus a stone wall 2 blocks in front of it
+				ServerPlayer sp = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+				if (sp == null) return;
+				int dist = arg.isEmpty() ? 6 : Integer.parseInt(arg);
+				net.minecraft.core.BlockPos at = sp.blockPosition().relative(sp.getDirection(), dist);
+				for (int dx = -2; dx <= 2; dx++) for (int dy = 0; dy <= 3; dy++) {
+					net.minecraft.core.BlockPos w = sp.blockPosition().relative(sp.getDirection(), dist - 2).relative(sp.getDirection().getClockWise(), dx).above(dy);
+					sp.serverLevel().setBlockAndUpdate(w, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+				}
+				thaumcraft.common.golems.EntityThaumcraftGolem golem = thaumcraft.common.registry.ThaumcraftEntities.GOLEM.get().create(sp.serverLevel());
+				thaumcraft.common.golems.GolemProperties props = new thaumcraft.common.golems.GolemProperties();
+				props.setMaterial(thaumcraft.api.golems.parts.GolemMaterial.getMaterials()[0]);
+				props.setHead(thaumcraft.api.golems.parts.GolemHead.getHeads()[0]);
+				props.setArms(thaumcraft.api.golems.parts.GolemArm.getArms()[0]);
+				props.setLegs(thaumcraft.api.golems.parts.GolemLeg.getLegs()[0]);
+				props.setAddon(thaumcraft.api.golems.parts.GolemAddon.getAddons()[0]);
+				golem.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, sp.getYRot() + 180, 0);
+				golem.initializeGolem(props, 0);
+				golem.setNoAi(true);
+				sp.serverLevel().addFreshEntity(golem);
+			});
 			case "seal" -> mc.getSingleplayerServer().execute(() -> {
 				// a stone block 3 ahead at eye level with a Breaker seal (it has a work area) on the side facing the player
 				ServerPlayer sp = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());

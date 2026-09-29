@@ -361,25 +361,34 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 			}
 		}
 
-		// the original's buttons: search, addon-tab scroll arrows, category tabs
+		// the original's buttons: search, addon-tab scroll arrows, category tabs - vanilla buttons there, so each press
+		// played the standard button click (restored 2026-09-29; the port had been silent)
 		if (mx >= 1 && my >= height - 17 && mx < 17 && my < height - 1) {
+			buttonClick();
 			startSearch();
 			return true;
 		}
 		if (scrollButtons) {
-			if (mx >= width - 14 && mx < width - 4 && my >= 20 && my < 31 && catScrollPos > 0) {
-				catScrollPos--;
-				updateResearch();
+			if (mx >= width - 14 && mx < width - 4 && my >= 20 && my < 31) {
+				buttonClick();
+				if (catScrollPos > 0) {
+					catScrollPos--;
+					updateResearch();
+				}
 				return true;
 			}
-			if (mx >= width - 14 && mx < width - 4 && my >= screenY + 1 && my < screenY + 12 && catScrollPos < catScrollMax) {
-				catScrollPos++;
-				updateResearch();
+			if (mx >= width - 14 && mx < width - 4 && my >= screenY + 1 && my < screenY + 12) {
+				buttonClick();
+				if (catScrollPos < catScrollMax) {
+					catScrollPos++;
+					updateResearch();
+				}
 				return true;
 			}
 		}
 		for (CategoryTab tab : tabs) {
 			if (mx >= tab.x() && my >= tab.y() + addonShift && mx < tab.x() + 16 && my < tab.y() + 16 + addonShift) {
+				buttonClick();
 				if (!tab.key().equals(selectedCategory)) selectCategory(tab.key());
 				return true;
 			}
@@ -456,6 +465,13 @@ public class ThaumonomiconScreen extends AbstractContainerScreen<ThaumonomiconMe
 		page = null;
 		invisible.clear();
 		updateResearch();
+	}
+
+	/** Vanilla's button press sound, as the original's GuiButtons made. */
+	private void buttonClick() {
+		if (minecraft != null) {
+			minecraft.getSoundManager().play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
+		}
 	}
 
 	void playSound(SoundEvent sound, float volume, float pitch) {

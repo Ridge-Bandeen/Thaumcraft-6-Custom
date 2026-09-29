@@ -250,9 +250,9 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 		if (player.level().isClientSide) return;
 		IPlayerWarp pw = ThaumcraftCapabilities.getWarp(player);
 		int cur = pw.get(type);
-		// The original's clamp - which sets +cur, not -cur, so removing more warp than there is ADDS the current amount.
-		// An original bug, kept as it was (2026-09-29).
-		if (amount < 0 && cur + amount < 0) amount = cur;
+		// Removing more warp than there is takes it to 0. (The original's clamp set +cur, so it ADDED the current amount
+		// instead - fixed at the user's request, 2026-09-29.)
+		if (amount < 0 && cur + amount < 0) amount = -cur;
 		pw.add(type, amount);
 		if (amount > 0) {
 			pw.setCounter(pw.get(IPlayerWarp.EnumWarpType.TEMPORARY) + pw.get(IPlayerWarp.EnumWarpType.PERMANENT) + pw.get(IPlayerWarp.EnumWarpType.NORMAL));

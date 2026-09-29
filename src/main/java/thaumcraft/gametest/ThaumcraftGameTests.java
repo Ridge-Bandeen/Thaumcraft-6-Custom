@@ -17496,11 +17496,10 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(warp.getCounter() == 5, "counter should follow the total, was " + warp.getCounter());
 		helper.assertTrue(ThaumcraftCapabilities.knowsResearchStrict(player, "WARP"), "the first non-temporary warp should unlock the Warp research");
 
-		// The original's clamp sets the amount to +current (not -current) when removing more than there is, so it ADDS
-		// the current warp - an original bug, kept as it was (see addWarpToPlayer).
+		// (the original ADDED the current warp here instead - fixed)
 		thaumcraft.api.ThaumcraftApi.internalMethods.addWarpToPlayer(player, -10, thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.PERMANENT);
-		helper.assertTrue(warp.get(thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.PERMANENT) == 4,
-				"the original's over-removal quirk doubles the warp instead (2 -> 4), was " + warp.get(thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.PERMANENT));
+		helper.assertTrue(warp.get(thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.PERMANENT) == 0,
+				"removing more warp than there is should take it to 0, was " + warp.get(thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.PERMANENT));
 		helper.succeed();
 	}
 

@@ -37,6 +37,11 @@ public class ItemSealPlacer extends Item implements ISealDisplayer {
 		return sealFactory.get().getKey();
 	}
 
+	/** The icon of the seal this places. */
+	public net.minecraft.resources.ResourceLocation getSealIcon() {
+		return sealFactory.get().getSealIcon();
+	}
+
 	public ItemSealPlacer(Properties properties, Supplier<ISeal> sealFactory) {
 		super(properties);
 		this.sealFactory = sealFactory;

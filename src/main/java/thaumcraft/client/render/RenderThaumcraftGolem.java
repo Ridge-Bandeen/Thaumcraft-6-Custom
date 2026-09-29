@@ -101,10 +101,22 @@ public class RenderThaumcraftGolem extends EntityRenderer<EntityThaumcraftGolem>
 	@Override
 	public void render(EntityThaumcraftGolem entity, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
 		super.render(entity, entityYaw, partialTick, poseStack, buffer, packedLight);
+		drawGolem(entity, entityYaw, partialTick, poseStack, buffer, buffer.getBuffer(RenderType.solid()), packedLight, true);
 
+		// The original's see-through silhouette: sneaking with a seal or Golem Bell shows golems you can't see through
+		// walls, faint grey (restored 2026-09-29).
+		var player = net.minecraft.client.Minecraft.getInstance().player;
+		if (player != null && player.isShiftKeyDown()
+				&& (player.getMainHandItem().getItem() instanceof thaumcraft.api.golems.ISealDisplayer || player.getOffhandItem().getItem() instanceof thaumcraft.api.golems.ISealDisplayer)
+				&& !player.hasLineOfSight(entity)) {
+			drawGolem(entity, entityYaw, partialTick, poseStack, buffer, new GhostConsumer(buffer.getBuffer(GhostType.GHOST)), packedLight, false);
+		}
+	}
+
+	private void drawGolem(EntityThaumcraftGolem entity, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource buffer,
+			VertexConsumer vertexConsumer, int packedLight, boolean withItem) {
 		IGolemProperties props = entity.getProperties();
 		GolemMaterial material = props.getMaterial();
-		VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.solid());
 
 		poseStack.pushPose();
 		poseStack.mulPose(Axis.YP.rotationDegrees(180.0f - entityYaw));
@@ -144,9 +156,66 @@ public class RenderThaumcraftGolem extends EntityRenderer<EntityThaumcraftGolem>
 		renderAttachedPart("addon", props.getAddon() == null ? null : props.getAddon().key, props.getAddon() == null ? null : props.getAddon().model,
 				material, poseStack, vertexConsumer, packedLight, limbSwing, swingAmount);
 
-		drawHeldItem(entity, poseStack, buffer, packedLight);
+		if (withItem) drawHeldItem(entity, poseStack, buffer, packedLight);
 
 		poseStack.popPose();
+	}
+
+	/** Block-sheet geometry drawn translucent with no depth test - the original's glDisable(GL_DEPTH_TEST) ghost pass. */
+	private static final class GhostType extends RenderType {
+		static final RenderType GHOST = create("thaumcraft_golem_ghost", com.mojang.blaze3d.vertex.DefaultVertexFormat.BLOCK,
+				com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 256, false, true,
+				CompositeState.builder()
+						.setShaderState(RENDERTYPE_TRANSLUCENT_SHADER)
+						.setTextureState(BLOCK_SHEET_MIPPED)
+						.setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+						.setDepthTestState(NO_DEPTH_TEST)
+						.setWriteMaskState(COLOR_WRITE)
+						.setLightmapState(LIGHTMAP)
+						.createCompositeState(false));
+
+		private GhostType() {
+			super("", com.mojang.blaze3d.vertex.DefaultVertexFormat.BLOCK, com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 0, false, false, () -> {}, () -> {});
+		}
+	}
+
+	/** Passes geometry through, tinted the original's 0.25 grey at 0.25 alpha. */
+	private record GhostConsumer(VertexConsumer inner) implements VertexConsumer {
+		@Override
+		public VertexConsumer addVertex(float x, float y, float z) {
+			inner.addVertex(x, y, z);
+			return this;
+		}
+
+		@Override
+		public VertexConsumer setColor(int r, int g, int b, int a) {
+			inner.setColor(r / 4, g / 4, b / 4, a / 4);
+			return this;
+		}
+
+		@Override
+		public VertexConsumer setUv(float u, float v) {
+			inner.setUv(u, v);
+			return this;
+		}
+
+		@Override
+		public VertexConsumer setUv1(int u, int v) {
+			inner.setUv1(u, v);
+			return this;
+		}
+
+		@Override
+		public VertexConsumer setUv2(int u, int v) {
+			inner.setUv2(u, v);
+			return this;
+		}
+
+		@Override
+		public VertexConsumer setNormal(float x, float y, float z) {
+			inner.setNormal(x, y, z);
+			return this;
+		}
 	}
 
 	/** Matches the original's own {@code drawHeldItem} - see this class's own doc comment for the transform. */

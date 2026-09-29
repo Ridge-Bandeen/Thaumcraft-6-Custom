@@ -129,13 +129,16 @@ public final class SealRenderer {
 				b = 0.7f + Mth.sin((t + seal.pos().getZ()) / 6.0f) * 0.1f;
 			}
 
-			// the icon, on the face, a hair off the surface
+			// the icon, on the face, a hair off the surface: the seal item's own model (vanilla extrudes flat item textures a
+			// pixel deep - the original's renderItemIn2D look), falling back to the flat sprite
 			pose.pushPose();
 			faceTransform(pose, seal.pos(), seal.face(), 0.55f);
 			float shade = dim ? 0.5f : 1.0f;
-			TextureAtlasSprite sprite = mc.getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(seal.icon());
 			RenderSystem.setShaderTexture(0, InventoryMenu.BLOCK_ATLAS);
-			quad(pose.last().pose(), 0.25f, sprite.getU0(), sprite.getV0(), sprite.getU1(), sprite.getV1(), shade, shade, shade, alpha);
+			if (!drawItemModel(mc, pose, seal.icon(), shade, alpha)) {
+				TextureAtlasSprite sprite = mc.getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(seal.icon());
+				quad(pose.last().pose(), 0.25f, sprite.getU0(), sprite.getV0(), sprite.getU1(), sprite.getV1(), shade, shade, shade, alpha);
+			}
 			pose.popPose();
 
 			// the turning ring
@@ -155,6 +158,50 @@ public final class SealRenderer {
 		RenderSystem.disableBlend();
 		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 		pose.popPose();
+	}
+
+	private static final Map<ResourceLocation, net.minecraft.world.item.ItemStack> ICON_ITEMS = new ConcurrentHashMap<>();
+
+	/** The seal placer item whose seal has this icon. */
+	private static net.minecraft.world.item.ItemStack iconItem(ResourceLocation icon) {
+		return ICON_ITEMS.computeIfAbsent(icon, key -> {
+			for (net.minecraft.world.item.Item item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+				if (item instanceof thaumcraft.common.golems.ItemSealPlacer placer && key.equals(placer.getSealIcon())) {
+					return new net.minecraft.world.item.ItemStack(item);
+				}
+			}
+			return net.minecraft.world.item.ItemStack.EMPTY;
+		});
+	}
+
+	/** Draws the seal item's baked quads, half a block across, centred - with our own colour/alpha and depth handling. */
+	private static boolean drawItemModel(Minecraft mc, PoseStack pose, ResourceLocation icon, float shade, float alpha) {
+		net.minecraft.world.item.ItemStack stack = iconItem(icon);
+		if (stack.isEmpty()) return false;
+		var model = mc.getItemRenderer().getModel(stack, mc.level, null, 0);
+		net.minecraft.util.RandomSource rand = net.minecraft.util.RandomSource.create(42L);
+		java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> quads = new java.util.ArrayList<>(model.getQuads(null, null, rand));
+		for (Direction d : Direction.values()) quads.addAll(model.getQuads(null, d, rand));
+		if (quads.isEmpty()) return false;
+		pose.pushPose();
+		pose.scale(0.5f, 0.5f, 0.5f);
+		pose.translate(-0.5f, -0.5f, -0.5f);
+		Matrix4f m = pose.last().pose();
+		RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+		BufferBuilder buf = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+		for (var q : quads) {
+			int[] v = q.getVertices();
+			int stride = v.length / 4;
+			float light = switch (q.getDirection()) { case UP, SOUTH -> 1.0f; case NORTH -> 0.8f; default -> 0.6f; }; // simple face shading
+			for (int i = 0; i < 4; i++) {
+				buf.addVertex(m, Float.intBitsToFloat(v[i * stride]), Float.intBitsToFloat(v[i * stride + 1]), Float.intBitsToFloat(v[i * stride + 2]))
+						.setUv(Float.intBitsToFloat(v[i * stride + 4]), Float.intBitsToFloat(v[i * stride + 5]))
+						.setColor(shade * light, shade * light, shade * light, alpha);
+			}
+		}
+		BufferUploader.drawWithShader(buf.buildOrThrow());
+		pose.popPose();
+		return true;
 	}
 
 	/** Moves to the centre of {@code pos}, turned so local +Z points out of {@code face}, then {@code out} along it. */

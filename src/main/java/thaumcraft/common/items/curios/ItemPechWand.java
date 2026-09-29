@@ -56,7 +56,7 @@ public class ItemPechWand extends Item {
 		if (!player.getAbilities().instabuild) {
 			stack.shrink(1);
 		}
-		level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENCHANTMENT_TABLE_USE,
+		level.playSound(null, player.getX(), player.getY(), player.getZ(), thaumcraft.common.registry.ThaumcraftSounds.LEARN.get(), // the original's own
 				SoundSource.NEUTRAL, 0.5f, 0.4f / (level.getRandom().nextFloat() * 0.4f + 0.8f));
 
 		if (!level.isClientSide) {
