@@ -187,6 +187,14 @@ Still open:
 - Needs a human check: config screen editing, the three HUD gauges, dialBottom, heartbeat, golem emotes, blue biome,
   regen with a new regenKey on an old world, and Magical Forest frequency at different weights.
 
+## Aspects for items new since 1.12, 2026-09-29
+
+Done with the user (reasoning per group in `tools/aspect_proposals.md`): ~150 new table values, derivation now follows
+stonecutter and smithing-upgrade recipes and skips 1.21's recolour recipes, raw metals = ingot value, dyed shulker boxes
+fixed, a few crafted items topped up. GameTest `everyVanillaItemHasAspects` guards it.
+
+Open: should vanilla candles be usable where Thaumcraft recipes want Thaumcraft candles (like vials / glass bottles)?
+
 ## Discrepancy sweep, 2026-09-29 (hooks the port had skipped)
 
 Fixed: items the original ran before the clicked block's own use (seal placer, Golem Bell, golem/turret placers - a

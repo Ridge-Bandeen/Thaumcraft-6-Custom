@@ -72,6 +72,7 @@ final class ThaumcraftAspectTable {
 		vanilla();
 		colours();
 		modern();
+		sinceTheOriginal();
 		thaumcraft();
 	}
 
@@ -99,19 +100,19 @@ final class ThaumcraftAspectTable {
 		tag(t("c:ingots/copper"), new AspectList().add(Aspect.METAL, 10).add(Aspect.EXCHANGE, 5));
 		tag(t("c:dusts/copper"), new AspectList().add(Aspect.METAL, 10).add(Aspect.ENTROPY, 1).add(Aspect.EXCHANGE, 5));
 		tag(t("c:ores/copper"), new AspectList().add(Aspect.METAL, 10).add(Aspect.EARTH, 5).add(Aspect.EXCHANGE, 5));
-		tag(t("c:raw_materials/copper"), new AspectList().add(Aspect.ORDER, 5).add(Aspect.METAL, 15).add(Aspect.EARTH, 5).add(Aspect.EXCHANGE, 10));
+		tag(t("c:raw_materials/copper"), new AspectList().add(Aspect.METAL, 10).add(Aspect.EXCHANGE, 5));
 		tag(t("c:ingots/tin"), new AspectList().add(Aspect.METAL, 10).add(Aspect.CRYSTAL, 5));
 		tag(t("c:dusts/tin"), new AspectList().add(Aspect.METAL, 10).add(Aspect.ENTROPY, 1).add(Aspect.CRYSTAL, 5));
 		tag(t("c:ores/tin"), new AspectList().add(Aspect.METAL, 10).add(Aspect.EARTH, 5).add(Aspect.CRYSTAL, 5));
-		tag(t("c:raw_materials/tin"), new AspectList().add(Aspect.ORDER, 5).add(Aspect.METAL, 15).add(Aspect.EARTH, 5).add(Aspect.CRYSTAL, 10));
+		tag(t("c:raw_materials/tin"), new AspectList().add(Aspect.METAL, 10).add(Aspect.CRYSTAL, 5));
 		tag(t("c:ingots/silver"), new AspectList().add(Aspect.METAL, 10).add(Aspect.DESIRE, 5));
 		tag(t("c:dusts/silver"), new AspectList().add(Aspect.METAL, 10).add(Aspect.ENTROPY, 1).add(Aspect.DESIRE, 5));
 		tag(t("c:ores/silver"), new AspectList().add(Aspect.METAL, 10).add(Aspect.EARTH, 5).add(Aspect.DESIRE, 5));
-		tag(t("c:raw_materials/silver"), new AspectList().add(Aspect.ORDER, 5).add(Aspect.METAL, 15).add(Aspect.EARTH, 5).add(Aspect.DESIRE, 10));
+		tag(t("c:raw_materials/silver"), new AspectList().add(Aspect.METAL, 10).add(Aspect.DESIRE, 5));
 		tag(t("c:ingots/lead"), new AspectList().add(Aspect.METAL, 10).add(Aspect.ORDER, 5));
 		tag(t("c:dusts/lead"), new AspectList().add(Aspect.METAL, 10).add(Aspect.ENTROPY, 1).add(Aspect.ORDER, 5));
 		tag(t("c:ores/lead"), new AspectList().add(Aspect.METAL, 10).add(Aspect.EARTH, 5).add(Aspect.ORDER, 5));
-		tag(t("c:raw_materials/lead"), new AspectList().add(Aspect.ORDER, 5).add(Aspect.METAL, 15).add(Aspect.EARTH, 5).add(Aspect.ORDER, 10));
+		tag(t("c:raw_materials/lead"), new AspectList().add(Aspect.METAL, 10).add(Aspect.ORDER, 5));
 		tag(t("c:ingots/brass"), new AspectList().add(Aspect.METAL, 10).add(Aspect.TOOL, 5));
 		tag(t("c:dusts/brass"), new AspectList().add(Aspect.METAL, 10).add(Aspect.ENTROPY, 1).add(Aspect.TOOL, 5));
 		tag(t("c:ingots/bronze"), new AspectList().add(Aspect.METAL, 10).add(Aspect.TOOL, 5));
@@ -260,21 +261,21 @@ final class ThaumcraftAspectTable {
 		complexItem(Items.MAGMA_CREAM, new AspectList().add(Aspect.ALCHEMY, 5));
 		item(Items.TOTEM_OF_UNDYING, new AspectList().add(Aspect.ORDER, 10).add(Aspect.ENTROPY, 10).add(Aspect.LIFE, 25).add(Aspect.UNDEAD, 10));
 		item(Items.SHULKER_SHELL, new AspectList().add(Aspect.PROTECT, 10).add(Aspect.ELDRITCH, 5).add(Aspect.BEAST, 5).add(Aspect.VOID, 5));
-		item(Blocks.BLACK_SHULKER_BOX.asItem(), () -> of(Blocks.PURPLE_SHULKER_BOX.asItem()));
-		item(Blocks.BLUE_SHULKER_BOX.asItem(), () -> of(Blocks.PURPLE_SHULKER_BOX.asItem()));
-		item(Blocks.GREEN_SHULKER_BOX.asItem(), () -> of(Blocks.PURPLE_SHULKER_BOX.asItem()));
-		item(Blocks.RED_SHULKER_BOX.asItem(), () -> of(Blocks.PURPLE_SHULKER_BOX.asItem()));
-		item(Blocks.YELLOW_SHULKER_BOX.asItem(), () -> of(Blocks.PURPLE_SHULKER_BOX.asItem()));
-		item(Blocks.LIGHT_GRAY_SHULKER_BOX.asItem(), () -> of(Blocks.PURPLE_SHULKER_BOX.asItem()));
-		item(Blocks.WHITE_SHULKER_BOX.asItem(), () -> of(Blocks.PURPLE_SHULKER_BOX.asItem()));
-		item(Blocks.ORANGE_SHULKER_BOX.asItem(), () -> of(Blocks.PURPLE_SHULKER_BOX.asItem()));
-		item(Blocks.PINK_SHULKER_BOX.asItem(), () -> of(Blocks.PURPLE_SHULKER_BOX.asItem()));
-		item(Blocks.GRAY_SHULKER_BOX.asItem(), () -> of(Blocks.PURPLE_SHULKER_BOX.asItem()));
-		item(Blocks.CYAN_SHULKER_BOX.asItem(), () -> of(Blocks.PURPLE_SHULKER_BOX.asItem()));
-		item(Blocks.LIGHT_BLUE_SHULKER_BOX.asItem(), () -> of(Blocks.PURPLE_SHULKER_BOX.asItem()));
-		item(Blocks.LIME_SHULKER_BOX.asItem(), () -> of(Blocks.PURPLE_SHULKER_BOX.asItem()));
-		item(Blocks.MAGENTA_SHULKER_BOX.asItem(), () -> of(Blocks.PURPLE_SHULKER_BOX.asItem()));
-		item(Blocks.BROWN_SHULKER_BOX.asItem(), () -> of(Blocks.PURPLE_SHULKER_BOX.asItem()));
+		item(Blocks.BLACK_SHULKER_BOX.asItem(), () -> of(Items.SHULKER_BOX));
+		item(Blocks.BLUE_SHULKER_BOX.asItem(), () -> of(Items.SHULKER_BOX));
+		item(Blocks.GREEN_SHULKER_BOX.asItem(), () -> of(Items.SHULKER_BOX));
+		item(Blocks.RED_SHULKER_BOX.asItem(), () -> of(Items.SHULKER_BOX));
+		item(Blocks.YELLOW_SHULKER_BOX.asItem(), () -> of(Items.SHULKER_BOX));
+		item(Blocks.LIGHT_GRAY_SHULKER_BOX.asItem(), () -> of(Items.SHULKER_BOX));
+		item(Blocks.WHITE_SHULKER_BOX.asItem(), () -> of(Items.SHULKER_BOX));
+		item(Blocks.ORANGE_SHULKER_BOX.asItem(), () -> of(Items.SHULKER_BOX));
+		item(Blocks.PINK_SHULKER_BOX.asItem(), () -> of(Items.SHULKER_BOX));
+		item(Blocks.GRAY_SHULKER_BOX.asItem(), () -> of(Items.SHULKER_BOX));
+		item(Blocks.CYAN_SHULKER_BOX.asItem(), () -> of(Items.SHULKER_BOX));
+		item(Blocks.LIGHT_BLUE_SHULKER_BOX.asItem(), () -> of(Items.SHULKER_BOX));
+		item(Blocks.LIME_SHULKER_BOX.asItem(), () -> of(Items.SHULKER_BOX));
+		item(Blocks.MAGENTA_SHULKER_BOX.asItem(), () -> of(Items.SHULKER_BOX));
+		item(Blocks.BROWN_SHULKER_BOX.asItem(), () -> of(Items.SHULKER_BOX));
 		item(Items.MUSIC_DISC_11, new AspectList().add(Aspect.SENSES, 15).add(Aspect.AIR, 5).add(Aspect.DESIRE, 15));
 		item(Items.MUSIC_DISC_13, new AspectList().add(Aspect.SENSES, 15).add(Aspect.AIR, 5).add(Aspect.WATER, 5).add(Aspect.DESIRE, 10));
 		item(Items.MUSIC_DISC_CAT, new AspectList().add(Aspect.SENSES, 15).add(Aspect.AIR, 5).add(Aspect.BEAST, 5).add(Aspect.DESIRE, 10));
@@ -431,11 +432,13 @@ final class ThaumcraftAspectTable {
 	/** Materials that only exist since the original's Minecraft version (it had no raw metals, amethyst, ...): the values
 	 * the port had already assigned them, kept so nothing regresses. */
 	private static void modern() {
-		item(Items.RAW_IRON, new AspectList().add(Aspect.METAL, 15).add(Aspect.ENTROPY, 1));
-		item(Items.RAW_GOLD, new AspectList().add(Aspect.METAL, 10).add(Aspect.DESIRE, 10).add(Aspect.ENTROPY, 1));
-		item(Items.RAW_COPPER, new AspectList().add(Aspect.METAL, 10).add(Aspect.ENTROPY, 1).add(Aspect.EXCHANGE, 5));
+		// raw metals: the metal part only - the ingot's value (reviewed with the user 2026-09-29; they had been dust values)
+		item(Items.RAW_IRON, new AspectList().add(Aspect.METAL, 15));
+		item(Items.RAW_GOLD, new AspectList().add(Aspect.METAL, 10).add(Aspect.DESIRE, 10));
+		item(Items.RAW_COPPER, new AspectList().add(Aspect.METAL, 10).add(Aspect.EXCHANGE, 5));
 		item(Items.NETHERITE_SCRAP, new AspectList().add(Aspect.METAL, 15).add(Aspect.FIRE, 10));
-		item(Items.AMETHYST_SHARD, new AspectList().add(Aspect.CRYSTAL, 10).add(Aspect.MAGIC, 5));
+		// amethyst's trait is its chime/resonance, not magic (reviewed 2026-09-29)
+		item(Items.AMETHYST_SHARD, new AspectList().add(Aspect.CRYSTAL, 10).add(Aspect.SENSES, 5));
 	}
 
 	private static Item blk(net.neoforged.neoforge.registries.DeferredBlock<? extends net.minecraft.world.level.block.Block> b) {
@@ -444,6 +447,182 @@ final class ThaumcraftAspectTable {
 
 	/** The mod's own entries from the original table. Ones for content this port has not built yet (eldritch blocks, the
 	 * runed tablet, celestial notes, Eldritch Eye, ambient grass, the Pure fluid bucket) are simply not listed. */
+	/**
+	 * Everything Minecraft added after the original's version that has no recipe to take aspects from (plants, stone,
+	 * creature drops, trial chamber loot, ...), plus additions for a few crafted things whose defining trait the recipes
+	 * lose. Worked through with the user on 2026-09-29 - the reasoning per group is in tools/aspect_proposals.md.
+	 */
+	private static void sinceTheOriginal() {
+		item(Items.PURPLE_SHULKER_BOX, () -> of(Items.SHULKER_BOX)); // the other 15 colours point at the undyed box too
+		item(Items.BAMBOO, new AspectList().add(Aspect.PLANT, 5).add(Aspect.AIR, 1));
+		item(Items.KELP, new AspectList().add(Aspect.PLANT, 5).add(Aspect.WATER, 5));
+		item(Items.SEAGRASS, new AspectList().add(Aspect.PLANT, 3).add(Aspect.WATER, 3));
+		item(Items.SEA_PICKLE, new AspectList().add(Aspect.PLANT, 3).add(Aspect.WATER, 3).add(Aspect.LIGHT, 5));
+		item(Items.SWEET_BERRIES, new AspectList().add(Aspect.PLANT, 3).add(Aspect.LIFE, 3).add(Aspect.AVERSION, 1));
+		item(Items.GLOW_BERRIES, new AspectList().add(Aspect.PLANT, 3).add(Aspect.LIFE, 3).add(Aspect.LIGHT, 3));
+		item(Items.GLOW_LICHEN, new AspectList().add(Aspect.PLANT, 2).add(Aspect.LIGHT, 3));
+		item(Items.HANGING_ROOTS, new AspectList().add(Aspect.PLANT, 3).add(Aspect.EARTH, 1));
+		item(Items.MANGROVE_ROOTS, new AspectList().add(Aspect.PLANT, 5).add(Aspect.WATER, 1));
+		item(Items.ROOTED_DIRT, new AspectList().add(Aspect.EARTH, 5).add(Aspect.PLANT, 2));
+		item(Items.MOSS_BLOCK, new AspectList().add(Aspect.PLANT, 5).add(Aspect.EARTH, 2).add(Aspect.LIFE, 1));
+		item(Items.MUD, new AspectList().add(Aspect.EARTH, 5).add(Aspect.WATER, 3));
+		item(Items.PINK_PETALS, new AspectList().add(Aspect.PLANT, 2).add(Aspect.SENSES, 2));
+		item(Items.PITCHER_PLANT, new AspectList().add(Aspect.PLANT, 5).add(Aspect.SENSES, 3));
+		item(Items.PITCHER_POD, new AspectList().add(Aspect.PLANT, 3).add(Aspect.LIFE, 2));
+		item(Items.TORCHFLOWER_SEEDS, new AspectList().add(Aspect.PLANT, 3).add(Aspect.LIGHT, 1));
+		item(Items.BIG_DRIPLEAF, new AspectList().add(Aspect.PLANT, 5).add(Aspect.WATER, 2));
+		item(Items.SMALL_DRIPLEAF, new AspectList().add(Aspect.PLANT, 3).add(Aspect.WATER, 1));
+		item(Items.SPORE_BLOSSOM, new AspectList().add(Aspect.PLANT, 5).add(Aspect.AIR, 3).add(Aspect.LIFE, 2));
+		item(Items.CRIMSON_FUNGUS, new AspectList().add(Aspect.PLANT, 3).add(Aspect.BEAST, 2).add(Aspect.FIRE, 1));
+		item(Items.WARPED_FUNGUS, new AspectList().add(Aspect.PLANT, 3).add(Aspect.LIFE, 2).add(Aspect.SENSES, 1));
+		item(Items.CRIMSON_ROOTS, new AspectList().add(Aspect.PLANT, 2).add(Aspect.BEAST, 1).add(Aspect.FIRE, 1));
+		item(Items.WARPED_ROOTS, new AspectList().add(Aspect.PLANT, 2).add(Aspect.LIFE, 1).add(Aspect.SENSES, 1));
+		item(Items.NETHER_SPROUTS, new AspectList().add(Aspect.PLANT, 1).add(Aspect.LIFE, 1).add(Aspect.SENSES, 1));
+		item(Items.WEEPING_VINES, new AspectList().add(Aspect.PLANT, 2).add(Aspect.BEAST, 1).add(Aspect.FIRE, 1).add(Aspect.MOTION, 1));
+		item(Items.TWISTING_VINES, new AspectList().add(Aspect.PLANT, 2).add(Aspect.LIFE, 1).add(Aspect.SENSES, 1).add(Aspect.MOTION, 1));
+		item(Items.CRIMSON_NYLIUM, new AspectList().add(Aspect.EARTH, 5).add(Aspect.PLANT, 2).add(Aspect.FIRE, 1));
+		item(Items.WARPED_NYLIUM, new AspectList().add(Aspect.EARTH, 5).add(Aspect.PLANT, 2).add(Aspect.SENSES, 1));
+		item(Items.WARPED_WART_BLOCK, new AspectList().add(Aspect.PLANT, 5).add(Aspect.SENSES, 2));
+		item(Items.SHROOMLIGHT, new AspectList().add(Aspect.PLANT, 3).add(Aspect.LIGHT, 10));
+		item(Items.MUSHROOM_STEM, new AspectList().add(Aspect.PLANT, 5).add(Aspect.EARTH, 2));
+		item(Items.CARVED_PUMPKIN, () -> of(Items.PUMPKIN));
+		item(Items.TUBE_CORAL, new AspectList().add(Aspect.WATER, 3).add(Aspect.LIFE, 3).add(Aspect.SENSES, 2));
+		item(Items.BRAIN_CORAL, new AspectList().add(Aspect.WATER, 3).add(Aspect.LIFE, 3).add(Aspect.SENSES, 2));
+		item(Items.BUBBLE_CORAL, new AspectList().add(Aspect.WATER, 3).add(Aspect.LIFE, 3).add(Aspect.SENSES, 2));
+		item(Items.FIRE_CORAL, new AspectList().add(Aspect.WATER, 3).add(Aspect.LIFE, 3).add(Aspect.SENSES, 2));
+		item(Items.HORN_CORAL, new AspectList().add(Aspect.WATER, 3).add(Aspect.LIFE, 3).add(Aspect.SENSES, 2));
+		item(Items.TUBE_CORAL_FAN, new AspectList().add(Aspect.WATER, 3).add(Aspect.LIFE, 3).add(Aspect.SENSES, 2));
+		item(Items.BRAIN_CORAL_FAN, new AspectList().add(Aspect.WATER, 3).add(Aspect.LIFE, 3).add(Aspect.SENSES, 2));
+		item(Items.BUBBLE_CORAL_FAN, new AspectList().add(Aspect.WATER, 3).add(Aspect.LIFE, 3).add(Aspect.SENSES, 2));
+		item(Items.FIRE_CORAL_FAN, new AspectList().add(Aspect.WATER, 3).add(Aspect.LIFE, 3).add(Aspect.SENSES, 2));
+		item(Items.HORN_CORAL_FAN, new AspectList().add(Aspect.WATER, 3).add(Aspect.LIFE, 3).add(Aspect.SENSES, 2));
+		item(Items.TUBE_CORAL_BLOCK, new AspectList().add(Aspect.EARTH, 5).add(Aspect.WATER, 5).add(Aspect.LIFE, 5));
+		item(Items.BRAIN_CORAL_BLOCK, new AspectList().add(Aspect.EARTH, 5).add(Aspect.WATER, 5).add(Aspect.LIFE, 5));
+		item(Items.BUBBLE_CORAL_BLOCK, new AspectList().add(Aspect.EARTH, 5).add(Aspect.WATER, 5).add(Aspect.LIFE, 5));
+		item(Items.FIRE_CORAL_BLOCK, new AspectList().add(Aspect.EARTH, 5).add(Aspect.WATER, 5).add(Aspect.LIFE, 5));
+		item(Items.HORN_CORAL_BLOCK, new AspectList().add(Aspect.EARTH, 5).add(Aspect.WATER, 5).add(Aspect.LIFE, 5));
+		item(Items.DEAD_TUBE_CORAL, new AspectList().add(Aspect.EARTH, 3).add(Aspect.DEATH, 3));
+		item(Items.DEAD_BRAIN_CORAL, new AspectList().add(Aspect.EARTH, 3).add(Aspect.DEATH, 3));
+		item(Items.DEAD_BUBBLE_CORAL, new AspectList().add(Aspect.EARTH, 3).add(Aspect.DEATH, 3));
+		item(Items.DEAD_FIRE_CORAL, new AspectList().add(Aspect.EARTH, 3).add(Aspect.DEATH, 3));
+		item(Items.DEAD_HORN_CORAL, new AspectList().add(Aspect.EARTH, 3).add(Aspect.DEATH, 3));
+		item(Items.DEAD_TUBE_CORAL_FAN, new AspectList().add(Aspect.EARTH, 3).add(Aspect.DEATH, 3));
+		item(Items.DEAD_BRAIN_CORAL_FAN, new AspectList().add(Aspect.EARTH, 3).add(Aspect.DEATH, 3));
+		item(Items.DEAD_BUBBLE_CORAL_FAN, new AspectList().add(Aspect.EARTH, 3).add(Aspect.DEATH, 3));
+		item(Items.DEAD_FIRE_CORAL_FAN, new AspectList().add(Aspect.EARTH, 3).add(Aspect.DEATH, 3));
+		item(Items.DEAD_HORN_CORAL_FAN, new AspectList().add(Aspect.EARTH, 3).add(Aspect.DEATH, 3));
+		item(Items.DEAD_TUBE_CORAL_BLOCK, new AspectList().add(Aspect.EARTH, 10).add(Aspect.DEATH, 5));
+		item(Items.DEAD_BRAIN_CORAL_BLOCK, new AspectList().add(Aspect.EARTH, 10).add(Aspect.DEATH, 5));
+		item(Items.DEAD_BUBBLE_CORAL_BLOCK, new AspectList().add(Aspect.EARTH, 10).add(Aspect.DEATH, 5));
+		item(Items.DEAD_FIRE_CORAL_BLOCK, new AspectList().add(Aspect.EARTH, 10).add(Aspect.DEATH, 5));
+		item(Items.DEAD_HORN_CORAL_BLOCK, new AspectList().add(Aspect.EARTH, 10).add(Aspect.DEATH, 5));
+		item(Items.CALCITE, new AspectList().add(Aspect.EARTH, 5).add(Aspect.ORDER, 1));
+		item(Items.BASALT, new AspectList().add(Aspect.EARTH, 5).add(Aspect.FIRE, 3));
+		item(Items.BLACKSTONE, new AspectList().add(Aspect.EARTH, 5).add(Aspect.DARKNESS, 2).add(Aspect.FIRE, 1));
+		item(Items.GILDED_BLACKSTONE, () -> of(Items.BLACKSTONE).add(Aspect.DESIRE, 5).add(Aspect.METAL, 2));
+		item(Items.SOUL_SOIL, new AspectList().add(Aspect.EARTH, 3).add(Aspect.SOUL, 3));
+		item(Items.POINTED_DRIPSTONE, new AspectList().add(Aspect.EARTH, 3).add(Aspect.WATER, 1).add(Aspect.AVERSION, 2));
+		item(Items.ANCIENT_DEBRIS, () -> of(Items.NETHERITE_SCRAP).add(Aspect.EARTH, 5));
+		item(Items.SUSPICIOUS_GRAVEL, () -> of(Items.GRAVEL).add(Aspect.MIND, 2).add(Aspect.DESIRE, 2));
+		item(Items.SUSPICIOUS_SAND, () -> of(Items.SAND).add(Aspect.MIND, 2).add(Aspect.DESIRE, 2));
+		item(Items.AMETHYST_CLUSTER, new AspectList().add(Aspect.CRYSTAL, 15).add(Aspect.SENSES, 5));
+		item(Items.LARGE_AMETHYST_BUD, new AspectList().add(Aspect.CRYSTAL, 10).add(Aspect.SENSES, 3));
+		item(Items.MEDIUM_AMETHYST_BUD, new AspectList().add(Aspect.CRYSTAL, 6).add(Aspect.SENSES, 2));
+		item(Items.SMALL_AMETHYST_BUD, new AspectList().add(Aspect.CRYSTAL, 3).add(Aspect.SENSES, 1));
+		item(Items.INFESTED_STONE, () -> of(Items.STONE).add(Aspect.BEAST, 3).add(Aspect.TRAP, 1));
+		item(Items.INFESTED_COBBLESTONE, () -> of(Items.COBBLESTONE).add(Aspect.BEAST, 3).add(Aspect.TRAP, 1));
+		item(Items.INFESTED_STONE_BRICKS, () -> of(Items.STONE_BRICKS).add(Aspect.BEAST, 3).add(Aspect.TRAP, 1));
+		item(Items.INFESTED_MOSSY_STONE_BRICKS, () -> of(Items.MOSSY_STONE_BRICKS).add(Aspect.BEAST, 3).add(Aspect.TRAP, 1));
+		item(Items.INFESTED_CRACKED_STONE_BRICKS, () -> of(Items.CRACKED_STONE_BRICKS).add(Aspect.BEAST, 3).add(Aspect.TRAP, 1));
+		item(Items.INFESTED_CHISELED_STONE_BRICKS, () -> of(Items.CHISELED_STONE_BRICKS).add(Aspect.BEAST, 3).add(Aspect.TRAP, 1));
+		item(Items.INFESTED_DEEPSLATE, () -> of(Items.DEEPSLATE).add(Aspect.BEAST, 3).add(Aspect.TRAP, 1));
+		item(Items.SMOOTH_STONE, () -> of(Items.STONE).add(Aspect.ORDER, 1));
+		item(Items.SMOOTH_SANDSTONE, () -> of(Items.SANDSTONE).add(Aspect.ORDER, 1));
+		item(Items.SMOOTH_RED_SANDSTONE, () -> of(Items.RED_SANDSTONE).add(Aspect.ORDER, 1));
+		item(Items.SMOOTH_QUARTZ, () -> of(Items.QUARTZ_BLOCK).add(Aspect.ORDER, 1));
+		item(Items.SMOOTH_BASALT, () -> of(Items.BASALT).add(Aspect.ORDER, 1));
+		item(Items.CRACKED_DEEPSLATE_BRICKS, () -> of(Items.DEEPSLATE_BRICKS).add(Aspect.ENTROPY, 1));
+		item(Items.CRACKED_DEEPSLATE_TILES, () -> of(Items.DEEPSLATE_TILES).add(Aspect.ENTROPY, 1));
+		item(Items.CRACKED_NETHER_BRICKS, () -> of(Items.NETHER_BRICKS).add(Aspect.ENTROPY, 1));
+		item(Items.CRACKED_POLISHED_BLACKSTONE_BRICKS, () -> of(Items.POLISHED_BLACKSTONE_BRICKS).add(Aspect.ENTROPY, 1));
+		item(Items.EXPOSED_COPPER, () -> of(Items.COPPER_BLOCK).add(Aspect.ENTROPY, 1));
+		item(Items.WEATHERED_COPPER, () -> of(Items.EXPOSED_COPPER).add(Aspect.ENTROPY, 1));
+		item(Items.OXIDIZED_COPPER, () -> of(Items.WEATHERED_COPPER).add(Aspect.ENTROPY, 1));
+		item(Items.SCULK, new AspectList().add(Aspect.SOUL, 3).add(Aspect.DARKNESS, 3).add(Aspect.SENSES, 1).add(Aspect.ELDRITCH, 2));
+		item(Items.SCULK_VEIN, new AspectList().add(Aspect.SOUL, 1).add(Aspect.DARKNESS, 1).add(Aspect.ELDRITCH, 1));
+		item(Items.SCULK_SENSOR, new AspectList().add(Aspect.SENSES, 10).add(Aspect.SOUL, 5).add(Aspect.DARKNESS, 3).add(Aspect.ELDRITCH, 2));
+		item(Items.SCULK_CATALYST, new AspectList().add(Aspect.SOUL, 10).add(Aspect.DEATH, 5).add(Aspect.DARKNESS, 5).add(Aspect.ELDRITCH, 2));
+		item(Items.SCULK_SHRIEKER, new AspectList().add(Aspect.SENSES, 5).add(Aspect.SOUL, 5).add(Aspect.DARKNESS, 5).add(Aspect.AVERSION, 3).add(Aspect.ELDRITCH, 2));
+		item(Items.ECHO_SHARD, new AspectList().add(Aspect.SOUL, 10).add(Aspect.SENSES, 5).add(Aspect.DARKNESS, 5).add(Aspect.ELDRITCH, 2));
+		item(Items.HONEYCOMB, new AspectList().add(Aspect.ORDER, 3).add(Aspect.BEAST, 2).add(Aspect.CRAFT, 2));
+		item(Items.BEE_NEST, new AspectList().add(Aspect.PLANT, 5).add(Aspect.BEAST, 5).add(Aspect.ORDER, 3));
+		item(Items.TURTLE_EGG, new AspectList().add(Aspect.BEAST, 5).add(Aspect.LIFE, 5).add(Aspect.WATER, 2));
+		item(Items.SNIFFER_EGG, new AspectList().add(Aspect.BEAST, 10).add(Aspect.LIFE, 10).add(Aspect.EARTH, 3));
+		item(Items.FROGSPAWN, new AspectList().add(Aspect.BEAST, 3).add(Aspect.WATER, 3).add(Aspect.LIFE, 3));
+		item(Items.TURTLE_SCUTE, new AspectList().add(Aspect.BEAST, 5).add(Aspect.PROTECT, 5).add(Aspect.WATER, 2));
+		item(Items.ARMADILLO_SCUTE, new AspectList().add(Aspect.BEAST, 5).add(Aspect.PROTECT, 5).add(Aspect.EARTH, 2));
+		item(Items.PHANTOM_MEMBRANE, new AspectList().add(Aspect.FLIGHT, 5).add(Aspect.UNDEAD, 5).add(Aspect.AIR, 3));
+		item(Items.NAUTILUS_SHELL, new AspectList().add(Aspect.WATER, 5).add(Aspect.PROTECT, 3).add(Aspect.BEAST, 3));
+		item(Items.HEART_OF_THE_SEA, new AspectList().add(Aspect.WATER, 15).add(Aspect.MAGIC, 10).add(Aspect.DESIRE, 10));
+		item(Items.GOAT_HORN, new AspectList().add(Aspect.BEAST, 5).add(Aspect.SENSES, 5).add(Aspect.AIR, 2));
+		item(Items.GLOW_INK_SAC, () -> of(Items.INK_SAC).add(Aspect.LIGHT, 5));
+		item(Items.PIGLIN_HEAD, () -> of(Items.ZOMBIE_HEAD).add(Aspect.FIRE, 5));
+		item(Items.OCHRE_FROGLIGHT, new AspectList().add(Aspect.LIGHT, 15).add(Aspect.BEAST, 3));
+		item(Items.VERDANT_FROGLIGHT, new AspectList().add(Aspect.LIGHT, 15).add(Aspect.BEAST, 3));
+		item(Items.PEARLESCENT_FROGLIGHT, new AspectList().add(Aspect.LIGHT, 15).add(Aspect.BEAST, 3));
+		item(Items.BREEZE_ROD, new AspectList().add(Aspect.AIR, 15).add(Aspect.MOTION, 5));
+		item(Items.HEAVY_CORE, new AspectList().add(Aspect.EARTH, 15).add(Aspect.METAL, 10));
+		item(Items.TRIAL_KEY, new AspectList().add(Aspect.METAL, 5).add(Aspect.TOOL, 5));
+		item(Items.OMINOUS_TRIAL_KEY, new AspectList().add(Aspect.METAL, 5).add(Aspect.TOOL, 5).add(Aspect.DARKNESS, 5));
+		item(Items.OMINOUS_BOTTLE, new AspectList().add(Aspect.ALCHEMY, 5).add(Aspect.DARKNESS, 5).add(Aspect.CRYSTAL, 1));
+		item(Items.BELL, new AspectList().add(Aspect.METAL, 10).add(Aspect.SENSES, 10).add(Aspect.ORDER, 3));
+		item(Items.CHIPPED_ANVIL, () -> of(Items.ANVIL).add(Aspect.ENTROPY, 1));
+		item(Items.DAMAGED_ANVIL, () -> of(Items.ANVIL).add(Aspect.ENTROPY, 2));
+		item(Items.DISC_FRAGMENT_5, new AspectList().add(Aspect.SENSES, 2).add(Aspect.AIR, 1));
+		item(Items.MUSIC_DISC_OTHERSIDE, new AspectList().add(Aspect.SENSES, 15).add(Aspect.AIR, 5).add(Aspect.ELDRITCH, 5).add(Aspect.DESIRE, 10));
+		item(Items.MUSIC_DISC_PIGSTEP, new AspectList().add(Aspect.SENSES, 15).add(Aspect.AIR, 5).add(Aspect.FIRE, 5).add(Aspect.DESIRE, 10));
+		item(Items.MUSIC_DISC_RELIC, new AspectList().add(Aspect.SENSES, 15).add(Aspect.AIR, 5).add(Aspect.MIND, 5).add(Aspect.DESIRE, 10));
+		item(Items.MUSIC_DISC_PRECIPICE, new AspectList().add(Aspect.SENSES, 15).add(Aspect.AIR, 5).add(Aspect.MOTION, 5).add(Aspect.DESIRE, 10));
+		item(Items.MUSIC_DISC_CREATOR, new AspectList().add(Aspect.SENSES, 15).add(Aspect.AIR, 5).add(Aspect.CRAFT, 5).add(Aspect.DESIRE, 10));
+		item(Items.MUSIC_DISC_CREATOR_MUSIC_BOX, new AspectList().add(Aspect.SENSES, 15).add(Aspect.AIR, 5).add(Aspect.CRAFT, 5).add(Aspect.DESIRE, 10));
+		item(Items.FLOW_BANNER_PATTERN, new AspectList().add(Aspect.PLANT, 1).add(Aspect.MIND, 2).add(Aspect.SENSES, 3));
+		item(Items.GLOBE_BANNER_PATTERN, new AspectList().add(Aspect.PLANT, 1).add(Aspect.MIND, 2).add(Aspect.SENSES, 3));
+		item(Items.GUSTER_BANNER_PATTERN, new AspectList().add(Aspect.PLANT, 1).add(Aspect.MIND, 2).add(Aspect.SENSES, 3));
+		item(Items.PIGLIN_BANNER_PATTERN, new AspectList().add(Aspect.PLANT, 1).add(Aspect.MIND, 2).add(Aspect.SENSES, 3));
+		item(Items.BUNDLE, () -> of(Items.LEATHER).add(Aspect.VOID, 5));
+		item(Items.WRITTEN_BOOK, () -> of(Items.WRITABLE_BOOK).add(Aspect.MIND, 3));
+		item(Items.FILLED_MAP, () -> of(Items.MAP).add(Aspect.MIND, 3));
+		item(Items.FIREWORK_STAR, () -> of(Items.GUNPOWDER).add(Aspect.LIGHT, 5).add(Aspect.SENSES, 3));
+		item(Items.SUSPICIOUS_STEW, () -> of(Items.MUSHROOM_STEW).add(Aspect.ALCHEMY, 3));
+		item(Items.POWDER_SNOW_BUCKET, () -> of(Items.BUCKET).add(Aspect.COLD, 10).add(Aspect.EARTH, 2));
+		item(Items.AXOLOTL_BUCKET, () -> of(Items.WATER_BUCKET).add(Aspect.BEAST, 5).add(Aspect.LIFE, 5));
+		item(Items.COD_BUCKET, () -> of(Items.WATER_BUCKET).add(of(Items.COD)));
+		item(Items.SALMON_BUCKET, () -> of(Items.WATER_BUCKET).add(of(Items.SALMON)));
+		item(Items.PUFFERFISH_BUCKET, () -> of(Items.WATER_BUCKET).add(of(Items.PUFFERFISH)));
+		item(Items.TROPICAL_FISH_BUCKET, () -> of(Items.WATER_BUCKET).add(of(Items.TROPICAL_FISH)));
+		item(Items.TADPOLE_BUCKET, () -> of(Items.WATER_BUCKET).add(Aspect.BEAST, 5).add(Aspect.LIFE, 5));
+		item(Items.DRIED_KELP, () -> of(Items.KELP).add(Aspect.FIRE, 1));
+		item(Items.HONEY_BOTTLE, () -> of(Items.GLASS_BOTTLE).add(Aspect.DESIRE, 5).add(Aspect.LIFE, 3));
+		item(Items.HONEY_BLOCK, new AspectList().add(Aspect.DESIRE, 10).add(Aspect.LIFE, 5).add(Aspect.TRAP, 5));
+		item(Items.STRIPPED_BAMBOO_BLOCK, () -> of(Items.BAMBOO_BLOCK));
+		item(Items.EXPOSED_COPPER_DOOR, () -> of(Items.COPPER_DOOR).add(Aspect.ENTROPY, 1));
+		item(Items.EXPOSED_COPPER_TRAPDOOR, () -> of(Items.COPPER_TRAPDOOR).add(Aspect.ENTROPY, 1));
+		item(Items.WEATHERED_COPPER_DOOR, () -> of(Items.EXPOSED_COPPER_DOOR).add(Aspect.ENTROPY, 1));
+		item(Items.WEATHERED_COPPER_TRAPDOOR, () -> of(Items.EXPOSED_COPPER_TRAPDOOR).add(Aspect.ENTROPY, 1));
+		item(Items.OXIDIZED_COPPER_DOOR, () -> of(Items.WEATHERED_COPPER_DOOR).add(Aspect.ENTROPY, 1));
+		item(Items.OXIDIZED_COPPER_TRAPDOOR, () -> of(Items.WEATHERED_COPPER_TRAPDOOR).add(Aspect.ENTROPY, 1));
+		item(Items.TRIDENT, new AspectList().add(Aspect.WATER, 10).add(Aspect.AVERSION, 15).add(Aspect.MOTION, 5));
+		tag(t("minecraft:decorated_pot_sherds"), new AspectList().add(Aspect.EARTH, 3).add(Aspect.FIRE, 1).add(Aspect.MIND, 2));
+		complexItem(Items.MACE, new AspectList().add(Aspect.AVERSION, 12));
+		complexItem(Items.CROSSBOW, new AspectList().add(Aspect.AVERSION, 10).add(Aspect.FLIGHT, 5));
+		complexItem(Items.SOUL_TORCH, new AspectList().add(Aspect.SOUL, 2));
+		complexItem(Items.SOUL_LANTERN, new AspectList().add(Aspect.SOUL, 2));
+		complexItem(Items.SOUL_CAMPFIRE, new AspectList().add(Aspect.SOUL, 2));
+		complexItem(Items.RESPAWN_ANCHOR, new AspectList().add(Aspect.LIFE, 5).add(Aspect.SOUL, 5));
+		complexItem(Items.LODESTONE, new AspectList().add(Aspect.MOTION, 5));
+		complexTag(t("minecraft:candles"), new AspectList().add(Aspect.LIGHT, 5));
+	}
+
 	private static void thaumcraft() {
 		for (var candle : BlocksTC.candles.values()) complexItem(blk(candle), new AspectList().add(Aspect.LIGHT, 5));
 		for (var banner : BlocksTC.banners.values()) complexItem(blk(banner), new AspectList().add(Aspect.ELDRITCH, 5));

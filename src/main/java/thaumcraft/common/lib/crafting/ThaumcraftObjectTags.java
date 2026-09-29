@@ -325,6 +325,10 @@ public final class ThaumcraftObjectTags {
 		List<RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>>> candidates = new ArrayList<>();
 		for (RecipeHolder<CraftingRecipe> holder : recipes.getAllRecipesFor(RecipeType.CRAFTING)) candidates.add(holder);
 		for (RecipeHolder<ArcaneRecipe> holder : recipes.getAllRecipesFor(ThaumcraftRecipeTypes.ARCANE_TYPE.get())) candidates.add(holder);
+		// Since 1.14 many block variants are made only on the stonecutter, and netherite gear only by smithing - both
+		// followed like crafting (decided 2026-09-29; the original's Minecraft had neither)
+		for (RecipeHolder<net.minecraft.world.item.crafting.StonecutterRecipe> holder : recipes.getAllRecipesFor(RecipeType.STONECUTTING)) candidates.add(holder);
+		for (RecipeHolder<net.minecraft.world.item.crafting.SmithingRecipe> holder : recipes.getAllRecipesFor(RecipeType.SMITHING)) candidates.add(holder);
 
 		for (RecipeHolder<? extends net.minecraft.world.item.crafting.Recipe<?>> holder : candidates) {
 			net.minecraft.world.item.crafting.Recipe<?> recipe = holder.value();
@@ -335,6 +339,7 @@ public final class ThaumcraftObjectTags {
 				continue;
 			}
 			if (out == null || out.isEmpty() || out.getItem() != item) continue;
+			if (isRecolour(recipe, out)) continue;
 			try {
 				List<ItemStack> remaining = new ArrayList<>();
 				if (recipe instanceof CraftingRecipe crafting) {
@@ -350,7 +355,10 @@ public final class ThaumcraftObjectTags {
 						}
 					}
 				}
-				AspectList ph = aspectsFromIngredients(recipe.getIngredients(), out, remaining);
+				List<Ingredient> ingredients = recipe instanceof net.minecraft.world.item.crafting.SmithingTransformRecipe smithing
+						? smithingInputs(smithing) : recipe.getIngredients();
+				if (ingredients == null) continue;
+				AspectList ph = aspectsFromIngredients(ingredients, out, remaining);
 				if (recipe instanceof ArcaneRecipe arcane && arcane.getVis() > 0) {
 					ph.add(Aspect.MAGIC, (int) (Math.sqrt(1 + arcane.getVis() / 2) / (float) out.getCount()));
 				}
@@ -363,6 +371,53 @@ public final class ThaumcraftObjectTags {
 			}
 		}
 		return best;
+	}
+
+	/** A smithing upgrade's base item and addition (the template isn't counted - it's a pattern, not material). Read
+	 * reflectively: the recipe keeps them in package-private fields. Null for any other smithing recipe (trims). */
+	@Nullable
+	private static List<Ingredient> smithingInputs(net.minecraft.world.item.crafting.SmithingTransformRecipe recipe) {
+		try {
+			java.lang.reflect.Field base = net.minecraft.world.item.crafting.SmithingTransformRecipe.class.getDeclaredField("base");
+			java.lang.reflect.Field addition = net.minecraft.world.item.crafting.SmithingTransformRecipe.class.getDeclaredField("addition");
+			base.setAccessible(true);
+			addition.setAccessible(true);
+			return List.of((Ingredient) base.get(recipe), (Ingredient) addition.get(recipe));
+		} catch (ReflectiveOperationException e) {
+			return null;
+		}
+	}
+
+	private static final String[] COLOURS = java.util.Arrays.stream(net.minecraft.world.item.DyeColor.values())
+			.map(net.minecraft.world.item.DyeColor::getName).sorted((a, b) -> b.length() - a.length()).toArray(String[]::new);
+
+	/**
+	 * 1.21's "recolour" recipes - a dye plus any other colour of the same thing (dye + any carpet makes a white carpet).
+	 * They are always the cheapest, so without this carpets, beds and wool would come out as just the dye (decided
+	 * 2026-09-29). Recognised as: a dye, and an ingredient offering several items that are the output's kind in other colours.
+	 */
+	private static boolean isRecolour(net.minecraft.world.item.crafting.Recipe<?> recipe, ItemStack out) {
+		if (!(recipe instanceof CraftingRecipe)) return false;
+		String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(out.getItem()).getPath();
+		String kind = null;
+		for (String colour : COLOURS) {
+			if (path.startsWith(colour + "_")) {
+				kind = path.substring(colour.length());
+				break;
+			}
+		}
+		if (kind == null) return false;
+		boolean dye = false, others = false;
+		for (Ingredient ingredient : recipe.getIngredients()) {
+			ItemStack[] stacks = ingredient.getItems();
+			if (stacks.length == 1 && stacks[0].is(Tags.Items.DYES)) dye = true;
+			if (stacks.length > 1) {
+				final String k = kind;
+				others |= java.util.Arrays.stream(stacks).allMatch(s -> s.getItem() != out.getItem()
+						&& net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().endsWith(k));
+			}
+		}
+		return dye && others;
 	}
 
 	private static AspectList aspectsFromIngredients(List<Ingredient> ingredients, ItemStack recipeOut, List<ItemStack> remaining) {

@@ -17527,4 +17527,43 @@ public class ThaumcraftGameTests {
 		}
 		helper.succeed();
 	}
+
+	/**
+	 * Every vanilla item has aspects (2026-09-29): about 290 things Minecraft added after the original's version had
+	 * none - no table entry, and nothing to derive them from. Creative/technical items, spawn eggs and the ones that get
+	 * theirs from their contents at runtime (potions, enchanted books) are exempt, as is Mud Brick Slab (its bricks'
+	 * small value rounds away over a six-slab recipe, as it would have in the original).
+	 */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty", timeoutTicks = 400)
+	public static void everyVanillaItemHasAspects(GameTestHelper helper) {
+		java.util.Set<String> exempt = java.util.Set.of("air", "barrier", "command_block", "chain_command_block", "repeating_command_block",
+				"command_block_minecart", "debug_stick", "jigsaw", "knowledge_book", "light", "structure_block", "structure_void",
+				"petrified_oak_slab", "reinforced_deepslate", "trial_spawner", "vault", "budding_amethyst", "enchanted_book",
+				"splash_potion", "lingering_potion", "tipped_arrow", "potion", "mud_brick_slab");
+		java.util.List<String> missing = new java.util.ArrayList<>();
+		for (net.minecraft.world.item.Item item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+			var id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item);
+			if (!id.getNamespace().equals("minecraft") || exempt.contains(id.getPath()) || id.getPath().endsWith("_spawn_egg")) continue;
+			thaumcraft.api.aspects.AspectList aspects = thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(new ItemStack(item));
+			if (aspects == null || aspects.size() == 0) missing.add(id.getPath());
+		}
+		helper.assertTrue(missing.isEmpty(), missing.size() + " vanilla items have no aspects: " + missing);
+		helper.succeed();
+	}
+
+	/** Spot checks of the decisions: raw metals are the ingot's value, recolour recipes don't win, netherite follows smithing,
+	 * stonecutter-only blocks follow the stonecutter. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void aspectDerivationFollowsStonecutterAndSmithingButNotRecolours(GameTestHelper helper) {
+		java.util.function.Function<net.minecraft.world.item.Item, thaumcraft.api.aspects.AspectList> of =
+				i -> thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(new ItemStack(i));
+		helper.assertTrue(of.apply(Items.RAW_IRON).getAmount(Aspect.METAL) == 15 && of.apply(Items.RAW_IRON).getAmount(Aspect.EARTH) == 0,
+				"raw iron should be Metallum 15 only, was " + of.apply(Items.RAW_IRON).getAspects().length + " aspects");
+		helper.assertTrue(of.apply(Items.RED_CARPET).getAmount(Aspect.BEAST) > 0, "a carpet should inherit its wool's Bestia, not just the dye's aspects");
+		helper.assertTrue(of.apply(Items.NETHERITE_SWORD).getAmount(Aspect.METAL) > 0, "netherite gear should follow its smithing upgrade (Metallum from the ingot)");
+		helper.assertTrue(of.apply(Items.POLISHED_BLACKSTONE).getAmount(Aspect.EARTH) > 0, "a stonecutter-only block should follow its stonecutter recipe");
+		helper.assertTrue(of.apply(Items.PURPLE_SHULKER_BOX).size() > 0 && of.apply(Items.RED_SHULKER_BOX).size() > 0, "dyed shulker boxes should have the undyed box's aspects");
+		helper.assertTrue(of.apply(Items.MACE).getAmount(Aspect.AVERSION) >= 12, "the mace should get its weapon Aversio");
+		helper.succeed();
+	}
 }
