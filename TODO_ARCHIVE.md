@@ -10,6 +10,9 @@
   NeoForge's bakeRenderable turns into textures/textures/...png.png - all three drew the missing texture.
 - Golem Press bugs, user's decisions: the split-component double charge FIXED (the player gives only the rest); the
   full-output-slot hang RESTORED to the original (one delivery try, then stuck; the port had retried).
+  Then, at the user's request (not in the original): a caster click on a stuck press (or any of its parts) retries
+  the delivery, the screen shows a stuck press as a full progress bar, and the Thaumonomicon (MINDCLOCKWORK stage 3)
+  says so. The press/furnace placeholders carry the original names ("Golem Press", "Infernal Furnace").
 - Vis Crystal / phial / label names back to the original's ("Ignis Vis Crystal", "Phial of Ignis Essentia", ...).
 
 ## Closed 2026-09-30 (after the TODO split)

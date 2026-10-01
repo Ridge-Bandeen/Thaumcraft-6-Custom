@@ -40,7 +40,9 @@ public class GolemBuilderMenu extends AbstractContainerMenu {
 	public static final int DATA_STUFF = 2;
 	/** Bumped with every check answer so the screen redoes its component list (the original's ContainerGolemBuilder.redo). */
 	public static final int DATA_STUFF_SERIAL = 3;
-	private static final int DATA_COUNT = 4;
+	/** 1 while a finished golem waits for the output slot (see TileGolemBuilder#isStuck). */
+	public static final int DATA_STUCK = 4;
+	private static final int DATA_COUNT = 5;
 
 	private final TileGolemBuilder tile;
 	private final ContainerLevelAccess access;
@@ -88,6 +90,10 @@ public class GolemBuilderMenu extends AbstractContainerMenu {
 		return index < 15 && (data.get(DATA_STUFF) & (1 << index)) != 0;
 	}
 
+	public boolean isStuck() {
+		return data.get(DATA_STUCK) != 0;
+	}
+
 	public int stuffSerial() {
 		return data.get(DATA_STUFF_SERIAL);
 	}
@@ -130,6 +136,7 @@ public class GolemBuilderMenu extends AbstractContainerMenu {
 		if (tile != null) {
 			data.set(DATA_COST, tile.cost);
 			data.set(DATA_MAX_COST, tile.maxCost);
+			data.set(DATA_STUCK, tile.isStuck() ? 1 : 0);
 		}
 		super.broadcastChanges();
 	}

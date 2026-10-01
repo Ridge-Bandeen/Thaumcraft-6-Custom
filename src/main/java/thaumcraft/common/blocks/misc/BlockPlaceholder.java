@@ -35,6 +35,20 @@ public class BlockPlaceholder extends Block {
 		return state.is(BlocksTC.placeholderNetherbrick.get()) || state.is(BlocksTC.placeholderObsidian.get());
 	}
 
+	/** A caster on a press part reaches the press, as one on the press itself does (see TileGolemBuilder#onCasterRightClick). */
+	@Override
+	protected net.minecraft.world.ItemInteractionResult useItemOn(net.minecraft.world.item.ItemStack stack, BlockState state, Level level, BlockPos pos,
+			Player player, net.minecraft.world.InteractionHand hand, BlockHitResult hitResult) {
+		if (!isFurnacePart(state) && stack.getItem() instanceof thaumcraft.api.casters.ICaster) {
+			BlockPos press = findPress(level, pos);
+			if (press != null && level.getBlockEntity(press) instanceof thaumcraft.common.tiles.crafting.TileGolemBuilder tile
+					&& tile.onCasterRightClick(level, stack, player, press, hitResult.getDirection(), hand)) {
+				return net.minecraft.world.ItemInteractionResult.sidedSuccess(level.isClientSide);
+			}
+		}
+		return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+	}
+
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
 		if (isFurnacePart(state)) return InteractionResult.PASS;

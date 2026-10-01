@@ -9852,7 +9852,8 @@ public class ThaumcraftGameTests {
 	}
 
 	/** As the original (kept at the user's request): if the output slot can't take the finished golem when the cost runs
-	 * out, the press stays stuck holding it and doesn't try again. */
+	 * out, the press stays stuck holding it and doesn't try again by itself - but a caster click retries (the user's
+	 * addition). */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void golemPressWithAFullOutputSlotStaysStuck(GameTestHelper helper) {
 		BlockPos pos = new BlockPos(1, 1, 1);
@@ -9878,6 +9879,16 @@ public class ThaumcraftGameTests {
 		for (int i = 0; i < 40; i++) thaumcraft.common.tiles.crafting.TileGolemBuilder.tick(helper.getLevel(), abs, state, tile);
 		helper.assertTrue(tile.getItemHandler().getStackInSlot(0).isEmpty() && tile.golem == props.toLong(),
 				"freeing the slot later shouldn't deliver it (the original never retried)");
+
+		// added at the user's request: a caster click on the stuck press tries again
+		var hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+		ItemStack caster = new ItemStack(ItemsTC.casterBasic.get());
+		helper.assertTrue(tile.onCasterRightClick(helper.getLevel(), caster, player, abs, net.minecraft.core.Direction.UP, hand),
+				"a caster click on a stuck press should be taken");
+		ItemStack out = tile.getItemHandler().getStackInSlot(0);
+		helper.assertTrue(out.is(ItemsTC.golemPlacer.get()) && tile.golem < 0L, "the caster click should deliver the waiting golem, got " + out);
+		helper.assertFalse(tile.onCasterRightClick(helper.getLevel(), caster, player, abs, net.minecraft.core.Direction.UP, hand),
+				"a press that isn't stuck leaves the click alone (it opens the screen)");
 		helper.succeed();
 	}
 

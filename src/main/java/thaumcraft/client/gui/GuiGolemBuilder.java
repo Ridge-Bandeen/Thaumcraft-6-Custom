@@ -35,7 +35,8 @@ import thaumcraft.common.lib.network.ServerboundGolemBuilderPacket;
  * openings, as the original's statics were); the golem's traits as icons; its health/armour/damage; the Machina
  * cost and the components, those neither beside the press nor carried dimmed; a progress bar while it builds; and the
  * craft button, enabled once everything is to hand. Every icon has the original's hover tooltip (name, then the
- * description in blue italics - the Machina icon shows the aspect's name and description).
+ * description in blue italics - the Machina icon shows the aspect's name and description). Added at the user's request:
+ * the bar stays full while a finished golem waits for the output slot (see TileGolemBuilder#onCasterRightClick).
  *
  * (A stand-in of cycle buttons and a "cost / total" line until 2026-10-01.)
  */
@@ -257,6 +258,11 @@ public class GuiGolemBuilder extends AbstractContainerScreen<GolemBuilderMenu> {
 		} else if (disableAll) {
 			disableAll = false;
 			redoComps();
+		}
+		if (menu.isStuck()) {
+			// not in the original (the user's request): a finished golem the output slot can't take shows as a full bar -
+			// clear the slot, then right-click the press with a caster to get it out
+			graphics.blit(TEXTURE, leftPos + 145, topPos + 89, 209, 89, 46, 6);
 		}
 		graphics.drawCenteredString(font, "" + hearts, leftPos + 48, topPos + 108, 0xFFFFFF);
 		graphics.drawCenteredString(font, "" + armor, leftPos + 72, topPos + 108, 0xFFFFFF);

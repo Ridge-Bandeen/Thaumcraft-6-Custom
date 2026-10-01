@@ -43,7 +43,9 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  *
  * As the original (the user chose to keep it, 2026-10-01): the finished placer goes into the output slot only on the
  * tick the cost runs out; if the slot is full then, the press stays at zero cost holding that golem and never retries
- * (starting another golem replaces it).
+ * by itself (starting another golem replaces it). Not in the original, added at the user's request: right-clicking a
+ * stuck press with a caster tries the delivery again ({@link #onCasterRightClick}), and the screen shows the stuck
+ * state as a full progress bar ({@link #isStuck}).
  *
  * <p>Real fixed-point found and fixed 2026-09-16, alongside the real client-only press-ram animation and
  * model renderer restoration ({@link thaumcraft.client.render.TileGolemBuilderRenderer}): this tile had NO
@@ -54,7 +56,7 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * getUpdateTag}/{@code getUpdatePacket}), matching the same "new sync infra before new renderer" shape
  * several other tile-renderer restorations this session already needed.
  */
-public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEssentiaTransport {
+public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEssentiaTransport, thaumcraft.api.casters.IInteractWithCaster {
 
 	private final ItemStackHandler items = new ItemStackHandler(1) {
 		@Override
@@ -225,6 +227,21 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 				tile.completeCraft(level, pos);
 			}
 		}
+	}
+
+	/** A finished golem is waiting because the output slot couldn't take it. */
+	public boolean isStuck() {
+		return golem >= 0L && cost <= 0;
+	}
+
+	/** Added at the user's request (not in the original): a caster click on a stuck press tries the delivery again. Any
+	 * other time it isn't taken, so the click opens the press screen as usual. */
+	@Override
+	public boolean onCasterRightClick(Level world, ItemStack casterStack, Player player, BlockPos pos, Direction side, net.minecraft.world.InteractionHand hand) {
+		if (!isStuck()) return false;
+		if (!world.isClientSide) completeCraft(world, worldPosition);
+		player.swing(hand);
+		return true;
 	}
 
 	private void completeCraft(Level level, BlockPos pos) {
