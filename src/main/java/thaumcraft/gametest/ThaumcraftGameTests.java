@@ -9806,6 +9806,81 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	private static thaumcraft.api.golems.IGolemProperties basicGolem(ServerPlayer player) {
+		thaumcraft.api.golems.IGolemProperties props = thaumcraft.common.golems.GolemProperties.fromLong(0L);
+		props.setMaterial(thaumcraft.api.golems.parts.GolemMaterial.getMaterials()[1]);
+		props.setHead(thaumcraft.api.golems.parts.GolemHead.getHeads()[0]);
+		props.setArms(thaumcraft.api.golems.parts.GolemArm.getArms()[0]);
+		props.setLegs(thaumcraft.api.golems.parts.GolemLeg.getLegs()[0]);
+		props.setAddon(thaumcraft.api.golems.parts.GolemAddon.getAddons()[0]);
+		for (String[] r : new String[][] { props.getMaterial().research, props.getHead().research, props.getArms().research,
+				props.getLegs().research, props.getAddon().research }) {
+			if (r != null) for (String key : r) forceResearch(player, key.split("@")[0]);
+		}
+		return props;
+	}
+
+	/** A component split between a chest beside the press and the player costs the player only the rest (the original
+	 * took it in full from the player as well - fixed at the user's request, 2026-10-01). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void golemPressTakesOnlyTheRemainderFromThePlayer(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(1, 1, 1);
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.golemBuilder.get());
+		thaumcraft.common.tiles.crafting.TileGolemBuilder tile = helper.getBlockEntity(pos);
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(pos).above(2));
+		player.getAbilities().instabuild = false;
+		thaumcraft.api.golems.IGolemProperties props = basicGolem(player);
+		ItemStack[] needed = props.generateComponents();
+		int split = -1;
+		for (int i = 0; i < needed.length; i++) if (needed[i].getCount() >= 2) split = i;
+		helper.assertTrue(split >= 0, "the test golem needs a component counted 2 or more");
+		helper.setBlock(pos.east(), Blocks.CHEST);
+		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(pos.east());
+		for (int i = 0; i < needed.length; i++) {
+			if (i == split) {
+				chest.setItem(i, needed[i].copyWithCount(1));
+				player.getInventory().add(needed[i].copyWithCount(needed[i].getCount() + 5));
+			} else {
+				chest.setItem(i, needed[i].copy());
+			}
+		}
+		helper.assertTrue(tile.startCraft(props.toLong(), player), "the craft should start");
+		int left = 0;
+		for (ItemStack s : player.getInventory().items) if (ItemStack.isSameItem(s, needed[split])) left += s.getCount();
+		helper.assertTrue(left == 6, "the player should give only what the chest lacked: expected 6 left, got " + left);
+		helper.succeed();
+	}
+
+	/** As the original (kept at the user's request): if the output slot can't take the finished golem when the cost runs
+	 * out, the press stays stuck holding it and doesn't try again. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void golemPressWithAFullOutputSlotStaysStuck(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(1, 1, 1);
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.golemBuilder.get());
+		thaumcraft.common.tiles.crafting.TileGolemBuilder tile = helper.getBlockEntity(pos);
+		ServerPlayer player = spawnCasterAt(helper, abs.above(2));
+		thaumcraft.api.golems.IGolemProperties props = basicGolem(player);
+		for (ItemStack stack : props.generateComponents()) player.getInventory().add(stack.copyWithCount(64));
+		helper.assertTrue(tile.startCraft(props.toLong(), player), "the craft should start");
+		// a different golem's placer in the slot: the finished one can't stack onto it
+		ItemStack other = new ItemStack(ItemsTC.golemPlacer.get());
+		other.set(thaumcraft.api.items.ThaumcraftDataComponents.GOLEM_PLACER_DATA.get(),
+				new thaumcraft.api.items.ThaumcraftDataComponents.GolemPlacerData(props.toLong() + 1, 0));
+		((net.neoforged.neoforge.items.ItemStackHandler) tile.getItemHandler()).setStackInSlot(0, other);
+		var state = helper.getLevel().getBlockState(abs);
+		for (int i = 0; i < (tile.maxCost + 2) * 6 && tile.cost > 0; i++) {
+			tile.addEssentia(Aspect.MECHANISM, 1, net.minecraft.core.Direction.UP);
+			thaumcraft.common.tiles.crafting.TileGolemBuilder.tick(helper.getLevel(), abs, state, tile);
+		}
+		helper.assertTrue(tile.cost == 0 && tile.golem == props.toLong(), "the press should be holding the finished golem, stuck");
+		((net.neoforged.neoforge.items.ItemStackHandler) tile.getItemHandler()).setStackInSlot(0, ItemStack.EMPTY);
+		for (int i = 0; i < 40; i++) thaumcraft.common.tiles.crafting.TileGolemBuilder.tick(helper.getLevel(), abs, state, tile);
+		helper.assertTrue(tile.getItemHandler().getStackInSlot(0).isEmpty() && tile.golem == props.toLong(),
+				"freeing the slot later shouldn't deliver it (the original never retried)");
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void golemBuilderCraftsAPlacerFromSelectedPartsAndEssentia(GameTestHelper helper) {
 		BlockPos pos = BlockPos.ZERO;

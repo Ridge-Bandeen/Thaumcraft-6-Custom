@@ -8,6 +8,8 @@
   inventory slots moved to the original x 24; wand sounds; output-slot guard; part icons got their missing ".png".
 - OBJ renderables (Golem Press, advanced crossbow turret, Eldritch sonic dome) passed full texture paths, which
   NeoForge's bakeRenderable turns into textures/textures/...png.png - all three drew the missing texture.
+- Golem Press bugs, user's decisions: the split-component double charge FIXED (the player gives only the rest); the
+  full-output-slot hang RESTORED to the original (one delivery try, then stuck; the port had retried).
 - Vis Crystal / phial / label names back to the original's ("Ignis Vis Crystal", "Phial of Ignis Essentia", ...).
 
 ## Closed 2026-09-30 (after the TODO split)

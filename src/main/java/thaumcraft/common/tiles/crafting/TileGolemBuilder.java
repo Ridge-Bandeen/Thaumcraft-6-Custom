@@ -37,15 +37,13 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * inventory-tile base" pattern every device this session uses.
  *
  * Components come from the inventories beside the press (not above) or else the crafting player, as the original's
- * {@code InventoryUtils.consumeItemsFromAdjacentInventoryOrPlayer} ({@link #checkCraft}, {@link #startCraft}) - with its
- * quirk kept: a component partly found beside the press is taken from there AND in full from the player.
+ * {@code InventoryUtils.consumeItemsFromAdjacentInventoryOrPlayer} ({@link #checkCraft}, {@link #startCraft}) - one bug
+ * fixed at the user's request (2026-10-01): a component partly found beside the press used to be taken from there AND
+ * in full from the player; now the player gives only the rest.
  *
- * Real behavioural improvement over the original, documented rather than silent: the original's completion
- * check ({@code cost <= 0} -> try to place the finished placer in the output slot) only ever ran inside the
- * same {@code cost > 0} guard as the essentia-draw step, so a completed golem whose output slot was full
- * when {@code cost} first hit zero would never retry and stayed stuck forever. {@link #tick} checks
- * completion as its own unconditional step every 5 ticks instead, so a golem completes as soon as the
- * output slot frees up.
+ * As the original (the user chose to keep it, 2026-10-01): the finished placer goes into the output slot only on the
+ * tick the cost runs out; if the slot is full then, the press stays at zero cost holding that golem and never retries
+ * (starting another golem replaces it).
  *
  * <p>Real fixed-point found and fixed 2026-09-16, alongside the real client-only press-ram animation and
  * model renderer restoration ({@link thaumcraft.client.render.TileGolemBuilderRenderer}): this tile had NO
@@ -132,9 +130,8 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 			c += stack.getCount();
 		}
 		for (ItemStack stack : components) {
-			if (!consumeAdjacent(level, worldPosition, stack)) {
-				consumeCarried(player, stack);
-			}
+			int left = consumeAdjacent(level, worldPosition, stack);
+			if (left > 0) consumeCarried(player, stack.copyWithCount(left));
 		}
 		cost = c;
 		maxCost = c;
@@ -173,8 +170,8 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 		return count;
 	}
 
-	/** The original's consumeFromAdjacentChests: takes what it can, true only if all of it came from beside the press. */
-	private static boolean consumeAdjacent(Level level, BlockPos pos, ItemStack wanted) {
+	/** The original's consumeFromAdjacentChests: takes what it can; returns how many are still owed. */
+	private static int consumeAdjacent(Level level, BlockPos pos, ItemStack wanted) {
 		int left = wanted.getCount();
 		for (Direction face : Direction.values()) {
 			if (face == Direction.UP || left <= 0) continue;
@@ -185,7 +182,7 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 				left -= handler.extractItem(slot, left, false).getCount();
 			}
 		}
-		return left <= 0;
+		return Math.max(0, left);
 	}
 
 	private static int countCarried(Player player, ItemStack wanted) {
@@ -223,9 +220,10 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 				tile.cost--;
 				tile.setChanged();
 			}
-		}
-		if (tile.cost <= 0 && tile.golem >= 0L) {
-			tile.completeCraft(level, pos);
+			// one try only, as the original (see the class comment)
+			if (tile.cost <= 0) {
+				tile.completeCraft(level, pos);
+			}
 		}
 	}
 
@@ -237,11 +235,10 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 		} else if (current.getCount() < current.getMaxStackSize() && ItemStack.isSameItemSameComponents(current, placer)) {
 			current.grow(1);
 		} else {
-			return; // output slot full/mismatched - stay pending and retry next tick, see this class's own doc comment.
+			return; // output slot full/mismatched: stuck, as the original - see the class comment
 		}
 		golem = -1L;
 		cost = 0;
-		maxCost = 0;
 		setChanged();
 		level.playSound(null, pos, thaumcraft.common.registry.ThaumcraftSounds.WAND.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
 	}
