@@ -30,7 +30,7 @@ import thaumcraft.common.container.ThaumonomiconMenu;
  * at all unless that property is set.
  *
  * <p>Plan: comma-separated steps - {@code book}, {@code all} (grant all research), {@code cat:KEY},
- * {@code entry:KEY}, {@code page:N}, {@code recipe:KEY}, {@code aspects:}, {@code back}, {@code shot:name}, {@code wait:ticks},
+ * {@code entry:KEY}, {@code page:N}, {@code press} (open a Golem Press), {@code recipe:KEY}, {@code aspects:}, {@code back}, {@code shot:name}, {@code wait:ticks},
  * {@code config} (the mod's config screen), {@code close}, {@code hold:ITEM}/{@code offhand:ITEM}, {@code sneak:true|false}.
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID, value = Dist.CLIENT)
@@ -83,6 +83,21 @@ public final class ScreenshotHarness {
 				if (sp.serverLevel().getBlockEntity(pos) instanceof thaumcraft.common.tiles.crafting.TileResearchTable tile) {
 					tile.getItemHandler().insertItem(0, new net.minecraft.world.item.ItemStack(thaumcraft.api.items.ItemsTC.scribingTools.get()), false);
 					tile.getItemHandler().insertItem(1, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.PAPER, 16), false);
+					sp.openMenu(tile);
+				}
+			});
+			case "press" -> mc.getSingleplayerServer().execute(() -> {
+				// a Golem Press two blocks ahead, a chest beside it with some iron golem parts, then open it
+				ServerPlayer sp = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+				if (sp == null) return;
+				net.minecraft.core.BlockPos pos = sp.blockPosition().relative(sp.getDirection(), 2);
+				sp.serverLevel().setBlockAndUpdate(pos, thaumcraft.api.blocks.BlocksTC.golemBuilder.get().defaultBlockState());
+				net.minecraft.core.BlockPos chestPos = pos.relative(sp.getDirection().getClockWise());
+				sp.serverLevel().setBlockAndUpdate(chestPos, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
+				if (sp.serverLevel().getBlockEntity(chestPos) instanceof net.minecraft.world.level.block.entity.ChestBlockEntity chest) {
+					chest.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 16));
+				}
+				if (sp.serverLevel().getBlockEntity(pos) instanceof thaumcraft.common.tiles.crafting.TileGolemBuilder tile) {
 					sp.openMenu(tile);
 				}
 			});

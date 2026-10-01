@@ -36,12 +36,9 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * Purpose-built {@link BlockEntity} + real {@link ItemStackHandler} (single output slot), same "no shared
  * inventory-tile base" pattern every device this session uses.
  *
- * Real, documented simplification: component cost is checked/consumed from the player's own inventory only
- * (see {@link GolemBuilderMenu#startCraft}), not the original's {@code InventoryUtils.checkAdjacentChests}/
- * {@code consumeItemsFromAdjacentInventoryOrPlayer} (adjacent-chest scanning - still 1.12.2, and a
- * genuinely separate, reusable piece of infrastructure not worth porting for one device) - same "check the
- * player's own inventory directly" precedent {@code TileFocalManipulator#hasCrystals}/{@code consumeCrystals}
- * already established for the same reason.
+ * Components come from the inventories beside the press (not above) or else the crafting player, as the original's
+ * {@code InventoryUtils.consumeItemsFromAdjacentInventoryOrPlayer} ({@link #checkCraft}, {@link #startCraft}) - with its
+ * quirk kept: a component partly found beside the press is taken from there AND in full from the player.
  *
  * Real behavioural improvement over the original, documented rather than silent: the original's completion
  * check ({@code cost <= 0} -> try to place the finished placer in the output slot) only ever ran inside the
@@ -99,25 +96,116 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 		return new GolemBuilderMenu(containerId, inventory, this);
 	}
 
-	/** Real, direct translation of the original's own {@code startCraft} cost formula - 2 per trait plus 1
-	 * per component item, called once the caller (the menu) has already confirmed and consumed the real
-	 * component cost. */
-	public boolean startCraft(IGolemProperties props) {
-		if (golem >= 0L) {
+	/** The original's checkCraft: which of the golem's components the inventories beside the press can supply (the
+	 * screen shows the rest as missing unless the player carries them). */
+	public boolean[] checkCraft(long id) {
+		ItemStack[] components = GolemProperties.fromLong(id).generateComponents();
+		boolean[] ret = new boolean[components.length];
+		for (int a = 0; a < components.length; a++) {
+			ret[a] = level != null && countAdjacent(level, worldPosition, components[a]) >= components[a].getCount();
+		}
+		return ret;
+	}
+
+	/** The original's startCraft: refuses (and clears) if the output slot holds something it can't stack onto, takes the
+	 * components, and sets the Machina cost - 2 per trait plus 1 per component item. */
+	public boolean startCraft(long id, Player player) {
+		ItemStack placer = placerFor(id);
+		ItemStack current = items.getStackInSlot(0);
+		if (!current.isEmpty() && (current.getCount() >= current.getMaxStackSize() || !ItemStack.isSameItemSameComponents(current, placer))) {
+			cost = 0;
+			golem = -1L;
 			return false;
 		}
-		golem = props.toLong();
+		IGolemProperties props = GolemProperties.fromLong(id);
+		ItemStack[] components = props.generateComponents();
+		for (ItemStack stack : components) {
+			if (countAdjacent(level, worldPosition, stack) < stack.getCount() && countCarried(player, stack) < stack.getCount()) {
+				cost = 0;
+				golem = -1L;
+				return false;
+			}
+		}
+		golem = id;
 		int c = props.getTraits().size() * 2;
-		for (ItemStack stack : props.generateComponents()) {
+		for (ItemStack stack : components) {
 			c += stack.getCount();
+		}
+		for (ItemStack stack : components) {
+			if (!consumeAdjacent(level, worldPosition, stack)) {
+				consumeCarried(player, stack);
+			}
 		}
 		cost = c;
 		maxCost = c;
 		setChanged();
-		if (level != null) {
-			level.playSound(null, getBlockPos(), SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 0.25f, 1.0f);
-		}
+		level.playSound(null, worldPosition, thaumcraft.common.registry.ThaumcraftSounds.WAND.get(), SoundSource.BLOCKS, 0.25f, 1.0f);
 		return true;
+	}
+
+	private static ItemStack placerFor(long id) {
+		ItemStack placer = new ItemStack(ItemsTC.golemPlacer.get());
+		placer.set(ThaumcraftDataComponents.GOLEM_PLACER_DATA.get(), new GolemPlacerData(id, 0));
+		return placer;
+	}
+
+	private static boolean matches(ItemStack wanted, ItemStack candidate) {
+		return !candidate.isEmpty() && ItemStack.isSameItem(wanted, candidate);
+	}
+
+	/** Every side but the top, as the original. */
+	private static IItemHandler handlerAt(Level level, BlockPos pos, Direction face) {
+		return level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, pos.relative(face), face.getOpposite());
+	}
+
+	private static int countAdjacent(Level level, BlockPos pos, ItemStack wanted) {
+		int count = 0;
+		for (Direction face : Direction.values()) {
+			if (face == Direction.UP) continue;
+			IItemHandler handler = handlerAt(level, pos, face);
+			if (handler == null) continue;
+			for (int slot = 0; slot < handler.getSlots(); slot++) {
+				ItemStack s = handler.getStackInSlot(slot);
+				if (matches(wanted, s)) count += s.getCount();
+			}
+			if (count >= wanted.getCount()) break;
+		}
+		return count;
+	}
+
+	/** The original's consumeFromAdjacentChests: takes what it can, true only if all of it came from beside the press. */
+	private static boolean consumeAdjacent(Level level, BlockPos pos, ItemStack wanted) {
+		int left = wanted.getCount();
+		for (Direction face : Direction.values()) {
+			if (face == Direction.UP || left <= 0) continue;
+			IItemHandler handler = handlerAt(level, pos, face);
+			if (handler == null) continue;
+			for (int slot = 0; slot < handler.getSlots() && left > 0; slot++) {
+				if (!matches(wanted, handler.getStackInSlot(slot))) continue;
+				left -= handler.extractItem(slot, left, false).getCount();
+			}
+		}
+		return left <= 0;
+	}
+
+	private static int countCarried(Player player, ItemStack wanted) {
+		int count = 0;
+		for (ItemStack s : player.getInventory().items) {
+			if (matches(wanted, s)) count += s.getCount();
+		}
+		return count;
+	}
+
+	private static void consumeCarried(Player player, ItemStack wanted) {
+		int left = wanted.getCount();
+		for (ItemStack s : player.getInventory().items) {
+			if (left <= 0) break;
+			if (!matches(wanted, s)) continue;
+			int take = Math.min(left, s.getCount());
+			s.shrink(take);
+			left -= take;
+		}
+		player.getInventory().setChanged();
 	}
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TileGolemBuilder tile) {
@@ -142,8 +230,7 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 	}
 
 	private void completeCraft(Level level, BlockPos pos) {
-		ItemStack placer = new ItemStack(ItemsTC.golemPlacer.get());
-		placer.set(ThaumcraftDataComponents.GOLEM_PLACER_DATA.get(), new GolemPlacerData(golem, 0));
+		ItemStack placer = placerFor(golem);
 		ItemStack current = items.getStackInSlot(0);
 		if (current.isEmpty()) {
 			items.setStackInSlot(0, placer);
@@ -156,7 +243,7 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 		cost = 0;
 		maxCost = 0;
 		setChanged();
-		level.playSound(null, pos, SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 1.0f, 1.2f);
+		level.playSound(null, pos, thaumcraft.common.registry.ThaumcraftSounds.WAND.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
 	}
 
 	/** Real vent-steam colour, matching the true original's own real hardcoded {@code 11184810} (0xAAAAAA,
@@ -193,7 +280,8 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 	private boolean drawEssentia(Level level, BlockPos pos) {
 		for (Direction dir : Direction.values()) {
 			if (!(level.getBlockEntity(pos.relative(dir)) instanceof IEssentiaTransport neighbor)) continue;
-			if (!neighbor.isConnectable(dir.getOpposite()) || !neighbor.canOutputTo(dir.getOpposite())) continue;
+			if (!neighbor.isConnectable(dir.getOpposite())) continue;
+			if (!neighbor.canOutputTo(dir.getOpposite())) return false; // as the original
 			if (neighbor.getSuctionAmount(dir.getOpposite()) < getSuctionAmount(dir)
 					&& neighbor.takeEssentia(Aspect.MECHANISM, 1, dir.getOpposite()) == 1) {
 				return true;

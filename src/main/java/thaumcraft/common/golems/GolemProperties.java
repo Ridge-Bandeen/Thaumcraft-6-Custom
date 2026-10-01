@@ -245,58 +245,58 @@ public class GolemProperties implements IGolemProperties {
 		GolemMaterial.register(new GolemMaterial("VOID", new String[] { "MATSTUDVOID" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/mat_void"), 1445161, 20, 6, 4,
 				new ItemStack(ItemsTC.plateVoid.get()), new ItemStack(ItemsTC.mechanismSimple.get()), new EnumGolemTrait[] { EnumGolemTrait.REPAIR }));
 
-		GolemHead.register(new GolemHead("BASIC", new String[] { "MINDCLOCKWORK" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/head_basic"),
+		GolemHead.register(new GolemHead("BASIC", new String[] { "MINDCLOCKWORK" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/head_basic.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_head_basic.obj"), null, PartModel.EnumAttachPoint.HEAD),
 				new Object[] { new ItemStack(ItemsTC.mindClockwork.get()) }, new EnumGolemTrait[0]));
-		GolemHead.register(new GolemHead("SMART", new String[] { "MINDBIOTHAUMIC" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/head_smart"),
+		GolemHead.register(new GolemHead("SMART", new String[] { "MINDBIOTHAUMIC" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/head_smart.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_head_smart.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_head_other"), PartModel.EnumAttachPoint.HEAD),
 				new Object[] { new ItemStack(ItemsTC.mindBiothaumic.get()) }, new EnumGolemTrait[] { EnumGolemTrait.SMART, EnumGolemTrait.FRAGILE }));
-		GolemHead.register(new GolemHead("SMART_ARMORED", new String[] { "MINDBIOTHAUMIC", "GOLEMCOMBATADV" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/head_smartarmor"),
+		GolemHead.register(new GolemHead("SMART_ARMORED", new String[] { "MINDBIOTHAUMIC", "GOLEMCOMBATADV" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/head_smartarmor.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_head_smart_armor.obj"), null, PartModel.EnumAttachPoint.HEAD),
 				new Object[] { new ItemStack(ItemsTC.mindBiothaumic.get()), new ItemStack(ItemsTC.plateIron.get()), "base", new ItemStack(Blocks.WHITE_WOOL) }, new EnumGolemTrait[] { EnumGolemTrait.SMART }));
-		GolemHead.register(new GolemHead("SCOUT", new String[] { "GOLEMVISION" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/head_scout"),
+		GolemHead.register(new GolemHead("SCOUT", new String[] { "GOLEMVISION" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/head_scout.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_head_scout.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_head_other"), PartModel.EnumAttachPoint.HEAD),
 				new Object[] { new ItemStack(ItemsTC.mindClockwork.get()), new ItemStack(ItemsTC.moduleVision.get()) }, new EnumGolemTrait[] { EnumGolemTrait.SCOUT, EnumGolemTrait.FRAGILE }));
-		GolemHead.register(new GolemHead("SMART_SCOUT", new String[] { "GOLEMVISION", "MINDBIOTHAUMIC" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/head_smartscout"),
+		GolemHead.register(new GolemHead("SMART_SCOUT", new String[] { "GOLEMVISION", "MINDBIOTHAUMIC" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/head_smartscout.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_head_scout_smart.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_head_other"), PartModel.EnumAttachPoint.HEAD),
 				new Object[] { new ItemStack(ItemsTC.mindBiothaumic.get()), new ItemStack(ItemsTC.moduleVision.get()) }, new EnumGolemTrait[] { EnumGolemTrait.SCOUT, EnumGolemTrait.SMART, EnumGolemTrait.FRAGILE }));
 
-		GolemArm.register(new GolemArm("BASIC", new String[] { "MINDCLOCKWORK" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/arms_basic"),
+		GolemArm.register(new GolemArm("BASIC", new String[] { "MINDCLOCKWORK" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/arms_basic.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_arms_basic.obj"), null, PartModel.EnumAttachPoint.ARMS), new Object[0], new EnumGolemTrait[0]));
-		GolemArm.register(new GolemArm("FINE", new String[] { "MATSTUDBRASS" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/arms_fine"),
+		GolemArm.register(new GolemArm("FINE", new String[] { "MATSTUDBRASS" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/arms_fine.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_arms_fine.obj"), null, PartModel.EnumAttachPoint.ARMS),
 				new Object[] { new ItemStack(ItemsTC.mechanismSimple.get()), "base" }, new EnumGolemTrait[] { EnumGolemTrait.DEFT, EnumGolemTrait.FRAGILE }));
-		GolemArm.register(new GolemArm("CLAWS", new String[] { "GOLEMCOMBATADV" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/arms_claws"),
+		GolemArm.register(new GolemArm("CLAWS", new String[] { "GOLEMCOMBATADV" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/arms_claws.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_arms_claws.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_arms_claws"), PartModel.EnumAttachPoint.ARMS),
 				new Object[] { new ItemStack(ItemsTC.moduleAggression.get()), new ItemStack(Items.SHEARS, 2), "base" }, new EnumGolemTrait[] { EnumGolemTrait.FIGHTER, EnumGolemTrait.CLUMSY, EnumGolemTrait.BRUTAL }));
-		GolemArm.register(new GolemArm("BREAKERS", new String[] { "GOLEMBREAKER" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/arms_breakers"),
+		GolemArm.register(new GolemArm("BREAKERS", new String[] { "GOLEMBREAKER" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/arms_breakers.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_arms_breakers.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_arms_breakers"), PartModel.EnumAttachPoint.ARMS),
 				new Object[] { new ItemStack(Items.DIAMOND, 2), "base", new ItemStack(Blocks.PISTON, 2) }, new EnumGolemTrait[] { EnumGolemTrait.BREAKER, EnumGolemTrait.CLUMSY, EnumGolemTrait.BRUTAL }));
-		GolemArm.register(new GolemArm("DARTS", new String[] { "GOLEMCOMBATADV" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/arms_darts"),
+		GolemArm.register(new GolemArm("DARTS", new String[] { "GOLEMCOMBATADV" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/arms_darts.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_arms_darter.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_arms_darter"), PartModel.EnumAttachPoint.ARMS),
 				new Object[] { new ItemStack(ItemsTC.moduleAggression.get()), new ItemStack(Blocks.DISPENSER, 2), new ItemStack(Items.ARROW, 32), "mech" },
 				new thaumcraft.common.golems.parts.GolemArmDart(),
 				new EnumGolemTrait[] { EnumGolemTrait.FIGHTER, EnumGolemTrait.CLUMSY, EnumGolemTrait.RANGED, EnumGolemTrait.FRAGILE }));
 
-		GolemLeg.register(new GolemLeg("WALKER", new String[] { "MINDCLOCKWORK" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/legs_walker"),
+		GolemLeg.register(new GolemLeg("WALKER", new String[] { "MINDCLOCKWORK" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/legs_walker.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_legs_walker.obj"), null, PartModel.EnumAttachPoint.LEGS), new Object[] { "base", "mech" }, new EnumGolemTrait[0]));
-		GolemLeg.register(new GolemLeg("ROLLER", new String[] { "MINDCLOCKWORK" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/legs_roller"),
+		GolemLeg.register(new GolemLeg("ROLLER", new String[] { "MINDCLOCKWORK" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/legs_roller.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_legs_wheel.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_legs_wheel"), PartModel.EnumAttachPoint.BODY),
 				new Object[] { new ItemStack(Items.BOWL, 2), new ItemStack(Items.LEATHER), "mech" }, new EnumGolemTrait[] { EnumGolemTrait.WHEELED }));
-		GolemLeg.register(new GolemLeg("CLIMBER", new String[] { "GOLEMCLIMBER" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/legs_climber"),
+		GolemLeg.register(new GolemLeg("CLIMBER", new String[] { "GOLEMCLIMBER" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/legs_climber.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_legs_climber.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/blocks/base_metal"), PartModel.EnumAttachPoint.LEGS),
 				new Object[] { new ItemStack(Items.FLINT, 4), "base", "mech", "mech" }, new EnumGolemTrait[] { EnumGolemTrait.CLIMBER }));
-		GolemLeg.register(new GolemLeg("FLYER", new String[] { "GOLEMFLYER" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/legs_flyer"),
+		GolemLeg.register(new GolemLeg("FLYER", new String[] { "GOLEMFLYER" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/legs_flyer.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_legs_floater.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_legs_floater"), PartModel.EnumAttachPoint.BODY),
 				new Object[] { new ItemStack(BlocksTC.levitator.get()), new ItemStack(ItemsTC.plateIron.get(), 4), new ItemStack(Items.SLIME_BALL), "mech" }, new EnumGolemTrait[] { EnumGolemTrait.FLYER, EnumGolemTrait.FRAGILE }));
 
 		GolemAddon.register(new GolemAddon("NONE", new String[] { "MINDCLOCKWORK" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/blocks/blank"), null, new Object[0], new EnumGolemTrait[0]));
-		GolemAddon.register(new GolemAddon("ARMORED", new String[] { "GOLEMCOMBATADV" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/addon_armored"),
+		GolemAddon.register(new GolemAddon("ARMORED", new String[] { "GOLEMCOMBATADV" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/addon_armored.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_armor.obj"), null, PartModel.EnumAttachPoint.BODY),
 				new Object[] { "base", "base", "base", "base" }, new EnumGolemTrait[] { EnumGolemTrait.ARMORED, EnumGolemTrait.HEAVY }));
-		GolemAddon.register(new GolemAddon("FIGHTER", new String[] { "SEALGUARD" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/addon_fighter"), null,
+		GolemAddon.register(new GolemAddon("FIGHTER", new String[] { "SEALGUARD" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/addon_fighter.png"), null,
 				new Object[] { new ItemStack(ItemsTC.moduleAggression.get()), "mech" }, new EnumGolemTrait[] { EnumGolemTrait.FIGHTER }));
-		GolemAddon.register(new GolemAddon("HAULER", new String[] { "MINDCLOCKWORK" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/addon_hauler"),
+		GolemAddon.register(new GolemAddon("HAULER", new String[] { "MINDCLOCKWORK" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/addon_hauler.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_hauler.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_hauler"), PartModel.EnumAttachPoint.BODY),
 				new Object[] { new ItemStack(Items.LEATHER), new ItemStack(Items.CHEST) }, new EnumGolemTrait[] { EnumGolemTrait.HAULER }));
 	}

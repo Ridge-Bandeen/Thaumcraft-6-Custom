@@ -1,5 +1,15 @@
 # Thaumcraft 1.21.1 Port — TODO archive
 
+## Closed 2026-10-01
+
+- Golem Press screen rebuilt from the original's GuiGolemBuilder (research-gated part carousel, traits, stats, Machina
+  cost + component grid with owned/missing, progress bar, craft button, tooltips); the menu takes the screen's golem
+  via `ServerboundGolemBuilderPacket`; components come from beside the press or the player as the original; player
+  inventory slots moved to the original x 24; wand sounds; output-slot guard; part icons got their missing ".png".
+- OBJ renderables (Golem Press, advanced crossbow turret, Eldritch sonic dome) passed full texture paths, which
+  NeoForge's bakeRenderable turns into textures/textures/...png.png - all three drew the missing texture.
+- Vis Crystal / phial / label names back to the original's ("Ignis Vis Crystal", "Phial of Ignis Essentia", ...).
+
 ## Closed 2026-09-30 (after the TODO split)
 
 - Golem Press restored as the original's multiblock: facing set by the ritual, invisible placeholders (`BlockPlaceholder`)

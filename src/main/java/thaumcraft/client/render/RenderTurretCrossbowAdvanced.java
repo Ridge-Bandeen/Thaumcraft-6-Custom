@@ -68,7 +68,9 @@ public class RenderTurretCrossbowAdvanced extends EntityRenderer<EntityTurretCro
 	public RenderTurretCrossbowAdvanced(EntityRendererProvider.Context context) {
 		super(context);
 		ObjModel model = ObjLoader.INSTANCE.loadModel(new ObjModel.ModelSettings(MODEL, true, true, false, true, MTL_OVERRIDE.toString()));
-		var bakingContext = StandaloneGeometryBakingContext.create(Map.of("#Material__25", TEXTURE));
+		// NeoForge's ObjModel#bakeRenderable turns the material into "textures/<path>.png" itself, so this is the short
+		// (sprite-style) name - a full path became textures/textures/....png.png and drew the missing texture (found 2026-10-01).
+		var bakingContext = StandaloneGeometryBakingContext.create(Map.of("#Material__25", ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "entity/crossbow_advanced")));
 		renderable = model.bakeRenderable(bakingContext);
 	}
 

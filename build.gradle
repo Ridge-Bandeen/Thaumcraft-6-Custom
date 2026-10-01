@@ -730,6 +730,7 @@ sourceSets {
             include 'thaumcraft/client/gui/GuiSpa.java'
             include 'thaumcraft/common/items/consumables/ItemBathSalts.java'
             include 'thaumcraft/common/lib/network/ServerboundChangeCasterFocusPacket.java'
+            include 'thaumcraft/common/lib/network/ServerboundGolemBuilderPacket.java'
             include 'thaumcraft/common/items/casters/CasterFocusHelper.java'
             include 'thaumcraft/client/gui/KeyBindings.java'
             include 'thaumcraft/client/gui/FocusRadialOverlay.java'

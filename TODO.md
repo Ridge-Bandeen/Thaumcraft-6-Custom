@@ -31,6 +31,10 @@ in a client are tracked in the `thaumcraft-ui-visual-parity-checklist` memory, n
 
 ## Design questions for the user
 
+- Golem Press, two original bugs: (a) a component found partly beside the press is taken from there AND in full from
+  the player (kept as the original); (b) a finished golem with a full output slot never came out in the original -
+  the port already retries (an unapproved fix, kept for now).
+
 - Should vanilla candles be usable where Thaumcraft recipes want Thaumcraft candles (as glass bottles stand in for
   phials)?
 

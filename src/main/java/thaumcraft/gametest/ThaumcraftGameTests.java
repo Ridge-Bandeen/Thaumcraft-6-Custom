@@ -9819,16 +9819,28 @@ public class ThaumcraftGameTests {
 				"opening the tile via the real MenuProvider path should give the player a real GolemBuilderMenu");
 		thaumcraft.common.container.GolemBuilderMenu menu = (thaumcraft.common.container.GolemBuilderMenu) player.containerMenu;
 
-		menu.clickMenuButton(player, 0); // cycle material -> index 1
-		menu.clickMenuButton(player, 1); // cycle head -> index 1
-
-		thaumcraft.api.golems.IGolemProperties expected = menu.buildSelectedProperties();
-		for (ItemStack stack : expected.generateComponents()) {
-			player.getInventory().add(new ItemStack(stack.getItem(), 64));
+		// as the original: the screen sends the golem it shows; components come from beside the press first
+		thaumcraft.api.golems.IGolemProperties expected = thaumcraft.common.golems.GolemProperties.fromLong(0L);
+		expected.setMaterial(thaumcraft.api.golems.parts.GolemMaterial.getMaterials()[1]);
+		expected.setHead(thaumcraft.api.golems.parts.GolemHead.getHeads()[0]);
+		expected.setArms(thaumcraft.api.golems.parts.GolemArm.getArms()[0]);
+		expected.setLegs(thaumcraft.api.golems.parts.GolemLeg.getLegs()[0]);
+		expected.setAddon(thaumcraft.api.golems.parts.GolemAddon.getAddons()[0]);
+		helper.assertFalse(menu.craft(player, expected.toLong()), "parts the player hasn't researched can't be built");
+		for (String[] r : new String[][] { expected.getMaterial().research, expected.getHead().research, expected.getArms().research,
+				expected.getLegs().research, expected.getAddon().research }) {
+			if (r != null) for (String key : r) forceResearch(player, key.split("@")[0]);
 		}
+		helper.setBlock(pos.east(), Blocks.CHEST);
+		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(pos.east());
+		ItemStack[] needed = expected.generateComponents();
+		for (int i = 0; i < needed.length; i++) chest.setItem(i, needed[i].copy());
+		boolean[] beside = menu.check(expected.toLong());
+		for (int i = 0; i < beside.length; i++) helper.assertTrue(beside[i] && menu.pressHas(i), "component " + i + " should be found beside the press");
 
-		boolean started = menu.clickMenuButton(player, 5);
-		helper.assertTrue(started, "starting a craft with sufficient components in the player's inventory should succeed");
+		boolean started = menu.craft(player, expected.toLong());
+		helper.assertTrue(started, "starting a craft with the components beside the press should succeed");
+		helper.assertTrue(chest.isEmpty(), "the components should have been taken from the chest beside the press");
 		helper.assertTrue(tile.golem == expected.toLong(), "the tile should now be building exactly the selected properties");
 		helper.assertTrue(tile.cost > 0 && tile.cost == tile.maxCost, "cost should be initialized and equal to maxCost at the very start");
 
@@ -15600,15 +15612,21 @@ public class ThaumcraftGameTests {
 		helper.getLevel().addFreshEntity(pech);
 		pech.setTamed(true);
 
-		pech.getTradeItems().insertItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ENDER_PEARL), false);
-		pech.generateTradeContents();
-
-		helper.assertTrue(pech.getTradeItems().getStackInSlot(0).isEmpty(), "the input slot should be consumed by a real trade");
+		// One trade can rightly pay nothing (as the original: the payment's value can roll down to 0, and big rewards are
+		// skipped half the time) - it failed that way 2026-10-01 - so several trades are tried; one must pay out.
 		boolean anyOutput = false;
-		for (int i = 1; i <= 4; i++) {
-			if (!pech.getTradeItems().getStackInSlot(i).isEmpty()) anyOutput = true;
+		for (int t = 0; t < 20 && !anyOutput; t++) {
+			pech.setTamed(true);
+			pech.getTradeItems().insertItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ENDER_PEARL), false);
+			pech.generateTradeContents();
+			helper.assertTrue(pech.getTradeItems().getStackInSlot(0).isEmpty(), "the input slot should be consumed by a real trade");
+			for (int i = 1; i <= 4; i++) {
+				if (!pech.getTradeItems().getStackInSlot(i).isEmpty()) anyOutput = true;
+			}
 		}
-		helper.assertTrue(anyOutput, "a real trade should fill at least one real output slot");
+		helper.assertTrue(anyOutput, "trades should fill an output slot within a few tries");
+		for (int i = 1; i <= 4; i++) pech.tradeItems.setStackInSlot(i, net.minecraft.world.item.ItemStack.EMPTY);
+		pech.setTamed(true);
 
 		// A non-valued item should be refused (real check, not just "any non-empty stack").
 		pech.getTradeItems().insertItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK), false);
