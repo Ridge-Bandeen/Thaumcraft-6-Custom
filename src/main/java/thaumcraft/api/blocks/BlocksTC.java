@@ -222,13 +222,9 @@ public final class BlocksTC {
 	 * a reachable ingredient. Log/planks/leaves use vanilla base classes directly ({@link RotatedPillarBlock}/
 	 * plain {@link Block}/{@link LeavesBlock} - no custom subclasses needed). The sapling is a real
 	 * {@link SaplingBlock} now, using a mod-owned {@link net.minecraft.world.level.block.grower.TreeGrower}
-	 * (see {@link ThaumcraftTreeGrowers}) that resolves against
-	 * {@code data/thaumcraft/worldgen/configured_feature/silverwood_tree.json} at grow time - vanilla's own
-	 * {@code minecraft:tree} feature type with a fancy trunk+foliage placer combo, not a reproduction of the
-	 * original's hand-rolled multi-trunk clustered-log shape ({@code WorldGenSilverwoodTrees}, which has no
-	 * equivalent in vanilla's modern TrunkPlacer/FoliagePlacer framework and would need a real custom
-	 * TrunkPlacer to reproduce faithfully - out of scope here, same "use vanilla's own feature/placer
-	 * instead of the hand-rolled original" precedent as the ore world-gen). Natural placement is a rare
+	 * (see {@link ThaumcraftTreeGrowers}); the tree itself is the original's own shape, ported as
+	 * {@link thaumcraft.common.world.SilverwoodTreeFeature} (a vanilla fancy-oak stand-in with a 1x1 trunk until
+	 * 2026-09-30). Natural placement is a rare
 	 * overworld scatter (see the placed_feature/biome_modifier next to the configured_feature) rather than
 	 * the original's "only near magical nodes" restriction - confirmed 2026-09-08/2026-09-15 that the
 	 * TC4-era discrete vis-node system this cites was never shipped in real Thaumcraft 6 at all (removed
@@ -267,16 +263,9 @@ public final class BlocksTC {
 
 	/**
 	 * Greatwood - the second magical wood set, same shape as Silverwood (see that block's own doc comment
-	 * above for the general pattern: vanilla base classes throughout, a mod-owned
-	 * {@link net.minecraft.world.level.block.grower.TreeGrower} instead of the original's hand-rolled
-	 * {@code WorldGenGreatwoodTrees}). One real difference from the original,
-	 * deliberately dropped: {@code WorldGenGreatwoodTrees}'s "giant" variant (a 2x2 sapling grid consumed to
-	 * grow an oversized tree, with cave spiders and loot spawned inside) - vanilla's own 2x2-sapling-to-giant-
-	 * tree logic is hardcoded to specific vanilla sapling blocks (dark oak/spruce) in {@code SaplingBlock}
-	 * itself, not a generic hook a modded sapling can opt into, and reproducing it custom would mean
-	 * rebuilding a real mechanic, not just porting data - out of scope here. A single Greatwood sapling still
-	 * grows into a real (if not giant) tree, using {@code minecraft:fancy_trunk_placer} with taller/wider
-	 * parameters than Silverwood's for a visually bigger canopy instead.
+	 * above). The tree is the original's own, ported as {@link thaumcraft.common.world.GreatwoodTreeFeature}: a
+	 * 2x2 trunk under two stacked crowns, grown only from a 2x2 of saplings (the TreeGrower's mega tree, as
+	 * vanilla's dark oak) - a single-sapling vanilla fancy-oak stand-in until 2026-09-30.
 	 */
 	public static final DeferredBlock<RotatedPillarBlock> logGreatwood = BLOCKS.registerBlock("log_greatwood",
 			RotatedPillarBlock::new,

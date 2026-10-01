@@ -109,6 +109,14 @@ final class ResearchPageView {
 	private long lastCycle;
 	private int cycle = -1;
 	private boolean showingAspects;
+	/** Not in the original: clicking an aspect in the aspects insert lists the things you have scanned that contain it
+	 * (the kind of lookup 1.12 players got from the Thaumic JEI add-on). Null while the insert shows the aspect list. */
+	private Aspect shownAspect;
+	private final List<ItemStack> aspectItems = new ArrayList<>();
+	private final List<Integer> aspectAmounts = new ArrayList<>();
+	private int aspectItemsPage;
+	private static final int ASPECT_ITEM_COLS = 8;
+	private static final int ASPECT_ITEM_ROWS = 9;
 	private boolean showingKnowledge;
 	private boolean hasRecipePages;
 	private boolean allowWithPagePopup;
@@ -1231,7 +1239,11 @@ final class ResearchPageView {
 		graphics.pose().pushPose();
 		graphics.pose().translate(0, 0, 200);
 		graphics.blit(TEX4, x, y, 0, 0, 255, 255);
-		drawAspectPage(graphics, x + 60, y + 24, mx, my);
+		if (shownAspect != null) {
+			drawAspectItems(graphics, x + 60, y + 24, mx, my);
+		} else {
+			drawAspectPage(graphics, x + 60, y + 24, mx, my);
+		}
 		graphics.pose().popPose();
 		allowWithPagePopup = false;
 	}
@@ -1254,6 +1266,7 @@ final class ResearchPageView {
 				graphics.blit(TEX3, 0, 0, 0, 0, 16, 16, 16, 16);
 				graphics.pose().popPose();
 				graphics.setColor(1f, 1f, 1f, 1f);
+				tipText = List.of(Component.translatable("tc.aspect.showitems").getString());
 			}
 			graphics.pose().pushPose();
 			graphics.pose().translate(x + 2, y + 2 + count % 5 * 40, 0);
@@ -1288,6 +1301,86 @@ final class ResearchPageView {
 		float bob = Mth.sin((mc().player != null ? mc().player.tickCount : 0) / 3.0f) * 0.2f + 0.1f;
 		if (aspectsPage > 0) drawTexturedModalRectScaled(graphics, x - 20, y + 208, 0, 184, 12, 8, bob);
 		if (aspectsPage < maxAspectPages - 1) drawTexturedModalRectScaled(graphics, x + 144, y + 208, 12, 184, 12, 8, bob);
+	}
+
+	/** Which aspect's icon in the aspect list is at (px, py), if any - the same rows {@link #drawAspectPage} draws. */
+	private Aspect aspectAt(int x, int y, int px, int py) {
+		if (knownPlayerAspects == null) return null;
+		int count = -1;
+		int start = aspectsPage * 5;
+		for (Aspect aspect : knownPlayerAspects.getAspectsSortedByName()) {
+			if (++count < start) continue;
+			if (count > start + 4) break;
+			int ty = y + count % 5 * 40;
+			if (aspect.getImage() != null && px >= x && py >= ty && px < x + 40 && py < ty + 40) return aspect;
+		}
+		return null;
+	}
+
+	/** Every item you have scanned (research key "!" + its id, as ScanGeneric grants) whose aspects include this one,
+	 * most of it first. */
+	private void showAspectItems(Aspect aspect) {
+		record Hit(ItemStack stack, int amount, String name) {}
+		List<Hit> hits = new ArrayList<>();
+		for (Item item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+			if (item == net.minecraft.world.item.Items.AIR) continue;
+			if (!knowledge().isResearchKnown("!" + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item))) continue;
+			ItemStack stack = new ItemStack(item);
+			AspectList aspects = thaumcraft.api.aspects.AspectHelper.getObjectAspects(stack);
+			int amount = aspects == null ? 0 : aspects.getAmount(aspect);
+			if (amount > 0) hits.add(new Hit(stack, amount, stack.getHoverName().getString()));
+		}
+		hits.sort(java.util.Comparator.comparingInt(Hit::amount).reversed().thenComparing(Hit::name));
+		shownAspect = aspect;
+		aspectItemsPage = 0;
+		aspectItems.clear();
+		aspectAmounts.clear();
+		for (Hit hit : hits) {
+			aspectItems.add(hit.stack());
+			aspectAmounts.add(hit.amount());
+		}
+	}
+
+	private int maxAspectItemPages() {
+		return Math.max(1, Mth.ceil(aspectItems.size() / (float) (ASPECT_ITEM_COLS * ASPECT_ITEM_ROWS)));
+	}
+
+	private void drawAspectItems(GuiGraphics graphics, int x, int y, int mx, int my) {
+		// header: the aspect (clicking it goes back to the list) and how many scanned things hold it
+		if (mx >= x && my >= y && mx < x + 144 && my < y + 26) {
+			tipText = List.of(Component.translatable("tc.aspect.back").getString());
+		}
+		graphics.pose().pushPose();
+		graphics.pose().translate(x + 2, y + 2, 0);
+		graphics.pose().scale(1.5f, 1.5f, 1.5f);
+		drawTag(graphics, 0, 0, shownAspect, 0);
+		graphics.pose().popPose();
+		graphics.drawString(font(), shownAspect.getName(), x + 32, y + 4, 5263440, false);
+		String held = Component.translatable("tc.aspect.scanned", aspectItems.size()).getString();
+		graphics.pose().pushPose();
+		graphics.pose().translate(x + 32, y + 15, 0);
+		graphics.pose().scale(0.5f, 0.5f, 0.5f);
+		graphics.drawString(font(), held, 0, 0, 7829367, false);
+		graphics.pose().popPose();
+
+		int gy = y + 30;
+		if (aspectItems.isEmpty()) {
+			graphics.drawWordWrap(font(), Component.translatable("tc.aspect.noitems"), x, gy + 4, 144, 7829367);
+			return;
+		}
+		int per = ASPECT_ITEM_COLS * ASPECT_ITEM_ROWS;
+		int start = aspectItemsPage * per;
+		for (int i = start; i < Math.min(aspectItems.size(), start + per); i++) {
+			int ix = x + (i - start) % ASPECT_ITEM_COLS * 18;
+			int iy = gy + (i - start) / ASPECT_ITEM_COLS * 18;
+			ItemStack stack = aspectItems.get(i);
+			drawStackAt(graphics, stack, ix, iy, mx, my, false, false);
+			// the aspect amount where a stack count goes
+			graphics.renderItemDecorations(font(), stack, ix, iy, String.valueOf(aspectAmounts.get(i)));
+		}
+		float bob = Mth.sin((mc().player != null ? mc().player.tickCount : 0) / 3.0f) * 0.2f + 0.1f;
+		if (aspectItemsPage > 0) drawTexturedModalRectScaled(graphics, x - 20, y + 208, 0, 184, 12, 8, bob);
+		if (aspectItemsPage < maxAspectItemPages() - 1) drawTexturedModalRectScaled(graphics, x + 144, y + 208, 12, 184, 12, 8, bob);
 	}
 
 	private void drawSmallCentered(GuiGraphics graphics, String text, int x, int y, int color) {
@@ -1401,6 +1494,7 @@ final class ResearchPageView {
 			if (shownRecipe != null || showingAspects || showingKnowledge) {
 				shownRecipe = null;
 				showingAspects = false;
+				shownAspect = null;
 				showingKnowledge = false;
 				screen.playSound(ThaumcraftSounds.PAGE.get(), 0.4f, 1.1f);
 			} else {
@@ -1417,6 +1511,11 @@ final class ResearchPageView {
 			return true;
 		}
 		if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
+			if (showingAspects && shownAspect != null) {
+				shownAspect = null;
+				screen.playSound(ThaumcraftSounds.PAGE.get(), 0.7f, 0.9f);
+				return true;
+			}
 			goBack();
 			return true;
 		}
@@ -1478,6 +1577,7 @@ final class ResearchPageView {
 				shownRecipe = null;
 				showingKnowledge = false;
 				showingAspects = !showingAspects;
+				shownAspect = null;
 				history.clear();
 				if (aspectsPage > maxAspectPages) aspectsPage = 0;
 				screen.playSound(ThaumcraftSounds.PAGE.get(), 0.7f, 0.9f);
@@ -1494,17 +1594,41 @@ final class ResearchPageView {
 				screen.playSound(ThaumcraftSounds.PAGE.get(), 0.7f, 0.9f);
 			}
 		}
+		if (showingAspects) {
+			int ax = (width() - 256) / 2 + 60;
+			int ay = (height() - 256) / 2 + 24;
+			if (shownAspect == null) {
+				Aspect clicked = aspectAt(ax, ay, par1, par2);
+				if (clicked != null) {
+					showAspectItems(clicked);
+					screen.playSound(ThaumcraftSounds.PAGE.get(), 0.7f, 0.9f);
+				}
+			} else if (par1 >= ax && par2 >= ay && par1 < ax + 144 && par2 < ay + 26) {
+				shownAspect = null;
+				screen.playSound(ThaumcraftSounds.PAGE.get(), 0.7f, 0.9f);
+			}
+		}
 		mx = par1 - (var4 + 205);
 		my = par2 - (var5 + 192);
-		if (showingAspects && aspectsPage < maxAspectPages - 1 && mx >= 0 && my >= 0 && mx < 14 && my < 14) {
-			aspectsPage++;
-			screen.playSound(ThaumcraftSounds.PAGE.get(), 0.7f, 0.9f);
+		if (mx >= 0 && my >= 0 && mx < 14 && my < 14) {
+			if (showingAspects && shownAspect == null && aspectsPage < maxAspectPages - 1) {
+				aspectsPage++;
+				screen.playSound(ThaumcraftSounds.PAGE.get(), 0.7f, 0.9f);
+			} else if (showingAspects && shownAspect != null && aspectItemsPage < maxAspectItemPages() - 1) {
+				aspectItemsPage++;
+				screen.playSound(ThaumcraftSounds.PAGE.get(), 0.7f, 0.9f);
+			}
 		}
 		mx = par1 - (var4 + 38);
 		my = par2 - (var5 + 192);
-		if (showingAspects && aspectsPage > 0 && mx >= 0 && my >= 0 && mx < 14 && my < 14) {
-			aspectsPage--;
-			screen.playSound(ThaumcraftSounds.PAGE.get(), 0.7f, 0.9f);
+		if (mx >= 0 && my >= 0 && mx < 14 && my < 14) {
+			if (showingAspects && shownAspect == null && aspectsPage > 0) {
+				aspectsPage--;
+				screen.playSound(ThaumcraftSounds.PAGE.get(), 0.7f, 0.9f);
+			} else if (showingAspects && shownAspect != null && aspectItemsPage > 0) {
+				aspectItemsPage--;
+				screen.playSound(ThaumcraftSounds.PAGE.get(), 0.7f, 0.9f);
+			}
 		}
 		if (!recipeLists.isEmpty()) {
 			int aa = 0;

@@ -29,10 +29,8 @@ import thaumcraft.common.tiles.crafting.TileResearchTable;
  * the device's scope this pass. No custom {@code BlockTCDevice} base, same "pick the right vanilla base
  * directly" precedent every device this session has used.
  *
- * Real, documented cut: the original was a real 4-way {@code IBlockFacingHorizontal} block (faces the
- * placing player); this ships non-directional for now - purely cosmetic (nothing in the real minigame logic
- * reads the table's facing), same class of simplification already made for other devices' rotation-only
- * cosmetics. Right-click opens the real {@link thaumcraft.common.container.ResearchTableMenu} now (same
+ * Faces the way the placing player looks, as the original's {@code IBlockFacingHorizontal} (non-directional in the
+ * port until 2026-09-30, which put the inkwell and quill on the same side of every table). Right-click opens the real {@link thaumcraft.common.container.ResearchTableMenu} now (same
  * {@code player.openMenu(tile)} pattern every menu-backed device this session uses) - still no screen (see
  * the tile's own arc notes for the rest of this arc).
  */
@@ -42,8 +40,33 @@ public class BlockResearchTable extends Block implements EntityBlock {
 
 	private static final VoxelShape SHAPE = Shapes.box(0, 0, 0, 1, 0.875, 1);
 
+	public static final net.minecraft.world.level.block.state.properties.DirectionProperty FACING =
+			net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING;
+
 	public BlockResearchTable(BlockBehaviour.Properties properties) {
 		super(properties);
+		registerDefaultState(stateDefinition.any().setValue(FACING, net.minecraft.core.Direction.NORTH));
+	}
+
+	@Override
+	protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<Block, BlockState> builder) {
+		builder.add(FACING);
+	}
+
+	/** The original: {@code placer.getHorizontalFacing()}, the way the player looks (not the opposite, unlike most devices). */
+	@Override
+	public BlockState getStateForPlacement(net.minecraft.world.item.context.BlockPlaceContext context) {
+		return defaultBlockState().setValue(FACING, context.getHorizontalDirection());
+	}
+
+	@Override
+	protected BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
+		return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+	}
+
+	@Override
+	protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+		return state.rotate(mirror.getRotation(state.getValue(FACING)));
 	}
 
 	@Override

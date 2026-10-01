@@ -53,6 +53,24 @@ public abstract class ItemFocus extends Item {
 		return p;
 	}
 
+	/** The original's own getFocusColor: the average of the effect elements' colours, white when the focus casts
+	 * nothing (an unassembled blank). Tints the focus item and the caster's focus gem. The original cached the
+	 * result in the stack's NBT; recomputed here, since item components can't be written from a render call. */
+	public int getFocusColor(ItemStack stack) {
+		if (stack == null || stack.isEmpty()) return 0xFFFFFFFF;
+		FocusPackage core = getPackage(stack);
+		thaumcraft.api.casters.FocusEffect[] effects = core != null ? core.getFocusEffects() : null;
+		if (effects == null || effects.length == 0) return 0xFFFFFFFF;
+		int r = 0, g = 0, b = 0;
+		for (thaumcraft.api.casters.FocusEffect effect : effects) {
+			int c = FocusEngine.getElementColor(effect.getKey());
+			r += (c >> 16) & 0xFF;
+			g += (c >> 8) & 0xFF;
+			b += c & 0xFF;
+		}
+		return 0xFF000000 | (r / effects.length) << 16 | (g / effects.length) << 8 | (b / effects.length);
+	}
+
 	public int getComplexity(ItemStack stack) {
 		ThaumcraftDataComponents.AssembledFocus assembled = stack.get(ThaumcraftDataComponents.ASSEMBLED_FOCUS.get());
 		if (assembled != null) {

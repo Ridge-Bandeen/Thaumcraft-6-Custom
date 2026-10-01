@@ -29,8 +29,8 @@ import thaumcraft.common.tiles.devices.TileStabilizer;
  * that its real energy meter was provably decoupled from this block's own stabilizing score (true - see
  * {@code canStabaliseInfusion}/{@code getStabilizationAmount} below, both still real and flat) and that
  * {@code EntityFluxRift} wasn't ported (false by the time this was re-checked - it's been real for a while).
- * See {@link TileStabilizer}'s own doc comment for the real mechanics this unlocks. No client-side charge-
- * driven color tint - that's part of the broader client-only rendering layer, tracked separately.
+ * See {@link TileStabilizer}'s own doc comment for the real mechanics this unlocks. Its stored energy tints the
+ * model (ThaumcraftClient's block colour handler, via {@link BlockInlay#colorMultiplier}).
  */
 public class BlockStabilizer extends Block implements IInfusionStabiliserExt, EntityBlock {
 

@@ -23,6 +23,12 @@ public final class ThaumcraftFeatures {
 	public static final DeferredHolder<Feature<?>, MoundFeature> MOUND = FEATURES.register("mound",
 			() -> new MoundFeature(NoneFeatureConfiguration.CODEC));
 
+	public static final DeferredHolder<Feature<?>, thaumcraft.common.world.GreatwoodTreeFeature> GREATWOOD_TREE = FEATURES.register("greatwood_tree",
+			() -> new thaumcraft.common.world.GreatwoodTreeFeature(thaumcraft.common.world.GreatwoodTreeFeature.Config.CODEC));
+
+	public static final DeferredHolder<Feature<?>, thaumcraft.common.world.SilverwoodTreeFeature> SILVERWOOD_TREE = FEATURES.register("silverwood_tree",
+			() -> new thaumcraft.common.world.SilverwoodTreeFeature(thaumcraft.common.world.SilverwoodTreeFeature.Config.CODEC));
+
 	private ThaumcraftFeatures() {
 	}
 }

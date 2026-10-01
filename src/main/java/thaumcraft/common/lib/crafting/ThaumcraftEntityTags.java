@@ -120,6 +120,45 @@ public final class ThaumcraftEntityTags {
 		register(EntityType.VINDICATOR, new AspectList().add(Aspect.AVERSION, 5).add(Aspect.MAGIC, 5).add(Aspect.MAN, 10));
 		register(EntityType.ILLUSIONER, new AspectList().add(Aspect.SENSES, 5).add(Aspect.MAGIC, 5).add(Aspect.MAN, 10));
 
+		// Not in the original: the Giant it had (dropped by the port until 2026-09-30), and every mob added to vanilla
+		// since 1.12, valued after their nearest original siblings (agreed with the user 2026-09-30). Without an
+		// entry a mob can't be scanned (found in playtest: armadillos).
+		register(EntityType.GIANT, new AspectList().add(Aspect.UNDEAD, 25).add(Aspect.MAN, 15).add(Aspect.EARTH, 10));
+		register(EntityType.ZOMBIE_VILLAGER, new AspectList().add(Aspect.UNDEAD, 20).add(Aspect.MAN, 15).add(Aspect.EARTH, 5));
+		register(EntityType.DROWNED, new AspectList().add(Aspect.UNDEAD, 20).add(Aspect.MAN, 10).add(Aspect.WATER, 5));
+		register(EntityType.BOGGED, new AspectList().add(Aspect.UNDEAD, 20).add(Aspect.MAN, 5).add(Aspect.PLANT, 5));
+		register(EntityType.PHANTOM, new AspectList().add(Aspect.UNDEAD, 10).add(Aspect.FLIGHT, 10).add(Aspect.DARKNESS, 5));
+		register(EntityType.ZOGLIN, new AspectList().add(Aspect.UNDEAD, 15).add(Aspect.BEAST, 10).add(Aspect.AVERSION, 5));
+		register(EntityType.PILLAGER, new AspectList().add(Aspect.MAN, 10).add(Aspect.AVERSION, 10));
+		register(EntityType.WANDERING_TRADER, new AspectList().add(Aspect.MAN, 15).add(Aspect.EXCHANGE, 5));
+		register(EntityType.PIGLIN, new AspectList().add(Aspect.MAN, 10).add(Aspect.BEAST, 10).add(Aspect.DESIRE, 5));
+		register(EntityType.PIGLIN_BRUTE, new AspectList().add(Aspect.MAN, 10).add(Aspect.BEAST, 10).add(Aspect.AVERSION, 10));
+		register(EntityType.HOGLIN, new AspectList().add(Aspect.BEAST, 15).add(Aspect.EARTH, 10).add(Aspect.AVERSION, 5));
+		register(EntityType.STRIDER, new AspectList().add(Aspect.BEAST, 10).add(Aspect.FIRE, 10).add(Aspect.MOTION, 5));
+		register(EntityType.ARMADILLO, new AspectList().add(Aspect.BEAST, 10).add(Aspect.PROTECT, 10).add(Aspect.EARTH, 5));
+		register(EntityType.AXOLOTL, new AspectList().add(Aspect.BEAST, 5).add(Aspect.WATER, 10).add(Aspect.LIFE, 5));
+		register(EntityType.BEE, new AspectList().add(Aspect.BEAST, 5).add(Aspect.FLIGHT, 5).add(Aspect.PLANT, 5));
+		register(EntityType.CAMEL, new AspectList().add(Aspect.BEAST, 15).add(Aspect.EARTH, 5).add(Aspect.MOTION, 5));
+		register(EntityType.DOLPHIN, new AspectList().add(Aspect.BEAST, 10).add(Aspect.WATER, 15).add(Aspect.MOTION, 5));
+		register(EntityType.FOX, new AspectList().add(Aspect.BEAST, 10).add(Aspect.ENTROPY, 5).add(Aspect.DESIRE, 5));
+		register(EntityType.FROG, new AspectList().add(Aspect.BEAST, 5).add(Aspect.WATER, 5).add(Aspect.MOTION, 5));
+		register(EntityType.TADPOLE, new AspectList().add(Aspect.BEAST, 5).add(Aspect.WATER, 5).add(Aspect.LIFE, 5));
+		register(EntityType.GOAT, new AspectList().add(Aspect.BEAST, 10).add(Aspect.EARTH, 10).add(Aspect.MOTION, 5));
+		register(EntityType.PANDA, new AspectList().add(Aspect.BEAST, 15).add(Aspect.PLANT, 5).add(Aspect.EARTH, 5));
+		register(EntityType.SNIFFER, new AspectList().add(Aspect.BEAST, 20).add(Aspect.EARTH, 10).add(Aspect.PLANT, 10).add(Aspect.SENSES, 5));
+		register(EntityType.TURTLE, new AspectList().add(Aspect.BEAST, 10).add(Aspect.WATER, 10).add(Aspect.PROTECT, 10));
+		register(EntityType.TRADER_LLAMA, new AspectList().add(Aspect.BEAST, 15).add(Aspect.WATER, 5).add(Aspect.EXCHANGE, 5));
+		register(EntityType.GLOW_SQUID, new AspectList().add(Aspect.BEAST, 5).add(Aspect.WATER, 10).add(Aspect.LIGHT, 10));
+		register(EntityType.COD, new AspectList().add(Aspect.BEAST, 5).add(Aspect.WATER, 5));
+		register(EntityType.SALMON, new AspectList().add(Aspect.BEAST, 5).add(Aspect.WATER, 5));
+		register(EntityType.PUFFERFISH, new AspectList().add(Aspect.BEAST, 5).add(Aspect.WATER, 5).add(Aspect.DEATH, 5));
+		register(EntityType.TROPICAL_FISH, new AspectList().add(Aspect.BEAST, 5).add(Aspect.WATER, 5).add(Aspect.SENSES, 5));
+		register(EntityType.WARDEN, new AspectList().add(Aspect.SENSES, 20).add(Aspect.DARKNESS, 20).add(Aspect.SOUL, 15).add(Aspect.ELDRITCH, 10));
+		register(EntityType.BREEZE, new AspectList().add(Aspect.AIR, 15).add(Aspect.MOTION, 5).add(Aspect.FLIGHT, 5));
+		register(EntityType.RAVAGER, new AspectList().add(Aspect.BEAST, 20).add(Aspect.AVERSION, 10).add(Aspect.EARTH, 10));
+		register(EntityType.ALLAY, new AspectList().add(Aspect.FLIGHT, 5).add(Aspect.SENSES, 5).add(Aspect.SOUL, 5).add(Aspect.DESIRE, 5));
+		register(EntityType.GLOW_ITEM_FRAME, new AspectList().add(Aspect.SENSES, 5).add(Aspect.CRAFT, 5).add(Aspect.LIGHT, 5));
+
 		register(thaumcraft.common.registry.ThaumcraftEntities.WISP.get(), new AspectList().add(Aspect.AURA, 10).add(Aspect.FLIGHT, 5).add(Aspect.MAGIC, 5));
 		register(thaumcraft.common.registry.ThaumcraftEntities.GOLEM.get(), new AspectList().add(Aspect.MECHANISM, 10).add(Aspect.MAN, 10).add(Aspect.MOTION, 10));
 		register(thaumcraft.common.registry.ThaumcraftEntities.THAUMIC_SLIME.get(), new AspectList().add(Aspect.LIFE, 5).add(Aspect.WATER, 5).add(Aspect.FLUX, 5).add(Aspect.ALCHEMY, 5));

@@ -1,7 +1,6 @@
 package thaumcraft.common.container;
 
 import java.util.Set;
-import java.util.function.Predicate;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
@@ -71,15 +70,19 @@ public class ResearchTableMenu extends AbstractContainerMenu {
 		this.access = access;
 
 		addSlot(new SlotItemHandler(handler, INK_SLOT, 16, 15));
-		addSlot(new SlotItemHandler(handler, PAPER_SLOT, 224, 15));
+		addSlot(new SlotItemHandler(handler, PAPER_SLOT, 224, 16));
 
 		for (int row = 0; row < 3; row++) {
 			for (int col = 0; col < 9; col++) {
 				addSlot(new Slot(playerInventory, col + row * 9 + 9, 77 + col * 18, 190 + row * 18));
 			}
 		}
-		for (int col = 0; col < 9; col++) {
-			addSlot(new Slot(playerInventory, col, 77 + col * 18, 248));
+		// the original's hotbar is a 3x3 block in the three columns left of the main inventory (research_table.png
+		// draws them there), not a row below it
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 3; j++) {
+				addSlot(new Slot(playerInventory, i + j * 3, 20 + i * 18, 190 + j * 18));
+			}
 		}
 
 		if (playerInventory.player instanceof ServerPlayer serverPlayer) {
@@ -187,7 +190,7 @@ public class ResearchTableMenu extends AbstractContainerMenu {
 		ItemStack[] required = card.getRequiredItems();
 		if (required != null) {
 			for (ItemStack stack : required) {
-				if (stack != null && !stack.isEmpty() && player.getInventory().countItem(stack.getItem()) < stack.getCount()) {
+				if (stack != null && !stack.isEmpty() && countCarried(player, stack) < stack.getCount()) {
 					return false;
 				}
 			}
@@ -196,8 +199,7 @@ public class ResearchTableMenu extends AbstractContainerMenu {
 				for (int a = 0; a < required.length; a++) {
 					ItemStack requiredStack = required[a];
 					if (consumed[a] && requiredStack != null && !requiredStack.isEmpty()) {
-						Predicate<ItemStack> matches = s -> s.getItem() == requiredStack.getItem();
-						player.getInventory().clearOrCountMatchingItems(matches, requiredStack.getCount(), player.getInventory());
+						consumeCarried(player, requiredStack);
 					}
 				}
 			}
@@ -211,6 +213,39 @@ public class ResearchTableMenu extends AbstractContainerMenu {
 			return true;
 		}
 		return false;
+	}
+
+	/** The original's InventoryUtils.isPlayerCarryingAmount with relaxed NBT: an inventory stack counts if it is the
+	 * same item and carries every component the required stack sets - so a card asking for a Vis Crystal of one
+	 * aspect is not satisfied by crystals of another (they are all one item; the aspect is a component). */
+	public static boolean matchesRequired(ItemStack required, ItemStack candidate) {
+		if (candidate.isEmpty() || !candidate.is(required.getItem())) return false;
+		for (var entry : required.getComponentsPatch().entrySet()) {
+			if (entry.getValue().isEmpty()) continue;
+			if (!java.util.Objects.equals(candidate.get(entry.getKey()), entry.getValue().get())) return false;
+		}
+		return true;
+	}
+
+	/** Main inventory and hotbar, as the original (not armour or the offhand). */
+	private static int countCarried(Player player, ItemStack required) {
+		int count = 0;
+		for (ItemStack stack : player.getInventory().items) {
+			if (matchesRequired(required, stack)) count += stack.getCount();
+		}
+		return count;
+	}
+
+	private static void consumeCarried(Player player, ItemStack required) {
+		int left = required.getCount();
+		for (ItemStack stack : player.getInventory().items) {
+			if (left <= 0) break;
+			if (!matchesRequired(required, stack)) continue;
+			int take = Math.min(left, stack.getCount());
+			stack.shrink(take);
+			left -= take;
+		}
+		player.getInventory().setChanged();
 	}
 
 	private boolean finish(Player player) {

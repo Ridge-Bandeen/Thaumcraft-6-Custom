@@ -2329,85 +2329,117 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
-	// Silverwood tree - a real SaplingBlock/TreeGrower now, resolving against the new
-	// data/thaumcraft/worldgen/configured_feature/silverwood_tree.json at grow time (vanilla's own
-	// minecraft:tree feature, not a reproduction of the original's hand-rolled shape - see BlocksTC's own
-	// doc comment). Advances a stage-1 sapling directly via SaplingBlock#advanceTree (the same method both
-	// bonemeal and the natural random-tick growth call) rather than waiting out real random ticks. Uses a
-	// new, taller "tall" structure (data/thaumcraft/structure/tall.nbt, 12x32x12 all-air) instead of the
-	// shared "empty" one (8x5x8) - confirmed by direct diagnosis that GameTest's own containment barrier
-	// sits just above "empty"'s bounds, which silently made TreeGrower#growTree's internal placement checks
-	// fail (the sapling reverted to its own stage-1 state, no exception) well before the tree feature's own
-	// logic was ever really exercised. Not a production bug - the same "real projectile/growth-feature needs
-	// more room than the tiny shared structure gives it" lesson as the Fireball focus's aim-precision note.
+	// Silverwood and Greatwood trees - the original's own shapes (SilverwoodTreeFeature, GreatwoodTreeFeature),
+	// grown through the saplings' TreeGrowers via SaplingBlock#advanceTree (what bonemeal and random ticks call).
+	// Silverwood fits the "tall" template (12x32x12, needed because GameTest's barrier sits just above "empty");
+	// a Greatwood needs "grove" (40x48x40): its crowns reach ~15 blocks out and ~40 up, and a smaller template
+	// would let it write into the neighbouring tests.
 	// --------------------------------------------------------------------------------------------------
 
-	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
-	public static void silverwoodSaplingGrowsIntoARealTree(GameTestHelper helper) {
-		BlockPos relPos = new BlockPos(4, 1, 4);
-		BlockPos absolute = helper.absolutePos(relPos);
-		ServerLevel level = helper.getLevel();
+	private static void growSapling(ServerLevel level, BlockPos absolute) {
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(absolute);
+		((net.minecraft.world.level.block.SaplingBlock) state.getBlock()).advanceTree(level, absolute, state, level.getRandom());
+	}
 
-		// The tree feature needs real soil beneath it to grow into, same as any real sapling planted in
-		// the world - the shared "empty" structure is entirely air, so this test provides its own ground.
-		level.setBlock(helper.absolutePos(relPos.below()), Blocks.DIRT.defaultBlockState(), 3);
-		level.setBlock(absolute, BlocksTC.saplingSilverwood.get().defaultBlockState()
+	private static void plantSapling(GameTestHelper helper, BlockPos relPos, net.minecraft.world.level.block.Block sapling) {
+		helper.getLevel().setBlock(helper.absolutePos(relPos.below()), Blocks.DIRT.defaultBlockState(), 3);
+		helper.getLevel().setBlock(helper.absolutePos(relPos), sapling.defaultBlockState()
 				.setValue(net.minecraft.world.level.block.SaplingBlock.STAGE, 1), 3);
-		net.minecraft.world.level.block.state.BlockState saplingState = level.getBlockState(absolute);
-		((net.minecraft.world.level.block.SaplingBlock) BlocksTC.saplingSilverwood.get())
-				.advanceTree(level, absolute, saplingState, level.getRandom());
+	}
 
-		AABB searchVolume = new AABB(absolute).inflate(10.0).expandTowards(0, 25.0, 0);
-		boolean foundLog = false;
-		boolean foundLeaves = false;
-		for (BlockPos p : net.minecraft.core.BlockPos.betweenClosed(
-				net.minecraft.core.BlockPos.containing(searchVolume.minX, searchVolume.minY, searchVolume.minZ),
-				net.minecraft.core.BlockPos.containing(searchVolume.maxX, searchVolume.maxY, searchVolume.maxZ))) {
-			if (level.getBlockState(p).is(BlocksTC.leavesSilverwood.get())) {
-				foundLeaves = true;
-			}
-			if (level.getBlockState(p).is(BlocksTC.logSilverwood.get())) {
-				foundLog = true;
-				break;
-			}
-		}
-		helper.assertTrue(foundLog, "advancing a stage-1 silverwood sapling should have grown a real tree with log_silverwood blocks somewhere nearby (leaves found: " + foundLeaves + ")");
+	/** Research Table cards asking for a Vis Crystal of an aspect (Reactions, Concentrate, Synthesis) must not be
+	 * satisfied by crystals of another aspect: all crystals are one item, the aspect is a component. The port first
+	 * compared items only, so any crystal counted (found in playtest 2026-09-30). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void researchCardsMatchRequiredCrystalsByAspect(GameTestHelper helper) {
+		ItemStack wanted = thaumcraft.common.items.resources.ItemCrystalEssence.of(thaumcraft.api.aspects.Aspect.ALCHEMY);
+		ItemStack same = thaumcraft.common.items.resources.ItemCrystalEssence.of(thaumcraft.api.aspects.Aspect.ALCHEMY);
+		same.setCount(5);
+		ItemStack other = thaumcraft.common.items.resources.ItemCrystalEssence.of(thaumcraft.api.aspects.Aspect.FIRE);
+		helper.assertTrue(thaumcraft.common.container.ResearchTableMenu.matchesRequired(wanted, same), "a crystal of the asked aspect should count");
+		helper.assertFalse(thaumcraft.common.container.ResearchTableMenu.matchesRequired(wanted, other), "a crystal of another aspect should not count");
+		helper.assertTrue(thaumcraft.common.container.ResearchTableMenu.matchesRequired(new ItemStack(Items.CLAY_BALL), new ItemStack(Items.CLAY_BALL)),
+				"a plain required item still matches by item alone");
 		helper.succeed();
 	}
 
-	/** Same shape as silverwoodSaplingGrowsIntoARealTree above - Greatwood's own configured_feature just
-	 * uses taller/wider fancy_trunk_placer/fancy_foliage_placer parameters for a visually bigger tree,
-	 * deliberately dropping the original's 2x2-sapling "giant" variant (see BlocksTC's own doc comment on
-	 * logGreatwood for why - vanilla's giant-sapling logic is hardcoded to specific vanilla saplings, not a
-	 * generic hook a modded one can opt into). */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
-	public static void greatwoodSaplingGrowsIntoARealTree(GameTestHelper helper) {
-		BlockPos relPos = new BlockPos(4, 1, 4);
-		BlockPos absolute = helper.absolutePos(relPos);
-		ServerLevel level = helper.getLevel();
+	public static void silverwoodSaplingGrowsTheOriginalsPlusShapedTree(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(6, 1, 6);
+		plantSapling(helper, relPos, BlocksTC.saplingSilverwood.get());
+		growSapling(helper.getLevel(), helper.absolutePos(relPos));
 
-		level.setBlock(helper.absolutePos(relPos.below()), Blocks.DIRT.defaultBlockState(), 3);
-		level.setBlock(absolute, BlocksTC.saplingGreatwood.get().defaultBlockState()
-				.setValue(net.minecraft.world.level.block.SaplingBlock.STAGE, 1), 3);
-		net.minecraft.world.level.block.state.BlockState saplingState = level.getBlockState(absolute);
-		((net.minecraft.world.level.block.SaplingBlock) BlocksTC.saplingGreatwood.get())
-				.advanceTree(level, absolute, saplingState, level.getRandom());
-
-		AABB searchVolume = new AABB(absolute).inflate(10.0).expandTowards(0, 25.0, 0);
-		boolean foundLog = false;
-		boolean foundLeaves = false;
-		for (BlockPos p : net.minecraft.core.BlockPos.betweenClosed(
-				net.minecraft.core.BlockPos.containing(searchVolume.minX, searchVolume.minY, searchVolume.minZ),
-				net.minecraft.core.BlockPos.containing(searchVolume.maxX, searchVolume.maxY, searchVolume.maxZ))) {
-			if (level.getBlockState(p).is(BlocksTC.leavesGreatwood.get())) {
-				foundLeaves = true;
-			}
-			if (level.getBlockState(p).is(BlocksTC.logGreatwood.get())) {
-				foundLog = true;
+		net.minecraft.world.level.block.Block log = BlocksTC.logSilverwood.get();
+		// the plus-shaped trunk, five logs across
+		for (BlockPos p : new BlockPos[] { relPos, relPos.east(), relPos.west(), relPos.north(), relPos.south() }) {
+			helper.assertBlockPresent(log, p.above(2));
+		}
+		// the roots flaring out at the base, lying along their own axis
+		helper.assertBlockProperty(relPos.east(2), net.minecraft.world.level.block.RotatedPillarBlock.AXIS, net.minecraft.core.Direction.Axis.X);
+		helper.assertBlockProperty(relPos.north(2), net.minecraft.world.level.block.RotatedPillarBlock.AXIS, net.minecraft.core.Direction.Axis.Z);
+		helper.assertBlockPresent(log, relPos.east(2).below());
+		// a crown of leaves that won't decay straight away (distance measured from the placed logs)
+		boolean anyAttached = false;
+		for (BlockPos p : BlockPos.betweenClosed(relPos.offset(-5, 5, -5), relPos.offset(5, 16, 5))) {
+			net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(p);
+			if (state.is(BlocksTC.leavesSilverwood.get()) && state.getValue(net.minecraft.world.level.block.LeavesBlock.DISTANCE) < 7) {
+				anyAttached = true;
 				break;
 			}
 		}
-		helper.assertTrue(foundLog, "advancing a stage-1 greatwood sapling should have grown a real tree with log_greatwood blocks somewhere nearby (leaves found: " + foundLeaves + ")");
+		helper.assertTrue(anyAttached, "the Silverwood crown should hold leaves within reach of a log");
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "grove")
+	public static void aLoneGreatwoodSaplingDoesNotGrow(GameTestHelper helper) {
+		BlockPos relPos = new BlockPos(19, 1, 19);
+		plantSapling(helper, relPos, BlocksTC.saplingGreatwood.get());
+		growSapling(helper.getLevel(), helper.absolutePos(relPos));
+		helper.assertBlockPresent(BlocksTC.saplingGreatwood.get(), relPos);
+		helper.assertBlockNotPresent(BlocksTC.logGreatwood.get(), relPos.above());
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "grove")
+	public static void fourGreatwoodSaplingsGrowATallTwoByTwoTree(GameTestHelper helper) {
+		BlockPos corner = new BlockPos(19, 1, 19);
+		BlockPos[] square = { corner, corner.east(), corner.south(), corner.south().east() };
+		for (BlockPos p : square) plantSapling(helper, p, BlocksTC.saplingGreatwood.get());
+		growSapling(helper.getLevel(), helper.absolutePos(corner.south().east()));
+
+		net.minecraft.world.level.block.Block log = BlocksTC.logGreatwood.get();
+		for (BlockPos p : square) {
+			helper.assertBlockPresent(log, p);
+			helper.assertBlockPresent(log, p.above(3));
+		}
+		// two crowns stacked: the second trunk starts where the first ends, at least 6 up, so logs reach 12+
+		int top = 0;
+		for (int y = 1; y < 47; y++) {
+			if (helper.getBlockState(new BlockPos(corner.getX(), y, corner.getZ())).is(log)) top = y;
+		}
+		helper.assertTrue(top >= 12, "a Greatwood's two stacked trunks should rise at least 12 blocks, got " + top);
+		helper.succeed();
+	}
+
+	/** The wild 1-in-8 "spider tree", forced (spider_chance 1): cave spider spawner under the trunk, dungeon chest
+	 * under that. Placed on the live level here, which is safe on the server thread (worldgen never gets it). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "grove")
+	public static void aGreatwoodSpiderTreeHasASpawnerAndChestBeneath(GameTestHelper helper) {
+		BlockPos corner = new BlockPos(19, 3, 19);
+		for (BlockPos p : new BlockPos[] { corner, corner.east(), corner.south(), corner.south().east() }) {
+			helper.setBlock(p.below(), Blocks.DIRT);
+		}
+		ServerLevel level = helper.getLevel();
+		boolean placed = new net.minecraft.world.level.levelgen.feature.ConfiguredFeature<>(
+				thaumcraft.common.registry.ThaumcraftFeatures.GREATWOOD_TREE.get(),
+				new thaumcraft.common.world.GreatwoodTreeFeature.Config(1f))
+				.place(level, level.getChunkSource().getGenerator(), level.getRandom(), helper.absolutePos(corner));
+		helper.assertTrue(placed, "the Greatwood should fit in the grove");
+		helper.assertBlockPresent(Blocks.SPAWNER, corner.below());
+		String spawner = helper.getBlockEntity(corner.below()).saveWithoutMetadata(level.registryAccess()).toString();
+		helper.assertTrue(spawner.contains("minecraft:cave_spider"), "the spawner should raise cave spiders: " + spawner);
+		helper.assertBlockPresent(Blocks.CHEST, corner.below(2));
 		helper.succeed();
 	}
 
@@ -17548,6 +17580,23 @@ public class ThaumcraftGameTests {
 			if (aspects == null || aspects.size() == 0) missing.add(id.getPath());
 		}
 		helper.assertTrue(missing.isEmpty(), missing.size() + " vanilla items have no aspects: " + missing);
+		helper.succeed();
+	}
+
+	/** Every vanilla mob can be scanned: a Thaumometer only scans things with aspects, and the port first carried only the
+	 * original's own entity table, so everything added since 1.12 was unscannable (armadillos, 2026-09-30). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void everyVanillaMobHasAspects(GameTestHelper helper) {
+		java.util.List<String> missing = new java.util.ArrayList<>();
+		for (net.minecraft.world.entity.EntityType<?> type : net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE) {
+			var id = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(type);
+			if (!id.getNamespace().equals("minecraft") || type == net.minecraft.world.entity.EntityType.PLAYER) continue;
+			net.minecraft.world.entity.Entity entity = type.create(helper.getLevel());
+			if (!(entity instanceof net.minecraft.world.entity.Mob)) continue;
+			thaumcraft.api.aspects.AspectList aspects = thaumcraft.common.lib.crafting.ThaumcraftEntityTags.getEntityTags(entity);
+			if (aspects == null || aspects.size() == 0) missing.add(id.getPath());
+		}
+		helper.assertTrue(missing.isEmpty(), missing.size() + " vanilla mobs have no aspects: " + missing);
 		helper.succeed();
 	}
 

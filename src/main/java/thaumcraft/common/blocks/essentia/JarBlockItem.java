@@ -61,6 +61,29 @@ public class JarBlockItem extends BlockItem implements IEssentiaContainerItem {
 		}
 	}
 
+	/** The original's getDurabilityForDisplay: 1 when empty, 0 when holding the jar's full 250. Drives both the
+	 * fill bar below and the item model's "fill" predicate (ThaumcraftClient). */
+	public static double emptiness(ItemStack stack) {
+		AspectList al = stack.get(ThaumcraftDataComponents.ASPECTS.get());
+		return al == null ? 1.0 : 1.0 - al.visSize() / 250.0;
+	}
+
+	@Override
+	public boolean isBarVisible(ItemStack stack) {
+		return stack.has(ThaumcraftDataComponents.ASPECTS.get());
+	}
+
+	@Override
+	public int getBarWidth(ItemStack stack) {
+		return (int) Math.round(13.0 - emptiness(stack) * 13.0);
+	}
+
+	/** 1.12's default durability colour: hue from red (empty) to green (full). */
+	@Override
+	public int getBarColor(ItemStack stack) {
+		return net.minecraft.util.Mth.hsvToRgb((float) Math.max(0.0, 1.0 - emptiness(stack)) / 3.0f, 1.0f, 1.0f);
+	}
+
 	@Override
 	public boolean ignoreContainedAspects() {
 		return false;

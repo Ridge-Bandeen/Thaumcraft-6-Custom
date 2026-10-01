@@ -505,6 +505,9 @@ sourceSets {
             include 'thaumcraft/common/world/CrystalClusterFeature.java'
             include 'thaumcraft/common/world/CultistPortalSpawnFeature.java'
             include 'thaumcraft/common/world/MoundFeature.java'
+            include 'thaumcraft/common/world/GreatwoodTreeFeature.java'
+            include 'thaumcraft/common/world/SilverwoodTreeFeature.java'
+            include 'thaumcraft/common/world/TreeGenHelper.java'
 
             include 'thaumcraft/common/blocks/crafting/BlockArcaneWorkbench.java'
             include 'thaumcraft/common/tiles/crafting/TileArcaneWorkbench.java'

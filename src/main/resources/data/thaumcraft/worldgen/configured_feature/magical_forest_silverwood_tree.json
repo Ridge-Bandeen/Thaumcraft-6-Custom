@@ -1,0 +1,8 @@
+{
+  "type": "thaumcraft:silverwood_tree",
+  "config": {
+    "min_height": 8,
+    "random_height": 5,
+    "flowers": true
+  }
+}

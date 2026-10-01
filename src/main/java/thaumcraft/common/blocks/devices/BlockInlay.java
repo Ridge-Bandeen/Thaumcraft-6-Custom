@@ -43,6 +43,14 @@ public class BlockInlay extends Block implements IInfusionStabiliserExt {
 		super(properties);
 	}
 
+	/** The original's charge tint for the inlay's glowing top layer (tint index 0); {@link BlockStabilizer} used
+	 * the same formula for its own energy. Charge 0 is a dim grey, 1-15 runs from half to full brightness. */
+	public static int colorMultiplier(int charge) {
+		float f = charge == 0 ? 0.3f : charge / 15.0f * 0.5f + 0.5f;
+		int c = Math.max(0, Math.min((int) (f * 255.0f), 255));
+		return 0xFF000000 | c << 16 | c << 8 | c;
+	}
+
 	@Override
 	protected MapCodec<? extends Block> codec() {
 		return CODEC;

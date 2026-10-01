@@ -139,7 +139,10 @@ public class MoundFeature extends Feature<NoneFeatureConfiguration> {
 		level.setBlock(pos, Blocks.SPAWNER.defaultBlockState(), 2);
 		BlockEntity be = level.getBlockEntity(pos);
 		if (be instanceof SpawnerBlockEntity spawner) {
-			spawner.getSpawner().setEntityId(type, level.getLevel(), random, pos);
+			// as vanilla's MonsterRoomFeature does: passing the live ServerLevel made the spawner read a block through
+			// it from the worldgen thread, which waits on the server thread while the server waits on this chunk -
+			// a deadlock that froze the game (every server-side click did nothing) once a new mound generated
+			spawner.setEntityId(type, random);
 		}
 	}
 }

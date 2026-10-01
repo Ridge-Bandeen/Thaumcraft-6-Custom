@@ -486,6 +486,10 @@ public class GuiResearchTable extends AbstractContainerScreen<ResearchTableMenu>
 	/** One sheet of paper: a random nudge and tilt from the card's seed, flipped at random, gilded for an aid's card; with
 	 * a card on it, its category watermark, bold name, text, inspiration cost and required items. */
 	private void drawSheet(GuiGraphics graphics, double x, double y, double scale, Random r, float alpha, float tilt, ResearchTableData.CardChoice cardChoice) {
+		// A sheet covers every sheet under it: a card's required items render as raised 3D models, which would otherwise
+		// poke through the paper of a sheet laid on top (the last card's phial showed through the next draw).
+		graphics.flush();
+		RenderSystem.clear(org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT, net.minecraft.client.Minecraft.ON_OSX);
 		var pose = graphics.pose();
 		pose.pushPose();
 		RenderSystem.enableBlend();

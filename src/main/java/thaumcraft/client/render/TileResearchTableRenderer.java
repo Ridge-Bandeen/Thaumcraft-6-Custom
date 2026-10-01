@@ -1,6 +1,7 @@
 package thaumcraft.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelPart;
@@ -27,12 +28,15 @@ import thaumcraft.common.tiles.crafting.TileResearchTable;
  * visible whenever a real theory is in progress, its ribbon tinted the real {@link Aspect#ALCHEMY} color,
  * matching the original exactly) - real geometry translation of the original's own {@code
  * ModelResearchTable} (a plain 3-part cuboid model), built here via the modern {@link LayerDefinition}/
- * {@link CubeListBuilder} cuboid system, same real box coordinates. No facing rotation needed - the real
- * modern {@code BlockResearchTable} is non-directional (see its own doc comment).
+ * {@link CubeListBuilder} cuboid system, same real box coordinates, turned with the table's facing. The quill is
+ * the original's own: research/quill.png drawn upright in the inkwell as a 1/16-thick extruded sprite (its
+ * UtilsFX.renderItemIn2D), not the Scribing Tools item (which the port drew here, sideways off the table's edge).
  */
 public class TileResearchTableRenderer implements BlockEntityRenderer<TileResearchTable> {
 
 	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/blocks/research_table_model.png");
+
+	private static final ResourceLocation QUILL = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/research/quill.png");
 
 	private final ModelPart inkwell;
 	private final ModelPart scrollTube;
@@ -58,6 +62,13 @@ public class TileResearchTableRenderer implements BlockEntityRenderer<TileResear
 		poseStack.pushPose();
 		poseStack.translate(0.5, 1.0, 0.5);
 		poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(180.0f));
+		switch (tile.getBlockState().getOptionalValue(thaumcraft.common.blocks.crafting.BlockResearchTable.FACING)
+				.orElse(net.minecraft.core.Direction.NORTH)) {
+			case EAST -> poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(90.0f));
+			case WEST -> poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(270.0f));
+			case SOUTH -> poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180.0f));
+			default -> { }
+		}
 
 		var vertexConsumer = bufferSource.getBuffer(RenderType.entityCutout(TEXTURE));
 		if (tile.data != null) {
@@ -73,14 +84,53 @@ public class TileResearchTableRenderer implements BlockEntityRenderer<TileResear
 			inkwell.render(poseStack, vertexConsumer, packedLight, packedOverlay);
 
 			poseStack.pushPose();
+			poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(180.0f));
 			poseStack.translate(-0.5, 0.1, 0.125);
 			poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(60.0f));
 			poseStack.scale(0.5f, 0.5f, 0.5f);
-			Minecraft.getInstance().getItemRenderer().renderStatic(ink, ItemDisplayContext.FIXED, packedLight, packedOverlay,
-					poseStack, bufferSource, tile.getLevel(), 0);
+			renderSpriteIn3D(poseStack, bufferSource.getBuffer(RenderType.entityCutoutNoCull(QUILL)), 16, 16, 0.0625f, packedLight, packedOverlay);
 			poseStack.popPose();
 		}
 
 		poseStack.popPose();
+	}
+
+	/** The original's UtilsFX.renderTextureIn3D for a whole standalone texture: front and back faces (mirrored in u, as
+	 * 1.12 drew them) spanning 0..1, and a 1-pixel strip of side faces per column and row, {@code thickness} deep. */
+	private static void renderSpriteIn3D(PoseStack poseStack, VertexConsumer vc, int width, int height, float thickness, int light, int overlay) {
+		PoseStack.Pose pose = poseStack.last();
+		float maxu = 1f, minu = 0f, top = 0f, bottom = 1f;
+		quad(vc, pose, light, overlay, 0, 0, 1,
+				0, 0, 0, maxu, bottom, 1, 0, 0, minu, bottom, 1, 1, 0, minu, top, 0, 1, 0, maxu, top);
+		quad(vc, pose, light, overlay, 0, 0, -1,
+				0, 1, -thickness, maxu, top, 1, 1, -thickness, minu, top, 1, 0, -thickness, minu, bottom, 0, 0, -thickness, maxu, bottom);
+		float du = 0.5f * (maxu - minu) / width;
+		float dv = 0.5f * (bottom - top) / height;
+		for (int k = 0; k < width; ++k) {
+			float x0 = k / (float) width;
+			float x1 = x0 + 1.0f / width;
+			float u = maxu + (minu - maxu) * x0 - du;
+			quad(vc, pose, light, overlay, -1, 0, 0,
+					x0, 0, -thickness, u, bottom, x0, 0, 0, u, bottom, x0, 1, 0, u, top, x0, 1, -thickness, u, top);
+			quad(vc, pose, light, overlay, 1, 0, 0,
+					x1, 1, -thickness, u, top, x1, 1, 0, u, top, x1, 0, 0, u, bottom, x1, 0, -thickness, u, bottom);
+		}
+		for (int k = 0; k < height; ++k) {
+			float y0 = k / (float) height;
+			float y1 = y0 + 1.0f / height;
+			float v = bottom + (top - bottom) * y0 - dv;
+			quad(vc, pose, light, overlay, 0, 1, 0,
+					0, y1, 0, maxu, v, 1, y1, 0, minu, v, 1, y1, -thickness, minu, v, 0, y1, -thickness, maxu, v);
+			quad(vc, pose, light, overlay, 0, -1, 0,
+					1, y0, 0, minu, v, 0, y0, 0, maxu, v, 0, y0, -thickness, maxu, v, 1, y0, -thickness, minu, v);
+		}
+	}
+
+	private static void quad(VertexConsumer vc, PoseStack.Pose pose, int light, int overlay, float nx, float ny, float nz, float... v) {
+		for (int i = 0; i < 4; i++) {
+			int o = i * 5;
+			vc.addVertex(pose, v[o], v[o + 1], v[o + 2]).setColor(-1).setUv(v[o + 3], v[o + 4]).setOverlay(overlay)
+					.setLight(light).setNormal(pose, nx, ny, nz);
+		}
 	}
 }

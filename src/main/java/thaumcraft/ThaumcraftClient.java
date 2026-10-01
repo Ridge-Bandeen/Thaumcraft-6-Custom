@@ -66,6 +66,15 @@ public class ThaumcraftClient {
         event.enqueueWork(() -> ItemProperties.register(ItemsTC.phial.get(), ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "filled"),
                 (stack, level, entity, seed) -> stack.has(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get()) ? 1.0f : 0.0f));
 
+        // jar_normal.json/jar_void.json switch on the original's "fill" predicate: 0 empty, then 1-4 by quarter
+        // (the liquid models are jar_*_25 .. jar_*_100).
+        for (net.minecraft.world.item.Item jar : new net.minecraft.world.item.Item[] { ItemsTC.jarNormal.get(), ItemsTC.jarVoid.get() }) {
+            event.enqueueWork(() -> ItemProperties.register(jar, ResourceLocation.withDefaultNamespace("fill"), (stack, level, entity, seed) -> {
+                double empty = thaumcraft.common.blocks.essentia.JarBlockItem.emptiness(stack);
+                return empty == 1.0 ? 0.0f : empty >= 0.75 ? 1.0f : empty >= 0.5 ? 2.0f : empty >= 0.25 ? 3.0f : 4.0f;
+            }));
+        }
+
         // label.json's model switches on the same predicate, same reasoning as phial.
         event.enqueueWork(() -> ItemProperties.register(ItemsTC.label.get(), ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "filled"),
                 (stack, level, entity, seed) -> stack.has(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get()) ? 1.0f : 0.0f));
@@ -397,6 +406,24 @@ public class ThaumcraftClient {
             return block instanceof thaumcraft.common.blocks.world.ore.BlockCrystal crystal ? crystal.aspect.getColor() : -1;
         }, BlocksTC.crystals.values().stream().map(net.neoforged.neoforge.registries.DeferredBlock::get)
                 .toArray(net.minecraft.world.level.block.Block[]::new));
+
+        // The original's leafColourHandler: Greatwood leaves take the biome's foliage colour like vanilla leaves;
+        // Silverwood leaves are never tinted (their parent minecraft:block/leaves still declares tintindex 0).
+        event.register((state, level, pos, tintIndex) -> level != null && pos != null
+                ? net.minecraft.client.renderer.BiomeColors.getAverageFoliageColor(level, pos)
+                : net.minecraft.world.level.FoliageColor.getDefaultColor(), BlocksTC.leavesGreatwood.get());
+        event.register((state, level, pos, tintIndex) -> -1, BlocksTC.leavesSilverwood.get());
+
+        // The glowing top layer (tint 0) of the inlay and the stabilizer's rings, by charge. The port's inlay carries
+        // no charge (see BlockInlay), so it always shows the original's uncharged grey.
+        event.register((state, level, pos, tintIndex) -> tintIndex == 0
+                ? thaumcraft.common.blocks.devices.BlockInlay.colorMultiplier(0) : -1, BlocksTC.inlay.get());
+        event.register((state, level, pos, tintIndex) -> {
+            if (tintIndex != 0) return -1;
+            int charge = level != null && pos != null
+                    && level.getBlockEntity(pos) instanceof thaumcraft.common.tiles.devices.TileStabilizer tile ? tile.getEnergy() : 0;
+            return thaumcraft.common.blocks.devices.BlockInlay.colorMultiplier(charge);
+        }, BlocksTC.stabilizer.get());
     }
 
     /** IMPORTANT: 1.21's item renderer reads the ALPHA byte of an item tint (unlike block tints, which ignore
@@ -468,5 +495,34 @@ public class ThaumcraftClient {
                     ? banner.dye.getTextureDiffuseColor() : -1;
         }, ItemsTC.banners.values().stream().map(net.neoforged.neoforge.registries.DeferredItem::get)
                 .toArray(net.minecraft.world.item.Item[]::new));
+
+        // The remaining handlers of the original's ColorHandler.
+        // Leaves: the block handler with no world, i.e. the default foliage colour / untinted Silverwood.
+        event.register((stack, tintIndex) -> net.minecraft.world.level.FoliageColor.getDefaultColor(), ItemsTC.leavesGreatwood.get());
+        event.register((stack, tintIndex) -> -1, ItemsTC.leavesSilverwood.get());
+
+        // Jars: the liquid (tint 1 in jar_*_25..100) takes the first held aspect's colour.
+        event.register(aspectTint, ItemsTC.jarNormal.get(), ItemsTC.jarVoid.get());
+
+        // The caster's focus gem (tint 1 of caster_gauntlet_focus) takes the fitted focus's colour.
+        event.register((stack, tintIndex) -> {
+            if (tintIndex == 0 || !(stack.getItem() instanceof thaumcraft.common.items.casters.ItemCaster caster)) return -1;
+            net.minecraft.world.item.ItemStack focus = caster.getFocusStack(stack);
+            return focus != null && focus.getItem() instanceof thaumcraft.common.items.casters.ItemFocus item ? item.getFocusColor(focus) : -1;
+        }, ItemsTC.casterBasic.get());
+
+        // Every focus is one grey gem texture, tinted by what it casts (the original tinted its three focus tiers).
+        event.register((stack, tintIndex) -> stack.getItem() instanceof thaumcraft.common.items.casters.ItemFocus item
+                        ? item.getFocusColor(stack) : -1,
+                net.minecraft.core.registries.BuiltInRegistries.ITEM.stream()
+                        .filter(i -> i instanceof thaumcraft.common.items.casters.ItemFocus).toArray(net.minecraft.world.item.Item[]::new));
+
+        // Golem placers take their material's colour.
+        event.register((stack, tintIndex) -> {
+            thaumcraft.api.items.ThaumcraftDataComponents.GolemPlacerData data =
+                    stack.get(thaumcraft.api.items.ThaumcraftDataComponents.GOLEM_PLACER_DATA.get());
+            return data == null ? -1 : net.minecraft.util.FastColor.ARGB32.opaque(
+                    thaumcraft.common.golems.GolemProperties.fromLong(data.props()).getMaterial().itemColor);
+        }, ItemsTC.golemPlacer.get());
     }
 }

@@ -144,9 +144,11 @@ The port applies no discount. Decide: replicate (free), implement the intended p
   logged as "Skipping unparseable research recipe reference" - those Thaumonomicon recipe pages may be empty.
   Trace where the names come from and map them to real recipe ids.
 - Stale 1.12 `forge_marker` blockstates for fluids/effects (`liquid_death`, `effect_sap`, ...) - log noise only.
-- Non-English lang files are old-format `.lang` (1.21 ignores them); only `en_us.json` works.
-- Deferred colour-handler gaps: focus items / caster focus layer / jar liquid tint / golem placer colour;
-  leaves/grass block-item tints unchecked.
+- Translations: the 8 original languages converted to `.json` by `tools/convert_lang.py` (2026-09-30; ~1,800/1,963 keys,
+  German ~1,300). Text new in the port stays English. Re-run the script after adding English keys whose text the original had.
+- Redstone Inlay carries no charge/wire connections (always the dim uncharged tint; no pedestal rune).
+- Golem Press (`BlockGolemBuilder`) lost the original's `IBlockFacingHorizontal` facing (the Research Table's was restored
+  2026-09-30; every other original horizontally-facing device kept it). Check its renderer before restoring.
 - Audit every remaining stub `.mtl` (golem_*) for the same missing-`map_Kd` problem once golems are played.
 - Pech: the original's small held-item offset (`LayerHeldItemPech`, bows especially) is not reproduced.
 - `FXGeneric` defaults gravity to 1.0 (a comment claims that matches 1.12's Particle); the original's nitor particles hover, so it may be wrong for other default-gravity effects - check when playtesting particles.

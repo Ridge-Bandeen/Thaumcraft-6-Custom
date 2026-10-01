@@ -1,0 +1,6 @@
+{
+  "type": "thaumcraft:greatwood_tree",
+  "config": {
+    "spider_chance": 0.125
+  }
+}

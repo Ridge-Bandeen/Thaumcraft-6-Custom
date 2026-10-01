@@ -120,7 +120,32 @@ public class TileStabilizer extends BlockEntity {
 	@Override
 	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
 		super.loadAdditional(tag, registries);
+		int before = energy;
 		energy = Math.min(tag.getInt("Energy"), CAPACITY);
+		// the block's charge tint (ThaumcraftClient's stabilizer colour handler) is baked into the chunk mesh:
+		// re-mesh when a synced charge changes, as the original's client tick did
+		if (level != null && level.isClientSide && energy != before) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_IMMEDIATE);
+		}
+	}
+
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	/** Every change here is a charge change, which the client needs for the tint (the original's syncTile). */
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide) {
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+		}
 	}
 
 	@Override
