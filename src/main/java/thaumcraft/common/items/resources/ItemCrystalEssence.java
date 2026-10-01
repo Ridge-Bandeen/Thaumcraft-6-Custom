@@ -40,7 +40,8 @@ public class ItemCrystalEssence extends ItemGenericEssentiaContainer {
 	public Component getName(ItemStack stack) {
 		AspectList aspects = getAspects(stack);
 		if (aspects != null && aspects.size() > 0) {
-			return Component.translatable("item.thaumcraft.crystal_essence.named", aspects.getAspects()[0].getLocalizedDescription());
+			// as the original: "Ignis Vis Crystal" - the aspect's own (untranslated) name, not its description
+			return Component.translatable("item.thaumcraft.crystal_essence.named", aspects.getAspects()[0].getName());
 		}
 		return super.getName(stack);
 	}

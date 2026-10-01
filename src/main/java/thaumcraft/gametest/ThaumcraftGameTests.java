@@ -4205,7 +4205,7 @@ public class ThaumcraftGameTests {
 		String fireName = fire.getHoverName().getString();
 
 		helper.assertTrue(!fireName.equals(plainName), "a crystal essence holding an aspect should show a different name than an unaspected one, both were: " + fireName);
-		helper.assertTrue(fireName.contains("Fire"), "a Fire crystal essence's display name should mention Fire, found: " + fireName);
+		helper.assertTrue(fireName.contains("Ignis"), "a Fire crystal is named after the aspect itself, as the original (\"Ignis Vis Crystal\"), found: " + fireName);
 		helper.succeed();
 	}
 
@@ -5770,6 +5770,26 @@ public class ThaumcraftGameTests {
 		}
 		helper.assertTrue(stabilized, "a real energized stabilizer should really pacify a nearby real Flux Rift over real time");
 		helper.assertTrue(stabilizer.getEnergy() < energyBefore, "pacifying a real rift should really spend real stored energy, had " + energyBefore + " now " + stabilizer.getEnergy());
+		helper.succeed();
+	}
+
+	/** The original's names: "%s Vis Crystal" and "Phial of %s Essentia" with the aspect's own name ("Ignis", not its
+	 * description "Fire"), a "Marked Label" once it carries an aspect. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void essentiaItemsUseTheOriginalsNames(GameTestHelper helper) {
+		java.util.function.BiConsumer<ItemStack, String[]> check = (stack, expect) -> {
+			var c = stack.getHoverName().getContents();
+			helper.assertTrue(c instanceof net.minecraft.network.chat.contents.TranslatableContents t && t.getKey().equals(expect[0])
+					&& (expect.length < 2 || (t.getArgs().length == 1 && String.valueOf(t.getArgs()[0]).equals(expect[1]))),
+					"name of " + stack + " should be " + String.join(" / ", expect) + ", was " + c);
+		};
+		check.accept(thaumcraft.common.items.resources.ItemCrystalEssence.of(Aspect.FIRE), new String[] { "item.thaumcraft.crystal_essence.named", "Ignis" });
+		check.accept(thaumcraft.common.items.consumables.ItemPhial.makeFilledPhial(Aspect.WATER), new String[] { "item.thaumcraft.phial.filled", "Aqua" });
+		check.accept(new ItemStack(ItemsTC.phial.get()), new String[] { "item.thaumcraft.phial" });
+		ItemStack label = new ItemStack(ItemsTC.label.get());
+		check.accept(label, new String[] { "item.thaumcraft.label" });
+		label.set(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get(), new thaumcraft.api.aspects.AspectList().add(Aspect.FIRE, 1));
+		check.accept(label, new String[] { "item.thaumcraft.label.filled" });
 		helper.succeed();
 	}
 

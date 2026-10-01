@@ -40,6 +40,13 @@ import thaumcraft.api.items.ThaumcraftDataComponents;
  */
 public class ItemLabel extends Item implements IEssentiaContainerItem {
 
+	/** As the original: "Blank Label", or "Marked Label" once it carries an aspect. */
+	@Override
+	public net.minecraft.network.chat.Component getName(ItemStack stack) {
+		thaumcraft.api.aspects.AspectList aspects = stack.get(ThaumcraftDataComponents.ASPECTS.get());
+		return aspects != null && aspects.size() > 0 ? net.minecraft.network.chat.Component.translatable("item.thaumcraft.label.filled") : super.getName(stack);
+	}
+
 	public ItemLabel(Properties properties) {
 		super(properties);
 	}

@@ -37,6 +37,16 @@ import thaumcraft.common.tiles.essentia.TileJarFillable;
  */
 public class ItemPhial extends Item implements IEssentiaContainerItem {
 
+	/** As the original: "Glass Phial" empty, "Phial of Ignis Essentia" filled (the aspect's own, untranslated name). */
+	@Override
+	public net.minecraft.network.chat.Component getName(ItemStack stack) {
+		thaumcraft.api.aspects.AspectList aspects = stack.get(ThaumcraftDataComponents.ASPECTS.get());
+		if (aspects != null && aspects.size() > 0) {
+			return net.minecraft.network.chat.Component.translatable("item.thaumcraft.phial.filled", aspects.getAspects()[0].getName());
+		}
+		return super.getName(stack);
+	}
+
 	public static final int BASE = 10;
 
 	public ItemPhial(Properties properties) {
