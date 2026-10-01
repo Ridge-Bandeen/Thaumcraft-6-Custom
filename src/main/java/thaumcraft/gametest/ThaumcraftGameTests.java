@@ -1179,6 +1179,34 @@ public class ThaumcraftGameTests {
 		return tile;
 	}
 
+	/** As the original: a Casting Gauntlet, or anything used while sneaking, is not thrown into a boiling crucible
+	 * (the port dissolved a gauntlet clicked on it); a plain item is. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleNeverSwallowsACasterOrASneakingClick(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(2, 1, 2);
+		TileCrucible tile = placeActiveCrucible(helper, pos);
+		BlockPos abs = helper.absolutePos(pos);
+		ServerPlayer player = spawnCasterAt(helper, abs.above());
+		player.getAbilities().instabuild = false;
+		var hit = new net.minecraft.world.phys.BlockHitResult(Vec3.atCenterOf(abs), net.minecraft.core.Direction.UP, abs, false);
+		var hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+
+		player.setItemInHand(hand, new ItemStack(thaumcraft.api.items.ItemsTC.casterBasic.get()));
+		helper.getBlockState(pos).useItemOn(player.getItemInHand(hand), helper.getLevel(), player, hand, hit);
+		helper.assertTrue(player.getItemInHand(hand).is(thaumcraft.api.items.ItemsTC.casterBasic.get()), "a caster used on a boiling crucible must not be dissolved");
+
+		player.setItemInHand(hand, new ItemStack(Items.STICK, 2));
+		player.setShiftKeyDown(true);
+		helper.getBlockState(pos).useItemOn(player.getItemInHand(hand), helper.getLevel(), player, hand, hit);
+		helper.assertTrue(player.getItemInHand(hand).getCount() == 2, "nothing goes in while sneaking");
+
+		player.setShiftKeyDown(false);
+		helper.getBlockState(pos).useItemOn(player.getItemInHand(hand), helper.getLevel(), player, hand, hit);
+		helper.assertTrue(player.getItemInHand(hand).getCount() == 1, "a plain item used on a boiling crucible goes in, one at a time");
+		helper.assertTrue(tile.aspects.size() > 0, "the stick's aspects should be in the crucible");
+		helper.succeed();
+	}
+
 	/** A mock player who has completed the research behind every crucible recipe (recipes are research-gated,
 	 * as in the original - and need a player at all: nobody thrown it means no recipe). */
 	/** Marks research complete outright, bypassing parents and stage gates. Since 2026-09-28 a new player starts with no
@@ -1791,7 +1819,7 @@ public class ThaumcraftGameTests {
 	// --------------------------------------------------------------------------------------------------
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
-	public static void crucibleFillsAndEmptiesWithABucketOfWater(GameTestHelper helper) {
+	public static void crucibleFillsWithABucketOfWaterButAnEmptyBucketTakesNoneBack(GameTestHelper helper) {
 		BlockPos relPos = BlockPos.ZERO;
 		helper.setBlock(relPos, BlocksTC.crucible.get());
 		BlockPos absolute = helper.absolutePos(relPos);
@@ -1816,8 +1844,9 @@ public class ThaumcraftGameTests {
 		helper.getBlockState(relPos).useItemOn(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND), helper.getLevel(), player,
 				net.minecraft.world.InteractionHand.MAIN_HAND, hit);
 
-		helper.assertTrue(!tile.hasWater(), "right-clicking a watered, empty (no aspects) crucible with an empty bucket should have emptied it");
-		helper.assertTrue(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).is(Items.WATER_BUCKET), "the empty bucket should have been swapped back for a full one");
+		// as the original: there is no taking water back out (the port had added that; on a cold crucible nothing happens)
+		helper.assertTrue(tile.hasWater(), "an empty bucket should not take the crucible's water");
+		helper.assertTrue(player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND).is(Items.BUCKET), "the bucket should stay empty");
 		helper.succeed();
 	}
 
@@ -2737,6 +2766,15 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(helper.getBlockState(lavaPos).is(BlocksTC.infernalFurnace.get()), "the lava core should really have become a real Infernal Furnace after the real delayed conversion, found " + helper.getBlockState(lavaPos));
 		helper.assertTrue(helper.getBlockState(barsPos).isAir(), "the real iron-bars slot should really have become air");
 		helper.assertTrue(helper.getBlockState(shellCornerPos).is(BlocksTC.placeholderNetherbrick.get()), "the real nether-brick shell should really have become the real placeholder block (not left re-convertible)");
+
+		// As the original: breaking a shell block takes the furnace apart - the shell turns back into nether brick and
+		// obsidian, the iron bars return to the opening behind the furnace, and the core is lava again.
+		player.gameMode.destroyBlock(helper.absolutePos(shellCornerPos));
+		helper.assertBlockPresent(Blocks.AIR, shellCornerPos);
+		helper.assertBlockPresent(Blocks.NETHER_BRICKS, base.offset(0, 1, 0));
+		helper.assertBlockPresent(Blocks.OBSIDIAN, base.offset(0, 1, 1));
+		helper.assertBlockPresent(Blocks.IRON_BARS, barsPos);
+		helper.assertBlockPresent(Blocks.LAVA, lavaPos);
 		helper.succeed();
 	}
 
@@ -2775,6 +2813,74 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(helper.getBlockState(anvilPos).is(BlocksTC.placeholderAnvil.get()), "the anvil corner should really have become the real placeholder block");
 		helper.assertTrue(helper.getBlockState(tablePos).is(BlocksTC.placeholderTable.get()), "the stone table corner should really have become the real placeholder block");
 		helper.assertTrue(helper.getBlockState(barsPos).is(BlocksTC.placeholderBars.get()), "the iron bars accent should really have become the real placeholder block");
+		assertPressModelCoversItsParts(helper, pistonPos);
+		helper.succeed();
+	}
+
+	/** The press model (TileGolemBuilderRenderer) spans the press block plus one block each way along the press's
+	 * clockwise side and its back - where the table and the cauldron must be, with the anvil on the diagonal. */
+	private static void assertPressModelCoversItsParts(GameTestHelper helper, BlockPos pressPos) {
+		net.minecraft.core.Direction facing = helper.getBlockState(pressPos).getValue(thaumcraft.common.blocks.crafting.BlockGolemBuilder.FACING);
+		net.minecraft.core.Direction side = facing.getClockWise();
+		net.minecraft.core.Direction back = facing.getOpposite();
+		helper.assertBlockPresent(BlocksTC.placeholderTable.get(), pressPos.relative(side));
+		helper.assertBlockPresent(BlocksTC.placeholderCauldron.get(), pressPos.relative(back));
+		helper.assertBlockPresent(BlocksTC.placeholderAnvil.get(), pressPos.relative(side).relative(back));
+	}
+
+	private static BlockPos buildGolemPress(GameTestHelper helper, boolean turned) {
+		// the blueprint's layout as built in salisMundusConvertsARealGolemPressStructure, or turned half way round
+		BlockPos base = new BlockPos(2, 1, 2);
+		BlockPos cauldronPos = turned ? base.offset(1, 0, 1) : base;
+		BlockPos anvilPos = turned ? base.offset(1, 0, 0) : base.offset(0, 0, 1);
+		BlockPos pistonPos = turned ? base.offset(0, 0, 1) : base.offset(1, 0, 0);
+		BlockPos tablePos = turned ? base : base.offset(1, 0, 1);
+		helper.setBlock(cauldronPos, Blocks.CAULDRON);
+		helper.setBlock(anvilPos, Blocks.ANVIL);
+		helper.setBlock(pistonPos, Blocks.PISTON.defaultBlockState().setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.UP));
+		helper.setBlock(tablePos, BlocksTC.tableStone.get());
+		helper.setBlock(pistonPos.above(), Blocks.IRON_BARS);
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		forceResearch(player, "MINDCLOCKWORK");
+		useSalisMundusOn(helper, player, pistonPos);
+		tickSchedulerPastDustTriggerDelay(helper);
+		helper.assertBlockPresent(BlocksTC.golemBuilder.get(), pistonPos);
+		return pistonPos;
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void aTurnedGolemPressFacesSoItsModelCoversItsParts(GameTestHelper helper) {
+		assertPressModelCoversItsParts(helper, buildGolemPress(helper, true));
+		helper.succeed();
+	}
+
+	/** As the original: breaking any part takes the press apart - the rest turn back into their real blocks, the press
+	 * into a piston facing up. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void breakingAGolemPressPartTakesThePressApart(GameTestHelper helper) {
+		BlockPos press = buildGolemPress(helper, false);
+		net.minecraft.core.Direction facing = helper.getBlockState(press).getValue(thaumcraft.common.blocks.crafting.BlockGolemBuilder.FACING);
+		BlockPos table = press.relative(facing.getClockWise());
+		helper.getLevel().destroyBlock(helper.absolutePos(table), true);
+		helper.assertBlockPresent(Blocks.PISTON, press);
+		helper.assertBlockPresent(Blocks.CAULDRON, press.relative(facing.getOpposite()));
+		helper.assertBlockPresent(Blocks.ANVIL, press.relative(facing.getClockWise()).relative(facing.getOpposite()));
+		helper.assertBlockPresent(Blocks.IRON_BARS, press.above());
+		helper.assertBlockPresent(Blocks.AIR, table);
+		helper.succeed();
+	}
+
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void breakingTheGolemPressRestoresItsParts(GameTestHelper helper) {
+		BlockPos press = buildGolemPress(helper, false);
+		net.minecraft.core.Direction facing = helper.getBlockState(press).getValue(thaumcraft.common.blocks.crafting.BlockGolemBuilder.FACING);
+		helper.getLevel().destroyBlock(helper.absolutePos(press), true);
+		helper.assertBlockPresent(Blocks.AIR, press);
+		helper.assertBlockPresent(BlocksTC.tableStone.get(), press.relative(facing.getClockWise()));
+		helper.assertBlockPresent(Blocks.IRON_BARS, press.above());
+		boolean piston = !helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+				new AABB(helper.absolutePos(press)).inflate(2.0), e -> e.getItem().is(Items.PISTON)).isEmpty();
+		helper.assertTrue(piston, "a broken press should drop its piston");
 		helper.succeed();
 	}
 
@@ -5667,6 +5773,53 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** As the original, a hopper can feed a pedestal: one item, and no more while it holds one. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty", timeoutTicks = 100)
+	public static void aHopperFeedsAPedestalOneItem(GameTestHelper helper) {
+		BlockPos pedestalPos = new BlockPos(2, 1, 2);
+		helper.setBlock(pedestalPos, BlocksTC.pedestal.get());
+		helper.setBlock(pedestalPos.above(), Blocks.HOPPER.defaultBlockState()
+				.setValue(net.minecraft.world.level.block.HopperBlock.FACING, net.minecraft.core.Direction.DOWN));
+		net.minecraft.world.level.block.entity.HopperBlockEntity hopper = helper.getBlockEntity(pedestalPos.above());
+		hopper.setItem(0, new ItemStack(Items.STICK, 3));
+		thaumcraft.common.tiles.crafting.TilePedestal pedestal = helper.getBlockEntity(pedestalPos);
+		helper.succeedWhen(() -> {
+			helper.assertTrue(pedestal.getItem().is(Items.STICK) && pedestal.getItem().getCount() == 1, "the pedestal should hold one stick");
+			helper.assertTrue(hopper.getItem(0).getCount() == 2, "the hopper should keep the other two");
+		});
+	}
+
+	/** Gives a placed stabilizer energy and wakes its neighbours, as its own tick does on each rise, so the inlay charges. */
+	private static void chargeStabilizer(GameTestHelper helper, BlockPos rel, int energy) {
+		thaumcraft.common.tiles.devices.TileStabilizer stabilizer = helper.getBlockEntity(rel);
+		stabilizer.setEnergyForTesting(energy);
+		helper.getLevel().updateNeighborsAt(helper.absolutePos(rel), BlocksTC.stabilizer.get());
+	}
+
+	/** The Redstone Inlay network, as the original: sides connect to inlay/pedestals and reach up onto a stabilizer; charge
+	 * falls by one per block and goes when the stabilizer's line is cut. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void inlayConnectsAndCarriesStabilizerCharge(GameTestHelper helper) {
+		var C = thaumcraft.common.blocks.devices.BlockInlay.CHARGE;
+		for (int x = 1; x <= 4; x++) helper.setBlock(new BlockPos(x, 0, 2), Blocks.STONE);
+		helper.setBlock(new BlockPos(1, 1, 2), BlocksTC.stabilizer.get());
+		for (int x = 2; x <= 4; x++) helper.setBlock(new BlockPos(x, 1, 2), BlocksTC.inlay.get());
+		helper.assertBlockProperty(new BlockPos(2, 1, 2), thaumcraft.common.blocks.devices.BlockInlay.WEST, thaumcraft.common.blocks.devices.BlockInlay.AttachPosition.EXT);
+		helper.assertBlockProperty(new BlockPos(3, 1, 2), thaumcraft.common.blocks.devices.BlockInlay.WEST, thaumcraft.common.blocks.devices.BlockInlay.AttachPosition.SIDE);
+		helper.assertBlockProperty(new BlockPos(4, 1, 2), thaumcraft.common.blocks.devices.BlockInlay.EAST, thaumcraft.common.blocks.devices.BlockInlay.AttachPosition.NONE);
+		helper.assertBlockProperty(new BlockPos(3, 1, 2), C, 0);
+
+		chargeStabilizer(helper, new BlockPos(1, 1, 2), 10);
+		helper.assertBlockProperty(new BlockPos(2, 1, 2), C, 10);
+		helper.assertBlockProperty(new BlockPos(3, 1, 2), C, 9);
+		helper.assertBlockProperty(new BlockPos(4, 1, 2), C, 8);
+
+		helper.setBlock(new BlockPos(2, 1, 2), Blocks.AIR);
+		helper.assertBlockProperty(new BlockPos(3, 1, 2), C, 0);
+		helper.assertBlockProperty(new BlockPos(4, 1, 2), C, 0);
+		helper.succeed();
+	}
+
 	/**
 	 * Real coverage for {@link thaumcraft.common.tiles.crafting.TilePedestal#findInstabilityMitigator} - a
 	 * real stabilizer reachable through a chain of real {@link BlocksTC#inlay} tiles should really be found;
@@ -5681,10 +5834,17 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(pedestal.findInstabilityMitigator() == null, "a real pedestal with no real inlay chain nearby should really find no mitigator");
 
+		helper.setBlock(pedPos.offset(1, -1, 0), Blocks.STONE);
+		helper.setBlock(pedPos.offset(2, -1, 0), Blocks.STONE);
 		helper.setBlock(pedPos.offset(1, 0, 0), BlocksTC.inlay.get());
 		helper.setBlock(pedPos.offset(2, 0, 0), BlocksTC.inlay.get());
 		helper.setBlock(pedPos.offset(3, 0, 0), BlocksTC.stabilizer.get());
+		helper.assertTrue(pedestal.findInstabilityMitigator() == null, "an uncharged network leads nowhere (the original follows the charge)");
 
+		chargeStabilizer(helper, pedPos.offset(3, 0, 0), 15);
+		helper.assertBlockProperty(pedPos.offset(2, 0, 0), thaumcraft.common.blocks.devices.BlockInlay.CHARGE, 15);
+		helper.assertBlockProperty(pedPos.offset(1, 0, 0), thaumcraft.common.blocks.devices.BlockInlay.CHARGE, 14);
+		helper.assertBlockProperty(pedPos, thaumcraft.common.blocks.devices.BlockInlay.CHARGE, 13);
 		BlockPos found = pedestal.findInstabilityMitigator();
 		helper.assertTrue(found != null && found.equals(helper.absolutePos(pedPos.offset(3, 0, 0))),
 				"a real stabilizer reachable through a real 2-tile inlay chain should really be found, got " + found);
@@ -5712,11 +5872,12 @@ public class ThaumcraftGameTests {
 		component.setItem(new ItemStack(Items.STICK));
 		BlockPos componentAbs = helper.absolutePos(componentPos);
 
+		helper.setBlock(componentPos.offset(1, -1, 0), Blocks.STONE);
 		helper.setBlock(componentPos.offset(1, 0, 0), BlocksTC.inlay.get());
 		helper.setBlock(componentPos.offset(2, 0, 0), BlocksTC.stabilizer.get());
 		BlockPos stabAbs = helper.absolutePos(componentPos.offset(2, 0, 0));
 		thaumcraft.common.tiles.devices.TileStabilizer stabilizer = helper.getBlockEntity(componentPos.offset(2, 0, 0));
-		stabilizer.setEnergyForTesting(15);
+		chargeStabilizer(helper, componentPos.offset(2, 0, 0), 15);
 
 		ServerLevel level = helper.getLevel();
 		BlockPos matrixAbs = helper.absolutePos(matrixPos);
@@ -11272,9 +11433,29 @@ public class ThaumcraftGameTests {
 			if (ie.getItem().is(thaumcraft.api.items.ItemsTC.primordialPearl.get())) foundPearl = true;
 			if (ie.getItem().is(thaumcraft.api.items.ItemsTC.lootBagRare.get())) foundLootBag = true;
 		}
-		helper.assertTrue(foundPearl, "a real dead cultist leader should really always drop a real primordial pearl");
+		helper.assertFalse(foundPearl, "a cultist leader drops no primordial pearl (the original's own drop override)");
 		helper.assertTrue(foundLootBag, "a real dead cultist leader should really always drop a real rare loot bag");
 
+		helper.succeed();
+	}
+
+	/** Bosses without their own drop (Eldritch Warden, Eldritch Golem) leave the original's floating primordial pearl and a
+	 * rare loot bag - the port's had dropped nothing. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void eldritchGolemDropsAFloatingPearlAndALootBag(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos abs = helper.absolutePos(new BlockPos(3, 1, 3));
+		var golem = thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_GOLEM.get().create(level);
+		golem.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+		level.addFreshEntity(golem);
+		golem.die(level.damageSources().generic());
+		AABB around = new AABB(abs).inflate(4);
+		boolean pearl = !level.getEntitiesOfClass(thaumcraft.common.entities.EntitySpecialItem.class, around,
+				e -> e.getItem().is(thaumcraft.api.items.ItemsTC.primordialPearl.get())).isEmpty();
+		boolean bag = !level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, around,
+				e -> e.getItem().is(thaumcraft.api.items.ItemsTC.lootBagRare.get())).isEmpty();
+		helper.assertTrue(pearl, "a dead Eldritch Golem should leave a floating primordial pearl");
+		helper.assertTrue(bag, "a dead Eldritch Golem should drop a rare loot bag");
 		helper.succeed();
 	}
 
@@ -15841,7 +16022,9 @@ public class ThaumcraftGameTests {
 		lone.setHealth(1.0f);
 		lone.hurt(level.damageSources().generic(), 50.0f);
 		helper.assertFalse(lone.isAlive(), "a lethal hit should really kill the lone taintacle giant");
-		helper.assertTrue(!level.getEntitiesOfClass(ItemEntity.class, new AABB(absA).inflate(2)).isEmpty(),
+		// the pearl floats up from half the giant's height (the original's entityDropSpecialItem)
+		helper.assertTrue(!level.getEntitiesOfClass(thaumcraft.common.entities.EntitySpecialItem.class, new AABB(absA).inflate(2).expandTowards(0, 8, 0),
+				e -> e.getItem().is(thaumcraft.api.items.ItemsTC.primordialPearl.get())).isEmpty(),
 				"a lone taintacle giant should really drop a real primordial pearl when it dies");
 
 		thaumcraft.common.entities.monster.boss.EntityTaintacleGiant pairA =
@@ -15855,7 +16038,7 @@ public class ThaumcraftGameTests {
 		pairA.setHealth(1.0f);
 		pairA.hurt(level.damageSources().generic(), 50.0f);
 		helper.assertFalse(pairA.isAlive(), "a lethal hit should really kill the first paired taintacle giant");
-		helper.assertTrue(level.getEntitiesOfClass(ItemEntity.class, new AABB(absB).inflate(3)).isEmpty(),
+		helper.assertTrue(level.getEntitiesOfClass(ItemEntity.class, new AABB(absB).inflate(3).expandTowards(0, 8, 0)).isEmpty(),
 				"a taintacle giant dying with a real other one still nearby should really NOT drop a duplicate primordial pearl");
 		helper.succeed();
 	}

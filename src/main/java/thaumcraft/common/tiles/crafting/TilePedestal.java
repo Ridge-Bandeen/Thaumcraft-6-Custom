@@ -16,26 +16,9 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * block above it - see {@link thaumcraft.common.blocks.devices.BlockPedestal}. The infusion altar
  * ({@link TileInfusionMatrix}) reads and writes this slot directly during crafting.
  *
- * Simplified for this pass (all real features, just not built yet):
- * <ul>
- * <li>No floating-item {@code BlockEntityRenderer} - the original showed the held item hovering/spinning
- * above the pedestal via a TESR. No custom renderer has been ported this whole session (see the port-tracking
- * memory notes); the held item is only visible via the item's own drop when the pedestal breaks, or by
- * right-clicking it back out.</li>
- * <li>No hopper/container capability - a single plain {@code ItemStack} field, not a real {@code Container}.
- * Automation would need to interact through a wand/player right-click, same as the original's "pedestals
- * aren't hoppers" design.</li>
- * </ul>
- *
- * <p>{@link #findInstabilityMitigator}, restored 2026-09-15 - see
- * {@link thaumcraft.common.tiles.devices.TileStabilizer}'s own doc comment for the full real story
- * (including the one real simplification: a plain BFS through connected {@code BlockInlay} positions
- * instead of the true original's own persistent charge-gradient blockstate search, same real reachability
- * result).
- *
- * Now has a real floating-item renderer ({@code thaumcraft.client.render.TilePedestalRenderer}), so
- * {@link #setChanged()} is overridden to actually push the update to nearby clients - see that override's
- * own doc comment for why plain {@code setChanged()} alone isn't enough.
+ * As the original: hoppers and pipes reach its one slot ({@link #getItemHandler}); the held item floats above it
+ * ({@code thaumcraft.client.render.TilePedestalRenderer}, which is why {@link #setChanged()} pushes updates to
+ * clients); and {@link #findInstabilityMitigator} follows the Redstone Inlay charge to a stabilizer.
  */
 public class TilePedestal extends BlockEntity {
 
@@ -62,8 +45,50 @@ public class TilePedestal extends BlockEntity {
 		item = ItemStack.EMPTY;
 	}
 
-	/** Real port of the true original's own {@code findInstabilityMitigator} - see this class's own doc
-	 * comment for the real simplification. */
+	/** The original's slot rules for hoppers and pipes (TileThaumcraftInventory, size 1, stack limit 1): any side, an item
+	 * goes in only when the pedestal is empty, and can always be taken out. */
+	private final net.neoforged.neoforge.items.IItemHandler itemHandler = new net.neoforged.neoforge.items.IItemHandler() {
+		@Override
+		public int getSlots() {
+			return 1;
+		}
+
+		@Override
+		public ItemStack getStackInSlot(int slot) {
+			return item;
+		}
+
+		@Override
+		public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+			if (stack.isEmpty() || !item.isEmpty()) return stack;
+			if (!simulate) setItem(stack.copyWithCount(1));
+			return stack.getCount() > 1 ? stack.copyWithCount(stack.getCount() - 1) : ItemStack.EMPTY;
+		}
+
+		@Override
+		public ItemStack extractItem(int slot, int amount, boolean simulate) {
+			if (amount <= 0 || item.isEmpty()) return ItemStack.EMPTY;
+			ItemStack out = item.copy();
+			if (!simulate) setItem(ItemStack.EMPTY);
+			return out;
+		}
+
+		@Override
+		public int getSlotLimit(int slot) {
+			return 1;
+		}
+
+		@Override
+		public boolean isItemValid(int slot, ItemStack stack) {
+			return item.isEmpty();
+		}
+	};
+
+	public net.neoforged.neoforge.items.IItemHandler getItemHandler() {
+		return itemHandler;
+	}
+
+	/** The original's {@code findInstabilityMitigator}: follows the inlay charge to a stabilizer (see TileStabilizer). */
 	public BlockPos findInstabilityMitigator() {
 		return level == null ? null : thaumcraft.common.tiles.devices.TileStabilizer.findNearbyStabilizer(level, worldPosition);
 	}

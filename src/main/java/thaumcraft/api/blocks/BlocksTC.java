@@ -361,26 +361,23 @@ public final class BlocksTC {
 			BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(3.0f).sound(SoundType.STONE)
 					.lightLevel(state -> 14).noOcclusion());
 
-	/** The Infernal Furnace's real multiblock-ritual shell blocks (see
-	 * {@link thaumcraft.common.registry.ThaumcraftDustTriggers}) - visually identical to plain vanilla nether
-	 * bricks/obsidian (same real texture, a different block id) so a finished furnace's own shell no longer
-	 * matches the blueprint's real nether-brick/obsidian source and can't be accidentally re-converted. */
+	/** The Infernal Furnace's ritual shell blocks (see {@link thaumcraft.common.registry.ThaumcraftDustTriggers}): invisible
+	 * stand-ins the furnace's 3x3x3 model draws over, as the original's - see {@link thaumcraft.common.blocks.misc.BlockPlaceholder}. */
 	public static final DeferredBlock<Block> placeholderNetherbrick = BLOCKS.registerBlock("placeholder_netherbrick",
-			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(2.0f, 6.0f).sound(SoundType.NETHER_BRICKS));
+			thaumcraft.common.blocks.misc.BlockPlaceholder::new, BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(2.0f, 6.0f).sound(SoundType.NETHER_BRICKS));
 	public static final DeferredBlock<Block> placeholderObsidian = BLOCKS.registerBlock("placeholder_obsidian",
-			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(50.0f, 1200.0f).sound(SoundType.STONE));
+			thaumcraft.common.blocks.misc.BlockPlaceholder::new, BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(50.0f, 1200.0f).sound(SoundType.STONE));
 
-	/** The Golem Press's real multiblock-ritual shell blocks (see {@link thaumcraft.common.registry.ThaumcraftDustTriggers#golemPressBlueprint})
-	 * - same real "visually near-identical to their real vanilla source, different block id" pattern
-	 * {@link #placeholderNetherbrick}/{@link #placeholderObsidian} already established. */
+	/** The Golem Press's ritual shell blocks (see {@link thaumcraft.common.registry.ThaumcraftDustTriggers#golemPressBlueprint}):
+	 * invisible stand-ins the press's model draws over, as the original's - see {@link thaumcraft.common.blocks.misc.BlockPlaceholder}. */
 	public static final DeferredBlock<Block> placeholderBars = BLOCKS.registerBlock("placeholder_bars",
-			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0f, 6.0f).sound(SoundType.METAL).noOcclusion());
+			thaumcraft.common.blocks.misc.BlockPlaceholder::new, BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0f, 6.0f).sound(SoundType.METAL).noOcclusion());
 	public static final DeferredBlock<Block> placeholderCauldron = BLOCKS.registerBlock("placeholder_cauldron",
-			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 6.0f).sound(SoundType.METAL));
+			thaumcraft.common.blocks.misc.BlockPlaceholder::new, BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.0f, 6.0f).sound(SoundType.METAL).lightLevel(state -> 13));
 	public static final DeferredBlock<Block> placeholderAnvil = BLOCKS.registerBlock("placeholder_anvil",
-			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0f, 1200.0f).sound(SoundType.ANVIL));
+			thaumcraft.common.blocks.misc.BlockPlaceholder::new, BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(5.0f, 1200.0f).sound(SoundType.ANVIL));
 	public static final DeferredBlock<Block> placeholderTable = BLOCKS.registerBlock("placeholder_table",
-			Block::new, BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.5f).sound(SoundType.STONE));
+			thaumcraft.common.blocks.misc.BlockPlaceholder::new, BlockBehaviour.Properties.of().mapColor(MapColor.STONE).strength(2.5f).sound(SoundType.STONE));
 
 	/** See {@link thaumcraft.common.blocks.devices.BlockRedstoneRelay}'s own doc comment - a real
 	 * configurable-threshold/strength redstone repeater variant, no tile entity needed. */

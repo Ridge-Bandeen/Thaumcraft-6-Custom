@@ -8,7 +8,7 @@
         { "condition": "minecraft:survives_explosion" }
       ],
       "entries": [
-        { "type": "minecraft:item", "name": "thaumcraft:placeholder_table" }
+        { "type": "minecraft:item", "name": "thaumcraft:table_stone" }
       ]
     }
   ]

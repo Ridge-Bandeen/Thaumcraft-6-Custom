@@ -66,6 +66,7 @@ public final class GogglesReadout {
 		BlockHitResult hit = null;
 		if (WornGearHelper.hasGoggles(mc.player) && mc.hitResult instanceof BlockHitResult block && block.getType() == HitResult.Type.BLOCK) {
 			BlockEntity tile = mc.level.getBlockEntity(block.getBlockPos());
+			drawExtendedText(mc, event, block.getBlockPos(), tile);
 			if (tile instanceof IAspectContainer container && container.getAspects() != null && container.getAspects().size() > 0) {
 				aspects = container.getAspects();
 				hit = block;
@@ -138,6 +139,48 @@ public final class GogglesReadout {
 		RenderSystem.depthMask(true);
 		RenderSystem.enableDepthTest();
 		RenderSystem.disableBlend();
+	}
+
+	/** The original's other goggles readouts: an {@link thaumcraft.api.items.IGogglesDisplayExtended} tile's or block's lines
+	 * (the Infusion Matrix's stability), drawn through walls, and the pitch of a note block or Arcane Ear. */
+	private static void drawExtendedText(Minecraft mc, RenderLevelStageEvent event, BlockPos pos, BlockEntity tile) {
+		Object source = tile instanceof thaumcraft.api.items.IGogglesDisplayExtended ? tile : mc.level.getBlockState(pos).getBlock();
+		if (source instanceof thaumcraft.api.items.IGogglesDisplayExtended ext) {
+			Vec3 v = ext.getIGogglesTextOffset();
+			String[] lines = ext.getIGogglesText();
+			// as the original: a tile's lines run downward, a block's upward
+			float sign = tile instanceof thaumcraft.api.items.IGogglesDisplayExtended ? -1.0f : 1.0f;
+			for (int to = 0; to < lines.length; to++) {
+				drawTextInAir(mc, event, pos.getX() + v.x, pos.getY() + v.y + sign * (to - lines.length / 2.0f) / 5.5f, pos.getZ() + v.z, lines[to], true);
+			}
+		}
+		int note = -1;
+		var state = mc.level.getBlockState(pos);
+		if (state.getBlock() instanceof net.minecraft.world.level.block.NoteBlock) {
+			note = state.getValue(net.minecraft.world.level.block.NoteBlock.NOTE);
+		} else if (tile instanceof thaumcraft.common.tiles.devices.TileArcaneEar ear) {
+			note = ear.getNote();
+		}
+		if (note >= 0) {
+			drawTextInAir(mc, event, pos.getX(), pos.getY() + 1, pos.getZ(), "Note: " + note, false);
+		}
+	}
+
+	/** The original's RenderEventHandler.drawTextInAir: centred over the block, turned to face the viewer about the
+	 * vertical only, at 1/80 scale, white with a shadow. */
+	private static void drawTextInAir(Minecraft mc, RenderLevelStageEvent event, double x, double y, double z, String text, boolean throughWalls) {
+		Vec3 cam = event.getCamera().getPosition();
+		PoseStack poseStack = new PoseStack();
+		poseStack.translate(x + 0.5 - cam.x, y + 0.5 - cam.y, z + 0.5 - cam.z);
+		float rotYaw = (float) Math.toDegrees(Math.atan2(cam.x - (x + 0.5), cam.z - (z + 0.5)));
+		poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(rotYaw + 180.0f));
+		poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(180.0f));
+		poseStack.scale(0.0125f, 0.0125f, 0.0125f);
+		Font font = mc.font;
+		MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
+		font.drawInBatch(text, 1 - font.width(text) / 2.0f, 1.0f, 0xFFFFFF, true, poseStack.last().pose(), buffers,
+				throughWalls ? Font.DisplayMode.SEE_THROUGH : Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+		buffers.endBatch();
 	}
 
 	private static void drawIcon(Matrix4f matrix, Aspect tag, float r, float g, float b) {

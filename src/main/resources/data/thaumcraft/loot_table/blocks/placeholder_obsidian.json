@@ -8,7 +8,7 @@
         { "condition": "minecraft:survives_explosion" }
       ],
       "entries": [
-        { "type": "minecraft:item", "name": "thaumcraft:placeholder_obsidian" }
+        { "type": "minecraft:item", "name": "minecraft:obsidian" }
       ]
     }
   ]

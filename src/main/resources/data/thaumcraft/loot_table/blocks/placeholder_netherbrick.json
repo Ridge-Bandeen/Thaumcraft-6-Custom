@@ -8,7 +8,7 @@
         { "condition": "minecraft:survives_explosion" }
       ],
       "entries": [
-        { "type": "minecraft:item", "name": "thaumcraft:placeholder_netherbrick" }
+        { "type": "minecraft:item", "name": "minecraft:nether_bricks" }
       ]
     }
   ]

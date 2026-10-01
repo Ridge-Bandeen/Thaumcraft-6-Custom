@@ -59,12 +59,7 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  *
  * Simplified for this pass (all real features, just not built yet - see the port-tracking memory notes):
  * <ul>
- * <li><b>No wand/caster item exists yet</b>, so the original's wand-right-click activation
- * ({@link IInteractWithCaster#onCasterRightClick}) has no real caller. This tile still implements the
- * interface as a real, working entry point (see {@link #onCasterRightClick}) - it's just that
- * {@link thaumcraft.common.blocks.crafting.BlockInfusionMatrix} calls {@link #activate} directly from a
- * plain empty-hand right-click for now. Once a caster/wand item is ported, wiring it to check for
- * {@code IInteractWithCaster} and call {@code onCasterRightClick} needs no changes here.</li>
+ * <li>Activated only with a caster ({@link #onCasterRightClick}), as the original.</li>
  * <li><b>Real pillar/accelerator-block tier system (restored - see the port-tracking memory's parity-review
  * notes).</b> {@link #validLocation} requires four real {@link thaumcraft.common.blocks.basic.BlockPillar}
  * blocks at the structure's corners, same real position/check as the true original. A uniform set of all
@@ -112,7 +107,7 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * own doc comment for why plain {@code setChanged()} doesn't push live client updates on its own; needed here
  * for {@link thaumcraft.client.render.TileInfusionMatrixRenderer}.
  */
-public class TileInfusionMatrix extends BlockEntity implements IInteractWithCaster, IAspectContainer {
+public class TileInfusionMatrix extends BlockEntity implements IInteractWithCaster, IAspectContainer, thaumcraft.api.items.IGogglesDisplayExtended {
 
 	private static final int STABILITY_CAP = 25;
 	private static final int BASE_CYCLE_TIME = 10;
@@ -220,8 +215,7 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 	}
 
 	/** Toggles the altar on, or (if already active and idle) starts a craft attempt against whatever is
-	 * currently on the pedestals. See this class's own doc comment for why this is called directly from a
-	 * plain block right-click for now instead of only through {@link #onCasterRightClick}. */
+	 * currently on the pedestals. Reached through {@link #onCasterRightClick}. */
 	public boolean activate(Level level, Player player) {
 		if (level.isClientSide) return false;
 		if (active && !crafting) {
@@ -297,6 +291,23 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 	}
 
 	private enum Stability { VERY_STABLE, STABLE, UNSTABLE, VERY_UNSTABLE }
+
+	private static final java.text.DecimalFormat GOGGLES_FORMAT = new java.text.DecimalFormat("#######.##");
+
+	/** The original's goggles readout: the stability state, what the surroundings give back each cycle, and - while a
+	 * recipe's instability is in play - the most a cycle can take. Client side (synced fields). */
+	@Override
+	public String[] getIGogglesText() {
+		String state = net.minecraft.ChatFormatting.BOLD + net.minecraft.network.chat.Component.translatable("stability." + stabilityState().name()).getString();
+		String gain = net.minecraft.ChatFormatting.GOLD + "" + net.minecraft.ChatFormatting.ITALIC + GOGGLES_FORMAT.format(stabilityReplenish) + " "
+				+ net.minecraft.network.chat.Component.translatable("stability.gain").getString();
+		float lpc = getLossPerCycle();
+		if (lpc != 0.0f) {
+			return new String[] { state, gain, net.minecraft.ChatFormatting.RED + net.minecraft.network.chat.Component.translatable("stability.range").getString()
+					+ net.minecraft.ChatFormatting.ITALIC + GOGGLES_FORMAT.format(lpc) + " " + net.minecraft.network.chat.Component.translatable("stability.loss").getString() };
+		}
+		return new String[] { state, gain };
+	}
 
 	private Stability stabilityState() {
 		if (stability > STABILITY_CAP / 2f) return Stability.VERY_STABLE;

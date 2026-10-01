@@ -383,6 +383,25 @@ public final class ClientFxHandlers {
 	}
 
 	/** The original's {@code FXDispatcher#drawSimpleSparkle}: a glowing, twinkling grid-sheet sparkle that drifts and slows. */
+	/** The original's {@code FXDispatcher#drawLineSparkle}: a sparkle drifting along a line (the Redstone Inlay's sparks). */
+	public static void spawnLineSparkle(net.minecraft.world.level.Level level, double x, double y, double z, double xd, double yd, double zd,
+			float scale, float r, float g, float b, int delay, float decay, float grav, int baseAge) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		boolean sp = level.random.nextFloat() < 0.2;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, xd, yd, zd);
+		fb.setMaxAge(baseAge * 4 + level.random.nextInt(baseAge));
+		fb.setRBGColorF(r, g, b);
+		fb.setAlphaF(0.0f, 1.0f, 0.0f);
+		fb.setParticles(sp ? 320 : 512, 16, 1);
+		fb.setLoop(true);
+		fb.setGravity(grav);
+		fb.setScale(scale, scale * 2.0f, scale);
+		fb.setLayer(0);
+		fb.setSlowDown(decay);
+		fb.setRandomMovementScale(5.0E-5f, 0.0f, 5.0E-5f);
+		addDelayed(fb, delay);
+	}
+
 	public static void spawnSimpleSparkle(net.minecraft.world.level.Level level, double x, double y, double z, double xd, double yd, double zd,
 			float scale, float r, float g, float b, int delay, float decay, float grav, int baseAge) {
 		if (!(level instanceof ClientLevel clientLevel)) return;

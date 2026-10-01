@@ -369,6 +369,17 @@ public class ThaumcraftClient {
         return new ModelResourceLocation(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, path), "standalone");
     }
 
+    /** Thaumcraft's recipes never appear in the vanilla recipe book, but without a finder the client recipe book logs an
+     * "Unknown recipe category" warning for every one of them (~126 at each login). Saying UNKNOWN up front is what it
+     * falls back to anyway. */
+    @SubscribeEvent
+    static void onRegisterRecipeBookCategories(net.neoforged.neoforge.client.event.RegisterRecipeBookCategoriesEvent event) {
+        for (var type : java.util.List.of(thaumcraft.api.crafting.ThaumcraftRecipeTypes.ARCANE_TYPE.get(),
+                thaumcraft.api.crafting.ThaumcraftRecipeTypes.CRUCIBLE_TYPE.get(), thaumcraft.api.crafting.ThaumcraftRecipeTypes.INFUSION_TYPE.get())) {
+            event.registerRecipeCategoryFinder(type, recipe -> net.minecraft.client.RecipeBookCategories.UNKNOWN);
+        }
+    }
+
     /** Candles share one grayscale texture across all 16 colors (no per-color art exists, unlike vanilla's
      * own candles) - tinted per-instance here off each block's own {@code dye} field instead. Both the
      * block and item handlers are needed: {@code BlockColors} only covers the in-world block, not the
@@ -414,10 +425,10 @@ public class ThaumcraftClient {
                 : net.minecraft.world.level.FoliageColor.getDefaultColor(), BlocksTC.leavesGreatwood.get());
         event.register((state, level, pos, tintIndex) -> -1, BlocksTC.leavesSilverwood.get());
 
-        // The glowing top layer (tint 0) of the inlay and the stabilizer's rings, by charge. The port's inlay carries
-        // no charge (see BlockInlay), so it always shows the original's uncharged grey.
+        // The glowing top layer (tint 0) of the inlay and the stabilizer's rings, by charge.
         event.register((state, level, pos, tintIndex) -> tintIndex == 0
-                ? thaumcraft.common.blocks.devices.BlockInlay.colorMultiplier(0) : -1, BlocksTC.inlay.get());
+                ? thaumcraft.common.blocks.devices.BlockInlay.colorMultiplier(state.getValue(thaumcraft.common.blocks.devices.BlockInlay.CHARGE)) : -1,
+                BlocksTC.inlay.get());
         event.register((state, level, pos, tintIndex) -> {
             if (tintIndex != 0) return -1;
             int charge = level != null && pos != null

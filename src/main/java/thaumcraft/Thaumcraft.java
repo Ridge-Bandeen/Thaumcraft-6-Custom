@@ -266,6 +266,9 @@ public class Thaumcraft {
         // same way the original's ISidedInventory did.
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ThaumcraftBlockEntities.RECHARGE_PEDESTAL.get(),
                 (tile, side) -> ((TileRechargePedestal) tile).getItemHandler());
+        // the infusion Pedestal too, as the original (a one-item sided inventory)
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ThaumcraftBlockEntities.PEDESTAL.get(),
+                (tile, side) -> tile.getItemHandler());
 
         // Vis Generator exposes energy only on its own output face - see TileVisGenerator's own doc
         // comment for the "push-only" design this mirrors from the original.

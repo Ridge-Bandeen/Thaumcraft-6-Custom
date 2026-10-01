@@ -33,19 +33,11 @@ import thaumcraft.common.tiles.devices.TileInfernalFurnace;
  * dropped on top gets pulled in and auto-smelted, anything not smeltable is destroyed, living entities that
  * touch it take real lava-like damage and catch fire.
  *
- * Real, documented simplification, same "pick the right vanilla-shaped block directly, drop the multi-block
- * illusion" pattern {@code BlockGolemBuilder}'s own doc comment already established for exactly this
- * situation: the original wasn't a real block at all - an invisible core built by a whole separate "structure
- * recognition" ritual ({@code IDustTrigger}/{@code DustTriggerMultiblock}) that swapped a real 3x3x3
- * arrangement of decorative nether-brick/obsidian/iron-bars "placeholder" blocks into their real vanilla
- * equivalents on completion/destruction. This currently ships as one real, solid, directly placed/broken
- * block instead, with a real {@link thaumcraft.api.crafting} recipe using the same real ingredients the
- * original's ritual consumed (nether bricks/obsidian/iron bars/lava bucket) rather than the original's
- * structure-based acquisition - <b>a real multiblock subsystem is now being built (see the port-tracking
- * memory), and this device's acquisition path is a real migration target once it exists.</b> The
- * smelting-bonus-nugget system ({@code ThaumcraftApi.SmeltBonus}) - previously deferred here with the claim
- * that it needed nugget items this port hadn't built - is real now; see {@link TileInfernalFurnace}'s own doc
- * comment for the real smelting mechanic and the bonus table's own real, carefully-checked scope.
+ * As the original, it is made by a Salis Mundus ritual (ThaumcraftDustTriggers#infernalFurnaceBlueprint): a 3x3x3 of
+ * nether bricks and obsidian around a lava core, iron bars in the opening at the back. The lava becomes this block and
+ * the shell becomes invisible placeholders ({@link thaumcraft.common.blocks.misc.BlockPlaceholder}) - its 3x3x3 model
+ * draws the whole furnace. Broken (or a shell block broken), it comes apart again: {@link #destroyFurnace}. It drops
+ * nothing itself. The smelting-bonus nuggets ({@code ThaumcraftApi.SmeltBonus}) are in {@link TileInfernalFurnace}.
  */
 public class BlockInfernalFurnace extends Block implements EntityBlock {
 
@@ -66,6 +58,49 @@ public class BlockInfernalFurnace extends Block implements EntityBlock {
 	@Override
 	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
 		builder.add(BlockStateProperties.HORIZONTAL_FACING);
+	}
+
+	/** Breaking the furnace (a player or an explosion) takes it apart as the original did; it drops nothing (see its loot
+	 * table). Both hooks run after the block is gone, so the lava left behind isn't overwritten by the removal. Not on a
+	 * plain replacement (world edits, test cleanup), where lava would be unwelcome. */
+	@Override
+	public void destroy(net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockState state) {
+		super.destroy(level, pos, state);
+		if (level instanceof Level l) destroyFurnace(l, pos, state, pos);
+	}
+
+	@Override
+	public void wasExploded(Level level, BlockPos pos, net.minecraft.world.level.Explosion explosion) {
+		super.wasExploded(level, pos, explosion);
+		destroyFurnace(level, pos, defaultBlockState(), pos);
+	}
+
+	/** The original's guard: taking the furnace apart breaks placeholders, which would start another teardown. */
+	private static boolean ignore;
+
+	/** The original's destroyFurnace: the nether-brick/obsidian placeholders around turn back into their real blocks, the
+	 * iron bars go back in the opening behind the furnace if it is empty, and the furnace becomes lava again. */
+	public static void destroyFurnace(Level level, BlockPos pos, BlockState state, BlockPos from) {
+		if (ignore || level.isClientSide) return;
+		ignore = true;
+		try {
+			for (BlockPos p : BlockPos.betweenClosed(pos.offset(-1, -1, -1), pos.offset(1, 1, 1))) {
+				if (p.equals(from)) continue;
+				BlockState s = level.getBlockState(p);
+				if (s.is(thaumcraft.api.blocks.BlocksTC.placeholderNetherbrick.get())) {
+					level.setBlock(p.immutable(), net.minecraft.world.level.block.Blocks.NETHER_BRICKS.defaultBlockState(), Block.UPDATE_ALL);
+				} else if (s.is(thaumcraft.api.blocks.BlocksTC.placeholderObsidian.get())) {
+					level.setBlock(p.immutable(), net.minecraft.world.level.block.Blocks.OBSIDIAN.defaultBlockState(), Block.UPDATE_ALL);
+				}
+			}
+			if (state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
+				BlockPos back = pos.relative(state.getValue(BlockStateProperties.HORIZONTAL_FACING).getOpposite());
+				if (level.isEmptyBlock(back)) level.setBlock(back, net.minecraft.world.level.block.Blocks.IRON_BARS.defaultBlockState(), Block.UPDATE_ALL);
+			}
+			level.setBlock(pos, net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState(), Block.UPDATE_ALL);
+		} finally {
+			ignore = false;
+		}
 	}
 
 	@Override

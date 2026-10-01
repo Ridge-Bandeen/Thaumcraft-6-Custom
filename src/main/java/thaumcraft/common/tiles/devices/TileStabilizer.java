@@ -1,10 +1,6 @@
 package thaumcraft.common.tiles.devices;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -40,18 +36,8 @@ import thaumcraft.common.tiles.crafting.TilePedestal;
  * energy per rift stabilized and setting a real 5-tick cooldown per success, matching the original's own real
  * {@code tryAddStability} loop exactly.
  *
- * <p>Real, deliberate simplification: the true original's own {@code TilePedestal#findInstabilityMitigator}
- * found a nearby stabilizer by following a real, persistent 0-15 "charge" value propagated blockstate-by-
- * blockstate through a chain of {@link BlockInlay} tiles (a real redstone-wire-style network,
- * {@code BlockInlay.CHARGE}) back to its source. {@code BlockInlay} itself stayed a plain stateless block in
- * this port (see its own doc comment - the same charge value's OTHER real job, infusion stability scoring,
- * is genuinely inert and not worth a whole propagation network on its own). Restoring the literal charge
- * network just to re-derive "is there a stabilizer reachable through connected inlays" would be real
- * player-invisible internal machinery for the exact same real outcome a direct search already gives -
- * {@link TilePedestal#findInstabilityMitigator} instead does a real plain BFS through connected
- * {@code BlockInlay} positions (capped at 15 hops, matching the original's own implicit 0-15 charge-value
- * range) until it finds a real {@link TileStabilizer}, same real reachability result, no persistent charge
- * state needed.
+ * <p>Its energy is the source of the {@link BlockInlay} charge network (the inlay reads it next door; each rise
+ * wakes the inlay), and {@link #findNearbyStabilizer} follows that charge back from a pedestal, as the original.
  */
 public class TileStabilizer extends BlockEntity {
 
@@ -95,6 +81,8 @@ public class TileStabilizer extends BlockEntity {
 			tile.energy++;
 			AuraHelper.polluteAura(level, pos, 0.25f, true);
 			tile.setChanged();
+			// as the original: a rise (only) wakes the inlay around it, which then carries the new charge
+			level.updateNeighborsAt(pos, state.getBlock());
 		}
 		if (tile.energy > 0 && tile.delay <= 0 && tile.ticks % 5 == 0) {
 			tile.tryAddStability(level, pos);
@@ -158,24 +146,27 @@ public class TileStabilizer extends BlockEntity {
 	 * {@code seekSourceRecursive} - see this class's own doc comment for why a plain BFS through connected
 	 * real {@link BlockInlay} positions stands in for the original's own persistent charge-gradient search. */
 	public static BlockPos findNearbyStabilizer(Level level, BlockPos from) {
-		Set<BlockPos> visited = new HashSet<>();
-		Deque<BlockPos> frontier = new ArrayDeque<>();
-		visited.add(from);
-		frontier.add(from);
-		int hops = 0;
-		while (!frontier.isEmpty() && hops < CAPACITY) {
-			int size = frontier.size();
-			for (int i = 0; i < size; i++) {
-				BlockPos current = frontier.poll();
-				for (Direction dir : Direction.Plane.HORIZONTAL) {
-					BlockPos next = current.relative(dir);
-					if (!visited.add(next)) continue;
-					if (level.getBlockEntity(next) instanceof TileStabilizer) return next;
-					if (level.getBlockState(next).getBlock() instanceof BlockInlay) frontier.add(next);
+		// the original's TilePedestal.findInstabilityMitigator: only from a charged pedestal, climbing to ever higher
+		// charge along the inlay until a stabilizer with at least 5 energy is next to it
+		BlockState start = level.getBlockState(from);
+		if (!start.hasProperty(BlockInlay.CHARGE) || start.getValue(BlockInlay.CHARGE) <= 0) return null;
+		return seekSourceRecursive(level, from, start.getValue(BlockInlay.CHARGE));
+	}
+
+	private static BlockPos seekSourceRecursive(Level level, BlockPos pos, int lastCharge) {
+		for (Direction face : Direction.Plane.HORIZONTAL) {
+			BlockPos pp = pos.relative(face);
+			if (BlockInlay.getSourceStrengthAt(level, pp) >= 5) return pp;
+			BlockState bs = level.getBlockState(pp);
+			if (bs.hasProperty(BlockInlay.CHARGE)) {
+				int charge = bs.getValue(BlockInlay.CHARGE);
+				if (charge > lastCharge) {
+					BlockPos ob = seekSourceRecursive(level, pp, charge);
+					if (ob != null) return ob;
 				}
 			}
-			hops++;
 		}
 		return null;
 	}
+
 }

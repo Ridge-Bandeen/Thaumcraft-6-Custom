@@ -50,6 +50,35 @@ public class BlockPedestal extends Block implements EntityBlock, IInfusionStabil
 
 	public BlockPedestal(BlockBehaviour.Properties properties) {
 		super(properties);
+		registerDefaultState(stateDefinition.any().setValue(BlockInlay.CHARGE, 0));
+	}
+
+	/** As the original: a pedestal is part of the Redstone Inlay network and carries its charge (see {@link BlockInlay}). */
+	@Override
+	protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<Block, BlockState> builder) {
+		builder.add(BlockInlay.CHARGE);
+	}
+
+	@Override
+	protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
+		if (!level.isClientSide && !oldState.is(state.getBlock())) {
+			BlockInlay.chargeChanged(level, pos);
+		}
+	}
+
+	@Override
+	protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean movedByPiston) {
+		if (!level.isClientSide) {
+			BlockInlay.updateSurroundingInlay(level, pos, state);
+		}
+	}
+
+	/** The original's offering cue: a charged pedestal shows red runes. */
+	@Override
+	public void animateTick(BlockState state, Level level, BlockPos pos, net.minecraft.util.RandomSource random) {
+		if (state.getValue(BlockInlay.CHARGE) > 0) {
+			thaumcraft.client.fx.ClientFxHandlers.spawnBlockRunes2(level, pos.getX(), pos.getY() - 0.375, pos.getZ(), 1.0f, 0.0f, 0.0f, 10, 0.0f);
+		}
 	}
 
 	@Override
@@ -107,6 +136,9 @@ public class BlockPedestal extends Block implements EntityBlock, IInfusionStabil
 			pedestal.dropContents(level);
 		}
 		super.onRemove(state, level, pos, newState, movedByPiston);
+		if (!level.isClientSide && !state.is(newState.getBlock())) {
+			BlockInlay.chargeRemoved(level, pos, state, this);
+		}
 	}
 
 	@Override

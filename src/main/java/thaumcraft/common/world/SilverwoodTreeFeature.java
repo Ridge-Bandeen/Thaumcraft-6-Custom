@@ -80,7 +80,7 @@ public class SilverwoodTreeFeature extends Feature<SilverwoodTreeFeature.Config>
 					BlockPos p = new BlockPos(xx, k2, zz);
 					if (dist < 10 + random.nextInt(8)) {
 						BlockState s2 = out.get(p);
-						if (s2 != null && (s2.isAir() || s2.is(BlockTags.LEAVES) || s2.is(BlockTags.REPLACEABLE_BY_TREES))) out.set(p, leaves);
+						if (s2 != null && (s2.isAir() || isOpen(s2) && !s2.is(BlockTags.LOGS))) out.set(p, leaves);
 					}
 				}
 			}
@@ -154,7 +154,7 @@ public class SilverwoodTreeFeature extends Feature<SilverwoodTreeFeature.Config>
 	}
 
 	private static boolean isOpen(BlockState state) {
-		return state.isAir() || state.is(BlockTags.LEAVES) || state.canBeReplaced() || state.is(BlockTags.REPLACEABLE_BY_TREES)
+		return state.isAir() || state.is(BlockTags.LEAVES) || state.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock || state.canBeReplaced() || state.is(BlockTags.REPLACEABLE_BY_TREES)
 				|| state.is(BlockTags.SAPLINGS);
 	}
 }

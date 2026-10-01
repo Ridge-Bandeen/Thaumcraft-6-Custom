@@ -158,7 +158,7 @@ public class EntityTaintacleGiant extends EntityTaintacle implements IEldritchMo
 	protected void dropCustomDeathLoot(ServerLevel level, DamageSource damageSource, boolean recentlyHit) {
 		boolean anotherGiantNearby = !level.getEntitiesOfClass(EntityTaintacleGiant.class, getBoundingBox().inflate(48.0), e -> e != this).isEmpty();
 		if (!anotherGiantNearby) {
-			spawnAtLocation(new ItemStack(ItemsTC.primordialPearl.get()));
+			EntityThaumcraftBoss.dropSpecialItem(this, new ItemStack(ItemsTC.primordialPearl.get()), getBbHeight() / 2.0f);
 		}
 	}
 }

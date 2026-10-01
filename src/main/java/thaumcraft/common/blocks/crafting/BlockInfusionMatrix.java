@@ -68,11 +68,6 @@ public class BlockInfusionMatrix extends Block implements EntityBlock {
 				: null;
 	}
 
-	@Override
-	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-		if (level.getBlockEntity(pos) instanceof TileInfusionMatrix tile && tile.activate(level, player)) {
-			return InteractionResult.SUCCESS;
-		}
-		return InteractionResult.PASS;
-	}
+	// No right-click of its own: as the original, only a caster starts it (ItemCaster -> TileInfusionMatrix#onCasterRightClick).
+	// The port's empty-hand activation, a stand-in from before casters existed, was removed 2026-09-30.
 }

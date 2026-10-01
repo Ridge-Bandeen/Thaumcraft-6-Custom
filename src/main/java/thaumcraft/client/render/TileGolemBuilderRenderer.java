@@ -31,9 +31,10 @@ import thaumcraft.common.tiles.crafting.TileGolemBuilder;
  * same real modern OBJ-loading path {@link RenderTurretCrossbowAdvanced} already established (see that
  * class's own doc comment for the full real API details - {@link ObjLoader}/{@link
  * StandaloneGeometryBakingContext}/{@link CompositeRenderable}). Genuinely simpler than that one: only 4 real
- * named parts ({@code table}/{@code anvil}/{@code box}/{@code press}), only 1 of which animates, and the true
- * original's own real renderer never applied any facing-rotation at all for this specific block (checked
- * directly - this port's own {@code BlockGolemBuilder} has no facing property either, so this matches as-is).
+ * named parts ({@code table}/{@code anvil}/{@code box}/{@code press}), only 1 of which animates. As the original, the
+ * model is centred on the block and turned by its facing: it spans 2x2 blocks (the press, the table beside it, the
+ * cauldron - "box" - and the anvil diagonally), lying over the invisible placeholders the ritual made. (An earlier
+ * pass here drew it from the block corner, half a block off, and unturned.)
  *
  * <p>Real, checked-not-assumed difference from the crossbow case: {@code golembuilder.mtl} DOES already exist
  * as a real original asset (unlike {@code crossbow_advanced.obj}'s own missing one) - but its own real
@@ -70,6 +71,14 @@ public class TileGolemBuilderRenderer implements BlockEntityRenderer<TileGolemBu
 	@Override
 	public void render(TileGolemBuilder tile, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
 		poseStack.pushPose();
+		poseStack.translate(0.5, 0.0, 0.5);
+		switch (tile.getBlockState().getOptionalValue(thaumcraft.common.blocks.crafting.BlockGolemBuilder.FACING)
+				.orElse(net.minecraft.core.Direction.NORTH)) {
+			case EAST -> poseStack.mulPose(Axis.YP.rotationDegrees(270.0f));
+			case WEST -> poseStack.mulPose(Axis.YP.rotationDegrees(90.0f));
+			case SOUTH -> poseStack.mulPose(Axis.YP.rotationDegrees(180.0f));
+			default -> { }
+		}
 
 		float bob = (float) Math.sin(Math.toRadians(tile.press)) * 0.625f;
 		Matrix4f pressTransform = new Matrix4f().translate(0.0f, -bob, 0.0f);
@@ -77,8 +86,7 @@ public class TileGolemBuilderRenderer implements BlockEntityRenderer<TileGolemBu
 
 		renderable.render(poseStack, bufferSource, texture -> RenderType.entityCutout(texture), packedLight, packedOverlay, partialTick, transforms);
 
-		poseStack.popPose();
-
+		// the glowing lava in the cauldron, in the same turned frame (the original drew it before popping)
 		poseStack.pushPose();
 		poseStack.translate(-0.3125, 0.625, 1.3125);
 		poseStack.mulPose(Axis.XP.rotationDegrees(-90.0f));
@@ -94,6 +102,13 @@ public class TileGolemBuilderRenderer implements BlockEntityRenderer<TileGolemBu
 		addVertex(consumer, pose, 0.0f, 1.0f, icon.getU1(), icon.getV0(), light);
 
 		poseStack.popPose();
+		poseStack.popPose();
+	}
+
+	/** The model reaches a block past this one on two sides (and up one), so it must not be culled with the block. */
+	@Override
+	public net.minecraft.world.phys.AABB getRenderBoundingBox(TileGolemBuilder tile) {
+		return new net.minecraft.world.phys.AABB(tile.getBlockPos()).inflate(1.5, 0.0, 1.5).expandTowards(0.0, 1.5, 0.0);
 	}
 
 	private static void addVertex(VertexConsumer consumer, PoseStack.Pose pose, float x, float y, float u, float v, int packedLight) {

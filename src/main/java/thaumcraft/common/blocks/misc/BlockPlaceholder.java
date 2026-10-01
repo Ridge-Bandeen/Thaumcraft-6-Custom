@@ -1,142 +1,90 @@
 package thaumcraft.common.blocks.misc;
-import java.util.Random;
-import net.minecraft.block.Block;
-import net.minecraft.block.SoundType;
-import net.minecraft.block.material.EnumPushReaction;
-import net.minecraft.block.material.Material;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
-import net.minecraft.item.Item;
-import net.minecraft.util.EnumBlockRenderType;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.IBlockAccess;
-import net.minecraft.world.World;
-import thaumcraft.Thaumcraft;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.PushReaction;
+import net.minecraft.world.phys.BlockHitResult;
 import thaumcraft.api.blocks.BlocksTC;
-import thaumcraft.common.blocks.BlockTC;
 import thaumcraft.common.blocks.crafting.BlockGolemBuilder;
-import thaumcraft.common.blocks.devices.BlockInfernalFurnace;
 
+/**
+ * The original's BlockPlaceholder: the blocks a Salis Mundus ritual turned into a Golem Press (iron bars, cauldron, anvil,
+ * stone table) or an Infernal Furnace (nether bricks, obsidian). Invisible - the device's own model draws the whole
+ * structure - and immovable. Using a press part opens the press; breaking any part takes the device apart: it drops
+ * its real block (the loot tables say which) and the rest turn back into theirs ({@link BlockGolemBuilder#dismantle},
+ * {@link thaumcraft.common.blocks.devices.BlockInfernalFurnace#destroyFurnace}). The cauldron glows (light 13).
+ */
+public class BlockPlaceholder extends Block {
 
-public class BlockPlaceholder extends BlockTC
-{
-    private Random rand;
-    
-    public BlockPlaceholder(String name) {
-        super(Material.ROCK, name);
-        rand = new Random();
-        setHardness(2.5f);
-        setSoundType(SoundType.STONE);
-        setCreativeTab(null);
-    }
-    
-    public EnumPushReaction getMobilityFlag(IBlockState state) {
-        return EnumPushReaction.BLOCK;
-    }
-    
-    protected boolean canSilkHarvest() {
-        return false;
-    }
-    
-    public boolean isOpaqueCube(IBlockState state) {
-        return false;
-    }
-    
-    public boolean isFullCube(IBlockState state) {
-        return false;
-    }
-    
-    public int getLightValue(IBlockState state, IBlockAccess world, BlockPos pos) {
-        if (state.getBlock() == BlocksTC.placeholderCauldron) {
-            return 13;
-        }
-        return super.getLightValue(state, world, pos);
-    }
-    
-    public EnumBlockRenderType getRenderType(IBlockState state) {
-        return EnumBlockRenderType.INVISIBLE;
-    }
-    
-    public Item getItemDropped(IBlockState state, Random rand, int fortune) {
-        if (state.getBlock() == BlocksTC.placeholderNetherbrick) {
-            return Item.getItemFromBlock(Blocks.NETHER_BRICK);
-        }
-        if (state.getBlock() == BlocksTC.placeholderObsidian) {
-            return Item.getItemFromBlock(Blocks.OBSIDIAN);
-        }
-        if (state.getBlock() == BlocksTC.placeholderBars) {
-            return Item.getItemFromBlock(Blocks.IRON_BARS);
-        }
-        if (state.getBlock() == BlocksTC.placeholderAnvil) {
-            return Item.getItemFromBlock(Blocks.ANVIL);
-        }
-        if (state.getBlock() == BlocksTC.placeholderCauldron) {
-            return Item.getItemFromBlock(Blocks.CAULDRON);
-        }
-        if (state.getBlock() == BlocksTC.placeholderTable) {
-            return Item.getItemFromBlock(BlocksTC.tableStone);
-        }
-        return Item.getItemById(0);
-    }
-    
-    @Override
-    public int damageDropped(IBlockState state) {
-        return 0;
-    }
-    
-    public boolean onBlockActivated(World world, BlockPos pos, IBlockState state, EntityPlayer player, EnumHand hand, EnumFacing side, float hitX, float hitY, float hitZ) {
-        if (world.isRemote) {
-            return true;
-        }
-        if (state.getBlock() != BlocksTC.placeholderNetherbrick && state.getBlock() != BlocksTC.placeholderObsidian) {
-            for (int a = -1; a <= 1; ++a) {
-                for (int b = -1; b <= 1; ++b) {
-                    for (int c = -1; c <= 1; ++c) {
-                        IBlockState s = world.getBlockState(pos.add(a, b, c));
-                        if (s.getBlock() == BlocksTC.golemBuilder) {
-                            player.openGui(Thaumcraft.instance, 19, world, pos.add(a, b, c).getX(), pos.add(a, b, c).getY(), pos.add(a, b, c).getZ());
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-        return super.onBlockActivated(world, pos, state, player, hand, side, hitX, hitY, hitZ);
-    }
-    
-    public void breakBlock(World worldIn, BlockPos pos, IBlockState state) {
-        Label_0265: {
-            if ((state.getBlock() == BlocksTC.placeholderNetherbrick || state.getBlock() == BlocksTC.placeholderObsidian) && !BlockInfernalFurnace.ignore && !worldIn.isRemote) {
-                for (int a = -1; a <= 1; ++a) {
-                    for (int b = -1; b <= 1; ++b) {
-                        for (int c = -1; c <= 1; ++c) {
-                            IBlockState s = worldIn.getBlockState(pos.add(a, b, c));
-                            if (s.getBlock() == BlocksTC.infernalFurnace) {
-                                BlockInfernalFurnace.destroyFurnace(worldIn, pos.add(a, b, c), s, pos);
-                                break Label_0265;
-                            }
-                        }
-                    }
-                }
-            }
-            else if (state.getBlock() != BlocksTC.placeholderNetherbrick && state.getBlock() != BlocksTC.placeholderObsidian && !BlockGolemBuilder.ignore && !worldIn.isRemote) {
-                for (int a = -1; a <= 1; ++a) {
-                    for (int b = -1; b <= 1; ++b) {
-                        for (int c = -1; c <= 1; ++c) {
-                            IBlockState s = worldIn.getBlockState(pos.add(a, b, c));
-                            if (s.getBlock() == BlocksTC.golemBuilder) {
-                                BlockGolemBuilder.destroy(worldIn, pos.add(a, b, c), s, pos);
-                                break Label_0265;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        super.breakBlock(worldIn, pos, state);
-    }
+	public BlockPlaceholder(BlockBehaviour.Properties properties) {
+		super(properties.noOcclusion().pushReaction(PushReaction.BLOCK));
+	}
+
+	@Override
+	protected RenderShape getRenderShape(BlockState state) {
+		return RenderShape.INVISIBLE;
+	}
+
+	private boolean isFurnacePart(BlockState state) {
+		return state.is(BlocksTC.placeholderNetherbrick.get()) || state.is(BlocksTC.placeholderObsidian.get());
+	}
+
+	@Override
+	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+		if (isFurnacePart(state)) return InteractionResult.PASS;
+		BlockPos press = findPress(level, pos);
+		if (press == null) return InteractionResult.PASS;
+		if (level.isClientSide) return InteractionResult.SUCCESS;
+		if (level.getBlockEntity(press) instanceof thaumcraft.common.tiles.crafting.TileGolemBuilder tile) {
+			player.openMenu(tile);
+		}
+		return InteractionResult.CONSUME;
+	}
+
+	@Override
+	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+		if (!state.is(newState.getBlock()) && !level.isClientSide && !isFurnacePart(state)) {
+			BlockPos press = findPress(level, pos);
+			if (press != null) BlockGolemBuilder.dismantle(level, press, pos);
+		}
+		super.onRemove(state, level, pos, newState, movedByPiston);
+	}
+
+	/** A furnace part takes the furnace apart only when broken by a player or an explosion - its teardown leaves lava,
+	 * which a plain block replacement (world edits, test cleanup) must not. */
+	@Override
+	public void destroy(net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockState state) {
+		super.destroy(level, pos, state);
+		if (level instanceof Level l) breakFurnaceAround(l, pos, state);
+	}
+
+	@Override
+	public void wasExploded(Level level, BlockPos pos, net.minecraft.world.level.Explosion explosion) {
+		super.wasExploded(level, pos, explosion);
+		breakFurnaceAround(level, pos, null);
+	}
+
+	private void breakFurnaceAround(Level level, BlockPos pos, BlockState state) {
+		if (level.isClientSide || (state != null && !isFurnacePart(state))) return;
+		for (BlockPos p : BlockPos.betweenClosed(pos.offset(-1, -1, -1), pos.offset(1, 1, 1))) {
+			BlockState s = level.getBlockState(p);
+			if (s.is(BlocksTC.infernalFurnace.get())) {
+				thaumcraft.common.blocks.devices.BlockInfernalFurnace.destroyFurnace(level, p.immutable(), s, pos);
+				return;
+			}
+		}
+	}
+
+	private static BlockPos findPress(Level level, BlockPos pos) {
+		for (BlockPos p : BlockPos.betweenClosed(pos.offset(-1, -1, -1), pos.offset(1, 1, 1))) {
+			if (level.getBlockState(p).is(BlocksTC.golemBuilder.get())) return p.immutable();
+		}
+		return null;
+	}
 }

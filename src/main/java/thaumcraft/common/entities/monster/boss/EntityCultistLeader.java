@@ -61,7 +61,8 @@ import thaumcraft.common.entities.projectile.EntityGolemOrb;
  * (which used the same effect/radius/interval - only the original's unported {@code EntityUtils} exception-
  * swallowing wrapper is gone, not needed for a plain entity scan). Real ranged attack: a homing "red" {@link
  * EntityGolemOrb} blast, matching the original's own {@code attackEntityWithRangedAttack} exactly (including
- * its {@code d2 + 2.0} upward aim offset). Real guaranteed Primordial Pearl + rare loot bag death drop.
+ * its {@code d2 + 2.0} upward aim offset). Drops only a rare loot bag, as the original's own override (the pearl
+ * the port had given it belongs to the Eldritch Warden and Golem).
  *
  * Real, documented cuts: no random enchantment on the starting weapon (same rationale as
  * {@code EntityCultistKnight}'s own rare-weapon drop). {@link ItemsTC#lootBagRare} stands in for the
@@ -170,7 +171,7 @@ public class EntityCultistLeader extends EntityThaumcraftBoss implements RangedA
 
 	@Override
 	protected void dropCustomDeathLoot(net.minecraft.server.level.ServerLevel level, DamageSource damageSource, boolean recentlyHit) {
-		spawnAtLocation(new ItemStack(ItemsTC.primordialPearl.get()));
-		spawnAtLocation(new ItemStack(ItemsTC.lootBagRare.get()));
+		// the original's own override: only the rare loot bag (no primordial pearl, unlike the Warden and Golem)
+		spawnAtLocation(new ItemStack(ItemsTC.lootBagRare.get()), 1.5f);
 	}
 }

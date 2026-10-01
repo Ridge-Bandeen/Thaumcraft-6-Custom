@@ -117,17 +117,11 @@ public class BlockCrucible extends Block implements EntityBlock {
 			return ItemInteractionResult.SUCCESS;
 		}
 
-		if (stack.is(Items.BUCKET) && tile.waterAmount >= 1000 && tile.aspects.size() == 0) {
-			tile.waterAmount -= 1000;
-			tile.setChanged();
-			if (!player.getAbilities().instabuild) {
-				player.setItemInHand(hand, new ItemStack(Items.WATER_BUCKET));
-			}
-			level.playSound(null, pos, SoundEvents.BUCKET_FILL, SoundSource.BLOCKS, 0.5f, 1.0f);
-			return ItemInteractionResult.SUCCESS;
-		}
-
-		if (!stack.isEmpty() && hitResult.getDirection() == Direction.UP && tile.isActive()) {
+		// As the original: an item used on the top of a boiling crucible goes in - but not while sneaking, and never a
+		// caster (the port dissolved a Casting Gauntlet clicked on it). There is no taking water back out with a bucket:
+		// that was a port addition; like any other item, an empty bucket used on a boiling crucible is dissolved.
+		if (!stack.isEmpty() && !player.isShiftKeyDown() && !(stack.getItem() instanceof thaumcraft.api.casters.ICaster)
+				&& hitResult.getDirection() == Direction.UP && tile.isActive()) {
 			ItemStack single = stack.copyWithCount(1);
 			ItemStack leftover = tile.attemptSmelt(single, player, level);
 			if (leftover.isEmpty()) {

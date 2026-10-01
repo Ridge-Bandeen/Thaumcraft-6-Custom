@@ -28,14 +28,13 @@ import thaumcraft.common.tiles.crafting.TileGolemBuilder;
  * Replaces the old (1.12.2) {@code BlockGolemBuilder}. See {@link TileGolemBuilder}'s own doc comment for
  * the device's real crafting logic.
  *
- * Real, documented cut: the original wasn't a real block at all - an invisible {@code BlockPistonBase}
- * shell wrapping a 3x2x3 multi-block of decorative placeholder blocks (bars/anvil/cauldron/table, each
- * reverting to its real vanilla equivalent on break via {@code BlockGolemBuilder.destroy}), built on
- * CodeChicken-lib rendering this port has never depended on for any device. This ships as one real, solid,
- * directly-interactable block instead - same "pick the right vanilla base directly, drop the multi-block
- * illusion" simplification every device this session has made for decorative/structural complexity, while
- * keeping the actual crafting mechanic (essentia-driven, real component cost) fully real. Right-click opens
- * the real {@link thaumcraft.common.container.GolemBuilderMenu}.
+ * As the original: made by a Salis Mundus ritual (ThaumcraftDustTriggers#golemPressBlueprint) out of a piston with
+ * iron bars above and a cauldron, anvil and stone table beside it. This block takes the piston's place, faces the way
+ * the ritual found the structure (so its model, TileGolemBuilderRenderer, lies over the other three), and is
+ * invisible - the model draws the whole press, the others becoming invisible {@link BlockPlaceholder}s. Breaking any
+ * part takes the press apart ({@link #dismantle}): the placeholders turn back into their real blocks and this one drops
+ * a piston (or, broken through one of the others, turns back into the piston). Right-click opens
+ * {@link thaumcraft.common.container.GolemBuilderMenu}.
  */
 public class BlockGolemBuilder extends Block implements EntityBlock {
 
@@ -43,8 +42,58 @@ public class BlockGolemBuilder extends Block implements EntityBlock {
 
 	private static final VoxelShape SHAPE = Shapes.box(0, 0, 0, 1, 1, 1);
 
+	public static final net.minecraft.world.level.block.state.properties.DirectionProperty FACING =
+			net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING;
+
+	/** The original's guard: a dismantle breaks placeholders, which would start another dismantle. */
+	private static boolean ignore;
+
 	public BlockGolemBuilder(BlockBehaviour.Properties properties) {
-		super(properties);
+		super(properties.noOcclusion());
+		registerDefaultState(stateDefinition.any().setValue(FACING, net.minecraft.core.Direction.NORTH));
+	}
+
+	@Override
+	protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<Block, BlockState> builder) {
+		builder.add(FACING);
+	}
+
+	/** Placed directly (it has an item), it faces the player, as every original device did unless sneaking. */
+	@Override
+	public BlockState getStateForPlacement(net.minecraft.world.item.context.BlockPlaceContext context) {
+		net.minecraft.core.Direction look = context.getHorizontalDirection();
+		return defaultBlockState().setValue(FACING, context.getPlayer() != null && context.getPlayer().isShiftKeyDown() ? look : look.getOpposite());
+	}
+
+	@Override
+	protected net.minecraft.world.level.block.RenderShape getRenderShape(BlockState state) {
+		return net.minecraft.world.level.block.RenderShape.INVISIBLE;
+	}
+
+	/** The original's BlockGolemBuilder.destroy: every placeholder within a block (up to one above) turns back into its
+	 * real block, and the press itself into a piston facing up - unless {@code from} is the press, which is being
+	 * broken and drops its piston itself. */
+	public static void dismantle(Level level, BlockPos press, BlockPos from) {
+		if (ignore || level.isClientSide) return;
+		ignore = true;
+		try {
+			for (BlockPos p : BlockPos.betweenClosed(press.offset(-1, 0, -1), press.offset(1, 1, 1))) {
+				if (p.equals(from)) continue;
+				BlockState state = level.getBlockState(p);
+				BlockState real = null;
+				if (state.is(thaumcraft.api.blocks.BlocksTC.placeholderBars.get())) real = net.minecraft.world.level.block.Blocks.IRON_BARS.defaultBlockState();
+				else if (state.is(thaumcraft.api.blocks.BlocksTC.placeholderAnvil.get())) real = net.minecraft.world.level.block.Blocks.ANVIL.defaultBlockState();
+				else if (state.is(thaumcraft.api.blocks.BlocksTC.placeholderCauldron.get())) real = net.minecraft.world.level.block.Blocks.CAULDRON.defaultBlockState();
+				else if (state.is(thaumcraft.api.blocks.BlocksTC.placeholderTable.get())) real = thaumcraft.api.blocks.BlocksTC.tableStone.get().defaultBlockState();
+				if (real != null) level.setBlock(p.immutable(), real, Block.UPDATE_ALL);
+			}
+			if (!press.equals(from)) {
+				level.setBlock(press, net.minecraft.world.level.block.Blocks.PISTON.defaultBlockState()
+						.setValue(net.minecraft.world.level.block.piston.PistonBaseBlock.FACING, net.minecraft.core.Direction.UP), Block.UPDATE_ALL);
+			}
+		} finally {
+			ignore = false;
+		}
 	}
 
 	@Override
@@ -84,11 +133,14 @@ public class BlockGolemBuilder extends Block implements EntityBlock {
 
 	@Override
 	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-		if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TileGolemBuilder tile) {
-			ItemStack held = tile.getItemHandler().getStackInSlot(0);
-			if (!held.isEmpty()) {
-				net.minecraft.world.Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, held);
+		if (!state.is(newState.getBlock())) {
+			if (level.getBlockEntity(pos) instanceof TileGolemBuilder tile) {
+				ItemStack held = tile.getItemHandler().getStackInSlot(0);
+				if (!held.isEmpty()) {
+					net.minecraft.world.Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, held);
+				}
 			}
+			dismantle(level, pos, pos);
 		}
 		super.onRemove(state, level, pos, newState, movedByPiston);
 	}
