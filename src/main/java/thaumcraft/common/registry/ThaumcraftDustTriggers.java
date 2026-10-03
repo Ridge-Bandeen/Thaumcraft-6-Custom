@@ -57,7 +57,8 @@ public final class ThaumcraftDustTriggers {
 		IDustTrigger.registerDustTrigger(new DustTriggerSimple("FIRSTSTEPS@1", Blocks.CRAFTING_TABLE, new ItemStack(BlocksTC.arcaneWorkbench.get())));
 		IDustTrigger.registerDustTrigger(new DustTriggerSimple("FIRSTSTEPS@1", net.minecraft.tags.BlockTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("c", "player_workstations/crafting_tables")),
 				new ItemStack(BlocksTC.arcaneWorkbench.get())));
-		IDustTrigger.registerDustTrigger(new DustTriggerSimple("UNLOCKALCHEMY@1", Blocks.CAULDRON, new ItemStack(BlocksTC.crucible.get())));
+		IDustTrigger.registerDustTrigger(new DustTriggerSimple("UNLOCKALCHEMY@1", net.minecraft.tags.BlockTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "crucible_bases")),
+				new ItemStack(BlocksTC.crucible.get())));
 		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("INFERNALFURNACE", infernalFurnaceBlueprint()));
 		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("INFUSION", infusionAltarBlueprint()));
 		IDustTrigger.registerDustTrigger(new DustTriggerMultiblock("INFUSIONANCIENT", infusionAltarAncientBlueprint()));

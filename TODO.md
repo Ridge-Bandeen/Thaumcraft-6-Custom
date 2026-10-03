@@ -10,9 +10,9 @@ in a client are tracked in the `thaumcraft-ui-visual-parity-checklist` memory, n
   over compiled classes): devices, mobs, drops and golems done 2026-10-03 (see archive). Left: foci and their
   entities, items (caster vis draw, armour, phial/alembic, resonator, void tools), research/scans, worldgen, GUIs
   (Focal Manipulator, focus pouch, hand mirror, seal config), client FX classes.
-- **Next up - ThaumCompat hooks** (see `COMPAT_HOOKS.md`, port reply sections): batch 1 = #1 `ThaumcraftSetupEvent`,
-  #2 crucible heater tag + `receiveExternalHeat`, #3 crucible-base trigger tag, #6 refining data map, #13 chest loot
-  tables; then #5, #8, #9, #10; then #4, #7, #11, #12.
+- **Next up - ThaumCompat hooks** (see `COMPAT_HOOKS.md`): batch 1 done 2026-10-03. Next batch 2 = #5 + #17 Infernal
+  Furnace (`infernal_smelting` recipe type, `smelting_bonus` data map, processors), #8 spawn biome tags, #9 scan tags,
+  #10 Harvest seal tilling via `HOE_TILL` + `#thaumcraft:farmland`; then batch 3 = #4 + #14, #7, #11, #12.
 - Golem renderer fidelity: per-part model classes (wheel spin from `GolemLegWheels.ani`, claws, breakers, darts,
   hauler), head look, idle sway, arm pose when carrying, the base model's stub arms, per-group textures.
 - Void Siphon's void streaks (the original's FXVoidStream, an ender-shader stream from each rift).

@@ -57,6 +57,23 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 	public static final String EJECTED_TAG = "thaumcraft_crucible_ejected";
 
 	public int heat;
+	/** Ticks of heat pushed in from outside (another mod's heater) - see {@link #receiveExternalHeat}. */
+	private int externalHeat;
+
+	/** Blocks that heat a crucible (or a Thaumatorium) from below. The original counted any lava or fire material;
+	 * the tag's default is lava, fire, soul fire and magma. Nitor always counts. */
+	public static final net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block> HEATERS = net.minecraft.tags.BlockTags.create(
+			net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "crucible_heaters"));
+
+	public static boolean isHeatSource(BlockState state) {
+		return state.is(HEATERS) || state.getBlock() instanceof thaumcraft.common.blocks.misc.BlockNitor;
+	}
+
+	/** Counts the crucible as heated for the next {@code ticks} ticks, whatever is below it - for addons whose heaters
+	 * push heat into the block above them. */
+	public void receiveExternalHeat(int ticks) {
+		externalHeat = Math.max(externalHeat, ticks);
+	}
 	/** Water in millibuckets, 0 to {@link #WATER_CAPACITY} (was a plain boolean - crafting could never use it up). */
 	public int waterAmount;
 	public AspectList aspects = new AspectList();
@@ -175,12 +192,7 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 		}
 
 		if (tile.hasWater()) {
-			BlockState below = level.getBlockState(pos.below());
-			boolean hot = below.is(net.minecraft.world.level.block.Blocks.LAVA) || below.is(net.minecraft.world.level.block.Blocks.FIRE)
-					|| below.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK) || below.is(net.minecraft.world.level.block.Blocks.SOUL_FIRE)
-					// The original also counted any Nitor below as a heat source (found in the first devices playtest,
-					// 2026-09-25: a nitor under a crucible did nothing).
-					|| below.getBlock() instanceof thaumcraft.common.blocks.misc.BlockNitor;
+			boolean hot = isHeatSource(level.getBlockState(pos.below())) || tile.externalHeat > 0;
 			if (hot && tile.heat < MAX_HEAT) {
 				tile.heat++;
 				tile.setChanged();
@@ -191,6 +203,8 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 		} else if (tile.heat > 0) {
 			tile.heat--;
 		}
+
+		if (tile.externalHeat > 0) tile.externalHeat--;
 
 		if (tile.aspects.visSize() > MAX_ASPECTS || tile.counter >= 100) {
 			tile.spillRandom(level);

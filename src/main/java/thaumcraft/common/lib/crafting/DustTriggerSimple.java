@@ -50,7 +50,35 @@ public class DustTriggerSimple implements IDustTrigger {
 		BlockState here = world.getBlockState(pos);
 		if (target != null ? here.getBlock() != target : !here.is(targetTag)) return null;
 		if (research != null && !ThaumcraftCapabilities.getKnowledge(player).isResearchKnown(research)) return null;
+		if (refuseFull(world, player, pos)) return null;
 		return new Placement(0, 0, 0, null);
+	}
+
+	/** Whether the block at {@code pos} holds items or fluid (through the usual item/fluid capabilities) - Salis Mundus
+	 * won't convert a block with contents, so nothing in it is lost. Tells the player why. Nothing Thaumcraft
+	 * converts by default holds anything; this guards modded containers tagged in as conversion targets. */
+	public static boolean refuseFull(Level world, Player player, BlockPos pos) {
+		if (!holdsContents(world, pos)) return false;
+		if (!world.isClientSide && player != null) {
+			player.displayClientMessage(net.minecraft.network.chat.Component.translatable("tc.dust.notempty"), true);
+		}
+		return true;
+	}
+
+	private static boolean holdsContents(Level world, BlockPos pos) {
+		var items = world.getCapability(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK, pos, null);
+		if (items != null) {
+			for (int i = 0; i < items.getSlots(); i++) {
+				if (!items.getStackInSlot(i).isEmpty()) return true;
+			}
+		}
+		var fluids = world.getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK, pos, null);
+		if (fluids != null) {
+			for (int i = 0; i < fluids.getTanks(); i++) {
+				if (!fluids.getFluidInTank(i).isEmpty()) return true;
+			}
+		}
+		return false;
 	}
 
 	@Override

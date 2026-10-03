@@ -126,7 +126,7 @@ public class GreatwoodTreeFeature extends Feature<GreatwoodTreeFeature.Config> {
 			if (out.canAccess(chestPos)) {
 				world.setBlock(chestPos, Blocks.CHEST.defaultBlockState(), 2);
 				if (world.getBlockEntity(chestPos) instanceof ChestBlockEntity chest) {
-					chest.setLootTable(BuiltInLootTables.SIMPLE_DUNGEON, par2Random.nextLong());
+					chest.setLootTable(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.LOOT_TABLE, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "chests/greatwood")), par2Random.nextLong());
 				}
 			}
 		}

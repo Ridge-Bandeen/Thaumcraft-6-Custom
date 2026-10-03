@@ -194,12 +194,9 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 
 	// ---- operation ---------------------------------------------------------------------------------------
 
-	/** The heat source sits under the crucible under this block. Lava, fire, magma - and, as for the crucible,
-	 * nitor. */
+	/** The heat source sits under the crucible under this block - the same sources as the crucible's. */
 	private static boolean isHot(Level level, BlockPos pos) {
-		BlockState heat = level.getBlockState(pos.below(2));
-		return heat.is(Blocks.LAVA) || heat.is(Blocks.FIRE) || heat.is(Blocks.MAGMA_BLOCK) || heat.is(Blocks.SOUL_FIRE)
-				|| heat.getBlock() instanceof thaumcraft.common.blocks.misc.BlockNitor;
+		return TileCrucible.isHeatSource(level.getBlockState(pos.below(2)));
 	}
 
 	private static boolean isPowered(Level level, BlockPos pos) {

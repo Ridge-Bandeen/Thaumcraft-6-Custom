@@ -84,7 +84,12 @@ public class DustTriggerMultiblock implements IDustTrigger {
 					BlockPos p2 = pos.offset(xx, yy, zz);
 					Direction fit = fitMultiblock(level, p2);
 					if (fit != null) {
-						return new Placement(xx, yy, zz, fit);
+						Placement placement = new Placement(xx, yy, zz, fit);
+						// as for a single block: nothing that would be replaced may be holding items or fluid
+						for (BlockPos converted : convertedCells(pos, placement)) {
+							if (DustTriggerSimple.refuseFull(level, player, converted)) return null;
+						}
+						return placement;
 					}
 				}
 			}
@@ -115,6 +120,24 @@ public class DustTriggerMultiblock implements IDustTrigger {
 			return rotation;
 		}
 		return null;
+	}
+
+	/** The positions this placement would replace (cells with a target; check-only cells are left alone). */
+	private List<BlockPos> convertedCells(BlockPos pos, Placement placement) {
+		BlockPos anchor = pos.offset(placement.xOffset, placement.yOffset, placement.zOffset);
+		List<BlockPos> list = new ArrayList<>();
+		for (int y = 0; y < ySize; y++) {
+			Matrix matrix = new Matrix(blueprint[y]);
+			matrix.Rotate90DegRight(3 - placement.facing.get2DDataValue());
+			Part[][] cells = matrix.getMatrix();
+			for (int x = 0; x < cells.length; x++) {
+				for (int z = 0; z < cells[x].length; z++) {
+					Part cell = cells[x][z];
+					if (cell != null && cell.getTarget() != null) list.add(anchor.offset(x, -y + (ySize - 1), z));
+				}
+			}
+		}
+		return list;
 	}
 
 	private static boolean sourceMatches(Object source, BlockState real) {

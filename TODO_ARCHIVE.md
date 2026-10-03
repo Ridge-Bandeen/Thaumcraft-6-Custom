@@ -1,5 +1,13 @@
 # Thaumcraft 1.21.1 Port — TODO archive
 
+## Closed 2026-10-03 (addon hooks, batch 1 - see COMPAT_HOOKS.md)
+
+- `ThaumcraftSetupEvent` (the original's `AspectRegistryEvent` successor, posted last in common setup); crucible heat
+  by `#thaumcraft:crucible_heaters` + `receiveExternalHeat` (Thaumatorium shares the check); Salis Mundus crucible
+  base by `#thaumcraft:crucible_bases`; Refining table as the `thaumcraft:refining` item data map (the original's
+  per-entry chance restored); mound/greatwood chests on `thaumcraft:chests/*` tables; Salis Mundus refuses blocks
+  holding items or fluid; `NitorHooks` server tickers. Defaults unchanged.
+
 ## Closed 2026-10-03 (foci)
 
 - The 12 port-invented fixed foci (Fire as `focus_1`, Frost, Break, Fire Bolt, Heal, Curse, Earth, Fireball, Flux,

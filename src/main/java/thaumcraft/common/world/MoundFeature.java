@@ -130,7 +130,7 @@ public class MoundFeature extends Feature<NoneFeatureConfiguration> {
 
 		BlockEntity be = level.getBlockEntity(pos);
 		if (be instanceof ChestBlockEntity chest) {
-			chest.setLootTable(BuiltInLootTables.SIMPLE_DUNGEON);
+			chest.setLootTable(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.LOOT_TABLE, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "chests/mound")));
 			chest.setLootTableSeed(random.nextLong());
 		}
 	}

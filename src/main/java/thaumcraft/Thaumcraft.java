@@ -73,6 +73,7 @@ public class Thaumcraft {
 
     public Thaumcraft(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener(thaumcraft.common.registry.ThaumcraftDataMaps::register);
         modEventBus.addListener(this::onRegisterGameTests);
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::registerPayloads);
@@ -133,9 +134,6 @@ public class Thaumcraft {
         // object-tag table it mirrors rather than in the constructor.
         thaumcraft.common.lib.crafting.ThaumcraftEntityTags.init();
 
-        // REFINING's cluster-substitution table - see ToolEvents' own doc comment. Same registry-timing
-        // reason as the two calls just above.
-        thaumcraft.common.lib.events.ToolEvents.initSpecialMining();
         // The real rareearth-nugget ore-break bonus table - same registry-timing reason.
         thaumcraft.common.lib.events.ToolEvents.initRareearthOreChances();
         // The real Infernal Furnace smelting-bonus table - same registry-timing reason.
@@ -258,6 +256,13 @@ public class Thaumcraft {
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidBasicAuromancy());
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidBasicEldritch());
         thaumcraft.api.research.theorycraft.TheorycraftManager.registerAid(new thaumcraft.common.lib.research.theorycraft.AidBrainInAJar());
+
+        // Last: addons register aspects, scans, dust triggers, seals and golem parts here, after all of the above (see
+        // ThaumcraftSetupEvent). On the main thread, so after every mod's own parallel common setup.
+        event.enqueueWork(() -> {
+            NeoForge.EVENT_BUS.post(new thaumcraft.api.ThaumcraftSetupEvent());
+            thaumcraft.common.lib.crafting.ThaumcraftObjectTags.clearDerived();
+        });
     }
 
     private void registerCapabilities(RegisterCapabilitiesEvent event) {

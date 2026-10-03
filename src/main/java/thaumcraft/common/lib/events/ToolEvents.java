@@ -82,10 +82,8 @@ import thaumcraft.common.lib.network.fx.PacketFXSlash;
  * same outcome either way.</li>
  * <li>{@link EnumInfusionEnchantment#REFINING} - a fortune-like chance (scaling with level, same
  * {@code (1 + level) * 0.125f} formula the original used) to replace a mined drop with the matching
- * {@code cluster_*} item instead - see {@link #SPECIAL_MINING}. The original's version of this table
- * (Forge's pre-1.13 ore-dictionary) doesn't exist anymore, but it's not needed: the original only ever
- * registered 4 entries (iron/gold/cinnabar/quartz), each keyed on one specific drop, so a plain
- * {@code Item -> ItemStack} map covers it exactly - no tag matching required.</li>
+ * {@code cluster_*} item instead - the {@code thaumcraft:refining} item data map (the original's
+ * {@code addSpecialMiningResult} table; see {@link thaumcraft.common.registry.ThaumcraftDataMaps#REFINING}).</li>
  * <li>{@link EnumInfusionEnchantment#ARCING} - cleaves up to {@code level} nearby living entities for half
  * the player's attack damage whenever they land a hit, real for the first time this port has a working
  * client packet ({@link PacketFXSlash}, see {@code Thaumcraft#registerPayloads}) - the visual cue (a small
@@ -155,20 +153,6 @@ public class ToolEvents {
 	 * had no hard visited-node bound of its own, relying on the position caps alone). */
 	private static final int BURROW_MAX_RADIUS = 24;
 	private static final int BURROW_MAX_VISITED = 4096;
-
-	/** REFINING's real target table - see this class's own doc comment. Populated by {@link #initSpecialMining}
-	 * (called from {@code Thaumcraft#commonSetup}, not a static initializer - the same
-	 * {@code DeferredHolder#get()}-before-{@code RegisterEvent} timing rule {@code ThaumcraftObjectTags}/
-	 * {@code ThaumcraftEntityTags} already ran into applies here too). */
-	private static final Map<Item, ItemStack> SPECIAL_MINING = new HashMap<>();
-
-	public static void initSpecialMining() {
-		SPECIAL_MINING.put(Items.RAW_IRON, new ItemStack(ItemsTC.clusterIron.get()));
-		SPECIAL_MINING.put(Items.RAW_GOLD, new ItemStack(ItemsTC.clusterGold.get()));
-		SPECIAL_MINING.put(BlocksTC.oreCinnabar.get().asItem(), new ItemStack(ItemsTC.clusterCinnabar.get()));
-		SPECIAL_MINING.put(Items.QUARTZ, new ItemStack(ItemsTC.clusterQuartz.get()));
-		SPECIAL_MINING.put(Items.RAW_COPPER, new ItemStack(ItemsTC.clusterCopper.get()));
-	}
 
 	@SubscribeEvent
 	public static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
@@ -331,11 +315,11 @@ public class ToolEvents {
 	 * {@link BlockDropsEvent}, so it can't reuse {@link #onBlockDrops} itself). Same real
 	 * {@code (1 + level) * 0.125f} chance formula either way. */
 	public static ItemStack rollSpecialMiningResult(ItemStack drop, int level, RandomSource rand) {
-		ItemStack template = SPECIAL_MINING.get(drop.getItem());
-		if (template == null || rand.nextFloat() > (1 + level) * 0.125f) {
+		thaumcraft.common.registry.ThaumcraftDataMaps.Refining entry = drop.getItemHolder().getData(thaumcraft.common.registry.ThaumcraftDataMaps.REFINING);
+		if (entry == null || rand.nextFloat() > (1 + level) * 0.125f * entry.chance()) {
 			return drop;
 		}
-		return template.copyWithCount(template.getCount() * drop.getCount());
+		return entry.result().copyWithCount(entry.result().getCount() * drop.getCount());
 	}
 
 	@SubscribeEvent

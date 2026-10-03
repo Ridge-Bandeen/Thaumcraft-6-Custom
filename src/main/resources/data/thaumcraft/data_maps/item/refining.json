@@ -1,0 +1,29 @@
+{
+  "values": {
+    "minecraft:raw_iron": {
+      "result": {
+        "id": "thaumcraft:cluster_iron"
+      }
+    },
+    "minecraft:raw_gold": {
+      "result": {
+        "id": "thaumcraft:cluster_gold"
+      }
+    },
+    "thaumcraft:ore_cinnabar": {
+      "result": {
+        "id": "thaumcraft:cluster_cinnabar"
+      }
+    },
+    "minecraft:quartz": {
+      "result": {
+        "id": "thaumcraft:cluster_quartz"
+      }
+    },
+    "minecraft:raw_copper": {
+      "result": {
+        "id": "thaumcraft:cluster_copper"
+      }
+    }
+  }
+}

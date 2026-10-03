@@ -468,6 +468,9 @@ sourceSets {
             include 'thaumcraft/client/render/RenderFluxRift.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'
+            include 'thaumcraft/api/ThaumcraftSetupEvent.java'
+            include 'thaumcraft/api/NitorHooks.java'
+            include 'thaumcraft/common/registry/ThaumcraftDataMaps.java'
             include 'thaumcraft/api/internal/IInternalMethodHandler.java'
             include 'thaumcraft/api/internal/DummyInternalMethodHandler.java'
             include 'thaumcraft/common/ThaumcraftInternalMethodHandler.java'

@@ -884,7 +884,7 @@ public class ThaumcraftGameTests {
 	 * {@code precipitationHeight} surface semantics) with real open air above, placing the feature should
 	 * really place both the real static structure template (spot-checked via one of its own real static
 	 * cobblestone blocks) and all 5 real dynamic extras the original placed programmatically: 2 loot-tier
-	 * blocks, a chest carrying the real vanilla {@code minecraft:chests/simple_dungeon} loot table, and 2 real
+	 * blocks, a chest carrying {@code thaumcraft:chests/mound} (the vanilla {@code minecraft:chests/simple_dungeon} loot, as the original), and 2 real
 	 * monster spawners (Skeleton/Zombie).
 	 */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
@@ -925,8 +925,8 @@ public class ThaumcraftGameTests {
 		var chestBe = level.getBlockEntity(chestPos);
 		helper.assertTrue(chestBe instanceof net.minecraft.world.level.block.entity.ChestBlockEntity chest
 						&& chest.getLootTable() != null
-						&& chest.getLootTable().location().toString().equals("minecraft:chests/simple_dungeon"),
-				"the real chest should really carry the true original's own real minecraft:chests/simple_dungeon loot table");
+						&& chest.getLootTable().location().toString().equals("thaumcraft:chests/mound"),
+				"the chest should carry thaumcraft:chests/mound (which rolls the original's minecraft:chests/simple_dungeon)");
 
 		BlockPos skeletonSpawnerPos = baseAbs.offset(4, 5, 4);
 		helper.assertTrue(level.getBlockState(skeletonSpawnerPos).is(Blocks.SPAWNER),
@@ -18005,5 +18005,112 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(of.apply(Items.PURPLE_SHULKER_BOX).size() > 0 && of.apply(Items.RED_SHULKER_BOX).size() > 0, "dyed shulker boxes should have the undyed box's aspects");
 		helper.assertTrue(of.apply(Items.MACE).getAmount(Aspect.AVERSION) >= 12, "the mace should get its weapon Aversio");
 		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Addon hooks (COMPAT_HOOKS.md batch 1): each default behaves as before, and each hook works.
+	// --------------------------------------------------------------------------------------------------
+
+	/** ThaumcraftSetupEvent's registration methods feed the same aspect tables Thaumcraft's own entries live in. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void setupEventRegistersItemAspects(GameTestHelper helper) {
+		new thaumcraft.api.ThaumcraftSetupEvent().registerObjectTag(Items.STRUCTURE_VOID, new AspectList().add(Aspect.VOID, 7));
+		thaumcraft.common.lib.crafting.ThaumcraftObjectTags.clearDerived();
+		AspectList got = thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(new ItemStack(Items.STRUCTURE_VOID));
+		helper.assertTrue(got != null && got.getAmount(Aspect.VOID) == 7, "an aspect registered through the setup event should be read back, got " + (got == null ? null : got.aspects));
+		helper.succeed();
+	}
+
+	/** The heater tag's defaults heat a crucible as before (magma here), and stone doesn't. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleHeatersTagDefaultsHeatAsBefore(GameTestHelper helper) {
+		helper.assertTrue(TileCrucible.isHeatSource(Blocks.MAGMA_BLOCK.defaultBlockState()) && TileCrucible.isHeatSource(Blocks.LAVA.defaultBlockState())
+				&& TileCrucible.isHeatSource(Blocks.FIRE.defaultBlockState()) && TileCrucible.isHeatSource(Blocks.SOUL_FIRE.defaultBlockState()),
+				"lava, fire, soul fire and magma should heat a crucible");
+		helper.assertTrue(TileCrucible.isHeatSource(BlocksTC.nitor.get(net.minecraft.world.item.DyeColor.WHITE).get().defaultBlockState()), "Nitor should heat a crucible");
+		helper.assertFalse(TileCrucible.isHeatSource(Blocks.STONE.defaultBlockState()), "stone should not");
+		helper.succeed();
+	}
+
+	/** receiveExternalHeat heats a crucible with nothing hot below it, for as long as it's told, then it cools. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleExternalHeatHeatsItWithoutAHeatSourceBelow(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(1, 2, 1);
+		helper.setBlock(pos.below(), Blocks.STONE);
+		helper.setBlock(pos, BlocksTC.crucible.get());
+		TileCrucible tile = helper.getBlockEntity(pos);
+		tile.waterAmount = TileCrucible.WATER_CAPACITY;
+		BlockPos abs = helper.absolutePos(pos);
+		var state = helper.getBlockState(pos);
+		for (int i = 0; i < 5; i++) TileCrucible.tick(helper.getLevel(), abs, state, tile);
+		helper.assertTrue(tile.heat == 0, "with stone below and no external heat it should stay cold, heat " + tile.heat);
+		tile.receiveExternalHeat(10);
+		for (int i = 0; i < 10; i++) TileCrucible.tick(helper.getLevel(), abs, state, tile);
+		helper.assertTrue(tile.heat == 10, "10 ticks of external heat should have warmed it by 10, heat " + tile.heat);
+		for (int i = 0; i < 4; i++) TileCrucible.tick(helper.getLevel(), abs, state, tile);
+		helper.assertTrue(tile.heat == 6, "once the external heat runs out it should cool again, heat " + tile.heat);
+		helper.succeed();
+	}
+
+	/** Salis Mundus refuses to convert a block that holds items or fluid; empty containers and plain blocks are fine. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void salisMundusRefusesToConvertABlockWithContents(GameTestHelper helper) {
+		BlockPos chestPos = new BlockPos(1, 1, 1);
+		helper.setBlock(chestPos, Blocks.CHEST);
+		BlockPos chestAbs = helper.absolutePos(chestPos);
+		helper.assertFalse(thaumcraft.common.lib.crafting.DustTriggerSimple.refuseFull(helper.getLevel(), null, chestAbs), "an empty chest has no contents to lose");
+		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(chestPos);
+		chest.setItem(4, new ItemStack(Items.IRON_INGOT));
+		helper.assertTrue(thaumcraft.common.lib.crafting.DustTriggerSimple.refuseFull(helper.getLevel(), null, chestAbs), "a chest holding an item must not be converted");
+
+		BlockPos cauldron = new BlockPos(3, 1, 1);
+		helper.setBlock(cauldron, Blocks.CAULDRON);
+		helper.assertFalse(thaumcraft.common.lib.crafting.DustTriggerSimple.refuseFull(helper.getLevel(), null, helper.absolutePos(cauldron)),
+				"an empty cauldron (today's crucible base) is still converted");
+		helper.assertTrue(helper.getBlockState(cauldron).is(net.minecraft.tags.BlockTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "crucible_bases"))),
+				"the cauldron should be in #thaumcraft:crucible_bases by default");
+		helper.succeed();
+	}
+
+	/** The refining data map's defaults are the old table, and an entry's result comes out with its count scaled. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void refiningDataMapHoldsTheOriginalTable(GameTestHelper helper) {
+		java.util.Map<net.minecraft.world.item.Item, net.minecraft.world.item.Item> expected = java.util.Map.of(
+				Items.RAW_IRON, ItemsTC.clusterIron.get(), Items.RAW_GOLD, ItemsTC.clusterGold.get(), Items.RAW_COPPER, ItemsTC.clusterCopper.get(),
+				Items.QUARTZ, ItemsTC.clusterQuartz.get(), BlocksTC.oreCinnabar.get().asItem(), ItemsTC.clusterCinnabar.get());
+		expected.forEach((in, out) -> {
+			var entry = in.builtInRegistryHolder().getData(thaumcraft.common.registry.ThaumcraftDataMaps.REFINING);
+			helper.assertTrue(entry != null && entry.result().is(out) && entry.chance() == 1.0f, in + " should refine into " + out + ", got " + entry);
+		});
+		// level 7 makes the roll certain: (1 + 7) * 0.125 = 1
+		ItemStack rolled = thaumcraft.common.lib.events.ToolEvents.rollSpecialMiningResult(new ItemStack(Items.RAW_IRON, 3), 7, helper.getLevel().random);
+		helper.assertTrue(rolled.is(ItemsTC.clusterIron.get()) && rolled.getCount() == 3, "3 raw iron should become 3 iron clusters, got " + rolled);
+		helper.succeed();
+	}
+
+	/** Mound and Greatwood chests use Thaumcraft's own loot tables, which exist and hand out dungeon loot. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void moundAndGreatwoodChestLootTablesExist(GameTestHelper helper) {
+		for (String name : new String[] { "chests/mound", "chests/greatwood" }) {
+			var key = net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.LOOT_TABLE,
+					net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, name));
+			var table = helper.getLevel().getServer().reloadableRegistries().getLootTable(key);
+			helper.assertTrue(table != net.minecraft.world.level.storage.loot.LootTable.EMPTY, "thaumcraft:" + name + " should exist");
+		}
+		helper.succeed();
+	}
+
+	private static final java.util.Set<BlockPos> NITOR_TICKED = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+	/** A Nitor placed after a server hook is registered ticks that hook on the server. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void nitorServerHookTicksPlacedNitor(GameTestHelper helper) {
+		if (!thaumcraft.api.NitorHooks.hasServerTickers()) {
+			thaumcraft.api.NitorHooks.addServerTicker((level, pos, state, be) -> NITOR_TICKED.add(pos.immutable()));
+		}
+		BlockPos pos = new BlockPos(2, 3, 2);
+		helper.setBlock(pos, BlocksTC.nitor.get(net.minecraft.world.item.DyeColor.ORANGE).get());
+		BlockPos abs = helper.absolutePos(pos);
+		helper.succeedWhen(() -> helper.assertTrue(NITOR_TICKED.contains(abs), "the hook should have ticked the placed Nitor"));
 	}
 }

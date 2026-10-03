@@ -58,8 +58,11 @@ public class BlockNitor extends Block implements net.minecraft.world.level.block
 	@org.jetbrains.annotations.Nullable
 	@Override
 	public <T extends net.minecraft.world.level.block.entity.BlockEntity> net.minecraft.world.level.block.entity.BlockEntityTicker<T> getTicker(Level level, BlockState state, net.minecraft.world.level.block.entity.BlockEntityType<T> type) {
-		return level.isClientSide && type == thaumcraft.common.registry.ThaumcraftBlockEntities.NITOR.get()
-				? (lvl, pos, st, be) -> thaumcraft.common.tiles.misc.TileNitor.clientTick(lvl, pos, st, (thaumcraft.common.tiles.misc.TileNitor) be)
-				: null;
+		if (type != thaumcraft.common.registry.ThaumcraftBlockEntities.NITOR.get()) return null;
+		if (level.isClientSide) {
+			return (lvl, pos, st, be) -> thaumcraft.common.tiles.misc.TileNitor.clientTick(lvl, pos, st, (thaumcraft.common.tiles.misc.TileNitor) be);
+		}
+		// nothing of Thaumcraft's own runs here; addons' hooks (thaumcraft.api.NitorHooks) do
+		return thaumcraft.api.NitorHooks.hasServerTickers() ? thaumcraft.api.NitorHooks::tick : null;
 	}
 }
