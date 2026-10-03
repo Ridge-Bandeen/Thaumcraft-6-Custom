@@ -32,13 +32,10 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * spot it finds in a real 5x5 area above itself (checked directly above first, matching the original's own
  * priority).
  *
- * Real, documented cut: the original's own "unmix" mode - a generic utility that drained the tank's
- * currently-held fluid (whatever it happened to be, water/lava/anything) back into the world as plain source
- * blocks - is dropped. That's a generic fluid-placement utility layered on top of the device's actual
- * thematic identity (making purifying fluid), not the mechanic that makes a Spa a Spa, and modern NeoForge's
- * own "place an arbitrary Fluid in the world" API shape differs enough from the original's
- * {@code BlockFluidBase}-based one that reusing it here isn't a simple swap. The real core mechanic - bank
- * water, spend Bath Salts, produce real purifying fluid nearby on a timer - is kept in full.
+ * As the original, its tank takes any fluid, and its screen toggles between two modes: "mix" (the default) spends
+ * a Bath Salt and a bucket of water on each block of Purifying Fluid, while "just the fluid" pours out a block of
+ * whatever is in the tank (any fluid that can be placed) for each bucket. A block goes straight above it, or - once
+ * a full one is already there - beside a full one somewhere in the 5x5 above.
  */
 public class TileSpa extends BlockEntity implements MenuProvider {
 
@@ -57,7 +54,7 @@ public class TileSpa extends BlockEntity implements MenuProvider {
 		}
 	};
 
-	public final FluidTank tank = new FluidTank(CAPACITY, stack -> stack.getFluid() == Fluids.WATER) {
+	public final FluidTank tank = new FluidTank(CAPACITY) {
 		@Override
 		protected void onContentsChanged() {
 			setChanged();
@@ -65,6 +62,17 @@ public class TileSpa extends BlockEntity implements MenuProvider {
 	};
 
 	private int counter;
+	/** The original's mix flag: make Purifying Fluid (true) or pour out the tank's own fluid (false). */
+	private boolean mix = true;
+
+	public boolean isMix() {
+		return mix;
+	}
+
+	public void toggleMix() {
+		mix = !mix;
+		setChanged();
+	}
 
 	public TileSpa(BlockPos pos, BlockState state) {
 		super(ThaumcraftBlockEntities.SPA.get(), pos, state);
@@ -86,39 +94,68 @@ public class TileSpa extends BlockEntity implements MenuProvider {
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TileSpa tile) {
 		if (level.isClientSide) return;
-		tile.counter++;
-		if (tile.counter % 40 != 0) return;
-		if (level.hasNeighborSignal(pos)) return;
-		if (tile.tank.getFluidAmount() < WATER_COST) return;
-		if (!(tile.items.getStackInSlot(0).getItem() instanceof ItemBathSalts)) return;
-
-		BlockPos target = findOpenSpot(level, pos);
-		if (target == null) return;
-
-		tile.tank.drain(WATER_COST, IFluidHandler.FluidAction.EXECUTE);
-		tile.items.extractItem(0, 1, false);
-		level.setBlockAndUpdate(target, thaumcraft.api.blocks.BlocksTC.purifyingFluid.get().defaultBlockState()
-				.setValue(BlockPurifyingFluid.LEVEL, BlockPurifyingFluid.MAX_LEVEL));
-		tile.setChanged();
-	}
-
-	private static BlockPos findOpenSpot(Level level, BlockPos pos) {
-		BlockPos direct = pos.above();
-		if (isOpenSpot(level, direct)) return direct;
-		for (int xx = -2; xx <= 2; xx++) {
-			for (int zz = -2; zz <= 2; zz++) {
-				if (xx == 0 && zz == 0) continue;
-				BlockPos p = pos.above().offset(xx, 0, zz);
-				if (isOpenSpot(level, p)) return p;
+		if (tile.counter++ % 40 != 0) return;
+		if (level.hasNeighborSignal(pos) || !tile.hasIngredients()) return;
+		BlockState place = tile.placeState();
+		if (place == null) return;
+		if (tile.isFull(level.getBlockState(pos.above()))) {
+			for (int xx = -2; xx <= 2; xx++) {
+				for (int zz = -2; zz <= 2; zz++) {
+					BlockPos p = pos.offset(xx, 1, zz);
+					if (tile.isValidLocation(level, p, true, place)) {
+						tile.consumeIngredients();
+						level.setBlockAndUpdate(p, place);
+						return;
+					}
+				}
 			}
+		} else if (tile.isValidLocation(level, pos.above(), false, place)) {
+			tile.consumeIngredients();
+			level.setBlockAndUpdate(pos.above(), place);
 		}
-		return null;
 	}
 
-	private static boolean isOpenSpot(Level level, BlockPos pos) {
-		BlockState here = level.getBlockState(pos);
+	private boolean hasIngredients() {
+		if (mix) {
+			return tank.getFluid().is(Fluids.WATER) && tank.getFluidAmount() >= WATER_COST && items.getStackInSlot(0).getItem() instanceof ItemBathSalts;
+		}
+		return !tank.isEmpty() && tank.getFluidAmount() >= WATER_COST && !tank.getFluid().getFluid().defaultFluidState().createLegacyBlock().isAir();
+	}
+
+	private void consumeIngredients() {
+		if (mix) items.extractItem(0, 1, false);
+		tank.drain(WATER_COST, IFluidHandler.FluidAction.EXECUTE);
+	}
+
+	/** A full block of what this spa makes: Purifying Fluid, or a source of the tank's fluid. */
+	@javax.annotation.Nullable
+	private BlockState placeState() {
+		if (mix) {
+			return thaumcraft.api.blocks.BlocksTC.purifyingFluid.get().defaultBlockState().setValue(BlockPurifyingFluid.LEVEL, BlockPurifyingFluid.MAX_LEVEL);
+		}
+		return tank.isEmpty() ? null : tank.getFluid().getFluid().defaultFluidState().createLegacyBlock();
+	}
+
+	private boolean isFull(BlockState state) {
+		if (mix) {
+			return state.is(thaumcraft.api.blocks.BlocksTC.purifyingFluid.get()) && state.getValue(BlockPurifyingFluid.LEVEL) == BlockPurifyingFluid.MAX_LEVEL;
+		}
+		return !tank.isEmpty() && state.getFluidState().isSource() && state.getFluidState().getType().isSame(tank.getFluid().getFluid());
+	}
+
+	/** The original's isValidLocation: on a solid top, replaceable, not already full - and, when it must be,
+	 * beside a full block. Water never goes where it would boil away. */
+	private boolean isValidLocation(Level level, BlockPos p, boolean mustBeAdjacent, BlockState place) {
+		if (place.getFluidState().is(net.minecraft.tags.FluidTags.WATER) && level.dimensionType().ultraWarm()) return false;
+		BlockState here = level.getBlockState(p);
+		if (!level.getBlockState(p.below()).isFaceSturdy(level, p.below(), Direction.UP)) return false;
 		if (!here.isAir() && !here.canBeReplaced()) return false;
-		return level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), Direction.UP);
+		if (isFull(here)) return false;
+		if (!mustBeAdjacent) return true;
+		for (Direction d : Direction.values()) {
+			if (isFull(level.getBlockState(p.relative(d)))) return true;
+		}
+		return false;
 	}
 
 	@Override
@@ -128,6 +165,7 @@ public class TileSpa extends BlockEntity implements MenuProvider {
 		CompoundTag tankTag = new CompoundTag();
 		tank.writeToNBT(registries, tankTag);
 		tag.put("Tank", tankTag);
+		tag.putBoolean("mix", mix);
 	}
 
 	@Override
@@ -137,6 +175,7 @@ public class TileSpa extends BlockEntity implements MenuProvider {
 		if (tag.contains("Tank")) {
 			tank.readFromNBT(registries, tag.getCompound("Tank"));
 		}
+		mix = !tag.contains("mix") || tag.getBoolean("mix");
 	}
 
 	@Override

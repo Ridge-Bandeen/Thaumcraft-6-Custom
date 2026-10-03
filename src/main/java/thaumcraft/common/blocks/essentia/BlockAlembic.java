@@ -37,7 +37,7 @@ public class BlockAlembic extends Block implements EntityBlock, ILabelable {
 
 	public static final MapCodec<BlockAlembic> CODEC = simpleCodec(BlockAlembic::new);
 
-	private static final VoxelShape SHAPE = Shapes.box(0.0625, 0, 0.0625, 0.9375, 1, 0.9375);
+	private static final VoxelShape SHAPE = Shapes.box(0.125, 0, 0.125, 0.875, 1, 0.875);
 
 	public BlockAlembic(BlockBehaviour.Properties properties) {
 		super(properties);
@@ -61,13 +61,23 @@ public class BlockAlembic extends Block implements EntityBlock, ILabelable {
 
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-		if (level.isClientSide || !(level.getBlockEntity(pos) instanceof TileAlembic tile)) return InteractionResult.PASS;
-		if (player.isCrouching() && tile.getAspectFilter() != null) {
+		if (!(level.getBlockEntity(pos) instanceof TileAlembic tile) || !player.isShiftKeyDown()) return InteractionResult.PASS;
+		if (level.isClientSide) return InteractionResult.SUCCESS;
+		Direction side = hitResult.getDirection();
+		if (tile.getAspectFilter() != null && side == tile.getLabelFace()) {
+			// as the original: sneak-clicking the label peels it off as a blank label
 			tile.clearLabel();
-			level.playSound(null, pos, SoundEvents.ITEM_BREAK, SoundSource.BLOCKS, 1.0f, 1.0f);
-			return InteractionResult.SUCCESS;
+			level.playSound(null, pos, thaumcraft.common.registry.ThaumcraftSounds.PAGE.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
+			level.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(level, pos.getX() + 0.5 + side.getStepX() / 3.0, pos.getY() + 0.5,
+					pos.getZ() + 0.5 + side.getStepZ() / 3.0, new ItemStack(thaumcraft.api.items.ItemsTC.label.get())));
+		} else {
+			// anywhere else: the essentia is poured out into the aura
+			int amount = tile.empty();
+			if (amount > 0) thaumcraft.api.aura.AuraHelper.polluteAura(level, pos, amount, true);
+			level.playSound(null, pos, thaumcraft.common.registry.ThaumcraftSounds.JAR.get(), SoundSource.BLOCKS, 0.4f, 1.0f);
+			level.playSound(null, pos, SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 0.5f, 1.0f + (level.random.nextFloat() - level.random.nextFloat()) * 0.3f);
 		}
-		return InteractionResult.PASS;
+		return InteractionResult.SUCCESS;
 	}
 
 	/** {@code ItemLabel} calls this - locks the alembic to one aspect (see {@link TileAlembic#applyLabel}). */
@@ -81,8 +91,8 @@ public class BlockAlembic extends Block implements EntityBlock, ILabelable {
 				labelAspect = held.getAspectsSortedByAmount()[0];
 			}
 		}
-		if (!tile.applyLabel(labelAspect)) return false;
-		player.level().playSound(null, pos, SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 0.4f, 1.0f);
+		if (!tile.applyLabel(labelAspect, side)) return false;
+		player.level().playSound(null, pos, thaumcraft.common.registry.ThaumcraftSounds.PAGE.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
 		return true;
 	}
 

@@ -93,7 +93,7 @@ import thaumcraft.common.items.casters.foci.FocusMediumProjectile;
  * ContainerPech#generateContents} value-tier algorithm. A successful high-value trade re-arms the Pech's
  * hostility (matches the original's own quirk of a trade sometimes "using up" the taming).
  *
- * <b>Real, documented simplifications (forced by missing dependencies, not design choices)</b>:
+ * <b>Notes</b>:
  * <ul>
  * <li>{@code Items.ENDER_PEARL} is still the original's own single explicit {@code valuedItems} entry
  * (ported verbatim), but the original's real general case - any item whose {@code Desire} aspect exceeds 1,
@@ -102,17 +102,12 @@ import thaumcraft.common.items.casters.foci.FocusMediumProjectile;
  * back it (added retroactively - this simplification was believed permanent when chunk 1 shipped, before
  * that class was found already real and modern from an earlier session).</li>
  * <li>{@link #TRADE_REWARDS}: the original's tables entry for entry - see that field.</li>
- * <li>No enchantment-based arrow damage/knockback/fire-aspect scaling on the bow attack (Power/Punch/Flame)
- * - modern MC's data-component-based enchantment API is real extra complexity this pass skips; the arrow
- * still does real, difficulty-scaled damage and can still roll a poison tip.</li>
- * <li>No natural biome-based spawning - matches the session-wide precedent every other custom hostile mob
- * in this port already established (see {@code EntityCultist}'s own doc comment): no {@code
- * SpawnPlacements}/biome-tag wiring exists for any of them yet. Spawnable via spawn egg/summon only.</li>
+ * <li>Its arrows come from its bow, so the bow's Power, Punch and Flame apply.</li>
+ * <li>It spawns naturally as the original (see {@code WorldConfigHooks}).</li>
  * <li>Model and sounds restored 2026-09-25 (first playtest: "looks entirely wrong, makes villager noises"): the
  * real {@code ModelPech} geometry and animation (see {@link thaumcraft.client.render.ModelPech}, including the
  * {@link #mumble} jaw flap) and the original's own {@code pech_idle}/{@code pech_hit}/{@code pech_death}/
- * {@code pech_charge}/{@code pech_trade} sounds. Still not reproduced: the original's small held-item offset
- * ({@code LayerHeldItemPech}).</li>
+ * {@code pech_charge}/{@code pech_trade} sounds, and the original's held-item offset ({@code PechItemInHandLayer}).</li>
  * </ul>
  */
 public class EntityPech extends Monster implements RangedAttackMob {
@@ -366,7 +361,8 @@ public class EntityPech extends Monster implements RangedAttackMob {
 				pickup.set(net.minecraft.core.component.DataComponents.POTION_CONTENTS,
 						PotionContents.EMPTY.withEffectAdded(new MobEffectInstance(MobEffects.POISON, 40)));
 			}
-			Arrow arrow = new Arrow(level(), getX(), getEyeY() - 0.1, getZ(), pickup, null);
+			// fired from its bow, so the bow's Power, Punch and Flame apply, as the original
+			Arrow arrow = new Arrow(level(), getX(), getEyeY() - 0.1, getZ(), pickup, getMainHandItem().isEmpty() ? null : getMainHandItem());
 			arrow.setOwner(this);
 			double dx = target.getX() - getX();
 			double dy = target.getBoundingBox().minY + target.getBbHeight() / 3.0 - arrow.getY();

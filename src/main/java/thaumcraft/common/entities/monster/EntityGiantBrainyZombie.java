@@ -98,7 +98,8 @@ public class EntityGiantBrainyZombie extends EntityBrainyZombie {
 
 	@Override
 	protected void dropCustomDeathLoot(ServerLevel level, DamageSource damageSource, boolean recentlyHit) {
-		for (int i = 0; i < 6; i++) {
+		// as the original: two rounds of six chances at two flesh
+		for (int i = 0; i < 12; i++) {
 			if (level.random.nextBoolean()) {
 				spawnAtLocation(new ItemStack(Items.ROTTEN_FLESH, 2));
 			}

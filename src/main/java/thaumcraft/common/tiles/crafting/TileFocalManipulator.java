@@ -44,17 +44,10 @@ import thaumcraft.common.world.aura.AuraHandler;
  *
  * Purpose-built {@link BlockEntity} + real {@link ItemStackHandler}, same "no shared inventory-tile base"
  * pattern {@code TileRechargePedestal}/{@code TileCrucible} already established - see that class's own doc
- * comment for why. {@link #nodes} is the live, player-editable graph (no GUI/network sync yet - this pass
- * is the headless data model + crafting logic only, see the doc comment on the block/menu/screen commits
- * that follow this one for the rest of the arc).
- *
- * Simplified vs the original: no {@code doGuiReset}/{@code receiveClientEvent} GUI-sync plumbing (no GUI
- * yet); no client-side particle FX while charging (the unconverted {@code FXDispatcher}, same cut every
- * other device this session made). Real custom {@code wandfail}/{@code wand}/{@code craftstart} sounds
- * restored 2026-09-15 (were vanilla stand-ins) - see {@link ThaumcraftSounds}'s own doc comment. The original's
- * {@code InventoryUtils}/{@code ThaumcraftApiHelper} crystal-cost helpers aren't ported (still 1.12.2) -
- * {@link #hasCrystals}/{@link #consumeCrystals} below do the same "does the player carry N crystals of
- * aspect X" check directly against vanilla's own {@link net.minecraft.world.entity.player.Inventory#clearOrCountMatchingItems}.
+ * comment for why. {@link #nodes} is the live, player-editable graph. As the original it draws its vis 20 at a time
+ * every second (a 3x3 chunk area under an Arcane Workbench Charger), sparkling (block event 5), with its own
+ * sounds; {@link #hasCrystals}/{@link #consumeCrystals} check and take the crystals the build needs from the
+ * player's inventory.
  *
  * {@link #getUpdateTag}/{@link #getUpdatePacket}/{@link #setChanged()} are overridden below - the same real
  * client-sync fix found while scoping the Infusion Matrix renderer (see

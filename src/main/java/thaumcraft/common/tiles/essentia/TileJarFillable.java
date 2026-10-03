@@ -65,6 +65,8 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 	private Aspect aspectFilter;
 	private int amount;
 	private boolean blocked;
+	/** Which way its label faces: towards whoever placed (or labelled) the jar, as the original. */
+	private net.minecraft.core.Direction facing = net.minecraft.core.Direction.NORTH;
 
 	public TileJarFillable(BlockPos pos, BlockState state) {
 		super(ThaumcraftBlockEntities.JAR.get(), pos, state);
@@ -272,6 +274,16 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 	 * @param labelAspect the aspect a filled label carries, or {@code null} for a blank one
 	 * @return true if the label was consumed (the jar was actually locked)
 	 */
+	public net.minecraft.core.Direction getFacing() {
+		return facing;
+	}
+
+	/** The original's onBlockPlacedBy: the label turns to face {@code entity}. */
+	public void faceTowards(net.minecraft.world.entity.LivingEntity entity) {
+		facing = entity.getDirection().getOpposite();
+		setChanged();
+	}
+
 	public boolean applyLabel(Aspect labelAspect) {
 		if (aspectFilter != null) return false;
 		if (amount == 0 && labelAspect == null) return false;
@@ -306,6 +318,7 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 	@Override
 	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
 		super.saveAdditional(tag, registries);
+		tag.putByte("facing", (byte) facing.get3DDataValue());
 		if (aspect != null) {
 			tag.putString("Aspect", aspect.getTag());
 		}
@@ -323,6 +336,8 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 		aspectFilter = tag.contains("AspectFilter") ? Aspect.getAspect(tag.getString("AspectFilter")) : null;
 		amount = tag.getInt("Amount");
 		blocked = tag.getBoolean("Blocked");
+		facing = tag.contains("facing") ? net.minecraft.core.Direction.from3DDataValue(tag.getByte("facing")) : net.minecraft.core.Direction.NORTH;
+		if (facing.getAxis() == net.minecraft.core.Direction.Axis.Y) facing = net.minecraft.core.Direction.NORTH;
 	}
 
 	/** Real block-entity sync wiring, added alongside the real fill-level visual restoration - see this

@@ -24,13 +24,9 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * the same {@code sqrt(riftSize)}-per-tick drain/shrink-chance formula the original used. {@code ENABLED}
  * is the same redstone-inverted convention every other toggled device this session uses.
  *
- * Simplified vs the original: no GUI - right-click empties the output slot into the player's hand/inventory
- * directly, same no-menu convention {@link thaumcraft.common.blocks.devices.BlockRechargePedestal} already
- * established (the original's GUI was read-only progress display plus item collection anyway - nothing a
- * player could configure). No client-side void-streak particle FX ({@code FXDispatcher}) - visual-only,
- * dropped like every other device this session. {@code EntityUtils#canEntityBeSeen}/{@code getEntitiesInRange}
- * (the original's own helpers - stale, Baubles-coupled) are replaced with real vanilla equivalents directly:
- * {@link Level#getEntitiesOfClass} and a direct {@link Level#clip} raycast for the line-of-sight check.
+ * As the original: its screen shows progress and holds the seeds, which hoppers can take out of any side (nothing
+ * goes in). A rift counts only if nothing blocks the line from it to a point one block out from the siphon towards it.
+ * Still missing: the original's void streaks from the rifts to the siphon ({@code FXVoidStream}).
  */
 public class TileVoidSiphon extends BlockEntity {
 
@@ -110,13 +106,11 @@ public class TileVoidSiphon extends BlockEntity {
 		double cz = pos.getZ() + 0.5;
 		for (EntityFluxRift rift : level.getEntitiesOfClass(EntityFluxRift.class, new AABB(pos).inflate(8.0))) {
 			if (!rift.isAlive() || rift.getRiftSize() < 2) continue;
-			// A real block-collision raycast from the rift to the siphon's collection point, matching the
-			// original's own EntityUtils#canEntityBeSeen check (the rift is the looker, the siphon the
-			// target) - vanilla's own Entity#hasLineOfSight only checks sight *to* another entity, so this
-			// uses Level#clip directly instead.
-			net.minecraft.world.phys.Vec3 from = new net.minecraft.world.phys.Vec3(rift.getX(), rift.getY(), rift.getZ());
-			net.minecraft.world.phys.Vec3 to = new net.minecraft.world.phys.Vec3(cx, cy, cz);
-			net.minecraft.world.level.ClipContext ctx = new net.minecraft.world.level.ClipContext(from, to,
+			// as the original: from a point one block out from the siphon (towards the rift) to the rift
+			net.minecraft.world.phys.Vec3 riftPos = new net.minecraft.world.phys.Vec3(rift.getX(), rift.getY(), rift.getZ());
+			net.minecraft.world.phys.Vec3 near = new net.minecraft.world.phys.Vec3(cx, cy, cz);
+			near = near.add(riftPos.subtract(near).normalize());
+			net.minecraft.world.level.ClipContext ctx = new net.minecraft.world.level.ClipContext(near, riftPos,
 					net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, rift);
 			if (level.clip(ctx).getType() != net.minecraft.world.phys.HitResult.Type.MISS) continue;
 			found.add(rift);

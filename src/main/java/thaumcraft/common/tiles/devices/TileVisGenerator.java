@@ -28,8 +28,8 @@ import thaumcraft.common.world.aura.AuraHandler;
  * external machine can read {@link #getEnergyStored()}/{@link #getMaxEnergyStored()} - again matching the
  * original.
  *
- * Simplified vs the original: no spark particle FX on push (client FX dispatcher not ported, same "no client
- * FX" precedent as every other device this session).
+ * As the original, while it holds energy, sparks crackle at its output face ({@code BlockVisGenerator#animateTick});
+ * the client is told whenever it goes from empty to charged or back.
  */
 public class TileVisGenerator extends BlockEntity implements IEnergyStorage {
 
@@ -124,5 +124,45 @@ public class TileVisGenerator extends BlockEntity implements IEnergyStorage {
 	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
 		super.loadAdditional(tag, registries);
 		energy = tag.getInt("Energy");
+	}
+
+	private boolean syncedCharged;
+	/** Client: whether it holds energy. */
+	private boolean clientCharged;
+
+	public boolean isChargedForDisplay() {
+		return level != null && level.isClientSide ? clientCharged : energy > 0;
+	}
+
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide && (energy > 0) != syncedCharged) {
+			syncedCharged = energy > 0;
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+		}
+	}
+
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		CompoundTag tag = new CompoundTag();
+		tag.putBoolean("charged", energy > 0);
+		return tag;
+	}
+
+	@Override
+	public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+		clientCharged = tag.getBoolean("charged");
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	@Override
+	public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket pkt,
+			HolderLookup.Provider registries) {
+		handleUpdateTag(pkt.getTag(), registries);
 	}
 }

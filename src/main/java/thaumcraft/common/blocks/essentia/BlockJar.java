@@ -131,27 +131,26 @@ public class BlockJar extends Block implements EntityBlock, ILabelable {
 				labelAspect = held.getAspectsSortedByAmount()[0];
 			}
 		}
+		if (tile.getAspectFilter() == null) tile.faceTowards(player); // as the original: the new label faces the labeller
 		if (!tile.applyLabel(labelAspect)) return false;
 		player.level().playSound(null, pos, ThaumcraftSounds.JAR.get(), SoundSource.BLOCKS, 0.4f, 1.0f);
 		return true;
 	}
 
-	/** Restored 2026-09-27: a broken jar keeps what it was holding and any label, matching the original's own
-	 * item-tag round trip (see {@link JarBlockItem}). The loot table for this block is empty - this is its only
-	 * drop, so nothing is duplicated. */
+	/** As the original's spawnFilledJar: a harvested (or blown up) jar keeps what it was holding and any label (see
+	 * {@link JarBlockItem}), and a brace comes off as its own item. Nothing drops when it's simply removed - broken in
+	 * creative, replaced by a command. The loot table is empty; this is the only drop. */
 	@Override
-	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-		if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TileJarFillable tile) {
-			ItemStack stack = new ItemStack(this);
-			AspectList aspects = tile.getAspects();
-			if (aspects != null && aspects.size() > 0) stack.set(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get(), aspects.copy());
-			Aspect filter = tile.getAspectFilter();
-			if (filter != null) stack.set(thaumcraft.api.items.ThaumcraftDataComponents.ASPECT_FILTER.get(), filter);
-			net.minecraft.world.entity.item.ItemEntity out = new net.minecraft.world.entity.item.ItemEntity(level,
-					pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);
-			level.addFreshEntity(out);
+	protected java.util.List<ItemStack> getDrops(BlockState state, net.minecraft.world.level.storage.loot.LootParams.Builder params) {
+		if (!(params.getOptionalParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_ENTITY) instanceof TileJarFillable tile)) {
+			return java.util.List.of(new ItemStack(this));
 		}
-		super.onRemove(state, level, pos, newState, movedByPiston);
+		ItemStack stack = new ItemStack(this);
+		AspectList aspects = tile.getAspects();
+		if (aspects != null && aspects.size() > 0) stack.set(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get(), aspects.copy());
+		Aspect filter = tile.getAspectFilter();
+		if (filter != null) stack.set(thaumcraft.api.items.ThaumcraftDataComponents.ASPECT_FILTER.get(), filter);
+		return tile.isBlocked() ? java.util.List.of(new ItemStack(thaumcraft.api.items.ItemsTC.jarBrace.get()), stack) : java.util.List.of(stack);
 	}
 
 	@Nullable
@@ -166,5 +165,11 @@ public class BlockJar extends Block implements EntityBlock, ILabelable {
 		return type == ThaumcraftBlockEntities.JAR.get()
 				? (lvl, pos, st, be) -> TileJarFillable.tick(lvl, pos, st, (TileJarFillable) be)
 				: null;
+	}
+
+	@Override
+	public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable net.minecraft.world.entity.LivingEntity placer, ItemStack stack) {
+		super.setPlacedBy(level, pos, state, placer, stack);
+		if (placer != null && level.getBlockEntity(pos) instanceof TileJarFillable tile) tile.faceTowards(placer);
 	}
 }

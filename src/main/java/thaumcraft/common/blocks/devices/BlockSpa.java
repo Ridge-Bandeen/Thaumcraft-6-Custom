@@ -48,7 +48,12 @@ public class BlockSpa extends Block implements EntityBlock {
 		if (level.isClientSide) return ItemInteractionResult.sidedSuccess(true);
 		if (!(level.getBlockEntity(pos) instanceof TileSpa tile)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
-		if (FluidUtil.interactWithFluidHandler(player, hand, tile.tank)) {
+		// as the original: a fluid container (not sneaking) pours into the tank, if it's the same fluid or the tank is empty
+		if (!player.isShiftKeyDown() && FluidUtil.getFluidContained(stack).isPresent()) {
+			if (FluidUtil.interactWithFluidHandler(player, hand, tile.tank)) {
+				level.playSound(null, pos, net.minecraft.sounds.SoundEvents.BOTTLE_FILL, net.minecraft.sounds.SoundSource.BLOCKS, 0.33f,
+						1.0f + (level.random.nextFloat() - level.random.nextFloat()) * 0.3f);
+			}
 			return ItemInteractionResult.SUCCESS;
 		}
 		return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
@@ -57,7 +62,7 @@ public class BlockSpa extends Block implements EntityBlock {
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
 		if (level.isClientSide) return InteractionResult.SUCCESS;
-		if (level.getBlockEntity(pos) instanceof TileSpa tile) {
+		if (level.getBlockEntity(pos) instanceof TileSpa tile && !player.isShiftKeyDown()) {
 			player.openMenu(tile);
 		}
 		return InteractionResult.CONSUME;

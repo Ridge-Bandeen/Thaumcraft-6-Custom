@@ -93,6 +93,12 @@ public class BlockWaterJug extends Block implements EntityBlock {
 		return new TileWaterJug(pos, state);
 	}
 
+	@Override
+	protected boolean triggerEvent(BlockState state, Level level, BlockPos pos, int id, int param) {
+		if (level.getBlockEntity(pos) instanceof TileWaterJug tile && tile.onBlockEvent(id, param)) return true;
+		return super.triggerEvent(state, level, pos, id, param);
+	}
+
 	@Nullable
 	@Override
 	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {

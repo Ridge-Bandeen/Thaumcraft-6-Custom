@@ -1,37 +1,37 @@
 package thaumcraft.common.lib.network.fx;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.util.math.BlockPos;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
-import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import thaumcraft.client.fx.FXDispatcher;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import thaumcraft.Thaumcraft;
 
-public class PacketFXBlockMist implements IMessage, IMessageHandler<PacketFXBlockMist, IMessage>
-{
-    private long loc;
-    private int color;
-    
-    public PacketFXBlockMist() {
-    }
-    
-    public PacketFXBlockMist(BlockPos pos, int color) {
-        loc = pos.toLong();
-        this.color = color;
-    }
-    
-    public void toBytes(ByteBuf buffer) {
-        buffer.writeLong(loc);
-        buffer.writeInt(color);
-    }
-    
-    public void fromBytes(ByteBuf buffer) {
-        loc = buffer.readLong();
-        color = buffer.readInt();
-    }
-    
-    public IMessage onMessage(PacketFXBlockMist message, MessageContext ctx) {
-        FXDispatcher.INSTANCE.drawBlockMistParticles(BlockPos.fromLong(message.loc), message.color);
-        return null;
-    }
+/**
+ * The original's PacketFXBlockMist: a soft coloured mist rising over block {@code pos} (the Growth Lamp's green when a
+ * plant it is tending changes). Drawn by {@code ClientFxHandlers#drawBlockMist}.
+ */
+public record PacketFXBlockMist(BlockPos pos, int color) implements CustomPacketPayload {
+
+	public static final Type<PacketFXBlockMist> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "fx_block_mist"));
+
+	public static final StreamCodec<RegistryFriendlyByteBuf, PacketFXBlockMist> STREAM_CODEC = StreamCodec.composite(
+			BlockPos.STREAM_CODEC, PacketFXBlockMist::pos,
+			ByteBufCodecs.INT, PacketFXBlockMist::color,
+			PacketFXBlockMist::new);
+
+	@Override
+	public Type<? extends CustomPacketPayload> type() {
+		return TYPE;
+	}
+
+	public static void send(net.minecraft.server.level.ServerLevel level, BlockPos pos, int color) {
+		try {
+			net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(level, null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 32.0,
+					new PacketFXBlockMist(pos, color));
+		} catch (Exception e) {
+			Thaumcraft.LOGGER.debug("Block mist FX packet failed to send", e);
+		}
+	}
 }

@@ -52,9 +52,8 @@ import thaumcraft.common.items.resources.ItemCrystalEssence;
  * entirely these particles). Real custom {@code swarm}/{@code swarmattack} sounds restored alongside it
  * (were vanilla bee-sound stand-ins).
  *
- * Real, documented cuts: no full-bright self-illumination ({@code getBrightnessForRender}/{@code
- * getBrightness} have no modern per-entity equivalent - lighting is purely block-based now, same real gap
- * every other exotic mob this session carries); the original's own "mark the victim as recently-hit" call
+ * The swarm is nothing but its particles (the original's renderer drew nothing either, so its full-bright
+ * override never showed). Not carried over: the original's own "mark the victim as recently-hit" call
  * (an obscure cross-system hook into a DIFFERENT entity's own future death-loot bonus, not this swarm's own
  * behavior) is dropped.
  */

@@ -37,7 +37,7 @@ import thaumcraft.common.tiles.essentia.TileJarFillable;
  * {@link TileJarBrain}'s own doc comment for the real mechanic and what's simplified.
  *
  * <p>Restored 2026-09-27: breaking a brain jar now keeps its accumulated XP on the dropped item (see
- * {@link #onRemove}/{@link JarBrainBlockItem}), matching the original's own item-tag round trip.
+ * {@link #getDrops}/{@link JarBrainBlockItem}), matching the original's own item-tag round trip.
  */
 public class BlockJarBrain extends Block implements EntityBlock {
 
@@ -82,16 +82,15 @@ public class BlockJarBrain extends Block implements EntityBlock {
 		return Math.min(15, Mth.floor(fraction * 14.0f) + (tile.getXp() > 0 ? 1 : 0));
 	}
 
+	/** As the original's spawnBrainJar: a harvested (or blown up) brain jar keeps its XP; nothing drops when it's
+	 * simply removed (creative, commands). */
 	@Override
-	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-		if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TileJarBrain tile) {
-			net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(this);
-			if (tile.getXp() > 0) stack.set(thaumcraft.api.items.ThaumcraftDataComponents.JAR_XP.get(), tile.getXp());
-			net.minecraft.world.entity.item.ItemEntity out = new net.minecraft.world.entity.item.ItemEntity(level,
-					pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);
-			level.addFreshEntity(out);
+	protected java.util.List<net.minecraft.world.item.ItemStack> getDrops(BlockState state, net.minecraft.world.level.storage.loot.LootParams.Builder params) {
+		net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(this);
+		if (params.getOptionalParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_ENTITY) instanceof TileJarBrain tile && tile.getXp() > 0) {
+			stack.set(thaumcraft.api.items.ThaumcraftDataComponents.JAR_XP.get(), tile.getXp());
 		}
-		super.onRemove(state, level, pos, newState, movedByPiston);
+		return java.util.List.of(stack);
 	}
 
 	@Nullable
@@ -106,5 +105,11 @@ public class BlockJarBrain extends Block implements EntityBlock {
 		return type == ThaumcraftBlockEntities.JAR_BRAIN.get()
 				? (lvl, pos, st, be) -> TileJarBrain.tick(lvl, pos, st, (TileJarBrain) be)
 				: null;
+	}
+
+	/** As the original, a Brain in a Jar is worth five bookshelves to an enchanting table. */
+	@Override
+	public float getEnchantPowerBonus(BlockState state, net.minecraft.world.level.LevelReader level, BlockPos pos) {
+		return 5.0f;
 	}
 }

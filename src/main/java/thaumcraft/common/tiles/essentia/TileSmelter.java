@@ -35,15 +35,10 @@ import java.util.List;
  * {@link TileAlembic} stack above via {@link TileAlembic#processAlembics}. First real consumer of
  * {@link AspectHelper#getObjectAspects} for arbitrary items (not just {@code IEssentiaContainerItem}).
  *
- * Simplified vs the original, all real features:
+ * As the original:
  * <ul>
- * <li><b>No GUI/menu.</b> The original opened a progress-bar screen (fuel/cook/vis gauges). This port uses
- * plain right-click item routing instead (matching the input-item-type-decides-the-slot convention already
- * used for {@code BlockPedestal}): right-click with a fuel item feeds the fuel slot, anything else with real
- * object aspects feeds the input slot, sneak+empty-hand clears the input slot back to the player. A real
- * {@link Container} implementation (not {@code WorldlyContainer}) still gives free hopper compatibility,
- * just without the original's side-specific slot routing (that nuance - fuel only from below, input only
- * from the sides, no extraction slot - is dropped along with it).</li>
+ * <li>Right-click opens its screen (fuel, cook and vis gauges); hoppers feed fuel from below and the item to smelt
+ * from the sides, never from the top, and can take either back out of the face they go in by.</li>
  * <li><b>Real 3-tier progression (Basic/Thaumium/Void), same shared class</b> - {@link #getTier} reads which
  * real registered {@code smelterThaumium}/{@code smelterVoid} block this tile's own state belongs to, no new
  * class needed (same shape {@code BlockSmelter} already reused for all three). {@link #getEfficiency}
@@ -61,7 +56,7 @@ import java.util.List;
  * <li>Alumentum fuel still grants a speed boost (a real, already-ported item, cheap to keep).</li>
  * </ul>
  */
-public class TileSmelter extends BlockEntity implements Container {
+public class TileSmelter extends BlockEntity implements net.minecraft.world.WorldlyContainer {
 
 	private static final int MAX_VIS = 256;
 
@@ -344,40 +339,30 @@ public class TileSmelter extends BlockEntity implements Container {
 		return tags != null && tags.size() > 0;
 	}
 
+	private static final int[] SLOTS_BOTTOM = { 1 };
+	private static final int[] SLOTS_TOP = {};
+	private static final int[] SLOTS_SIDES = { 0 };
+
+	/** The original's sided inventory: fuel from below, the item to smelt from the sides, nothing from the top. */
+	@Override
+	public int[] getSlotsForFace(net.minecraft.core.Direction side) {
+		return side == net.minecraft.core.Direction.DOWN ? SLOTS_BOTTOM : side == net.minecraft.core.Direction.UP ? SLOTS_TOP : SLOTS_SIDES;
+	}
+
+	@Override
+	public boolean canPlaceItemThroughFace(int slot, ItemStack stack, @javax.annotation.Nullable net.minecraft.core.Direction side) {
+		return side != net.minecraft.core.Direction.UP && canPlaceItem(slot, stack);
+	}
+
+	@Override
+	public boolean canTakeItemThroughFace(int slot, ItemStack stack, net.minecraft.core.Direction side) {
+		return side != net.minecraft.core.Direction.UP || slot != 1 || stack.is(net.minecraft.world.item.Items.BUCKET);
+	}
+
 	@Override
 	public void clearContent() {
 		inputItem = ItemStack.EMPTY;
 		fuelItem = ItemStack.EMPTY;
-	}
-
-	/**
-	 * Right-click routing (see this class's own doc comment): a fuel item goes in the fuel slot, anything
-	 * else with real object aspects goes in the input slot, sneak+empty-hand takes the input item back.
-	 */
-	public boolean interact(Level level, Player player, ItemStack held) {
-		if (level.isClientSide) return true;
-		if (held.isEmpty()) {
-			if (player.isCrouching() && !inputItem.isEmpty()) {
-				if (!player.getInventory().add(inputItem)) player.drop(inputItem, false);
-				inputItem = ItemStack.EMPTY;
-				setChanged();
-				return true;
-			}
-			return false;
-		}
-		if (AbstractFurnaceBlockEntity.isFuel(held) && fuelItem.isEmpty()) {
-			fuelItem = held.copyWithCount(1);
-			held.shrink(1);
-			setChanged();
-			return true;
-		}
-		if (inputItem.isEmpty() && canPlaceItem(0, held)) {
-			inputItem = held.copyWithCount(1);
-			held.shrink(1);
-			setChanged();
-			return true;
-		}
-		return false;
 	}
 
 	@Override

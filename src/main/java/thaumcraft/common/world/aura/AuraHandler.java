@@ -34,17 +34,11 @@ import thaumcraft.common.world.biomes.BiomeHandler;
  * AuraThread} calls it from the background simulation thread, which hands the actual spawn off to the main
  * server thread via {@code MinecraftServer#execute} rather than touching the level off-thread.
  *
- * <p>Real per-biome variation on generation is real again - {@link #generateAuraChunk} weights the baseline
- * by {@link BiomeHandler#getAuraModifier}, sampled from the real biome at the chunk's own real center,
- * matching the true original's own real {@code BiomeDictionary}-tag-weighted seeding (see that class's own
- * doc comment for the full story, including a real duplicate-registration quirk it found in the original).
- *
- * <p>Still deliberately simplified versus the original, worth revisiting later:
- * <ul>
- * <li>Chunks are created lazily on first read/write instead of via a world-gen hook, which sidesteps
- * needing to port that wiring for now - functionally equivalent from a "does this block have vis"
- * standpoint, just not primed ahead of time.</li>
- * </ul>
+ * <p>As the original, a chunk's aura is generated when the chunk first loads ({@link #onChunkLoad}): its base is the
+ * average {@link BiomeHandler#getAuraModifier} of its own biome and its four neighbours' (sampled at y 50 at each
+ * chunk's centre), times 500 and some noise. Only loaded chunks are simulated by the {@link AuraThread} - an unloaded
+ * chunk's aura waits, unchanged, until it loads again (the original dropped it from memory and read it back from the
+ * chunk). Anything reading a chunk that hasn't loaded yet still creates it the same way.
  */
 public class AuraHandler
 {
@@ -52,6 +46,8 @@ public class AuraHandler
 
     private static final ConcurrentHashMap<ResourceKey<Level>, AuraWorld> auras = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<ResourceKey<Level>, AuraThread> auraThreads = new ConcurrentHashMap<>();
+    /** The chunks each dimension has loaded - the only ones the aura thread simulates. */
+    private static final ConcurrentHashMap<ResourceKey<Level>, java.util.Set<Long>> loadedChunks = new ConcurrentHashMap<>();
     private static final Random rand = new Random();
 
     /** Set from Thaumcraft's ServerStartingEvent/ServerStoppingEvent handlers. */
@@ -82,13 +78,32 @@ public class AuraHandler
         });
     }
 
-    /** Seeds a freshly-touched chunk's baseline aura, real biome weighting included - see this class's own
-     * doc comment. */
+    /** The original's generateAura: the chunk's own biome and its four neighbours', averaged - see the class doc. */
     private static AuraChunk generateAuraChunk(Level level, ChunkPos pos) {
+        float life = BiomeHandler.getAuraModifier(level.getBiome(new BlockPos(pos.x * 16 + 8, 50, pos.z * 16 + 8)));
+        for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            life += BiomeHandler.getAuraModifier(level.getBiome(new BlockPos((pos.x + dir.getStepX()) * 16 + 8, 50, (pos.z + dir.getStepZ()) * 16 + 8)));
+        }
+        life /= 5.0f;
         float noise = (float) (1.0 + rand.nextGaussian() * 0.1);
-        float biomeModifier = BiomeHandler.getAuraModifier(level.getBiome(pos.getMiddleBlockPosition(64)));
-        short base = (short) Math.max(0, Math.min(AURA_CEILING, (int) (biomeModifier * AURA_CEILING * noise)));
+        short base = (short) Math.max(0, Math.min(AURA_CEILING, (int) (life * AURA_CEILING * noise)));
         return new AuraChunk(pos, base, base, 0.0f);
+    }
+
+    /** A chunk loaded: generate its aura if it has none yet, and let the aura thread simulate it. */
+    public static void onChunkLoad(ServerLevel level, ChunkPos pos) {
+        getAuraChunk(level, pos.x, pos.z);
+        loadedChunks.computeIfAbsent(level.dimension(), k -> ConcurrentHashMap.newKeySet()).add(pos.toLong());
+    }
+
+    public static void onChunkUnload(ServerLevel level, ChunkPos pos) {
+        java.util.Set<Long> loaded = loadedChunks.get(level.dimension());
+        if (loaded != null) loaded.remove(pos.toLong());
+    }
+
+    static boolean isChunkLoaded(ResourceKey<Level> dim, int x, int z) {
+        java.util.Set<Long> loaded = loadedChunks.get(dim);
+        return loaded != null && loaded.contains(ChunkPos.asLong(x, z));
     }
 
     public static void ensureThreadStarted(ResourceKey<Level> dim) {
@@ -113,6 +128,7 @@ public class AuraHandler
         AuraThread thread = auraThreads.remove(dim);
         if (thread != null) thread.stop();
         auras.remove(dim);
+        loadedChunks.remove(dim);
     }
 
     public static void stopAllThreads() {
@@ -121,6 +137,7 @@ public class AuraHandler
         }
         auraThreads.clear();
         auras.clear();
+        loadedChunks.clear();
     }
 
     public static float getTotalAura(Level level, BlockPos pos) {
@@ -239,7 +256,8 @@ public class AuraHandler
         }
         srv.execute(() -> {
             ServerLevel level = srv.getLevel(dim);
-            if (level != null) {
+            // as the original, wuss mode means no flux rifts
+            if (level != null && !thaumcraft.common.config.ThaumcraftConfig.WUSS_MODE.get()) {
                 thaumcraft.common.entities.EntityFluxRift.createRift(level, pos);
             }
         });

@@ -25,13 +25,8 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * (while holding charge and not redstone-powered), scans a 7-block radius for two same-species adult
  * {@link Animal}s not already in love and puts them in love, matching the original's exact algorithm.
  *
- * Real improvement over the original, not just a port: the original manually checked
- * {@code getGrowingAge() == 0 && !isInLove()} for "eligible to breed" - this uses {@link Animal#isBaby()}
- * (negated) the same way, but the adjacent {@link Animal#canFallInLove()} accessor (vanilla's own real
- * "not currently on love cooldown" check) is used in place of the original's simpler {@code !isInLove()},
- * correctly also excluding animals still on their post-breeding cooldown, not just currently-hearting ones.
- *
- * Simplified: no particle/sound FX (client FX, dropped like everywhere else this session).
+ * "Eligible" is the original's {@code getGrowingAge() == 0 && !isInLove()}: grown up, off its breeding cooldown,
+ * and not in love already.
  */
 public class TileLampFertility extends BlockEntity implements IEssentiaTransport {
 
@@ -75,7 +70,7 @@ public class TileLampFertility extends BlockEntity implements IEssentiaTransport
 		AABB area = new AABB(pos).inflate(SEARCH_RADIUS);
 		List<Animal> animals = level.getEntitiesOfClass(Animal.class, area);
 		for (Animal candidate : animals) {
-			if (candidate.isBaby() || !candidate.canFallInLove()) continue;
+			if (candidate.getAge() != 0 || candidate.isInLove()) continue;
 			List<Animal> sameSpecies = new ArrayList<>();
 			for (Animal other : animals) {
 				if (other.getClass().equals(candidate.getClass())) {
@@ -85,7 +80,7 @@ public class TileLampFertility extends BlockEntity implements IEssentiaTransport
 			if (sameSpecies.size() > 9) continue;
 			Animal partner = null;
 			for (Animal other : sameSpecies) {
-				if (other.isBaby() || !other.canFallInLove()) continue;
+				if (other.getAge() != 0 || other.isInLove()) continue;
 				if (partner != null) {
 					charges -= 5;
 					other.setInLove(null);

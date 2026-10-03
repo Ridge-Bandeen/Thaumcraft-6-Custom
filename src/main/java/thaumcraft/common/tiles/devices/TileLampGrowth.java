@@ -25,22 +25,16 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  *
  * The original tracked its own hand-picked whitelist of "standard crops" via {@code CropUtils}
  * (block+metadata strings registered per-crop) and forced growth by scheduling an early random tick
- * ({@code World#scheduleUpdate}), leaving the actual growth decision to that block's own random-tick
- * handler. This port uses vanilla's real {@link BonemealableBlock} interface instead - the same one bonemeal
- * itself uses - restricted to {@link BonemealableBlock.Type#GROWER} (excludes spreaders like grass/vines,
- * which aren't "growth" in the crop sense this lamp is themed around). This is a genuine improvement, not
- * just a simplification: it works correctly on every real growable block in the game (any crop, sapling, or
- * modded block correctly implementing the interface), not just a fixed, hand-maintained list, and growth is
- * a direct, guaranteed stage advance via {@link BonemealableBlock#performBonemeal} rather than a "might not
- * actually grow this attempt" scheduled random tick.
+ * (the original's {@code World#scheduleUpdate}, which ran the block's own growth tick): here the block gets a random
+ * tick, so it grows with the same chance it would from the world's own random ticks. Plants are the original's:
+ * anything growable, any bush (flowers, saplings, crops, mushrooms, wart...), cactus and sugar cane, but never grass;
+ * and grown crops ({@link thaumcraft.common.lib.utils.CropUtils#isGrownCrop}) are left alone. When the plant it last
+ * tended has changed, a green mist rises over it for anyone within 32 blocks.
  *
  * {@link IEssentiaTransport} ports over mechanically from the original - see
  * {@link thaumcraft.common.tiles.essentia.TileJarFillable}'s own doc comment for why no physical tube
  * network is needed for this direct, single-adjacent-tile draw.
  *
- * Simplified vs the original: no particle/sound FX on growth (client FX, dropped like everywhere else this
- * session - the original's own mist-particle trigger existed purely to mark "something changed here" for
- * players standing nearby).
  */
 public class TileLampGrowth extends BlockEntity implements IEssentiaTransport {
 
@@ -51,6 +45,11 @@ public class TileLampGrowth extends BlockEntity implements IEssentiaTransport {
 	private int charges;
 	private int drawDelay;
 	private final List<BlockPos> checklist = new ArrayList<>();
+	/** The plant last tended, and its state then (the original's lx/ly/lz, lid/lmd). */
+	@javax.annotation.Nullable
+	private BlockPos lastPlant;
+	@javax.annotation.Nullable
+	private BlockState lastState;
 
 	public TileLampGrowth(BlockPos pos, BlockState state) {
 		super(ThaumcraftBlockEntities.LAMP_GROWTH.get(), pos, state);
@@ -89,6 +88,15 @@ public class TileLampGrowth extends BlockEntity implements IEssentiaTransport {
 	}
 
 	private void tryGrowSomething(Level level, BlockPos pos) {
+		if (lastPlant != null) {
+			BlockState now = level.getBlockState(lastPlant);
+			if (now != lastState) {
+				if (level.getNearestPlayer(lastPlant.getX(), lastPlant.getY(), lastPlant.getZ(), 32.0, false) != null) {
+					thaumcraft.common.lib.network.fx.PacketFXBlockMist.send((ServerLevel) level, lastPlant, 4259648);
+				}
+				lastState = now;
+			}
+		}
 		if (checklist.isEmpty()) {
 			for (int a = -SEARCH_RADIUS; a <= SEARCH_RADIUS; a++) {
 				for (int b = -SEARCH_RADIUS; b <= SEARCH_RADIUS; b++) {
@@ -104,16 +112,24 @@ public class TileLampGrowth extends BlockEntity implements IEssentiaTransport {
 		double radiusSq = (double) SEARCH_RADIUS * SEARCH_RADIUS;
 		for (int y = column.getY(); y >= pos.getY() - SEARCH_RADIUS; y--) {
 			BlockPos bp = new BlockPos(column.getX(), y, column.getZ());
-			if (bp.distSqr(pos) >= radiusSq) continue;
 			BlockState target = level.getBlockState(bp);
-			if (target.isAir()) continue;
-			if (!(target.getBlock() instanceof BonemealableBlock growable) || growable.getType() != BonemealableBlock.Type.GROWER) continue;
-			if (!growable.isValidBonemealTarget(level, bp, target)) continue;
-			growable.performBonemeal((ServerLevel) level, level.random, bp, target);
+			if (target.isAir() || !isPlant(target) || bp.distSqr(pos) >= radiusSq
+					|| thaumcraft.common.lib.utils.CropUtils.isGrownCrop(level, bp) || !thaumcraft.common.lib.utils.CropUtils.doesLampGrow(level, bp)) continue;
 			charges--;
+			lastPlant = bp.immutable();
+			lastState = target;
+			target.randomTick((ServerLevel) level, bp, level.random);
 			setChanged();
 			return;
 		}
+	}
+
+	/** The original's isPlant: growable, a cactus or a plant (bushes, sugar cane) - never grass. */
+	private static boolean isPlant(BlockState state) {
+		net.minecraft.world.level.block.Block block = state.getBlock();
+		boolean growable = block instanceof BonemealableBlock bm && bm.getType() != BonemealableBlock.Type.NEIGHBOR_SPREADER;
+		return (growable || block instanceof net.minecraft.world.level.block.CactusBlock || block instanceof net.minecraft.world.level.block.BushBlock
+				|| block instanceof net.minecraft.world.level.block.SugarCaneBlock) && !(block instanceof net.minecraft.world.level.block.GrassBlock);
 	}
 
 	private boolean drawEssentia(Level level, BlockPos pos, BlockState state) {

@@ -29,9 +29,9 @@ import thaumcraft.common.tiles.devices.TileMirror;
  * mirrors to each OTHER at placement time): this links itself to any one already-placed real {@link
  * TileMirror} ({@link #useOn}, no validity check on the target - unlike {@code BlockMirrorItem}, the original
  * let a Hand Mirror re-point at any real mirror at any time, even an already-linked one), then lets the
- * holder open a real remote delivery menu from anywhere ({@link #use}) that pushes items through to wherever
- * THAT mirror's own real network partner is (via {@link TileMirror#transportDirect}) - a real two-hop
- * indirection, matching the original exactly.
+ * holder open a remote delivery menu from anywhere ({@link #use}); what's put in pops out of THAT mirror (via
+ * {@link TileMirror#transportDirect}), as the original and its book page say ("they will pop out at the linked
+ * mirror").
  *
  * Real link storage reuses {@link ThaumcraftDataComponents#MIRROR_LINK} directly (the same real component
  * {@code BlockMirrorItem}/{@code TileMirror} already use) rather than inventing a second, parallel one -
@@ -61,8 +61,8 @@ public class ItemHandMirror extends Item {
 
 		ItemStack held = context.getItemInHand();
 		held.set(ThaumcraftDataComponents.MIRROR_LINK.get(), new MirrorLink(level.dimension(), context.getClickedPos().immutable()));
-		level.playSound(null, context.getClickedPos(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0f, 2.0f);
-		player.displayClientMessage(Component.translatable("tc.handmirrorlinked"), true);
+		level.playSound(null, context.getClickedPos(), thaumcraft.common.registry.ThaumcraftSounds.JAR.get(), SoundSource.BLOCKS, 1.0f, 2.0f);
+		player.sendSystemMessage(Component.translatable("tc.handmirrorlinked"));
 		return InteractionResult.CONSUME;
 	}
 
@@ -80,9 +80,7 @@ public class ItemHandMirror extends Item {
 			return InteractionResultHolder.pass(stack);
 		}
 		if (!resolveTarget(level, link).isPresent()) {
-			stack.remove(ThaumcraftDataComponents.MIRROR_LINK.get());
-			player.playSound(SoundEvents.EVOKER_CAST_SPELL, 1.0f, 0.8f);
-			player.displayClientMessage(Component.translatable("tc.handmirrorerror").withStyle(ChatFormatting.RED), true);
+			breakLink(stack, player);
 			return InteractionResultHolder.fail(stack);
 		}
 		player.openMenu(new net.minecraft.world.MenuProvider() {
@@ -108,6 +106,13 @@ public class ItemHandMirror extends Item {
 					.withStyle(ChatFormatting.DARK_PURPLE));
 		}
 		super.appendHoverText(stack, context, tooltip, flag);
+	}
+
+	/** The original's broken-link response: the link is forgotten, with a zap and a message. */
+	public static void breakLink(ItemStack stack, Player player) {
+		stack.remove(ThaumcraftDataComponents.MIRROR_LINK.get());
+		player.level().playSound(null, player.blockPosition(), thaumcraft.common.registry.ThaumcraftSounds.ZAP.get(), SoundSource.PLAYERS, 1.0f, 0.8f);
+		player.sendSystemMessage(Component.translatable("tc.handmirrorerror"));
 	}
 
 	/** Real, static resolver shared with {@link HandMirrorMenu} - a real linked target tile only if the real

@@ -279,6 +279,14 @@ public class Thaumcraft {
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ThaumcraftBlockEntities.WATER_JUG.get(),
                 (tile, side) -> side == net.minecraft.core.Direction.UP ? tile.tank : null);
 
+        // the Void Siphon's seeds can be taken out from any side, as the original (nothing can be put in)
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ThaumcraftBlockEntities.VOID_SIPHON.get(),
+                (tile, side) -> ((thaumcraft.common.tiles.crafting.TileVoidSiphon) tile).getItemHandler());
+
+        // the item Mirror's always-empty slot: what goes in is sent to its partner, as the original's IInventory
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ThaumcraftBlockEntities.MIRROR.get(),
+                (tile, side) -> ((thaumcraft.common.tiles.devices.TileMirror) tile).getItemHandler());
+
         // the Crucible's water tank, on every side as the original
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ThaumcraftBlockEntities.CRUCIBLE.get(),
                 (tile, side) -> tile.getFluidHandler());
@@ -396,6 +404,8 @@ public class Thaumcraft {
                 (payload, context) -> context.enqueueWork(() -> payload.handle((net.minecraft.server.level.ServerPlayer) context.player())));
         registrar.playToClient(thaumcraft.common.lib.network.fx.PacketFXShield.TYPE, thaumcraft.common.lib.network.fx.PacketFXShield.STREAM_CODEC,
                 (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.handleShield(payload));
+        registrar.playToClient(thaumcraft.common.lib.network.fx.PacketFXBlockMist.TYPE, thaumcraft.common.lib.network.fx.PacketFXBlockMist.STREAM_CODEC,
+                (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.drawBlockMist(payload.pos(), payload.color()));
         registrar.playToServer(thaumcraft.common.lib.network.ServerboundGolemBuilderPacket.TYPE,
                 thaumcraft.common.lib.network.ServerboundGolemBuilderPacket.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> payload.handle((net.minecraft.server.level.ServerPlayer) context.player())));
@@ -460,7 +470,7 @@ public class Thaumcraft {
                 net.minecraft.world.entity.monster.Monster::checkMonsterSpawnRules, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
         event.register(ThaumcraftEntities.INHABITED_ZOMBIE.get(), net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND,
                 net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                net.minecraft.world.entity.monster.Monster::checkMonsterSpawnRules, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
+                thaumcraft.common.entities.monster.EntityInhabitedZombie::checkSpawn, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
         event.register(ThaumcraftEntities.ELDRITCH_GUARDIAN.get(), net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND,
                 net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 net.minecraft.world.entity.monster.Monster::checkMonsterSpawnRules, net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent.Operation.AND);
@@ -562,6 +572,20 @@ public class Thaumcraft {
         AuraHandler.stopAllThreads();
         AuraHandler.server = null;
         thaumcraft.common.lib.events.EssentiaHandler.clear();
+    }
+
+    @SubscribeEvent
+    public void onChunkLoad(net.neoforged.neoforge.event.level.ChunkEvent.Load event) {
+        if (event.getLevel() instanceof ServerLevel level) {
+            AuraHandler.onChunkLoad(level, event.getChunk().getPos());
+        }
+    }
+
+    @SubscribeEvent
+    public void onChunkUnload(net.neoforged.neoforge.event.level.ChunkEvent.Unload event) {
+        if (event.getLevel() instanceof ServerLevel level) {
+            AuraHandler.onChunkUnload(level, event.getChunk().getPos());
+        }
     }
 
     @SubscribeEvent
@@ -747,10 +771,8 @@ public class Thaumcraft {
      * drops instead, same exclusion {@link thaumcraft.common.lib.events.ChampionModEvents#onDrops}'s own
      * paired real XP bonus uses), a real rolled champion mod id (0-13) excluding Tainted (13). No independent
      * chance roll on top - a confirmed real champion always drops one, same as the true original. Tier is
-     * still a simple weighted pick (60% common/30% uncommon/10% rare) rather than the original's real
-     * looting-level scaling - that stays a real, deliberate simplification, confirmed by reading the modern
-     * {@code LivingDropsEvent} class directly: it genuinely has no {@code lootingLevel} field or equivalent
-     * at all (unlike the original's own event), not just an oversight.
+     * the original's {@code min(2, (rand(9) + looting) / 5)}: without Looting five in nine are common and the rest
+     * uncommon; Looting brings the rare ones in. Kills by fake players (machines) drop none, as the original.
      *
      * (Zombie -&gt; Brain drops used to be rolled from this same {@code LivingDropsEvent} subscriber too -
      * removed once {@code MobDeathDropEvents#onLivingDrops} shipped a more complete real version, correctly
@@ -764,10 +786,15 @@ public class Thaumcraft {
         if (!event.isRecentlyHit()) return;
         if (!(event.getEntity() instanceof net.minecraft.world.entity.monster.Monster monster)) return;
         if (monster instanceof thaumcraft.common.entities.monster.boss.EntityThaumcraftBoss) return;
-        rollLootBagDrop(monster, event.getDrops());
+        if (event.getSource().getEntity() instanceof net.neoforged.neoforge.common.util.FakePlayer) return;
+        rollLootBagDrop(monster, event.getDrops(), thaumcraft.common.lib.utils.LootingHelper.level(event.getSource()));
     }
 
     public static void rollLootBagDrop(net.minecraft.world.entity.monster.Monster monster, java.util.Collection<net.minecraft.world.entity.item.ItemEntity> drops) {
+        rollLootBagDrop(monster, drops, 0);
+    }
+
+    public static void rollLootBagDrop(net.minecraft.world.entity.monster.Monster monster, java.util.Collection<net.minecraft.world.entity.item.ItemEntity> drops, int looting) {
         net.minecraft.world.entity.ai.attributes.AttributeInstance championAttr =
                 monster.getAttribute(ThaumcraftAttributes.CHAMPION_MOD);
         if (championAttr == null) return;
@@ -775,10 +802,10 @@ public class Thaumcraft {
         if (championId < 0.0 || championId == 13.0) return;
 
         net.minecraft.util.RandomSource random = monster.getRandom();
-        float roll = random.nextFloat();
+        int lb = Math.min(2, net.minecraft.util.Mth.floor((random.nextInt(9) + looting) / 5.0f));
         net.neoforged.neoforge.registries.DeferredItem<thaumcraft.common.items.curios.ItemLootBag> tier =
-                roll < 0.6f ? thaumcraft.api.items.ItemsTC.lootBagCommon
-                        : roll < 0.9f ? thaumcraft.api.items.ItemsTC.lootBagUncommon
+                lb == 0 ? thaumcraft.api.items.ItemsTC.lootBagCommon
+                        : lb == 1 ? thaumcraft.api.items.ItemsTC.lootBagUncommon
                         : thaumcraft.api.items.ItemsTC.lootBagRare;
         drops.add(new net.minecraft.world.entity.item.ItemEntity(
                 monster.level(), monster.getX(), monster.getY() + monster.getEyeHeight(), monster.getZ(),

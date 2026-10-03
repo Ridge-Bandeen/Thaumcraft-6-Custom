@@ -1,5 +1,35 @@
 # Thaumcraft 1.21.1 Port — TODO archive
 
+## Closed 2026-10-03 (parity sweep, first passes)
+
+- Warp curse post-shaders, Death Gaze vignette, mist/guardian fog (rewritten for 1.21 shaders); mist tiers bring
+  Eldritch Guardians; curses are milk-proof and ambient; Death Gaze view cone; it no longer withers the player.
+- AuraThread race: kept as the original (same design). Aura chunks are made when a chunk loads with the original's
+  5-biome blend and only loaded chunks are simulated; wussMode stops rifts.
+- Crucible (fluid capability, boil/spill events, read-only aspects); EssentiaHandler as the original (cache, retry
+  delay, directional boxes, confirm drain, mirror exclusion); Essentia Mirror relays through it.
+- Smelter sided hopper slots and no-sneak GUI; jars drop on harvest only, with the brace, labels face the
+  labeller; Brain in a Jar = 5 bookshelves and eats merged orbs whole; Alembic per-face label, label removal,
+  emptying, original shape.
+- Item Mirror: hopper input, wispy motes, 1 s eject warm-up, Hand Mirror delivers out of the linked mirror.
+- Everfull Urn auto-fill of tanks/cauldrons with water trail, refill every 5 ticks (was every tick).
+- Void Siphon: hopper extraction, original line of sight. Recharge Pedestal: aspect container (goggles).
+- Tubes: venting, the holding-aspect suction rule, staggered start, creak; tube facing set on placement; valve's
+  handle side never connects. Arcane Ear note particle/block event. Pattern Crafter dial-only click.
+- Thaumatorium never draws through its front. Spa: any-fluid tank, mix/unmix toggle, gauge, original placement.
+- Lamps: Growth Lamp random-ticks (was bonemeal) with the original plant rules and green mist (CropUtils
+  ported); Fertility Lamp breeding cooldown rule; Arcane Lamp/Lamplight use the glimmer block again, lamp lights
+  stay within 4 of the ground and are cleared by scan.
+- Levitator lifts on both sides (players) with motes; hole edge sparkles; Condenser and Vis Generator sparks.
+- Looting: LootingHelper; every original looting term restored (turrets, bore, crab, golem, brainy zombie, zombie
+  brains, loot-bag tier formula; no bags for fake-player kills). Bore drops its full table; Giant Brainy Zombie's
+  12 rolls; Greater Portal drops its Primordial Pearl.
+- Pech bow enchantments; Thaumic Slime spit attack and size-count split; crab hunts cultists and is an arthropod;
+  Inhabited Zombie spawn spacing; Fire Bat full-bright; Wisp spawn/death puffs; Spell Bat spawn data, effect
+  particles and translucent spell tint.
+- Stale "simplified" notes corrected (Infusion Matrix, Potion Sprayer, Focal Manipulator, lamps, Pech spawning,
+  portals/swarm brightness, cultist spawn particles = dead code in the original).
+
 ## Closed 2026-10-02
 
 - Infusion recipes checked one by one against the original: all present; the elemental tools and Primal Crusher now

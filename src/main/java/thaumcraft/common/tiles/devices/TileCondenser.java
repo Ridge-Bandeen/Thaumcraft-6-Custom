@@ -29,8 +29,7 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * block in the structure - the original's own maintenance loop ({@code ItemsTC.filter} clears a dirty block
  * back to clean on right-click, ported alongside on {@link BlockCondenserLattice}).
  *
- * Simplified vs the original: no client-side spark particle effects (FXDispatcher) - visual-only, dropped
- * like everywhere else this session.
+ * As the original, sparks flicker over the lattice while it works ({@link #clientTick}).
  */
 public class TileCondenser extends BlockEntity implements IEssentiaTransport {
 
@@ -62,7 +61,10 @@ public class TileCondenser extends BlockEntity implements IEssentiaTransport {
 	}
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TileCondenser tile) {
-		if (level.isClientSide) return;
+		if (level.isClientSide) {
+			tile.clientTick(level, pos, state);
+			return;
+		}
 		if (tile.latticeCount < 0.0f) {
 			tile.triggerCheck(level, pos);
 		}
@@ -82,6 +84,56 @@ public class TileCondenser extends BlockEntity implements IEssentiaTransport {
 			}
 			tile.setChanged();
 		}
+	}
+
+	/** As the original's client update: while working and holding essentia, sparks of random colour flicker over its
+	 * clean lattice blocks, quicker the faster it works. (The client rescans the lattice itself every two seconds -
+	 * lattice changes only reach the server's copy.) */
+	private void clientTick(Level level, BlockPos pos, BlockState state) {
+		count++;
+		if (latticeCount < 0.0f || count % 40 == 0) triggerCheck(level, pos);
+		if (!state.getValue(BlockStateProperties.ENABLED) || latticeCount <= 0.0f || !clientHasEssentia || uncloggedList.isEmpty()) return;
+		if (count % Math.max(3, interval / 50) != 0) return;
+		BlockPos p = BlockPos.of(uncloggedList.get(level.random.nextInt(uncloggedList.size())));
+		var r = level.random;
+		thaumcraft.client.fx.ClientFxHandlers.spawnSpark(level, p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5, 4.5f + r.nextFloat(),
+				0.33f + r.nextFloat() * 0.66f, 0.33f + r.nextFloat() * 0.66f, 0.33f + r.nextFloat() * 0.66f, 0.8f);
+	}
+
+	/** Client: whether it holds essentia (synced whenever that changes). */
+	private boolean clientHasEssentia;
+	private boolean syncedHasEssentia;
+
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		if (level != null && !level.isClientSide && (essentia > 0) != syncedHasEssentia) {
+			syncedHasEssentia = essentia > 0;
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+		}
+	}
+
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		CompoundTag tag = new CompoundTag();
+		tag.putBoolean("hasEssentia", essentia > 0);
+		return tag;
+	}
+
+	@Override
+	public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+		clientHasEssentia = tag.getBoolean("hasEssentia");
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	@Override
+	public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket pkt,
+			HolderLookup.Provider registries) {
+		handleUpdateTag(pkt.getTag(), registries);
 	}
 
 	private void fill(Level level, BlockPos pos) {

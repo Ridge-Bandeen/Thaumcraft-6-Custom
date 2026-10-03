@@ -90,8 +90,7 @@ import thaumcraft.common.world.aura.AuraHandler;
  * {@link #mobInteract}, same real "no GUI, a simpler direct interaction already covers the one real slot"
  * reasoning {@link EntityTurretCrossbow}'s own dispenser-auto-reload cut established. No real mining-beam VFX
  * (see {@code ModelArcaneBore}'s own doc comment - a genuine bespoke Tessellator effect, real separate follow-
- * up). Three of the original's own death-drop entries ({@code morphicResonator}, {@code crystalAir}, {@code
- * crystalEarth}) aren't ported yet, dropped from the table rather than blocking this chunk on them.
+ * up). Its death drops are the original's whole table, Looting included.
  */
 public class EntityArcaneBore extends EntityOwnedConstruct {
 
@@ -527,16 +526,27 @@ public class EntityArcaneBore extends EntityOwnedConstruct {
 
 	@Override
 	protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
-		if (random.nextFloat() < 0.2f) {
+		// the original's table; Looting raises every chance by 0.15 a level
+		float b = thaumcraft.common.lib.utils.LootingHelper.level(source) * 0.15f;
+		if (random.nextFloat() < 0.2f + b) {
 			spawnAtLocation(new ItemStack(ItemsTC.mindClockwork.get()));
 		}
-		if (random.nextFloat() < 0.5f) {
+		if (random.nextFloat() < 0.2f + b) {
+			spawnAtLocation(new ItemStack(ItemsTC.morphicResonator.get()));
+		}
+		if (random.nextFloat() < 0.2f + b) {
+			spawnAtLocation(new ItemStack(BlocksTC.crystals.get(thaumcraft.api.aspects.Aspect.AIR).get()));
+		}
+		if (random.nextFloat() < 0.2f + b) {
+			spawnAtLocation(new ItemStack(BlocksTC.crystals.get(thaumcraft.api.aspects.Aspect.EARTH).get()));
+		}
+		if (random.nextFloat() < 0.5f + b) {
 			spawnAtLocation(new ItemStack(ItemsTC.mechanismSimple.get()));
 		}
-		if (random.nextFloat() < 0.5f) {
+		if (random.nextFloat() < 0.5f + b) {
 			spawnAtLocation(new ItemStack(ItemsTC.plateBrass.get()));
 		}
-		if (random.nextFloat() < 0.5f) {
+		if (random.nextFloat() < 0.5f + b) {
 			spawnAtLocation(new ItemStack(BlocksTC.plankGreatwood.get()));
 		}
 	}

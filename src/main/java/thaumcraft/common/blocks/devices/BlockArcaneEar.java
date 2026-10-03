@@ -130,4 +130,9 @@ public class BlockArcaneEar extends Block implements EntityBlock {
 				? (lvl, pos, st, be) -> TileArcaneEar.tick(lvl, pos, st, (TileArcaneEar) be)
 				: null;
 	}
+
+	@Override
+	protected boolean triggerEvent(BlockState state, Level level, BlockPos pos, int id, int param) {
+		return thaumcraft.common.tiles.devices.TileArcaneEar.playNoteEvent(level, pos, id, param) || super.triggerEvent(state, level, pos, id, param);
+	}
 }

@@ -6,13 +6,13 @@ in a client are tracked in the `thaumcraft-ui-visual-parity-checklist` memory, n
 
 ## Code work
 
-- Parity sweep: ~50 compiled block/tile classes still describe "simplified"/"stand-in"/"cut" behaviour in their doc
-  comments (many stale - the Alchemical Furnace screen, the pedestal renderer and casters all exist now). Check each
-  against the original and restore or correct; the standard is full parity (see the parity memory).
-- The original's potion post-shaders (Death Gaze desaturate, Blurred Vision blur, Unnatural Hunger, Sun Scorned) and
-  the warp fog packets aren't ported; `disableShaders` would gate them too.
-- `AuraThread.processAuraChunk` reads a chunk's vis/flux, works, then writes back off the server thread without
-  locking, so a server-side change in between is lost. Same design as the original; rare, small.
+- Parity sweep of the "simplified"/"stand-in"/"cut" doc notes (list: `grep -iE "simplif|stand-in|cut|not ported"`
+  over compiled classes): devices, mobs and drops done 2026-10-03 (see archive). Left: golems (filter matching
+  toggles meta/NBT/ore/mod on Provide/Stock/Use/Empty/Fill/Pickup; SealProvide serving seal- and entity-sourced
+  requests; AIGoto stuck detection; interaction nudge; bell/placer variants), foci and their entities, items
+  (caster vis draw, armour, phial/alembic, resonator, void tools), research/scans, worldgen, GUIs (Focal
+  Manipulator, focus pouch, hand mirror, seal config), client FX classes.
+- Void Siphon's void streaks (the original's FXVoidStream, an ender-shader stream from each rift).
 - Renderer fidelity: no full sweep yet of already-registered renderers for simplified detail/animation (the mob
   sweep only covered entities that had been invisible placeholders).
 - Aspect table: entries for content the port hasn't built are skipped (ambient grass, the Pure bucket); the

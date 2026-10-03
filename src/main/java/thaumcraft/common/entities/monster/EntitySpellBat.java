@@ -45,12 +45,11 @@ import thaumcraft.api.casters.Trajectory;
  * {@link Entity#isAlliedTo}, which already covers the same team/tame-ownership cases without needing to
  * port that whole utility method.
  *
- * <p>Real, documented cut: no custom {@code EntityRenderer} yet, same real gap {@link EntityFireBat} already
- * carries and for the same reason (no vanilla {@code Bat}-compatible model to reuse). The original's own
- * client-side "average the focus effects' own colors" particle-tint computation isn't ported either - it
- * only ever fed the also-unported particle dispatcher, so there's nothing for it to drive yet.
+ * <p>As the original, its focus package goes to clients with the spawn ({@link #writeSpawnData}); there it trails
+ * its effects' particles and takes their averaged colour ({@link #getColor}), which
+ * {@link thaumcraft.client.render.RenderSpellBat} tints it with, see-through and full-bright.
  */
-public class EntitySpellBat extends FlyingMob {
+public class EntitySpellBat extends FlyingMob implements net.neoforged.neoforge.entity.IEntityWithComplexSpawn {
 
 	private static final EntityDataAccessor<Boolean> DATA_FRIENDLY =
 			SynchedEntityData.defineId(EntitySpellBat.class, EntityDataSerializers.BOOLEAN);
@@ -154,10 +153,57 @@ public class EntitySpellBat extends FlyingMob {
 		}
 	}
 
+	/** Client: the package's effects and their averaged colour, worked out once (the original's effects/color). */
+	@javax.annotation.Nullable
+	private thaumcraft.api.casters.FocusEffect[] effects;
+	private int color = 0xFFFFFF;
+
+	public int getColor() {
+		return color;
+	}
+
+	@Override
+	public void writeSpawnData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
+		buffer.writeNbt(focusPackage != null ? focusPackage.serialize() : new net.minecraft.nbt.CompoundTag());
+	}
+
+	@Override
+	public void readSpawnData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
+		try {
+			net.minecraft.nbt.CompoundTag tag = buffer.readNbt();
+			if (tag != null && !tag.isEmpty()) {
+				focusPackage = new FocusPackage();
+				focusPackage.deserialize(tag, level());
+			}
+		} catch (Exception e) {
+			thaumcraft.Thaumcraft.LOGGER.debug("Spell bat package could not be read", e);
+		}
+	}
+
 	@Override
 	public void aiStep() {
 		super.aiStep();
 		if (level().isClientSide) {
+			if (isAlive() && focusPackage != null) {
+				if (effects == null) {
+					effects = focusPackage.getFocusEffects();
+					if (effects.length > 0) {
+						int r = 0, g = 0, b = 0;
+						for (thaumcraft.api.casters.FocusEffect ef : effects) {
+							int c = thaumcraft.api.casters.FocusEngine.getElementColor(ef.getKey());
+							r += (c >> 16) & 255;
+							g += (c >> 8) & 255;
+							b += c & 255;
+						}
+						color = (r / effects.length) << 16 | (g / effects.length) << 8 | (b / effects.length);
+					}
+				}
+				if (effects.length > 0) {
+					thaumcraft.api.casters.FocusEffect eff = effects[random.nextInt(effects.length)];
+					eff.renderParticleFX(level(), getX() + random.nextGaussian() * 0.125, getY() + getBbHeight() / 2.0f + random.nextGaussian() * 0.125,
+							getZ() + random.nextGaussian() * 0.125, 0.0, 0.0, 0.0);
+				}
+			}
 			return;
 		}
 		ServerLevel level = (ServerLevel) level();

@@ -53,8 +53,8 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * recipe whose catalyst matches the slot, sucks essentia from connected jars/tubes toward that recipe's aspects
  * until they are met, then crafts, consuming one catalyst and clearing the stored essentia.</li>
  * </ul>
- * Not ported: crafting-event firing for the curating player, and ejecting into an adjacent inventory (the result
- * drops above the device).
+ * The player who chose the recipe counts as having crafted the result, which goes into an inventory in front of the
+ * device or drops out there. Essentia comes in from any side but the front and the bottom.
  *
  * <p>{@link #setChanged()} is overridden below for the same real reason {@link TilePedestal#setChanged()} is - the
  * renderer's floating preview and the GUI both read this tile's state on the client.
@@ -280,13 +280,18 @@ public class TileThaumatorium extends BlockEntity implements IAspectContainer, I
 		}
 	}
 
+	private Direction frontFacing() {
+		return getBlockState().hasProperty(thaumcraft.common.blocks.crafting.BlockThaumatorium.FACING)
+				? getBlockState().getValue(thaumcraft.common.blocks.crafting.BlockThaumatorium.FACING) : Direction.NORTH;
+	}
+
 	/** Pulls one essentia from a connected jar or tube - scanning both this block's neighbours and the top block's
-	 * (the device is two blocks tall), never straight down. */
+	 * (the device is two blocks tall), never straight down or through the front. */
 	private void fill(Level level, BlockPos pos) {
 		for (int y = 0; y <= 1; y++) {
 			BlockPos base = pos.above(y);
 			for (Direction dir : Direction.values()) {
-				if (dir == Direction.DOWN || (y == 0 && dir == Direction.UP)) continue;
+				if (dir == Direction.DOWN || dir == frontFacing() || (y == 0 && dir == Direction.UP)) continue;
 				if (!(level.getBlockEntity(base.relative(dir)) instanceof IEssentiaTransport neighbor)) continue;
 				if (!neighbor.isConnectable(dir.getOpposite()) || !neighbor.canOutputTo(dir.getOpposite())) continue;
 				if (neighbor.getEssentiaAmount(dir.getOpposite()) <= 0) continue;

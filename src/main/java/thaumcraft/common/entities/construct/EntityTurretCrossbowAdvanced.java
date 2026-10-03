@@ -281,28 +281,27 @@ public class EntityTurretCrossbowAdvanced extends EntityTurretCrossbow implement
 
 	@Override
 	protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
-		// Real, complete replacement of the base turret's own drop table, matching the original's own
-		// dropFewItems override completely replacing the base's rather than adding to it. No looting-level
-		// scaling, same real, documented cut as the base turret.
-		if (random.nextFloat() < 0.2f) {
+		float b = thaumcraft.common.lib.utils.LootingHelper.level(source) * 0.15f;
+		// the original's own table, replacing the base turret's; Looting raises every chance by 0.15 a level
+		if (random.nextFloat() < 0.2f + b) {
 			spawnAtLocation(new ItemStack(ItemsTC.mindBiothaumic.get()));
 		}
-		if (random.nextFloat() < 0.5f) {
+		if (random.nextFloat() < 0.5f + b) {
 			spawnAtLocation(new ItemStack(ItemsTC.mechanismSimple.get()));
 		}
-		if (random.nextFloat() < 0.5f) {
+		if (random.nextFloat() < 0.5f + b) {
 			spawnAtLocation(new ItemStack(BlocksTC.plankGreatwood.get()));
 		}
-		if (random.nextFloat() < 0.5f) {
+		if (random.nextFloat() < 0.5f + b) {
 			spawnAtLocation(new ItemStack(BlocksTC.plankGreatwood.get()));
 		}
-		if (random.nextFloat() < 0.3f) {
+		if (random.nextFloat() < 0.3f + b) {
 			spawnAtLocation(new ItemStack(ItemsTC.plateBrass.get()));
 		}
-		if (random.nextFloat() < 0.4f) {
+		if (random.nextFloat() < 0.4f + b) {
 			spawnAtLocation(new ItemStack(ItemsTC.plateIron.get()));
 		}
-		if (random.nextFloat() < 0.4f) {
+		if (random.nextFloat() < 0.4f + b) {
 			spawnAtLocation(new ItemStack(ItemsTC.plateIron.get()));
 		}
 	}

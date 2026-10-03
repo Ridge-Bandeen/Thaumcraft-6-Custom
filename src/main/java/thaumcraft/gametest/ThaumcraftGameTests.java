@@ -1750,7 +1750,7 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(result.is(ItemsTC.focus1.get()), "the discounted craft should still produce its result, got " + result);
 		menu.slots.get(0).onTake(player, result);
 		float spent = visBefore - AuraHandler.getVis(helper.getLevel(), origin);
-		helper.assertTrue(spent == 14, "the craft should drain the discounted 14 vis - not 0 (the original's bug) and not 15, spent " + spent);
+		helper.assertTrue(Math.round(spent) == 14, "the craft should drain the discounted 14 vis - not 0 (the original's bug) and not 15, spent " + spent);
 		helper.succeed();
 	}
 
@@ -1767,7 +1767,7 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(result.is(ItemsTC.focus1.get()), "an exhausted player with plenty of vis can still craft, got " + result);
 		menu.slots.get(0).onTake(player, result);
 		float spent = visBefore - AuraHandler.getVis(helper.getLevel(), origin);
-		helper.assertTrue(spent == 17, "Vis Exhaust I adds 10% (15 -> 16.5 -> 17), spent " + spent);
+		helper.assertTrue(Math.round(spent) == 17, "Vis Exhaust I adds 10% (15 -> 16.5 -> 17), spent " + spent);
 		helper.succeed();
 	}
 
@@ -3173,7 +3173,7 @@ public class ThaumcraftGameTests {
 		for (BlockPos p : net.minecraft.core.BlockPos.betweenClosed(
 				net.minecraft.core.BlockPos.containing(searchVolume.minX, searchVolume.minY, searchVolume.minZ),
 				net.minecraft.core.BlockPos.containing(searchVolume.maxX, searchVolume.maxY, searchVolume.maxZ))) {
-			if (helper.getLevel().getBlockState(p).is(net.minecraft.world.level.block.Blocks.LIGHT)) {
+			if (helper.getLevel().getBlockState(p).is(BlocksTC.effectGlimmer.get())) {
 				foundLight = true;
 				break;
 			}
@@ -3760,10 +3760,10 @@ public class ThaumcraftGameTests {
 		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
 		helper.assertFalse(tile.getItem().isEmpty(), "the feather catalyst should have been accepted");
 
-		helper.setBlock(pos.north(), TEST_ESSENTIA_SOURCE_BLOCK.get());
-		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(pos.north());
+		helper.setBlock(pos.east(), TEST_ESSENTIA_SOURCE_BLOCK.get());
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(pos.east());
 		source.amount = 200;
-		source.outputFace = net.minecraft.core.Direction.SOUTH;
+		source.outputFace = net.minecraft.core.Direction.WEST;
 
 		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(pos);
 		for (int i = 0; i < 500 && !tile.getItem().isEmpty(); i++) {
@@ -3793,11 +3793,11 @@ public class ThaumcraftGameTests {
 		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
 		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
 
-		helper.setBlock(pos.north(), TEST_ESSENTIA_SOURCE_BLOCK.get());
-		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(pos.north());
+		helper.setBlock(pos.east(), TEST_ESSENTIA_SOURCE_BLOCK.get());
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(pos.east());
 		source.aspect = Aspect.EARTH;
 		source.amount = 200;
-		source.outputFace = net.minecraft.core.Direction.SOUTH;
+		source.outputFace = net.minecraft.core.Direction.WEST;
 
 		net.minecraft.world.level.block.state.BlockState state = helper.getBlockState(pos);
 		for (int i = 0; i < 100; i++) {
@@ -4846,8 +4846,7 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
-	// Growth Lamp (TileLampGrowth) - see its own doc comment for the real BonemealableBlock-based growth
-	// mechanic and the charge/essentia-draw shell it shares in spirit with the original.
+	// Growth Lamp (TileLampGrowth) - it gives plants in reach random ticks, as the original's scheduled updates.
 	// --------------------------------------------------------------------------------------------------
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
@@ -4856,13 +4855,14 @@ public class ThaumcraftGameTests {
 		BlockPos sourcePos = lampPos.above();
 		BlockPos farmlandPos = lampPos.offset(0, 2, 0);
 		BlockPos cropPos = lampPos.offset(0, 3, 0);
+		// sugar cane: every random tick ages it one step, whatever the light
 
 		helper.setBlock(sourcePos, TEST_ESSENTIA_SOURCE_BLOCK.get());
 		helper.setBlock(lampPos, BlocksTC.lampGrowth.get().defaultBlockState()
 				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.UP));
-		helper.setBlock(farmlandPos, net.minecraft.world.level.block.Blocks.FARMLAND);
-		helper.setBlock(cropPos, net.minecraft.world.level.block.Blocks.WHEAT.defaultBlockState()
-				.setValue(net.minecraft.world.level.block.CropBlock.AGE, 0));
+		helper.setBlock(farmlandPos, net.minecraft.world.level.block.Blocks.SAND);
+		helper.setBlock(farmlandPos.east(), net.minecraft.world.level.block.Blocks.WATER);
+		helper.setBlock(cropPos, net.minecraft.world.level.block.Blocks.SUGAR_CANE.defaultBlockState());
 
 		BlockPos lampAbs = helper.absolutePos(lampPos);
 		BlockPos cropAbs = helper.absolutePos(cropPos);
@@ -4877,8 +4877,9 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(lamp.getCharges() >= 0, "the lamp should have drawn essentia and be tracking real charge, got " + lamp.getCharges());
 		helper.assertTrue(source.amount < 999, "the essentia source above should have been drawn from, still at " + source.amount);
-		int age = helper.getLevel().getBlockState(cropAbs).getValue(net.minecraft.world.level.block.CropBlock.AGE);
-		helper.assertTrue(age > 0, "a real wheat crop within the lamp's search radius should have been advanced via BonemealableBlock, age is still " + age);
+		// 500 ticks is more than two passes over the lamp's 169 columns, so the cane got at least two random ticks
+		int age = helper.getLevel().getBlockState(cropAbs).getValue(net.minecraft.world.level.block.SugarCaneBlock.AGE);
+		helper.assertTrue(age >= 2, "the sugar cane within the lamp's reach should have had random ticks, age is " + age);
 		helper.succeed();
 	}
 
@@ -5619,6 +5620,11 @@ public class ThaumcraftGameTests {
 		}
 		helper.assertTrue(!valve.isAllowingFlow(), "a redstone-powered valve should shut itself");
 
+		// as the original, a unit already inside the valve can still drain out after it shuts: let it, then start clean
+		for (int i = 0; i < 20; i++) {
+			thaumcraft.common.tiles.essentia.TileTubeValve.tick(helper.getLevel(), valveAbs, helper.getBlockState(valvePos), valve);
+			thaumcraft.common.tiles.essentia.TileJarFillable.tick(helper.getLevel(), jarAbs, helper.getBlockState(jarPos), jar);
+		}
 		jar.emptyIntoAura(helper.getLevel(), jarAbs);
 		for (int i = 0; i < 200; i++) {
 			thaumcraft.common.tiles.essentia.TileTubeValve.tick(helper.getLevel(), valveAbs, helper.getBlockState(valvePos), valve);
@@ -6599,7 +6605,7 @@ public class ThaumcraftGameTests {
 					level, absPos, level.getBlockState(absPos), null, new java.util.ArrayList<>(), player, pickaxe);
 			thaumcraft.common.lib.events.ToolEvents.onBlockDrops(event);
 
-			helper.assertTrue(level.getBlockState(absPos).is(Blocks.LIGHT),
+			helper.assertTrue(level.getBlockState(absPos).is(BlocksTC.effectGlimmer.get()),
 					"LAMPLIGHT should place a real light source in a dark, fully air-enclosed mined spot (brightness "
 							+ level.getMaxLocalRawBrightness(absPos) + "), found: " + level.getBlockState(absPos));
 		});
@@ -7352,10 +7358,14 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos, BlocksTC.alembic.get());
 		thaumcraft.common.tiles.essentia.TileAlembic tile = helper.getBlockEntity(pos);
 
-		helper.assertTrue(tile.applyLabel(Aspect.FIRE), "labelling an empty alembic should succeed");
+		helper.assertTrue(!tile.applyLabel(Aspect.FIRE, net.minecraft.core.Direction.UP), "a label only goes on a side face");
+		helper.assertTrue(tile.applyLabel(Aspect.FIRE, net.minecraft.core.Direction.NORTH), "labelling an empty alembic should succeed");
 		helper.assertTrue(tile.getAspectFilter() == Aspect.FIRE, "the alembic should now be filtered to Fire, found " + tile.getAspectFilter());
+		helper.assertTrue(!tile.isConnectable(net.minecraft.core.Direction.NORTH) && tile.isConnectable(net.minecraft.core.Direction.SOUTH),
+				"the labelled face no longer connects");
 		tile.clearLabel();
 		helper.assertTrue(tile.getAspectFilter() == null, "clearing the label should remove the filter, found " + tile.getAspectFilter());
+		helper.assertTrue(tile.isConnectable(net.minecraft.core.Direction.NORTH), "and the face connects again");
 		helper.succeed();
 	}
 
@@ -8120,6 +8130,7 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.tiles.essentia.TileJarFillable tile = helper.getBlockEntity(pos);
 		tile.setAspects(new AspectList().add(Aspect.AIR, 30));
 		tile.applyLabel(Aspect.AIR);
+		tile.applyBrace();
 
 		helper.getLevel().destroyBlock(absolute, true);
 		java.util.List<net.minecraft.world.entity.item.ItemEntity> drops = helper.getLevel().getEntitiesOfClass(
@@ -8131,6 +8142,7 @@ public class ThaumcraftGameTests {
 		Aspect carriedFilter = dropped.get(thaumcraft.api.items.ThaumcraftDataComponents.ASPECT_FILTER.get());
 		helper.assertTrue(carriedAspects != null && carriedAspects.getAmount(Aspect.AIR) == 30, "the dropped item should carry the 30 Air it held, got " + carriedAspects);
 		helper.assertTrue(carriedFilter == Aspect.AIR, "the dropped item should carry its Air label, got " + carriedFilter);
+		helper.assertTrue(drops.stream().anyMatch(e -> e.getItem().is(ItemsTC.jarBrace.get())), "the brace should come off as its own item");
 		for (net.minecraft.world.entity.item.ItemEntity e : drops) e.discard();
 
 		helper.setBlock(pos.east(), Blocks.AIR);
@@ -8740,7 +8752,8 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(accepted && dropped.isRemoved(), "touching a linked mirror should transport the item and remove the original entity");
 
 		net.minecraft.world.level.block.state.BlockState stateB = helper.getBlockState(posB);
-		for (int i = 0; i < 5; i++) {
+		// a mirror waits its first second before ejecting, as the original
+		for (int i = 0; i < 25; i++) {
 			thaumcraft.common.tiles.devices.TileMirror.tick(level, absB, stateB, tileB);
 		}
 
@@ -17301,15 +17314,15 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.container.HandMirrorMenu menu = new thaumcraft.common.container.HandMirrorMenu(1, player.getInventory(), handMirror);
 		menu.getSlot(0).set(new ItemStack(Items.STICK, 2));
 
-		net.minecraft.world.level.block.state.BlockState stateB = helper.getBlockState(posB);
-		thaumcraft.common.tiles.devices.TileMirror tileB = helper.getBlockEntity(posB);
-		for (int i = 0; i < 5; i++) {
-			thaumcraft.common.tiles.devices.TileMirror.tick(level, absB, stateB, tileB);
+		// as the original and its book page: the items pop out of the mirror the Hand Mirror is linked to (A)
+		net.minecraft.world.level.block.state.BlockState stateA = helper.getBlockState(posA);
+		for (int i = 0; i < 25; i++) {
+			thaumcraft.common.tiles.devices.TileMirror.tick(level, absA, stateA, tileA);
 		}
 
 		helper.assertTrue(menu.getSlot(0).getItem().isEmpty(), "dropping an item into a real linked Hand Mirror's send slot should really deliver it, clearing the slot");
-		List<ItemEntity> nearB = level.getEntitiesOfClass(ItemEntity.class, new AABB(absB).inflate(2));
-		helper.assertTrue(!nearB.isEmpty(), "the delivered item should really eject out of mirror A's own real linked partner (mirror B)");
+		List<ItemEntity> nearA = level.getEntitiesOfClass(ItemEntity.class, new AABB(absA).inflate(2));
+		helper.assertTrue(!nearA.isEmpty(), "the delivered item should pop out of mirror A, the one the Hand Mirror is linked to");
 		helper.succeed();
 	}
 

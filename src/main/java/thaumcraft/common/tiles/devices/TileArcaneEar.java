@@ -35,17 +35,11 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * the same "populate mid-tick, clear at tick end" window the original had via its own
  * {@code WorldEvents}/{@code ServerEvents} pair.
  *
- * Real improvement over the original, not just a simplification: the "tone" (which instrument the ear reacts
- * to) is now the actual support block's real {@code BlockState#instrument()} - the same per-block accessor
- * vanilla's own {@link NoteBlock} placement logic uses - instead of the original's hand-picked 10-case
- * material/block if-chain (stone/sand/glass/wood/clay/gold/wool/packed_ice/bone_block only). Every block with
- * a real vanilla instrument mapping (which is most of them) works correctly now, not just those ten.
+ * The "tone" (which instrument the ear reacts to) is the support block's {@code BlockState#instrument()}: the
+ * original's material/block if-chain was 1.12 vanilla's own note-block instrument choice, and this is today's.
  *
- * Simplified vs the original: the note sound is played directly via {@code Level#playSound} (broadcasts to
- * nearby players on its own when called server-side with a null player) instead of the original's
- * block-event round trip ({@code addBlockEvent}/{@code eventReceived}) - that indirection existed to sync a
- * client-side visual/audio trigger in 1.12.2's networking model and has no functional purpose here. No note
- * particle (client FX, dropped like everywhere else this session).
+ * As the original, its note is a block event (instrument, pitch): the note sound for everyone nearby and a note
+ * particle in the pitch's colour.
  */
 public class TileArcaneEar extends BlockEntity {
 
@@ -115,9 +109,19 @@ public class TileArcaneEar extends BlockEntity {
 	}
 
 	private void playNote(Level level, BlockPos pos, BlockState state) {
-		NoteBlockInstrument instrument = instrumentAt(level, pos, state);
-		float pitch = NoteBlock.getPitchFromNote(note);
-		level.playSound(null, pos, instrument.getSoundEvent().value(), SoundSource.RECORDS, 3.0f, pitch);
+		level.blockEvent(pos, state.getBlock(), instrumentAt(level, pos, state).ordinal(), note);
+	}
+
+	/** The original's eventReceived: the note sound (server, heard by everyone nearby) and a note particle (client). */
+	public static boolean playNoteEvent(Level level, BlockPos pos, int instrument, int pitchNote) {
+		NoteBlockInstrument[] all = NoteBlockInstrument.values();
+		if (instrument < 0 || instrument >= all.length) return false;
+		if (level.isClientSide) {
+			level.addParticle(net.minecraft.core.particles.ParticleTypes.NOTE, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, pitchNote / 24.0, 0.0, 0.0);
+		} else {
+			level.playSound(null, pos, all[instrument].getSoundEvent().value(), SoundSource.BLOCKS, 3.0f, NoteBlock.getPitchFromNote(pitchNote));
+		}
+		return true;
 	}
 
 	private NoteBlockInstrument instrumentAt(Level level, BlockPos pos, BlockState state) {

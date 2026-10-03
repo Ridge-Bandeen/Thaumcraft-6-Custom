@@ -34,17 +34,11 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * {@link thaumcraft.common.blocks.devices.BlockMirror#entityInside}) is queued on the OTHER mirror
  * ({@link #outputStacks}) and trickles back out there one unit at a time.
  *
- * Simplified from the original:
- * <ul>
- * <li>Dropped the whole {@code IInventory} hopper-compatibility surface (most of it was empty/no-op stubs in
- * the original anyway) - no other device this port has ships hopper integration either, so there was nothing
- * real being cut, just boilerplate.</li>
- * <li>{@link #link} is one nullable {@link MirrorLink} record instead of a {@code linked} boolean plus 4 raw
- * ints (3 position ints + a raw dimension id, not a real concept anymore - see that record's own doc
- * comment).</li>
- * <li>No client wispy-motes particle burst on transport ({@code FXDispatcher}) - the usual client-FX
- * boundary this port has kept all session.</li>
- * </ul>
+ * As the original, a hopper (or pipe) feeding a mirror with a partner sends the items through too
+ * ({@link #getItemHandler}: a slot that always reads empty), a Hand Mirror delivers straight out of the mirror it is
+ * linked to ({@link #transportDirect}), and items going in or coming out raise wispy motes (block event 1). A
+ * freshly loaded mirror waits a second before ejecting. {@link #link} is one nullable {@link MirrorLink} record
+ * instead of a {@code linked} boolean plus 4 raw ints.
  */
 public class TileMirror extends BlockEntity {
 
@@ -99,7 +93,6 @@ public class TileMirror extends BlockEntity {
 		if (target != null && !target.isLinkValid()) {
 			target.link = new MirrorLink(level.dimension(), worldPosition.immutable());
 			target.setChanged();
-			level.playSound(null, worldPosition, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 0.5f, 1.5f);
 			setChanged();
 		}
 	}
@@ -118,27 +111,67 @@ public class TileMirror extends BlockEntity {
 		instability += itemEntity.getItem().getCount();
 		setChanged();
 		itemEntity.discard();
+		level.blockEvent(worldPosition, getBlockState().getBlock(), 1, 0);
 		return true;
 	}
 
-	/** Real port of the original's own {@code TileMirror.transportDirect} - the real {@link
-	 * thaumcraft.common.items.tools.ItemHandMirror}'s own delivery path, pushing a real {@link ItemStack}
-	 * straight into {@link #outputStacks} without needing a real {@link ItemEntity} to exist first (unlike
-	 * {@link #transport}, called when something physically touches the block). Same real "must have a real
-	 * valid link" gate. @return whether the stack was accepted. */
+	/** The original's {@code transportDirect}, the Hand Mirror's delivery: the items come out of THIS mirror (the one
+	 * the Hand Mirror is linked to), whether or not it has a partner. @return whether there was anything to send. */
 	public boolean transportDirect(ItemStack stack) {
-		if (!isLinkValid()) {
+		if (stack.isEmpty()) {
 			return false;
 		}
-		TileMirror target = targetTile();
-		if (target == null) {
-			return false;
-		}
-		target.outputStacks.add(stack.copy());
-		target.setChanged();
-		instability += stack.getCount();
+		outputStacks.add(stack.copy());
 		setChanged();
 		return true;
+	}
+
+	/** The original's IInventory face: one slot that always reads empty; what's put in goes to the partner (or, with
+	 * no partner tile, drops out of this mirror). Only accepts while a partner mirror exists. */
+	private final net.neoforged.neoforge.items.IItemHandler itemHandler = new net.neoforged.neoforge.items.IItemHandler() {
+		@Override
+		public int getSlots() {
+			return 1;
+		}
+
+		@Override
+		public ItemStack getStackInSlot(int slot) {
+			return ItemStack.EMPTY;
+		}
+
+		@Override
+		public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+			if (stack.isEmpty() || !isItemValid(slot, stack)) return stack;
+			if (simulate) return ItemStack.EMPTY;
+			TileMirror target = targetTile();
+			if (target != null) {
+				target.outputStacks.add(stack.copy());
+				target.setChanged();
+				instability += stack.getCount();
+				setChanged();
+				level.blockEvent(worldPosition, getBlockState().getBlock(), 1, 0);
+			}
+			return ItemStack.EMPTY;
+		}
+
+		@Override
+		public ItemStack extractItem(int slot, int amount, boolean simulate) {
+			return ItemStack.EMPTY;
+		}
+
+		@Override
+		public int getSlotLimit(int slot) {
+			return 64;
+		}
+
+		@Override
+		public boolean isItemValid(int slot, ItemStack stack) {
+			return targetTile() != null;
+		}
+	};
+
+	public net.neoforged.neoforge.items.IItemHandler getItemHandler() {
+		return itemHandler;
 	}
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TileMirror tile) {
@@ -159,7 +192,7 @@ public class TileMirror extends BlockEntity {
 	}
 
 	private void eject(Level level, BlockPos pos, BlockState state) {
-		if (outputStacks.isEmpty()) {
+		if (outputStacks.isEmpty() || count <= 20) {
 			return;
 		}
 		int i = level.random.nextInt(outputStacks.size());
@@ -175,6 +208,7 @@ public class TileMirror extends BlockEntity {
 		level.addFreshEntity(itemEntity);
 		queued.shrink(1);
 		instability++;
+		level.blockEvent(pos, state.getBlock(), 1, 0);
 		if (queued.isEmpty()) {
 			outputStacks.remove(i);
 		}

@@ -33,10 +33,7 @@ import thaumcraft.common.registry.ThaumcraftSounds;
  * onCollideWithPlayer}), real potion immunity, real death explosion (radius 1.5, no block/mob damage,
  * matching the original's own {@code (1.5f, false, false)} call).
  *
- * Real, documented cuts: no "always full-bright" self-illumination - the original's own {@code
- * getBrightnessForRender}/{@code getBrightness} overrides don't have a real modern equivalent (entities
- * don't carry their own light-emission override point any more; lighting is purely block-based now), a
- * real, minor cosmetic loss. Real custom {@code craftstart}/{@code wandfail}/{@code monolith}/{@code zap}/
+ * It is drawn full-bright, as the original ({@code FXCultistPortalLesser}). Real custom {@code craftstart}/{@code wandfail}/{@code monolith}/{@code zap}/
  * {@code shock} sounds restored 2026-09-15 (were vanilla stand-ins) - see {@link ThaumcraftSounds}'s own
  * doc comment. The original's own {@code getTiming()} method is dead code in the original too (declared,
  * never called anywhere in that same file) - not ported.

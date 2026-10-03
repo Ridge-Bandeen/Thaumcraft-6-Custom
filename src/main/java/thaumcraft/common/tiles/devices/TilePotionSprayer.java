@@ -39,19 +39,8 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * living entity in a small volume 2 blocks out along the block's facing, without consuming the potion
  * itself.
  *
- * Real, documented simplification: the original derived a real per-potion aspect cost by tracing the
- * potion's brewing reagents back through the whole item-aspect ("object tag") database
- * ({@code ConfigAspects#getPotionAspects} -> {@code ThaumcraftCraftingManager#getPotionReagentsRecursive}/
- * {@code #getObjectTags}) - thousands of {@code registerObjectTag} calls across {@code ConfigAspects} and
- * friends, none of which are ported yet (see the port-tracking memory's "config system" gap; this is a
- * separately-scoped future subsystem, not something to improvise piecemeal here). Standing in for it: a
- * flat alchemical cost, the same regardless of which potion is loaded - forced by the missing dependency,
- * not a deviation from the original's actual intent (charge the sprayer up with essentia before each
- * burst).
- *
- * Also simplified: no GUI - right-click inserts/removes the potion directly, the same no-menu convention
- * {@link thaumcraft.common.blocks.devices.BlockRechargePedestal} already established (no ported single-slot
- * container/menu base to reuse yet, so building one bespoke for a single device isn't worth it).
+ * Each charge costs the potion's own essentia, as the original: the aspects of its brewing ingredients, cut by 66%
+ * and culled to 10 kinds ({@link thaumcraft.common.lib.crafting.PotionAspects}). Its screen holds the potion.
  *
  * <p>Real client-side spray-vent particle burst restored 2026-09-16 - see {@link #venting}'s own doc comment
  * (this class's own doc comment previously called it dropped "visual-only... like every other device this

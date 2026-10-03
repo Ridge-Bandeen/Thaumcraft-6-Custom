@@ -28,16 +28,9 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * since {@code AuraHelper} (which {@code RechargeHelper} calls through) stopped being a stub earlier this
  * session.
  *
- * Simplified vs the original:
- * <ul>
- * <li>No {@code IAspectContainer} implementation (goggles-of-revealing display) - goggles aren't ported,
- * so there's no consumer for it yet.</li>
- * <li>No particle/sound FX on a successful recharge tick, same as every other device this session.</li>
- * <li>Custom packet-based partial-slot sync ({@code TileThaumcraftInventory#syncSlots}) is replaced by
- * vanilla's own full block-entity sync ({@code getUpdateTag}/{@code handleUpdateTag}, inherited unchanged
- * from {@link BlockEntity}) - the original's whole-tile sync-splitting existed to reduce 1.12.2 network
- * traffic and has no real modern equivalent (nor is one needed for a single-slot device).</li>
- * </ul>
+ * As the original it is an {@link thaumcraft.api.aspects.IAspectContainer} holding the item's vis charge as Potentia,
+ * so the Goggles of Revealing read it; it sparkles (block event 5) with each charge. Vanilla's block-entity sync
+ * replaces the original's partial-slot sync.
  *
  * <b>Real bug fix (found while scoping the Infusion Matrix renderer):</b> {@link BlockEntity}'s own default
  * {@code getUpdateTag}/{@code getUpdatePacket} return an empty tag / {@code null} - a plain {@code BlockEntity}
@@ -48,7 +41,7 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * already do it, plus a {@link #setChanged()} override so later item changes push live instead of only
  * showing up after the chunk is reloaded (see that override's own doc comment).
  */
-public class TileRechargePedestal extends BlockEntity {
+public class TileRechargePedestal extends BlockEntity implements thaumcraft.api.aspects.IAspectContainer {
 
 	private final ItemStackHandler items = new ItemStackHandler(1) {
 		@Override
@@ -145,5 +138,54 @@ public class TileRechargePedestal extends BlockEntity {
 		if (level != null && !level.isClientSide) {
 			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
 		}
+	}
+
+	/** The original's IAspectContainer face: the charge of the item on it, as Potentia (read only). */
+	@Override
+	public thaumcraft.api.aspects.AspectList getAspects() {
+		ItemStack stack = getItem();
+		if (!stack.isEmpty() && stack.getItem() instanceof IRechargable) {
+			return new thaumcraft.api.aspects.AspectList().add(thaumcraft.api.aspects.Aspect.ENERGY, RechargeHelper.getCharge(stack));
+		}
+		return null;
+	}
+
+	@Override
+	public void setAspects(thaumcraft.api.aspects.AspectList aspects) {
+	}
+
+	@Override
+	public boolean doesContainerAccept(thaumcraft.api.aspects.Aspect tag) {
+		return true;
+	}
+
+	@Override
+	public int addToContainer(thaumcraft.api.aspects.Aspect tag, int amount) {
+		return 0;
+	}
+
+	@Override
+	public boolean takeFromContainer(thaumcraft.api.aspects.Aspect tag, int amount) {
+		return false;
+	}
+
+	@Override
+	public boolean takeFromContainer(thaumcraft.api.aspects.AspectList ot) {
+		return false;
+	}
+
+	@Override
+	public boolean doesContainerContainAmount(thaumcraft.api.aspects.Aspect tag, int amount) {
+		return false;
+	}
+
+	@Override
+	public boolean doesContainerContain(thaumcraft.api.aspects.AspectList ot) {
+		return false;
+	}
+
+	@Override
+	public int containerContains(thaumcraft.api.aspects.Aspect tag) {
+		return 0;
 	}
 }

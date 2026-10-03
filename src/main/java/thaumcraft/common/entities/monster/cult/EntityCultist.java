@@ -29,13 +29,9 @@ import thaumcraft.common.entities.monster.boss.EntityCultistLeader;
  * {@link EntityCultistLeader} boss - restored 2026-09-15 (the leader arc shipped a while before this fix
  * caught up to it), matching the true original's own {@code isOnSameTeam} exactly.
  *
- * Real, documented cuts vs the original: no natural-spawn light-level override (this whole session's
- * monster arc has consistently deferred {@code SpawnPlacements} wiring - see {@code EntityEldritchCrab}'s
- * own doc-comment precedent), no {@code spawnExplosionParticle} client spawn-in effect (tied to the
- * unported {@code FXDispatcher}, purely cosmetic), no {@code canAttackClass} sibling-exemption (the
- * original fed this into 1.12's own {@code EntityLiving} hook, which modern MC removed in favor of a
- * {@code TargetingConditions} predicate on the targeting Goal itself - moot anyway since {@link
- * EntityCultistKnight} only ever targets {@code Player}, not other mobs). Real home-position restriction
+ * Not carried over because they did nothing in the original: its "any light" spawn rule (cultists never spawn
+ * naturally, only from portals), its spawn-in particles (only ever called on the server, where they didn't draw),
+ * and {@code canAttackClass} (cultists only ever target players). Real home-position restriction
  * now comes free from vanilla's own {@link net.minecraft.world.entity.Mob#restrictTo} (persisted
  * automatically) - the original had to hand-roll its own NBT read/write for this because 1.12's {@code
  * EntityCreature} lacked it.

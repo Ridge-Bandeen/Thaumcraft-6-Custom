@@ -36,17 +36,9 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * in the real adjacent inventory below - consumes the ingredients and produces it. Same real per-type
  * ingredient-count table the original used (equal to each pattern's own slot count: 9/1/2/2/4/3/3/6/6/8).
  *
- * Real, documented simplifications vs. the original:
- * <ul>
- * <li>No CodeChicken sub-hit raytracing for "click the crank specifically" - the same real dependency wall
- * that already blocked the Levitator/Redstone Relay/Tube One-way this session. The original's block only
- * ever had one real interactive region anyway (the crank), so a plain whole-block right-click
- * ({@link thaumcraft.common.blocks.crafting.BlockPatternCrafter#useWithoutItem}) loses no real function,
- * just the precision of clicking a specific decorative sub-region.</li>
- * <li>{@code BlockStateProperties#ENABLED} (redstone-inverted) replaces the original's own wand-toggle -
- * same real convention every other toggled device this session already uses (see e.g.
- * {@code TileVoidSiphon}'s own doc comment), not a bespoke wand-click mechanic.</li>
- * </ul>
+ * As the original, clicking the little dial on its side (and only that) steps to the next pattern, and redstone
+ * turns it off ({@code ENABLED}). The original also outlined just the dial when you looked at it; here the whole
+ * block is outlined.
  *
  * Real client-side crank-rotation animation restored 2026-09-16 - see {@link #rot}/{@link #rp}/
  * {@link #rotTicks} and {@link thaumcraft.client.render.TilePatternCrafterRenderer}'s own doc comment (this

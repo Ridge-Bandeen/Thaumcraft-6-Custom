@@ -91,6 +91,18 @@ public class BlockMirror extends Block implements EntityBlock {
 		super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);
 	}
 
+	/** Block event 1: wispy motes drifting out of the glass (an item went in or came out), as the original. */
+	@Override
+	protected boolean triggerEvent(BlockState state, Level level, BlockPos pos, int id, int param) {
+		if (id == 1) {
+			if (level.isClientSide) {
+				thaumcraft.client.fx.ClientFxHandlers.mirrorMotes(level, pos, state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING));
+			}
+			return true;
+		}
+		return super.triggerEvent(state, level, pos, id, param);
+	}
+
 	@Override
 	protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
 		if (!level.isClientSide && entity instanceof ItemEntity itemEntity && !itemEntity.isRemoved() && !itemEntity.isOnPortalCooldown()

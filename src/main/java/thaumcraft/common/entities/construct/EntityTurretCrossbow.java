@@ -271,16 +271,17 @@ public class EntityTurretCrossbow extends EntityOwnedConstruct implements Ranged
 
 	@Override
 	protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
-		if (random.nextFloat() < 0.2f) {
+		float b = thaumcraft.common.lib.utils.LootingHelper.level(source) * 0.15f;
+		if (random.nextFloat() < 0.2f + b) {
 			spawnAtLocation(new ItemStack(ItemsTC.mindClockwork.get()));
 		}
-		if (random.nextFloat() < 0.5f) {
+		if (random.nextFloat() < 0.5f + b) {
 			spawnAtLocation(new ItemStack(ItemsTC.mechanismSimple.get()));
 		}
-		if (random.nextFloat() < 0.5f) {
+		if (random.nextFloat() < 0.5f + b) {
 			spawnAtLocation(new ItemStack(BlocksTC.plankGreatwood.get()));
 		}
-		if (random.nextFloat() < 0.5f) {
+		if (random.nextFloat() < 0.5f + b) {
 			spawnAtLocation(new ItemStack(BlocksTC.plankGreatwood.get()));
 		}
 	}

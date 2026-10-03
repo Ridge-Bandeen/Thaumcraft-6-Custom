@@ -263,6 +263,12 @@ public final class ClientFxHandlers {
 		}
 	}
 
+	/** The original's FXDispatcher#drawVentParticles: one puff of coloured steam. */
+	public static void spawnVent(net.minecraft.world.level.Level level, double x, double y, double z, double mx, double my, double mz, int color) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXVent(clientLevel, x, y, z, mx, my, mz, color));
+	}
+
 	/** Real {@link thaumcraft.client.fx.particles.FXVent2} burst - see {@link #spawnVentBurst}'s own doc
 	 * comment for why this common-safe signature matters. */
 	public static void spawnVentBurst2(net.minecraft.world.level.Level level, double x, double y, double z,
@@ -702,6 +708,13 @@ public final class ClientFxHandlers {
 	 * real "count" seed ({@code RenderEventHandler.tickCount}, a real shared, ever-incrementing client tick
 	 * counter) is replaced with the real client level's own real game time - same real purpose (vary the
 	 * initial-kick wobble phase between concurrently-triggered streams), no new counter needed. */
+	/** The original's FXDispatcher#waterTrailFx: a water-blue stream from the Everfull Urn to what it is filling. */
+	public static void waterTrail(net.minecraft.world.level.Level level, BlockPos from, BlockPos to, int count) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXEssentiaStream(clientLevel,
+				from.getX() + 0.5, from.getY() + 0.66, from.getZ() + 0.5, to.getX() + 0.5, to.getY() + 0.5, to.getZ() + 0.5, count, 2650102, 0.1f, 0, 0.2));
+	}
+
 	public static void handleEssentiaSource(thaumcraft.common.lib.network.fx.PacketFXEssentiaSource payload) {
 		var level = Minecraft.getInstance().level;
 		if (level == null) return;
@@ -1124,6 +1137,76 @@ public final class ClientFxHandlers {
 		}
 	}
 
+	/** The original's FXDispatcher#drawBlockMistParticles: eight slow, swelling puffs of coloured mist rising out of
+	 * the block's shape. */
+	public static void drawBlockMist(BlockPos p, int c) {
+		ClientLevel level = Minecraft.getInstance().level;
+		if (level == null) return;
+		var shape = level.getBlockState(p).getShape(level, p);
+		var bs = shape.isEmpty() ? new net.minecraft.world.phys.AABB(0, 0, 0, 1, 1, 1) : shape.bounds();
+		var r = level.random;
+		for (int a = 0; a < 8; a++) {
+			double x = p.getX() + bs.minX + r.nextFloat() * (bs.maxX - bs.minX);
+			double y = p.getY() + bs.minY + r.nextFloat() * (bs.maxY - bs.minY);
+			double z = p.getZ() + bs.minZ + r.nextFloat() * (bs.maxZ - bs.minZ);
+			var fb = new thaumcraft.client.fx.particles.FXGeneric(level, x, y, z, r.nextGaussian() * 0.01, r.nextFloat() * 0.075, r.nextGaussian() * 0.01);
+			fb.setMaxAge(50 + r.nextInt(25));
+			fb.setRBGColorF(((c >> 16) & 255) / 255.0f, ((c >> 8) & 255) / 255.0f, (c & 255) / 255.0f);
+			fb.setAlphaF(0.0f, 0.5f, 0.4f, 0.3f, 0.2f, 0.1f, 0.0f);
+			fb.setGridSize(16);
+			fb.setParticles(56, 1, 1);
+			fb.setScale(5.0f, 1.0f);
+			fb.setLayer(0);
+			fb.setSlowDown(1.0);
+			fb.setGravity(0.1f);
+			fb.setWind(0.001);
+			fb.setRotationSpeed(r.nextFloat(), r.nextBoolean() ? -1.0f : 1.0f);
+			Minecraft.getInstance().particleEngine.add(fb);
+		}
+	}
+
+	/** The original's FXDispatcher#drawLevitatorParticles: a faint yellowish mote, slowly swelling and fading. */
+	public static void drawLevitatorParticles(net.minecraft.world.level.Level level, double x, double y, double z, double mx, double my, double mz) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, mx, my, mz);
+		fb.setMaxAge(200 + level.random.nextInt(100));
+		fb.setRBGColorF(0.5f, 0.5f, 0.2f);
+		fb.setAlphaF(0.3f, 0.0f);
+		fb.setGridSize(16);
+		fb.setParticles(56, 1, 1);
+		fb.setScale(2.0f, 5.0f);
+		fb.setLayer(0);
+		fb.setSlowDown(1.0);
+		fb.setRotationSpeed(level.random.nextFloat(), level.random.nextBoolean() ? -1.0f : 1.0f);
+		Minecraft.getInstance().particleEngine.add(fb);
+	}
+
+	/** The original's FXDispatcher#sparkle: (two times in three) a short looping twinkle. */
+	public static void sparkle(net.minecraft.world.level.Level level, double x, double y, double z, float r, float g, float b) {
+		if (!(level instanceof ClientLevel clientLevel) || level.random.nextInt(6) >= 4) return;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, 0.0, 0.0, 0.0);
+		fb.setMaxAge(6 + level.random.nextInt(4));
+		fb.setRBGColorF(r, g, b);
+		fb.setAlphaF(0.9f);
+		fb.setLoop(true);
+		fb.setParticles(320, 16, 1);
+		fb.setScale(0.6f + level.random.nextFloat() * 0.2f);
+		fb.setLayer(0);
+		fb.setRotationSpeed(0.0f);
+		addDelayed(fb, 0);
+	}
+
+	/** The original's FXDispatcher#burst: a quick 31-frame bloom of the given size. */
+	public static void burst(net.minecraft.world.level.Level level, double x, double y, double z, float size) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, 0.0, 0.0, 0.0);
+		fb.setMaxAge(31);
+		fb.setGridSize(16);
+		fb.setParticles(208, 31, 1);
+		fb.setScale(size);
+		Minecraft.getInstance().particleEngine.add(fb);
+	}
+
 	public static void handleShield(thaumcraft.common.lib.network.fx.PacketFXShield payload) {
 		ClientLevel level = Minecraft.getInstance().level;
 		if (level == null) return;
@@ -1192,6 +1275,18 @@ public final class ClientFxHandlers {
 	}
 
 	/** The original's drawWispyMotes with a random tint. */
+	/** The original TileMirror's receiveClientEvent(1): a purple-blue mote drifting out of the glass. */
+	public static void mirrorMotes(net.minecraft.world.level.Level level, BlockPos pos, net.minecraft.core.Direction face) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var r = level.random;
+		double xx = pos.getX() + 0.33 + r.nextFloat() * 0.33f - face.getStepX() / 2.0;
+		double yy = pos.getY() + 0.33 + r.nextFloat() * 0.33f - face.getStepY() / 2.0;
+		double zz = pos.getZ() + 0.33 + r.nextFloat() * 0.33f - face.getStepZ() / 2.0;
+		drawWispyMotes(clientLevel, xx, yy, zz, face.getStepX() / 50.0 + r.nextGaussian() * 0.01, face.getStepY() / 50.0 + r.nextGaussian() * 0.01,
+				face.getStepZ() / 50.0 + r.nextGaussian() * 0.01, net.minecraft.util.Mth.nextInt(r, 10, 30), r.nextFloat() / 3.0f, 0.0f, r.nextFloat() / 2.0f,
+				(float) (r.nextGaussian() * 0.01));
+	}
+
 	public static void drawWispyMotes(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, int age, float grav) {
 		var random = level.random;
 		drawWispyMotes(level, x, y, z, vx, vy, vz, age, 0.25f + random.nextFloat() * 0.75f, 0.25f + random.nextFloat() * 0.75f,

@@ -50,9 +50,7 @@ import thaumcraft.common.tiles.misc.TileBanner;
  * while below stage 12, matching the original's own {@code stage < 12} gate. Real touch damage (8, doubled
  * from the lesser portal's 4), real potion immunity, real death explosion (radius 2.0, no block/mob damage).
  *
- * Real, documented cut: no "always full-bright" self-illumination (same real reason {@link
- * thaumcraft.common.entities.monster.cult.EntityCultistPortalLesser}'s own doc comment already explains -
- * entities don't carry a light-emission override point any more). Real {@code PacketFXBlockArc} stage-progress
+ * It is drawn full-bright, as the original ({@code FXCultistPortalGreater}), and leaves a Primordial Pearl. Real {@code PacketFXBlockArc} stage-progress
  * "pulse" signal restored 2026-09-15 (see {@link #sendArcPulse}) alongside its real {@code wandfail} sound
  * (was a vanilla {@code EVOKER_CAST_SPELL} stand-in) - a different real mechanism from {@link #pulse} below
  * (a lightning-arc visual from a placed banner/crate back to this portal, vs. this portal's own internal
@@ -295,6 +293,12 @@ public class EntityCultistPortalGreater extends Monster {
 		if (distanceToSqr(player) < 3.0 && player.hurt(damageSources().indirectMagic(this, this), 8.0f)) {
 			playSound(SoundEvents.LIGHTNING_BOLT_THUNDER, 1.0f, (random.nextFloat() - random.nextFloat()) * 0.1f + 1.0f);
 		}
+	}
+
+	/** As the original, the portal leaves a Primordial Pearl behind. */
+	@Override
+	protected void dropCustomDeathLoot(net.minecraft.server.level.ServerLevel level, DamageSource damageSource, boolean recentlyHit) {
+		EntityThaumcraftBoss.dropSpecialItem(this, new net.minecraft.world.item.ItemStack(thaumcraft.api.items.ItemsTC.primordialPearl.get()), getBbHeight() / 2.0f);
 	}
 
 	@Override

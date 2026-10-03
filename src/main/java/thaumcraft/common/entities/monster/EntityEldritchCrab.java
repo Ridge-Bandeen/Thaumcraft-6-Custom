@@ -41,11 +41,8 @@ import thaumcraft.common.registry.ThaumcraftSounds;
  * original exactly. Real bonus ender pearl death drop, real poison immunity, and crabs don't fight each
  * other (real {@link #isAlliedTo} override).
  *
- * Real, documented cuts: the original's own targeting also included {@code EntityCultist} (still unported -
- * see this whole session's own monster-arc notes) - this only targets real players for now, a real, minor
- * simplification until that entity exists. Door-breaking pathfinding and the original's own arthropod
- * creature-attribute tag (bane-of-arthropods bonus damage - modern MC replaced that whole system with
- * data-driven entity tags, not a per-instance Java override) aren't ported either.
+ * As the original it hunts cultists as well as players, and it is an arthropod (the entity tags: Bane of Arthropods
+ * hurts it). Its pathing through doors is vanilla's.
  */
 public class EntityEldritchCrab extends Monster implements IEldritchMob {
 
@@ -80,6 +77,7 @@ public class EntityEldritchCrab extends Monster implements IEldritchMob {
 		goalSelector.addGoal(8, new RandomLookAroundGoal(this));
 		targetSelector.addGoal(1, new HurtByTargetGoal(this));
 		targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+		targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, thaumcraft.common.entities.monster.cult.EntityCultist.class, true));
 	}
 
 	public boolean hasHelm() {
@@ -154,7 +152,7 @@ public class EntityEldritchCrab extends Monster implements IEldritchMob {
 
 	@Override
 	protected void dropCustomDeathLoot(ServerLevel level, DamageSource damageSource, boolean recentlyHit) {
-		if (recentlyHit && (random.nextInt(3) == 0)) {
+		if (recentlyHit && (random.nextInt(3) == 0 || random.nextInt(1 + thaumcraft.common.lib.utils.LootingHelper.level(damageSource)) > 0)) {
 			spawnAtLocation(Items.ENDER_PEARL);
 		}
 	}

@@ -19,13 +19,10 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * a stack of one or more alembics (see that class's own doc comment). {@code canInputFrom} is always false,
  * same as the original - unlike a Warded Jar, an alembic can't be filled by a tube/jar network at all.
  *
- * Can be locked to one aspect via {@link thaumcraft.api.blocks.ILabelable} - see
- * {@link thaumcraft.common.blocks.essentia.BlockAlembic#applyLabel}. Simplified from the original's version
- * of that mechanic: the original locked the label to a specific *face* (one of the four horizontal sides,
- * rendered via a TESR-drawn label texture + reserved that face from essentia I/O) - this port drops the
- * per-face targeting and TESR rendering entirely (same "no custom BlockEntityRenderer" boundary as every
- * other device this session) and just locks the whole tile to one aspect, the same shape as
- * {@link TileJarFillable}'s own label mechanic.
+ * As the original, a label goes on one of its side faces ({@link #getLabelFace}, DOWN while unlabelled) and locks
+ * it to one aspect - what it already holds, else the label's; that face no longer connects, and the label is drawn
+ * on it ({@link thaumcraft.client.render.TileAlembicRenderer}). See
+ * {@link thaumcraft.common.blocks.essentia.BlockAlembic} for taking it off and emptying the alembic.
  */
 public class TileAlembic extends BlockEntity implements IAspectContainer, IEssentiaTransport {
 
@@ -34,6 +31,8 @@ public class TileAlembic extends BlockEntity implements IAspectContainer, IEssen
 	private Aspect aspect;
 	private Aspect aspectFilter;
 	private int amount;
+	/** The labelled face (the original's {@code facing}); DOWN, which never connects anyway, while unlabelled. */
+	private Direction labelFace = Direction.DOWN;
 
 	public TileAlembic(BlockPos pos, BlockState state) {
 		super(ThaumcraftBlockEntities.ALEMBIC.get(), pos, state);
@@ -43,19 +42,35 @@ public class TileAlembic extends BlockEntity implements IAspectContainer, IEssen
 		return aspectFilter;
 	}
 
-	/** {@code BlockAlembic#applyLabel} calls this - locks the alembic to one aspect. Returns false (same as
-	 * {@link TileJarFillable#applyLabel}) if there's nothing to lock to or it's already locked. */
-	public boolean applyLabel(Aspect newFilter) {
-		if (aspectFilter != null || newFilter == null) return false;
-		if (amount > 0 && aspect != newFilter) return false;
-		aspectFilter = newFilter;
+	public Direction getLabelFace() {
+		return labelFace;
+	}
+
+	/** The original's applyLabel: only on a side face of an unlabelled alembic; it locks to what the alembic holds,
+	 * else to the label's aspect (an empty alembic needs a marked label). */
+	public boolean applyLabel(@javax.annotation.Nullable Aspect labelAspect, Direction side) {
+		if (side.getAxis() == Direction.Axis.Y || aspectFilter != null) return false;
+		Aspect lock = amount > 0 ? aspect : labelAspect;
+		if (lock == null) return false;
+		aspectFilter = lock;
+		labelFace = side;
 		setChanged();
 		return true;
 	}
 
 	public void clearLabel() {
 		aspectFilter = null;
+		labelFace = Direction.DOWN;
 		setChanged();
+	}
+
+	/** Sneak-click with an empty hand (not on the label): the essentia is poured out. @return how much there was. */
+	public int empty() {
+		int was = amount;
+		aspect = null;
+		amount = 0;
+		setChanged();
+		return was;
 	}
 
 	@Override
@@ -126,7 +141,7 @@ public class TileAlembic extends BlockEntity implements IAspectContainer, IEssen
 
 	@Override
 	public boolean isConnectable(Direction face) {
-		return face != Direction.DOWN;
+		return face != Direction.DOWN && face != labelFace;
 	}
 
 	@Override
@@ -136,7 +151,7 @@ public class TileAlembic extends BlockEntity implements IAspectContainer, IEssen
 
 	@Override
 	public boolean canOutputTo(Direction face) {
-		return face != Direction.DOWN;
+		return face != Direction.DOWN && face != labelFace;
 	}
 
 	@Override
@@ -209,6 +224,7 @@ public class TileAlembic extends BlockEntity implements IAspectContainer, IEssen
 		aspect = tag.contains("aspect") ? Aspect.getAspect(tag.getString("aspect")) : null;
 		aspectFilter = tag.contains("AspectFilter") ? Aspect.getAspect(tag.getString("AspectFilter")) : null;
 		amount = tag.getInt("amount");
+		labelFace = tag.contains("facing") ? Direction.from3DDataValue(tag.getByte("facing")) : Direction.DOWN;
 	}
 
 	@Override
@@ -217,6 +233,7 @@ public class TileAlembic extends BlockEntity implements IAspectContainer, IEssen
 		if (aspect != null) tag.putString("aspect", aspect.getTag());
 		if (aspectFilter != null) tag.putString("AspectFilter", aspectFilter.getTag());
 		tag.putInt("amount", amount);
+		tag.putByte("facing", (byte) labelFace.get3DDataValue());
 	}
 
 	@Override

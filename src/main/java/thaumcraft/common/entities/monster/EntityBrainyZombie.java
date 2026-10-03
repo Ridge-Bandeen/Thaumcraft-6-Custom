@@ -42,14 +42,11 @@ public class EntityBrainyZombie extends Zombie {
 		return super.getArmorValue() + 1;
 	}
 
-	/** Real, documented simplification: the original's own bonus-drop roll scaled down by the killing blow's
-	 * looting level ({@code rand.nextInt(10) - lootingModifier <= 4}); this port drops the looting term (a
-	 * flat 50% chance regardless of looting) - a minor, real simplification, not a functional loss worth a
-	 * whole enchantment-level plumbing pass for one extra item's drop odds. */
+	/** The original's bonus brain: {@code rand.nextInt(10) - looting <= 4}. */
 	@Override
 	protected void dropCustomDeathLoot(ServerLevel level, DamageSource damageSource, boolean recentlyHit) {
 		super.dropCustomDeathLoot(level, damageSource, recentlyHit);
-		if (level.random.nextInt(10) <= 4) {
+		if (level.random.nextInt(10) - thaumcraft.common.lib.utils.LootingHelper.level(damageSource) <= 4) {
 			spawnAtLocation(new net.minecraft.world.item.ItemStack(ItemsTC.brain.get()), 1.5f);
 		}
 	}

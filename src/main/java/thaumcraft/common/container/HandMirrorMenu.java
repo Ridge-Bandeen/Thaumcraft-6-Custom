@@ -33,6 +33,7 @@ public class HandMirrorMenu extends AbstractContainerMenu {
 
 	private final ItemStackHandler handler;
 	private final ItemStack mirrorStack;
+	private final Player player;
 	private final Level level;
 
 	/** Client-side reconstruction - see {@code PechMenu}'s own doc comment for why. */
@@ -43,6 +44,7 @@ public class HandMirrorMenu extends AbstractContainerMenu {
 	public HandMirrorMenu(int containerId, Inventory playerInventory, ItemStack mirrorStack) {
 		super(ThaumcraftMenus.HAND_MIRROR.get(), containerId);
 		this.mirrorStack = mirrorStack;
+		this.player = playerInventory.player;
 		this.level = playerInventory.player.level();
 		this.handler = new ItemStackHandler(1) {
 			@Override
@@ -77,14 +79,18 @@ public class HandMirrorMenu extends AbstractContainerMenu {
 		if (held.isEmpty()) return;
 
 		MirrorLink link = mirrorStack.get(ThaumcraftDataComponents.MIRROR_LINK.get());
-		java.util.Optional<TileMirror> target = link == null
-				? java.util.Optional.empty()
-				: ItemHandMirror.resolveTarget(level, link);
-		if (target.isPresent() && target.get().transportDirect(held)) {
-			handler.setStackInSlot(SEND_SLOT, ItemStack.EMPTY);
+		if (link == null || !(level instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
+		net.minecraft.server.level.ServerLevel targetLevel = serverLevel.getServer().getLevel(link.dimension());
+		if (targetLevel == null || !targetLevel.isLoaded(link.pos())) return; // the item waits in the slot
+		if (!(targetLevel.getBlockEntity(link.pos()) instanceof TileMirror target)) {
+			// as the original: the linked mirror is gone - the link breaks and the item stays
+			ItemHandMirror.breakLink(mirrorStack, player);
+			return;
 		}
-		// Real failure (no link, or the linked mirror is gone/unloaded): leave the item sitting in the send
-		// slot exactly as-is, matching the original's own real bounce-back behavior.
+		if (target.transportDirect(held)) {
+			handler.setStackInSlot(SEND_SLOT, ItemStack.EMPTY);
+			player.playNotifySound(net.minecraft.sounds.SoundEvents.ENDERMAN_TELEPORT, net.minecraft.sounds.SoundSource.PLAYERS, 0.1f, 1.0f);
+		}
 	}
 
 	@Override

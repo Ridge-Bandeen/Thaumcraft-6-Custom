@@ -60,10 +60,7 @@ import thaumcraft.common.lib.network.fx.PacketFXSlash;
  * The infusion-enchantment gameplay hooks reachable without any not-yet-ported infrastructure are ported
  * this pass:
  * <ul>
- * <li>{@link EnumInfusionEnchantment#LAMPLIGHT} - places a real light source in a mined-out dark spot. The
- * original placed a custom invisible {@code BlockEffect} variant ({@code effectGlimmer}); vanilla's own
- * {@link Blocks#LIGHT} (also invisible, also a plain light source) does the same job with nothing new to
- * port.</li>
+ * <li>{@link EnumInfusionEnchantment#LAMPLIGHT} - leaves a glimmer (invisible light) in a mined-out dark spot.</li>
  * <li>{@link EnumInfusionEnchantment#DESTRUCTIVE} - chain-breaks the 8 neighbours in the plane of the block
  * just mined. {@link #LAST_FACE_CLICKED} reproduces the original's own face-tracking
  * ({@code PlayerInteractEvent.LeftClickBlock} to {@code BlockEvent.HarvestDropsEvent}, now
@@ -406,8 +403,9 @@ public class ToolEvents {
 	}
 
 	private static void tryPlaceLamplight(ServerLevel level, BlockPos pos) {
-		if (level.getBlockState(pos).isAir() && level.getMaxLocalRawBrightness(pos) < 10) {
-			level.setBlock(pos, Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, 15), 3);
+		BlockState there = level.getBlockState(pos);
+		if (there.isAir() && !there.is(BlocksTC.effectGlimmer.get()) && level.getMaxLocalRawBrightness(pos) < 10) {
+			level.setBlock(pos, BlocksTC.effectGlimmer.get().defaultBlockState(), 3);
 		}
 	}
 

@@ -41,11 +41,8 @@ import thaumcraft.common.tiles.essentia.TileJarFillable;
  * {@link TileJarBrain#getRotb()}, linearly interpolated across partial ticks exactly like the true original's
  * own real formula) plus the same real brine-glass overlay the essentia jar's lid brace reuses geometry from.
  *
- * <p>Real, disclosed simplifications: this port's own {@link thaumcraft.common.blocks.essentia.BlockJar} has
- * no facing/orientation state at all (the true original's own jar could apparently face a direction the label
- * rotated around; this port's jar always sits the same way), so the label sticker always faces a single fixed
- * direction rather than the true original's own real per-facing rotation. The label's small per-jar tilt follows
- * the {@code crooked} client option, as in the original.
+ * <p>As the original, the label sticker faces whoever placed or labelled the jar ({@link TileJarFillable#getFacing}),
+ * with the small per-jar tilt of the {@code crooked} client option.
  */
 public class TileJarRenderer implements BlockEntityRenderer<BlockEntity> {
 
@@ -97,7 +94,15 @@ public class TileJarRenderer implements BlockEntityRenderer<BlockEntity> {
 		if (filter != null) {
 			// the crooked option: labels stuck on a little askew, per jar
 			float rot = thaumcraft.common.config.ThaumcraftConfig.client(thaumcraft.common.config.ThaumcraftConfig.CROOKED)
-					? (filter.getTag().hashCode() + pos.getX()) % 4 - 2 : 0;
+					? (filter.getTag().hashCode() + pos.getX() + tile.getFacing().get3DDataValue()) % 4 - 2 : 0;
+			poseStack.pushPose();
+			switch (tile.getFacing()) {
+				case SOUTH -> poseStack.mulPose(Axis.YP.rotationDegrees(180.0f));
+				case EAST -> poseStack.mulPose(Axis.YP.rotationDegrees(90.0f));
+				case WEST -> poseStack.mulPose(Axis.YP.rotationDegrees(270.0f));
+				default -> {
+				}
+			}
 
 			VertexConsumer labelConsumer = bufferSource.getBuffer(RenderType.entityTranslucent(TEX_LABEL));
 			poseStack.pushPose();
@@ -112,6 +117,7 @@ public class TileJarRenderer implements BlockEntityRenderer<BlockEntity> {
 			poseStack.mulPose(Axis.ZP.rotationDegrees(rot));
 			int tint = FastColor.ARGB32.opaque(filter.getColor());
 			emitCenteredQuad(iconConsumer, poseStack.last(), 0.168f, tint, packedLight, packedOverlay);
+			poseStack.popPose();
 			poseStack.popPose();
 		}
 

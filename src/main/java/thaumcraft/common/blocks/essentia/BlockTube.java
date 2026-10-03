@@ -107,4 +107,16 @@ public class BlockTube extends Block implements EntityBlock {
 				? (lvl, p, st, be) -> TileTube.tick(lvl, p, st, (TileTube) be)
 				: null;
 	}
+
+	@Override
+	protected boolean triggerEvent(BlockState state, Level level, BlockPos pos, int id, int param) {
+		if (level.getBlockEntity(pos) instanceof thaumcraft.common.tiles.essentia.TileTube tube && tube.onBlockEvent(id, param)) return true;
+		return super.triggerEvent(state, level, pos, id, param);
+	}
+
+	@Override
+	public void setPlacedBy(Level level, BlockPos pos, BlockState state, @javax.annotation.Nullable net.minecraft.world.entity.LivingEntity placer, net.minecraft.world.item.ItemStack stack) {
+		super.setPlacedBy(level, pos, state, placer, stack);
+		if (placer != null && level.getBlockEntity(pos) instanceof thaumcraft.common.tiles.essentia.TileTube tube) tube.faceTowards(placer);
+	}
 }

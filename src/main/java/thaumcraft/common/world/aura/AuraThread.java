@@ -11,9 +11,9 @@ import net.minecraft.world.level.Level;
 import thaumcraft.Thaumcraft;
 
 /**
- * Replaces the old (1.12.2) {@code AuraThread}. Same overall shape - a background thread per dimension,
- * ticking roughly once a second, diffusing vis/flux between neighbouring chunks and slowly regenerating
- * vis toward each chunk's base value. See {@link AuraHandler}'s class doc for what's simplified.
+ * Replaces the old (1.12.2) {@code AuraThread}, as the original: a background thread per dimension, ticking roughly
+ * once a second, diffusing vis/flux between neighbouring loaded chunks and slowly regenerating vis toward each loaded
+ * chunk's base value, the moon phase setting the pace. Unloaded chunks are left alone (see {@link AuraHandler}).
  */
 public class AuraThread implements Runnable
 {
@@ -49,7 +49,9 @@ public class AuraThread implements Runnable
                 phaseFlux = 0.25f - phaseVis;
 
                 for (AuraChunk chunk : auraWorld.getAuraChunks().values()) {
-                    processAuraChunk(auraWorld, chunk);
+                    if (AuraHandler.isChunkLoaded(dim, chunk.getLoc().x, chunk.getLoc().z)) {
+                        processAuraChunk(auraWorld, chunk);
+                    }
                 }
             }
 
@@ -79,7 +81,8 @@ public class AuraThread implements Runnable
 
         for (int a : directions) {
             Direction dir = Direction.from2DDataValue(a);
-            AuraChunk n = auraWorld.getAuraChunkAt(x + dir.getStepX(), z + dir.getStepZ());
+            AuraChunk n = AuraHandler.isChunkLoaded(dim, x + dir.getStepX(), z + dir.getStepZ())
+                    ? auraWorld.getAuraChunkAt(x + dir.getStepX(), z + dir.getStepZ()) : null;
             if (n != null) {
                 if ((neighbourVisChunk == null || lowestVis > n.getVis()) && n.getVis() + n.getFlux() < n.getBase() * phaseMax) {
                     neighbourVisChunk = n;

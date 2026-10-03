@@ -23,14 +23,13 @@ import thaumcraft.api.items.ItemsTC;
 
 /**
  * Replaces the old (1.12.2) {@code EntityThaumicSlime} - a real {@link Slime} subclass (the original was
- * one too, {@code EntitySlime}), reusing vanilla's own real jump/float/attack {@code Goal}s and its own real
- * split-on-death behavior ({@link Slime#remove}, inherited unchanged) rather than re-deriving the original's
- * own hand-rolled equivalents of both.
- *
- * Real, documented cut: the original's other constructor spawned a second, smaller "flying" slime aimed at
- * a distant player as a ranged spit attack (a whole aimed-projectile-entity mechanic, tracked via its own
- * {@code launched}/{@code spitCounter} fields) - not ported; this is a real melee-only slime, same as every
- * vanilla one, just with real Thaumcraft-flavored size-scaled attack damage and a flux-crystal death drop.
+ * one too, {@code EntitySlime}), reusing vanilla's own jump/float/attack {@code Goal}s. As the original:
+ * <ul>
+ * <li>A slime bigger than 2 watches the nearest player within 16 blocks and, every five seconds while they're
+ * more than 4 blocks off, spits a little slime at them ({@link #spit}), shrinking by one.</li>
+ * <li>For its first half-second a slime trails splats (the spat ones fly through the air trailing them).</li>
+ * <li>It dies into as many tiny slimes as its size ({@link #remove}), not vanilla's halves.</li>
+ * </ul>
  * The original's own {@code getDropItem}/{@code dropFewItems}' two overlapping crystal-essence drops are
  * collapsed into the one real drop {@code ConfigItems.FLUX_CRYSTAL} actually was (a crystal essence carrying
  * the {@link Aspect#FLUX} tag) via {@link #dropCustomDeathLoot}, the same local {@code makeCrystal} stand-in
@@ -45,6 +44,9 @@ import thaumcraft.api.items.ItemsTC;
 public class EntityThaumicSlime extends Slime implements ITaintedMob {
 
 	private boolean wasOnGroundLastTick;
+	/** Client: ticks of launch trail left (every slime starts with them, as the original). */
+	private int launched = 10;
+	private int spitCounter = 100;
 
 	public EntityThaumicSlime(EntityType<? extends EntityThaumicSlime> type, Level level) {
 		super(type, level);
@@ -74,7 +76,69 @@ public class EntityThaumicSlime extends Slime implements ITaintedMob {
 				}
 			}
 			wasOnGroundLastTick = onGround();
+			if (launched > 0) {
+				launched--;
+				for (int k = 0; k < getSize() * (launched + 1); k++) {
+					thaumcraft.client.fx.ClientFxHandlers.spawnSlimeJump(level(), this, getSize());
+				}
+			}
+		} else if (isAlive()) {
+			net.minecraft.world.entity.player.Player player = level().getNearestPlayer(this, 16.0);
+			if (player != null) {
+				if (spitCounter > 0) spitCounter--;
+				lookAt(player, 10.0f, 20.0f);
+				if (distanceTo(player) > 4.0f && spitCounter <= 0 && getSize() > 2) {
+					spitCounter = 101;
+					spit(player);
+					playSound(thaumcraft.common.registry.ThaumcraftSounds.GORE.get(), 1.0f, ((random.nextFloat() - random.nextFloat()) * 0.2f + 1.0f) * 0.8f);
+					setSize(getSize() - 1, true);
+				}
+			}
 		}
+	}
+
+	/** The original's second constructor: a tiny slime launched from this one's middle, a block towards the target,
+	 * lobbed at its lower third. */
+	private void spit(net.minecraft.world.entity.LivingEntity target) {
+		EntityThaumicSlime fly = thaumcraft.common.registry.ThaumcraftEntities.THAUMIC_SLIME.get().create(level());
+		if (fly == null) return;
+		fly.setSize(1, true);
+		double y = (getBoundingBox().minY + getBoundingBox().maxY) / 2.0;
+		double dx = target.getX() - getX();
+		double dy = target.getBoundingBox().minY + target.getBbHeight() / 3.0f - y;
+		double dz = target.getZ() - getZ();
+		double dist = Math.sqrt(dx * dx + dz * dz);
+		if (dist < 1.0E-7) return;
+		float yaw = (float) (Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0f;
+		float pitch = (float) (-(Math.atan2(dy, dist) * 180.0 / Math.PI));
+		fly.moveTo(getX() + dx / dist, y, getZ() + dz / dist, yaw, pitch);
+		double vy = dy + dist * 0.2f;
+		double len = Math.sqrt(dx * dx + vy * vy + dz * dz);
+		double mx = (dx / len + random.nextGaussian() * 0.0075) * 1.5;
+		double my = (vy / len + random.nextGaussian() * 0.0075) * 1.5;
+		double mz = (dz / len + random.nextGaussian() * 0.0075) * 1.5;
+		fly.setDeltaMovement(mx, my, mz);
+		level().addFreshEntity(fly);
+	}
+
+	/** The original's setDead: a dying slime bursts into as many tiny slimes as its size. */
+	@Override
+	public void remove(RemovalReason reason) {
+		int i = getSize();
+		if (!level().isClientSide && i > 1 && isDeadOrDying()) {
+			for (int k = 0; k < i; k++) {
+				float f = (k % 2 - 0.5f) * i / 4.0f;
+				float f2 = (k / 2 - 0.5f) * i / 4.0f;
+				EntityThaumicSlime child = thaumcraft.common.registry.ThaumcraftEntities.THAUMIC_SLIME.get().create(level());
+				if (child == null) continue;
+				child.setSize(1, true);
+				child.moveTo(getX() + f, getY() + 0.5, getZ() + f2, random.nextFloat() * 360.0f, 0.0f);
+				level().addFreshEntity(child);
+			}
+			// vanilla would split it again into halves: it's already burst
+			setSize(1, false);
+		}
+		super.remove(reason);
 	}
 
 	/** {@code Slime} doesn't define its own static attribute builder (unlike most vanilla mobs) - matches

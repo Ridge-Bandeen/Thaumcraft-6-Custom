@@ -57,11 +57,7 @@ import thaumcraft.api.items.ItemsTC;
  * true original's own real {@code RenderWisp} never drew a skeletal model either, just 3 real billboarded
  * glow quads every frame).
  *
- * Real, documented cuts: the original's client-side death particle burst (drove entirely by the
- * unconverted {@code FXDispatcher}); and real natural world-spawning (the original's own spawn list only
- * ever added it to the Nether biome dictionary plus two custom Thaumcraft biomes, neither of which exist in
- * this port) - {@link #canSpawnHere} still does the original's real darkness/density validity check, ready
- * for {@code EntityFluxRift}'s own direct-spawn call, just never registered as a natural spawn. Real custom
+ * As the original it puffs as it appears and as it dies, and spawns naturally (see {@code WorldConfigHooks}). Real custom
  * {@code zap}/{@code wisplive}/{@code wispdead} sounds restored 2026-09-15 (were vanilla stand-ins) - see
  * {@link thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment.
  */
@@ -117,6 +113,8 @@ public class EntityWisp extends FlyingMob implements Enemy {
 	public void aiStep() {
 		super.aiStep();
 		if (level().isClientSide) {
+			// as the original: a big puff as it appears
+			if (tickCount <= 1) thaumcraft.client.fx.ClientFxHandlers.burst(level(), getX(), getY(), getZ(), 10.0f);
 			thaumcraft.client.fx.ClientFxHandlers.maintainWisp(this);
 			return;
 		}
@@ -275,5 +273,12 @@ public class EntityWisp extends FlyingMob implements Enemy {
 		}
 		int blockLight = level.getBrightness(LightLayer.BLOCK, pos);
 		return blockLight <= random.nextInt(8);
+	}
+
+	/** As the original, a small puff where it dies (the client hears of the death too). */
+	@Override
+	public void die(net.minecraft.world.damagesource.DamageSource source) {
+		super.die(source);
+		if (level().isClientSide) thaumcraft.client.fx.ClientFxHandlers.burst(level(), getX(), getY() + 0.45, getZ(), 1.0f);
 	}
 }

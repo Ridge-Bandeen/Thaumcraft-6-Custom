@@ -41,17 +41,11 @@ import thaumcraft.common.registry.ThaumcraftSounds;
  * and updated, but never actually read by its own real renderer - not ported, same "don't resurrect
  * genuinely unused state" precedent as {@code ModelJar}'s own unused {@code Core} box.
  *
- * <p>Real, documented cut: the original's own {@code getEnchantPowerBonus() -> 5.0f} (a stronger-than-a-
- * bookshelf enchanting boost) has no direct modern equivalent - modern Minecraft replaced the old per-block
- * float bonus with a flat, tag-driven {@code minecraft:enchantment_power_provider} block tag (a fixed +1 per
- * qualifying block in range, not a variable magnitude). This block is tagged into it (see
- * {@code data/minecraft/tags/block/enchantment_power_provider.json}) for a real, if weaker, modern
- * equivalent rather than dropping the perk outright.
+ * <p>As the original, the block is worth five bookshelves to a nearby enchanting table
+ * ({@code BlockJarBrain#getEnchantPowerBonus}).
  *
- * <p>Real, minor simplification: a merged/stacked vanilla {@code ExperienceOrb} entity (several orbs that
- * despawn-merged into one, tracked via a private {@code count} field with no public accessor) is only
- * credited for its own {@link ExperienceOrb#getValue()} once, not {@code value * count} - a genuine, rare
- * edge case (many kills in the same spot), not reachable without reflection into a private vanilla field.
+ * <p>A merged orb (today's orbs stack up; 1.12's never did) counts as all the orbs in it. As the original, it eats
+ * whatever touches it while below its maximum, which can take it a little past.
  */
 public class TileJarBrain extends BlockEntity {
 
@@ -105,7 +99,7 @@ public class TileJarBrain extends BlockEntity {
 			boolean changed = false;
 			for (ExperienceOrb orb : touching) {
 				if (tile.xp >= XP_MAX) break;
-				tile.xp = Math.min(XP_MAX, tile.xp + orb.getValue());
+				tile.xp += orb.getValue() * Math.max(1, orb.count);
 				level.playSound(null, pos, SoundEvents.GENERIC_EAT, SoundSource.BLOCKS,
 						0.1f, (level.getRandom().nextFloat() - level.getRandom().nextFloat()) * 0.2f + 1.0f);
 				orb.discard();

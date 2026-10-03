@@ -90,6 +90,12 @@ public class TileTubeValve extends TileTube {
 		return allowFlow;
 	}
 
+	/** As the original: the side its handle is on (its facing) never connects. */
+	@Override
+	public boolean isConnectable(net.minecraft.core.Direction face) {
+		return face != getFacing() && super.isConnectable(face);
+	}
+
 	@Override
 	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
 		super.saveAdditional(tag, registries);

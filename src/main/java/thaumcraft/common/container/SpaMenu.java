@@ -14,11 +14,9 @@ import thaumcraft.common.registry.ThaumcraftMenus;
 import thaumcraft.common.tiles.devices.TileSpa;
 
 /**
- * Replaces the old (1.12.2) {@code ContainerSpa}. Slot layout matches the original's real Bath Salts slot
- * position (65, 31) exactly, then the usual 27 player-inventory + 9-hotbar slots. No "mix/unmix" toggle
- * button - see {@link TileSpa}'s own doc comment for why that mode is dropped; there's no other visible
- * server-only state left for a button to drive, so unlike {@link PechMenu}/{@link GolemBuilderMenu} this
- * menu needs no {@link #clickMenuButton} override at all.
+ * Replaces the old (1.12.2) {@code ContainerSpa}: the Bath Salts slot at (65, 31), the player's inventory, and as
+ * the original's window properties the mix flag and the tank (amount, fluid) for the screen's toggle and gauge.
+ * Button 1 toggles the mix mode.
  */
 public class SpaMenu extends AbstractContainerMenu {
 
@@ -27,19 +25,46 @@ public class SpaMenu extends AbstractContainerMenu {
 	private static final int HOTBAR_END = 37;
 
 	private final ContainerLevelAccess access;
+	@javax.annotation.Nullable
+	private final TileSpa tile;
+	public static final int DATA_MIX = 0;
+	public static final int DATA_AMOUNT = 1;
+	public static final int DATA_FLUID = 2;
+	private final net.minecraft.world.inventory.ContainerData data;
 
 	/** Client-side reconstruction - see {@link PechMenu}'s own doc comment for why. */
 	public SpaMenu(int containerId, Inventory playerInventory) {
-		this(containerId, playerInventory, new ItemStackHandler(1), ContainerLevelAccess.NULL);
+		this(containerId, playerInventory, new ItemStackHandler(1), ContainerLevelAccess.NULL, null);
 	}
 
 	public SpaMenu(int containerId, Inventory playerInventory, TileSpa tile) {
-		this(containerId, playerInventory, tile.getItemHandler(), ContainerLevelAccess.create(tile.getLevel(), tile.getBlockPos()));
+		this(containerId, playerInventory, tile.getItemHandler(), ContainerLevelAccess.create(tile.getLevel(), tile.getBlockPos()), tile);
 	}
 
-	private SpaMenu(int containerId, Inventory playerInventory, IItemHandler handler, ContainerLevelAccess access) {
+	private SpaMenu(int containerId, Inventory playerInventory, IItemHandler handler, ContainerLevelAccess access, @javax.annotation.Nullable TileSpa tile) {
 		super(ThaumcraftMenus.SPA.get(), containerId);
 		this.access = access;
+		this.tile = tile;
+		this.data = tile == null ? new net.minecraft.world.inventory.SimpleContainerData(3) : new net.minecraft.world.inventory.ContainerData() {
+			@Override
+			public int get(int index) {
+				return switch (index) {
+					case DATA_MIX -> tile.isMix() ? 1 : 0;
+					case DATA_AMOUNT -> tile.tank.getFluidAmount();
+					default -> tile.tank.isEmpty() ? -1 : net.minecraft.core.registries.BuiltInRegistries.FLUID.getId(tile.tank.getFluid().getFluid());
+				};
+			}
+
+			@Override
+			public void set(int index, int value) {
+			}
+
+			@Override
+			public int getCount() {
+				return 3;
+			}
+		};
+		addDataSlots(data);
 
 		addSlot(new SlotItemHandler(handler, INPUT_SLOT, 65, 31));
 		for (int row = 0; row < 3; row++) {
@@ -50,6 +75,29 @@ public class SpaMenu extends AbstractContainerMenu {
 		for (int col = 0; col < 9; col++) {
 			addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
 		}
+	}
+
+	public boolean isMix() {
+		return data.get(DATA_MIX) != 0;
+	}
+
+	public int tankAmount() {
+		return data.get(DATA_AMOUNT);
+	}
+
+	@javax.annotation.Nullable
+	public net.minecraft.world.level.material.Fluid tankFluid() {
+		int id = data.get(DATA_FLUID);
+		return id < 0 ? null : net.minecraft.core.registries.BuiltInRegistries.FLUID.byId(id);
+	}
+
+	@Override
+	public boolean clickMenuButton(Player player, int id) {
+		if (id == 1 && tile != null) {
+			tile.toggleMix();
+			return true;
+		}
+		return false;
 	}
 
 	@Override

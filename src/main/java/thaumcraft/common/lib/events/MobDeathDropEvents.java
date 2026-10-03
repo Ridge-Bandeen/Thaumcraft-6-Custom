@@ -55,7 +55,8 @@ public class MobDeathDropEvents {
 		if (!event.isRecentlyHit() || event.getEntity().level().isClientSide()) return;
 		LivingEntity entity = event.getEntity();
 
-		if (entity instanceof Zombie && !(entity instanceof EntityBrainyZombie) && entity.getRandom().nextInt(10) < 1) {
+		if (entity instanceof Zombie && !(entity instanceof EntityBrainyZombie)
+				&& entity.getRandom().nextInt(10) - thaumcraft.common.lib.utils.LootingHelper.level(event.getSource()) < 1) {
 			drop(event, new ItemStack(ItemsTC.brain.get()));
 		}
 

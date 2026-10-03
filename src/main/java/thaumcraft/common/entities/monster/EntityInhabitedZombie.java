@@ -38,9 +38,7 @@ import thaumcraft.common.registry.ThaumcraftEntities;
  * splitting loop). No other death drops happen at all, matching the original's own {@code getDropItem}/
  * {@code dropFewItems} overrides exactly.
  *
- * Real, documented cuts: no {@code getCanSpawnHere} "don't spawn near another inhabited zombie" restriction
- * - this whole monster arc has consistently deferred all natural-spawn ({@code SpawnPlacements}) wiring, so
- * there's no spawn-time hook for this check to run from yet either. Real custom {@code crabtalk} sound
+ * As the original, one never spawns within 32 blocks (16 up or down) of another ({@link #checkSpawn}). Real custom {@code crabtalk} sound
  * restored 2026-09-15 (was a vanilla spider-sound stand-in), same bundled sound {@link EntityEldritchCrab}
  * itself uses - see {@link thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment.
  */
@@ -99,5 +97,13 @@ public class EntityInhabitedZombie extends Zombie implements IEldritchMob {
 	@Override
 	protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
 		return SoundEvents.GENERIC_HURT;
+	}
+
+	/** The original's getCanSpawnHere: a monster's usual rules, and no other inhabited zombie nearby. */
+	public static boolean checkSpawn(net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.monster.Monster> type,
+			net.minecraft.world.level.ServerLevelAccessor level, net.minecraft.world.entity.MobSpawnType reason, net.minecraft.core.BlockPos pos,
+			net.minecraft.util.RandomSource random) {
+		return net.minecraft.world.entity.monster.Monster.checkMonsterSpawnRules(type, level, reason, pos, random)
+				&& level.getEntitiesOfClass(EntityInhabitedZombie.class, new net.minecraft.world.phys.AABB(pos).inflate(32.0, 16.0, 32.0)).isEmpty();
 	}
 }

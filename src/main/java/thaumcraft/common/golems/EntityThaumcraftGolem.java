@@ -490,9 +490,10 @@ public class EntityThaumcraftGolem extends TamableAnimal implements IGolemAPI, R
 
 	@Override
 	protected void dropCustomDeathLoot(ServerLevel level, DamageSource damageSource, boolean recentlyHit) {
+		float b = thaumcraft.common.lib.utils.LootingHelper.level(damageSource) * 0.15f;
 		super.dropCustomDeathLoot(level, damageSource, recentlyHit);
 		for (ItemStack stack : getProperties().generateComponents()) {
-			if (level.random.nextFloat() < 0.3f) {
+			if (level.random.nextFloat() < 0.3f + b) {
 				ItemStack copy = stack.copy();
 				if (copy.getCount() > 1) {
 					copy.shrink(level.random.nextInt(copy.getCount()));

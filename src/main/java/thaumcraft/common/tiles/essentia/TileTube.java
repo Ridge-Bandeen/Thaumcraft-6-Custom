@@ -48,8 +48,10 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * {@link #facing}, consulted only by {@link TileTubeOneway}. Requires an actual Caster in hand, matching the
  * true original's own real requirement (unlike Levitator/Redstone Relay, which never needed one).
  *
- * <p>Real, deliberate simplification kept from the earlier pass: no venting warning FX/sound when two
- * neighbors want conflicting aspects (client FX + a flavor cue, dropped like everywhere else this session).
+ * <p>Venting, as the original: when a neighbour pulls for a different aspect with (nearly) the same suction as this
+ * tube's own, the tube vents for 2 seconds - it stops relaying and moving essentia, hisses and puffs coloured steam
+ * (block event 1, the aspect's colour) - which breaks a deadlock between two competing demands. Moving essentia
+ * creaks now and then (block event 0).
  *
  * {@link TileTubeFilter} (aspect-locks a tube), {@link TileTubeRestrict} (halves its effective suction), and
  * {@link TileTubeOneway} (accepts suction from - and only feeds essentia toward - a single facing) all
@@ -86,6 +88,9 @@ public class TileTube extends BlockEntity implements IEssentiaTransport, IIntera
 	private static final AABB CORE_LOCAL = new AABB(0.375, 0.375, 0.375, 0.625, 0.625, 0.625);
 
 	private int count;
+	/** Ticks left venting (see the class doc); server and client each keep their own. */
+	private int venting;
+	private int ventColor;
 	protected Aspect essentiaType;
 	protected int essentiaAmount;
 	protected Aspect suctionType;
@@ -111,10 +116,26 @@ public class TileTube extends BlockEntity implements IEssentiaTransport, IIntera
 	}
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TileTube tile) {
-		if (level.isClientSide) return;
+		if (tile.venting > 0) tile.venting--;
+		// as the original: each tube starts at a random point of the cycle, so a network doesn't all act on one tick
+		if (tile.count == 0) tile.count = level.random.nextInt(10);
+		if (level.isClientSide) {
+			if (tile.venting > 0) {
+				java.util.Random r = new java.util.Random(tile.hashCode() * 4L);
+				float rp = r.nextFloat() * 360.0f;
+				float ry = r.nextFloat() * 360.0f;
+				double fx = -net.minecraft.util.Mth.sin(ry / 180.0f * (float) Math.PI) * net.minecraft.util.Mth.cos(rp / 180.0f * (float) Math.PI);
+				double fz = net.minecraft.util.Mth.cos(ry / 180.0f * (float) Math.PI) * net.minecraft.util.Mth.cos(rp / 180.0f * (float) Math.PI);
+				double fy = -net.minecraft.util.Mth.sin(rp / 180.0f * (float) Math.PI);
+				thaumcraft.client.fx.ClientFxHandlers.spawnVent(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, fx / 5.0, fy / 5.0, fz / 5.0, tile.ventColor);
+			}
+			return;
+		}
+		if (tile.venting > 0) return;
 		tile.count++;
 		if (tile.count % 2 == 0) {
 			tile.calculateSuction(level, pos);
+			tile.checkVenting(level, pos);
 			if (tile.essentiaType != null && tile.essentiaAmount <= 0) {
 				tile.essentiaType = null;
 			}
@@ -122,6 +143,44 @@ public class TileTube extends BlockEntity implements IEssentiaTransport, IIntera
 		if (tile.count % 5 == 0 && tile.suction > 0) {
 			tile.equalizeWithNeighbours(level, pos);
 		}
+	}
+
+	/** The original's checkVenting: a neighbour (not a filter tube) pulling for another aspect with this tube's own
+	 * suction, or one less, sets it venting. */
+	protected void checkVenting(Level level, BlockPos pos) {
+		for (Direction dir : Direction.values()) {
+			if (!openSides[dir.ordinal()]) continue;
+			if (!(level.getBlockEntity(pos.relative(dir)) instanceof IEssentiaTransport neighbor) || !neighbor.isConnectable(dir.getOpposite())) continue;
+			int suck = neighbor.getSuctionAmount(dir.getOpposite());
+			if (suction > 0 && (suck == suction || suck == suction - 1) && suctionType != neighbor.getSuctionType(dir.getOpposite())
+					&& !(neighbor instanceof TileTubeFilter)) {
+				level.blockEvent(pos, getBlockState().getBlock(), 1, suctionType != null ? suctionType.getColor() : -1);
+				venting = 40;
+			}
+		}
+	}
+
+	/** Block events: 0 the creak of moving essentia, 1 venting (param: the aspect colour, -1 for none). */
+	public boolean onBlockEvent(int id, int param) {
+		if (id == 0) {
+			if (level != null && level.isClientSide) {
+				level.playLocalSound(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5,
+						thaumcraft.common.registry.ThaumcraftSounds.CREAK.get(), net.minecraft.sounds.SoundSource.AMBIENT, 1.0f, 1.3f + level.random.nextFloat() * 0.2f, false);
+			}
+			return true;
+		}
+		if (id == 1) {
+			if (level != null && level.isClientSide) {
+				if (venting <= 0) {
+					level.playLocalSound(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5,
+							net.minecraft.sounds.SoundEvents.LAVA_EXTINGUISH, net.minecraft.sounds.SoundSource.BLOCKS, 0.1f, 1.0f + level.random.nextFloat() * 0.1f, false);
+				}
+				venting = 50;
+				ventColor = param == -1 ? 11184810 : param;
+			}
+			return true;
+		}
+		return false;
 	}
 
 	/** Recomputes {@link #suction}/{@link #suctionType} from the strongest of the 6 neighbors' own demand.
@@ -148,6 +207,8 @@ public class TileTube extends BlockEntity implements IEssentiaTransport, IIntera
 			if (!neighbor.isConnectable(dir.getOpposite())) continue;
 			Aspect neighborType = neighbor.getSuctionType(dir.getOpposite());
 			if (!acceptsNeighborSuctionType(neighborType)) continue;
+			// as the original: holding one aspect, a tube won't take up a pull for another
+			if (getEssentiaAmount(dir) > 0 && getEssentiaType(dir) != null && neighborType != null && getEssentiaType(dir) != neighborType) continue;
 			int suck = neighbor.getSuctionAmount(dir.getOpposite());
 			if (suck > 0 && suck > suction + 1) {
 				suction = adjustSuction(suck);
@@ -176,6 +237,7 @@ public class TileTube extends BlockEntity implements IEssentiaTransport, IIntera
 
 			int taken = neighbor.takeEssentia(want, 1, dir.getOpposite());
 			if (taken > 0 && addEssentia(want, taken, dir) > 0) {
+				if (level.random.nextInt(100) == 0) level.blockEvent(pos, getBlockState().getBlock(), 0, 0);
 				return;
 			}
 		}
@@ -218,6 +280,20 @@ public class TileTube extends BlockEntity implements IEssentiaTransport, IIntera
 
 	public Direction getFacing() {
 		return facing;
+	}
+
+	/** The original's onBlockPlacedBy: a tube faces the player who placed it (straight up or down when they stand
+	 * right over or under it). */
+	public void faceTowards(net.minecraft.world.entity.LivingEntity placer) {
+		BlockPos pos = getBlockPos();
+		Direction dir = placer.getDirection().getOpposite();
+		if (Math.abs(placer.getX() - pos.getX()) < 2.0 && Math.abs(placer.getZ() - pos.getZ()) < 2.0) {
+			double eye = placer.getEyeY();
+			if (eye - pos.getY() > 2.0) dir = Direction.UP;
+			else if (pos.getY() - eye > 0.0) dir = Direction.DOWN;
+		}
+		facing = dir;
+		setChanged();
 	}
 
 	public boolean isSideOpen(Direction dir) {

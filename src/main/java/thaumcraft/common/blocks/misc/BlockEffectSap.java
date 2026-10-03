@@ -27,11 +27,7 @@ import thaumcraft.api.entities.IEldritchMob;
  * block equality check matched, not by any real per-state property). Only {@code effect_sap} gets a real
  * modern port here:
  * <ul>
- * <li>{@code effect_glimmer} needs no port at all - both of its real true-original placers
- * ({@code ToolEvents}' own {@code LAMPLIGHT} infusion enchantment, {@link thaumcraft.common.tiles.devices.TileLampArcane})
- * already use real vanilla {@link net.minecraft.world.level.block.Blocks#LIGHT} instead, a strictly better
- * modern fit for "invisible placeable light source" (added in 1.17) with nothing lost - see both of those
- * classes' own doc comments.</li>
+ * <li>{@code effect_glimmer} is its own block, {@link BlockEffectGlimmer} (it neither hurts nor goes away).</li>
  * <li>{@code effect_shock} is real, registered, and coded (a Slowness + 1 magic damage variant of this same
  * on-touch mechanic) - but a real {@code git grep} across the ENTIRE true original codebase found it has
  * {@code ZERO} real placers anywhere, not even upstream. Same "registered but never actually wired up, not a

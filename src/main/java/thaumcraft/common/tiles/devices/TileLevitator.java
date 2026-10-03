@@ -30,10 +30,9 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * Sneaking near an real UP-facing levitator lets you resist its lift and descend slowly instead, matching
  * the original's own real "hover platform" use case.
  *
- * Real, deliberate cut: the original's client-only levitator particle trail ({@code drawFX}/{@code drawFXAt})
- * is dropped - same "keep the real mechanic, drop the flourish" precedent as every other device this port
- * has shipped. No client sync is needed either now that nothing client-visible depends on the real
- * range/vis-buffer state (the original only ever synced them for that same dropped particle trail).
+ * As the original, the lift runs on the client too (players move themselves), driven there by the synced
+ * {@code ENABLED} state and the range the client works out itself, and motes drift from it and around whatever
+ * it lifts ({@code drawFX}/{@code drawFXAt}).
  */
 public class TileLevitator extends BlockEntity {
 
@@ -73,7 +72,9 @@ public class TileLevitator extends BlockEntity {
 		if (!level.isClientSide && state.getValue(BlockStateProperties.ENABLED) != active) {
 			level.setBlock(pos, state.setValue(BlockStateProperties.ENABLED, active), 3);
 		}
-		if (level.isClientSide || !active) return;
+		// as the original, the lift runs on both sides: a player's own motion is decided by their client
+		if (level.isClientSide) active = tile.rangeActual > 0 && state.getValue(BlockStateProperties.ENABLED);
+		if (!active) return;
 
 		int r = tile.rangeActual;
 		AABB area = new AABB(
@@ -84,6 +85,10 @@ public class TileLevitator extends BlockEntity {
 		for (Entity e : targets) {
 			if (!(e instanceof ItemEntity) && !e.isPushable() && !(e instanceof AbstractHorse)) continue;
 			lifted = true;
+			if (level.isClientSide) {
+				drawFXAt(level, e);
+				drawFX(level, pos, facing, 0.6);
+			}
 			if (e.isShiftKeyDown() && facing == Direction.UP) {
 				Vec3 motion = e.getDeltaMovement();
 				if (motion.y < 0.0) {
@@ -104,11 +109,33 @@ public class TileLevitator extends BlockEntity {
 				e.setDeltaMovement(mx, my, mz);
 			}
 			e.fallDistance = 0.0f;
-			tile.vis -= tile.getCost();
-			if (tile.vis <= 0) break;
+			if (!level.isClientSide) {
+				tile.vis -= tile.getCost();
+				if (tile.vis <= 0) break;
+			}
 		}
-		if (lifted && tile.counter % 20 == 0) {
+		if (level.isClientSide) drawFX(level, pos, facing, 0.1);
+		if (lifted && !level.isClientSide && tile.counter % 20 == 0) {
 			tile.setChanged();
+		}
+	}
+
+	/** The original's drawFX: now and then a pale mote drifting out of the levitator along its facing. */
+	private static void drawFX(Level level, BlockPos pos, Direction facing, double chance) {
+		if (level.random.nextFloat() < chance) {
+			thaumcraft.client.fx.ClientFxHandlers.drawLevitatorParticles(level, pos.getX() + 0.25 + level.random.nextFloat() * 0.5,
+					pos.getY() + 0.25 + level.random.nextFloat() * 0.5, pos.getZ() + 0.25 + level.random.nextFloat() * 0.5,
+					facing.getStepX() / 50.0, facing.getStepY() / 50.0, facing.getStepZ() / 50.0);
+		}
+	}
+
+	/** The original's drawFXAt: motes around something being lifted. */
+	private static void drawFXAt(Level level, Entity e) {
+		if (level.random.nextFloat() < 0.1f) {
+			var r = level.random;
+			thaumcraft.client.fx.ClientFxHandlers.drawLevitatorParticles(level, e.getX() + (r.nextFloat() - r.nextFloat()) * e.getBbWidth(),
+					e.getY() + r.nextFloat() * e.getBbHeight(), e.getZ() + (r.nextFloat() - r.nextFloat()) * e.getBbWidth(),
+					(r.nextFloat() - r.nextFloat()) * 0.01, (r.nextFloat() - r.nextFloat()) * 0.01, (r.nextFloat() - r.nextFloat()) * 0.01);
 		}
 	}
 
@@ -123,7 +150,19 @@ public class TileLevitator extends BlockEntity {
 			range = 0;
 		}
 		setChanged();
+		if (level != null && !level.isClientSide) level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
 		player.displayClientMessage(Component.translatable("tc.levitator", RANGES[range], getCost()), true);
+	}
+
+	/** The client needs the range setting to run the lift (see the class doc). */
+	@Override
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+		return saveWithoutMetadata(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
 	}
 
 	@Override

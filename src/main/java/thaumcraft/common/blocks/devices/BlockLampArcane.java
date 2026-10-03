@@ -28,12 +28,8 @@ import thaumcraft.common.tiles.devices.TileLampArcane;
  * since only the Arcane one is in scope). See {@link TileLampArcane}'s own doc comment for the light-
  * scatter mechanic.
  *
- * Simplified vs the original: doesn't attach to an arbitrary clicked face (wall/ceiling-mountable, like a
- * torch/lantern) and fall off if that support is removed - just a plain placed block, like every other
- * device this session. The original's composite "base + stand" model used Forge's old {@code submodel}
- * multi-layer-model system, which has no modern equivalent and no base geometry ever existed for it either
- * (only texture references) - this uses a single static cube model instead, texture swapped by the
- * {@code enabled} state, same "simplify the model, keep the function" precedent as Arcane Stone's family.
+ * As the original it hangs off the face it was placed against (FACING points at its support, the stand drawn
+ * there) and drops if that support goes.
  * ENABLED still toggles the normal way (redstone-inverted, matching every other {@code IBlockEnabled}
  * device the original had): lit unless powered.
  */

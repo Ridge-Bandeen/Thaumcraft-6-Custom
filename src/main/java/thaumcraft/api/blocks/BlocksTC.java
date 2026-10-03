@@ -950,6 +950,11 @@ public final class BlocksTC {
 					.noCollission().noOcclusion().lightLevel(state -> 7).noLootTable().randomTicks()
 					.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
 
+	/** The original's glimmer: invisible light the Arcane Lamp and Lamplight tools leave in the dark. */
+	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockEffectGlimmer> effectGlimmer = BLOCKS.registerBlock("effect_glimmer",
+			thaumcraft.common.blocks.misc.BlockEffectGlimmer::new,
+			BlockBehaviour.Properties.of().replaceable().noCollission().noLootTable().air().lightLevel(state -> 15));
+
 	/** The Spa - see {@link thaumcraft.common.tiles.devices.TileSpa}'s own doc comment. */
 	public static final DeferredBlock<thaumcraft.common.blocks.devices.BlockSpa> spa = BLOCKS.registerBlock("spa",
 			thaumcraft.common.blocks.devices.BlockSpa::new,

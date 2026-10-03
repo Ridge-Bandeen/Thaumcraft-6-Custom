@@ -28,11 +28,7 @@ import thaumcraft.common.tiles.essentia.TileAlembic;
  * via {@code level.getBlockEntity(pos.relative(dir))}, same as {@code TileTube}), not the stale
  * pre-conversion {@code ThaumcraftApiHelper.getConnectableTile}.
  *
- * <b>Real, deliberate scope cut - not new, already decided:</b> the original also drew a face-oriented label
- * (a flat aspect-tag icon) on whichever single face the alembic's aspect lock was applied to. This port's own
- * {@link TileAlembic} doc comment already dropped that per-face targeting and its TESR entirely when the tile
- * itself was ported - {@link TileAlembic#getAspectFilter()} locks the whole tile, not one face, so there's no
- * "which face" data left to orient a label towards. Nothing to add back here.
+ * <p>As the original, a labelled alembic shows its label - the parchment and the aspect's icon - on the labelled face.
  */
 public class TileAlembicRenderer implements BlockEntityRenderer<TileAlembic> {
 
@@ -51,8 +47,23 @@ public class TileAlembicRenderer implements BlockEntityRenderer<TileAlembic> {
 		nozzle2 = baked.getChild("nozzle2");
 	}
 
+	private static final ResourceLocation TEX_LABEL = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/models/label.png");
+
 	@Override
 	public void render(TileAlembic tile, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
+		thaumcraft.api.aspects.Aspect filter = tile.getAspectFilter();
+		if (filter != null && tile.getLabelFace().getAxis() != Direction.Axis.Y) {
+			// the original: centred half a block up, 0.376 out from the centre, the parchment 0.44 across, the icon on top
+			poseStack.pushPose();
+			poseStack.translate(0.5, 0.5, 0.5);
+			poseStack.mulPose(Axis.YP.rotationDegrees(-tile.getLabelFace().toYRot()));
+			poseStack.translate(0.0, 0.0, 0.376);
+			label(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(TEX_LABEL)), 0.22f, 0xFFFFFFFF, packedLight, packedOverlay);
+			poseStack.translate(0.0, 0.0, 0.001);
+			label(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(filter.getImage())), 0.16f,
+					net.minecraft.util.FastColor.ARGB32.opaque(filter.getColor()), packedLight, packedOverlay);
+			poseStack.popPose();
+		}
 		if (tile.getLevel() == null) return;
 		VertexConsumer vc = bufferSource.getBuffer(RenderType.entityCutout(TEXTURE));
 
@@ -79,5 +90,13 @@ public class TileAlembicRenderer implements BlockEntityRenderer<TileAlembic> {
 			case WEST -> 180.0f;
 			default -> 0.0f; // EAST
 		};
+	}
+
+	private static void label(PoseStack poseStack, VertexConsumer vc, float half, int tint, int light, int overlay) {
+		PoseStack.Pose pose = poseStack.last();
+		vc.addVertex(pose, -half, half, 0.0f).setColor(tint).setUv(0.0f, 0.0f).setOverlay(overlay).setLight(light).setNormal(pose, 0.0f, 0.0f, 1.0f);
+		vc.addVertex(pose, -half, -half, 0.0f).setColor(tint).setUv(0.0f, 1.0f).setOverlay(overlay).setLight(light).setNormal(pose, 0.0f, 0.0f, 1.0f);
+		vc.addVertex(pose, half, -half, 0.0f).setColor(tint).setUv(1.0f, 1.0f).setOverlay(overlay).setLight(light).setNormal(pose, 0.0f, 0.0f, 1.0f);
+		vc.addVertex(pose, half, half, 0.0f).setColor(tint).setUv(1.0f, 0.0f).setOverlay(overlay).setLight(light).setNormal(pose, 0.0f, 0.0f, 1.0f);
 	}
 }

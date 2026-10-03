@@ -32,8 +32,7 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
 import thaumcraft.common.tiles.essentia.TileSmelter;
 
 /**
- * Replaces the old (1.12.2) {@code BlockSmelter}. See {@link TileSmelter}'s own doc comment for what's
- * simplified about this device this pass (single tier, no GUI, no bellows/aux/vent blocks).
+ * Replaces the old (1.12.2) {@code BlockSmelter} - the Alchemical Furnace in its three tiers; see {@link TileSmelter}.
  */
 public class BlockSmelter extends Block implements EntityBlock {
 
@@ -99,6 +98,7 @@ public class BlockSmelter extends Block implements EntityBlock {
 	 * right-click item routing instead, which lost the gauges. */
 	private InteractionResult openMenu(Level level, BlockPos pos, Player player) {
 		if (level.isClientSide) return InteractionResult.SUCCESS;
+		if (player.isShiftKeyDown()) return InteractionResult.SUCCESS; // as the original: not while sneaking
 		if (!(level.getBlockEntity(pos) instanceof TileSmelter tile)) return InteractionResult.PASS;
 		player.openMenu(new net.minecraft.world.SimpleMenuProvider(
 				(id, inv, p) -> new thaumcraft.common.container.SmelterMenu(id, inv, tile),

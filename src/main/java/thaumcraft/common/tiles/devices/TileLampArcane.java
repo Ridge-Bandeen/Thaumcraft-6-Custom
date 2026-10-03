@@ -21,25 +21,13 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import thaumcraft.common.registry.ThaumcraftBlockEntities;
 
 /**
- * Replaces the old (1.12.2) {@code TileLampArcane}. Scatters real light sources around itself, using
- * vanilla's own {@link net.minecraft.world.level.block.LightBlock} (added in 1.17, a placeable invisible
- * light source with no equivalent needed in the original - which had to hand-roll {@code effectGlimmer}, a
- * custom marker block, for exactly this purpose). Every 5 ticks, while enabled, picks a random nearby air
- * position with low current light and a clear line of sight (via {@code Level#clip}, the same raytrace
- * mechanism {@code FocusMediumTouch}/{@code ItemCaster} already use) and places a light block there.
- *
- * Improvement over the original: placed positions are tracked in a persisted list rather than being
- * rediscovered by re-scanning a 31x31x31 volume on removal (the original's {@code removeLights}) - cheaper
- * and exact, no risk of clearing a light block placed by a second nearby lamp.
- *
- * Simplified vs the original: the block itself doesn't attach to an arbitrary face (torch/lantern-style) -
- * see {@code BlockLampArcane}'s own doc comment. No client FX.
+ * Replaces the old (1.12.2) {@code TileLampArcane}, as the original: every 5 ticks while lit it picks a random spot up
+ * to 15 blocks away (no more than 4 above the ground there, and not below the fifth block from the bottom of the
+ * world), and if that spot is air, darker than block light 11 and in sight of the lamp, leaves a glimmer there
+ * ({@code BlocksTC#effectGlimmer}, invisible full light). Turning it off with redstone or removing it clears every
+ * glimmer within 15 blocks.
  */
 public class TileLampArcane extends BlockEntity {
-
-	private static final int MAX_TRACKED = 64;
-
-	private final List<BlockPos> placedLights = new ArrayList<>();
 
 	public TileLampArcane(BlockPos pos, BlockState state) {
 		super(ThaumcraftBlockEntities.LAMP_ARCANE.get(), pos, state);
@@ -60,17 +48,18 @@ public class TileLampArcane extends BlockEntity {
 		int dy = level.random.nextInt(16) - level.random.nextInt(16);
 		int dz = level.random.nextInt(16) - level.random.nextInt(16);
 		BlockPos target = pos.offset(dx, dy, dz);
+		int top = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, target).getY();
+		if (target.getY() > top + 4) {
+			target = new BlockPos(target.getX(), top + 4, target.getZ());
+		}
 		if (target.getY() < level.getMinBuildHeight() + 5) {
 			target = new BlockPos(target.getX(), level.getMinBuildHeight() + 5, target.getZ());
 		}
 
-		if (level.isEmptyBlock(target) && level.getBrightness(LightLayer.BLOCK, target) < 11 && hasLineOfSight(level, pos, target)) {
-			level.setBlock(target, Blocks.LIGHT.defaultBlockState().setValue(BlockStateProperties.LEVEL, 14), 3);
-			placedLights.add(target.immutable());
-			if (placedLights.size() > MAX_TRACKED) {
-				placedLights.remove(0);
-			}
-			setChanged();
+		BlockState there = level.getBlockState(target);
+		if (there.isAir() && !there.is(thaumcraft.api.blocks.BlocksTC.effectGlimmer.get()) && level.getBrightness(LightLayer.BLOCK, target) < 11
+				&& hasLineOfSight(level, pos, target)) {
+			level.setBlock(target, thaumcraft.api.blocks.BlocksTC.effectGlimmer.get().defaultBlockState(), 3);
 		}
 	}
 
@@ -81,39 +70,12 @@ public class TileLampArcane extends BlockEntity {
 		return hit.getType() == HitResult.Type.MISS || hit.getLocation().distanceToSqr(to) < 1.0;
 	}
 
-	/** Called when the lamp block is removed - clears every light block this specific lamp placed, still
-	 * present, without touching anything else nearby. */
+	/** The original's removeLights: every glimmer within 15 blocks goes out. */
 	public void removeLights(Level level) {
-		for (BlockPos light : placedLights) {
-			if (level.getBlockState(light).is(Blocks.LIGHT)) {
-				level.removeBlock(light, false);
-			}
-		}
-		placedLights.clear();
-	}
-
-	@Override
-	protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-		super.saveAdditional(tag, registries);
-		ListTag list = new ListTag();
-		for (BlockPos p : placedLights) {
-			CompoundTag posTag = new CompoundTag();
-			posTag.putInt("X", p.getX());
-			posTag.putInt("Y", p.getY());
-			posTag.putInt("Z", p.getZ());
-			list.add(posTag);
-		}
-		tag.put("PlacedLights", list);
-	}
-
-	@Override
-	protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-		super.loadAdditional(tag, registries);
-		placedLights.clear();
-		if (tag.contains("PlacedLights")) {
-			for (Tag t : tag.getList("PlacedLights", 10)) {
-				CompoundTag posTag = (CompoundTag) t;
-				placedLights.add(new BlockPos(posTag.getInt("X"), posTag.getInt("Y"), posTag.getInt("Z")));
+		BlockPos pos = getBlockPos();
+		for (BlockPos p : BlockPos.betweenClosed(pos.offset(-15, -15, -15), pos.offset(15, 15, 15))) {
+			if (level.getBlockState(p).is(thaumcraft.api.blocks.BlocksTC.effectGlimmer.get())) {
+				level.removeBlock(p, false);
 			}
 		}
 	}

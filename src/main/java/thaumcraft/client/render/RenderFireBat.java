@@ -36,4 +36,10 @@ public class RenderFireBat extends MobRenderer<EntityFireBat, ModelFireBat<Entit
 	public ResourceLocation getTextureLocation(EntityFireBat entity) {
 		return TEXTURE;
 	}
+
+	/** As the original, a fire bat glows: always drawn at full light. */
+	@Override
+	protected int getBlockLightLevel(EntityFireBat entity, net.minecraft.core.BlockPos pos) {
+		return 15;
+	}
 }

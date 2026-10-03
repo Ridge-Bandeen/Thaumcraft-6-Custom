@@ -21,8 +21,8 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * holes in the perpendicular plane - both exactly the original's own real recursive {@code
  * FocusEffectRift#createHole} calls.
  *
- * Real, deliberate cut: the original's client-only {@code surroundwithsparkles} per-tick particle trail is
- * dropped, same established cut as every other device this port has shipped.
+ * As the original, on the client its edges glitter blue ({@link #surroundWithSparkles}, twice a tick) wherever the
+ * hole meets solid blocks; everything else happens on the server.
  */
 public class TileHole extends BlockEntity {
 
@@ -37,6 +37,10 @@ public class TileHole extends BlockEntity {
 	}
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TileHole tile) {
+		if (level.isClientSide) {
+			for (int a = 0; a < 2; a++) tile.surroundWithSparkles(level, pos);
+			return;
+		}
 		if (tile.countdown == 0 && tile.count > 1 && tile.direction != null) {
 			Direction.Axis axis = tile.direction.getAxis();
 			for (int a = 0; a < 9; a++) {
@@ -58,6 +62,29 @@ public class TileHole extends BlockEntity {
 		if (tile.countdown % 20 == 0) tile.setChanged();
 		if (tile.countdown >= tile.countdownMax) {
 			level.setBlock(pos, tile.oldBlock, 3);
+		}
+	}
+
+	/** The original's surroundwithsparkles: a sparkle on every edge where an open face of the hole meets a solid block. */
+	private void surroundWithSparkles(Level level, BlockPos pos) {
+		for (Direction d1 : Direction.values()) {
+			BlockState b1 = level.getBlockState(pos.relative(d1));
+			if (b1.is(thaumcraft.api.blocks.BlocksTC.hole.get()) || b1.isSolidRender(level, pos.relative(d1))) continue;
+			for (Direction d2 : Direction.values()) {
+				if (d1.getAxis() == d2.getAxis()) continue;
+				if (!level.getBlockState(pos.relative(d2)).isSolidRender(level, pos.relative(d2))
+						&& !level.getBlockState(pos.relative(d1).relative(d2)).isSolidRender(level, pos.relative(d1).relative(d2))) continue;
+				float sx = 0.5f * d1.getStepX();
+				float sy = 0.5f * d1.getStepY();
+				float sz = 0.5f * d1.getStepZ();
+				if (sx == 0.0f) sx = 0.5f * d2.getStepX();
+				if (sy == 0.0f) sy = 0.5f * d2.getStepY();
+				if (sz == 0.0f) sz = 0.5f * d2.getStepZ();
+				sx = sx == 0.0f ? level.random.nextFloat() : sx + 0.5f;
+				sy = sy == 0.0f ? level.random.nextFloat() : sy + 0.5f;
+				sz = sz == 0.0f ? level.random.nextFloat() : sz + 0.5f;
+				thaumcraft.client.fx.ClientFxHandlers.sparkle(level, pos.getX() + sx, pos.getY() + sy, pos.getZ() + sz, 0.25f, 0.25f, 1.0f);
+			}
 		}
 	}
 

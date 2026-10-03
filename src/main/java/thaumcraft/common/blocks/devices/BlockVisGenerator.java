@@ -107,4 +107,16 @@ public class BlockVisGenerator extends Block implements EntityBlock {
 				? (lvl, pos, st, be) -> TileVisGenerator.tick(lvl, pos, st, (TileVisGenerator) be)
 				: null;
 	}
+
+	/** The original's randomDisplayTick: a spark at the output face while it holds energy. */
+	@Override
+	public void animateTick(BlockState state, net.minecraft.world.level.Level level, BlockPos pos, net.minecraft.util.RandomSource rand) {
+		if (!(level.getBlockEntity(pos) instanceof thaumcraft.common.tiles.devices.TileVisGenerator tile) || !tile.isChargedForDisplay()) return;
+		Direction face = tile.getFacing();
+		double x = face.getStepX() == 0 ? rand.nextGaussian() * 0.1 : face.getStepX() * 0.1;
+		double y = face.getStepY() == 0 ? rand.nextGaussian() * 0.1 : face.getStepY() * 0.1;
+		double z = face.getStepZ() == 0 ? rand.nextGaussian() * 0.1 : face.getStepZ() * 0.1;
+		thaumcraft.client.fx.ClientFxHandlers.spawnSpark(level, pos.getX() + 0.5 + x, pos.getY() + 0.5 + y, pos.getZ() + 0.5 + z,
+				0.66f + rand.nextFloat(), 0.65f + rand.nextFloat() * 0.1f, 1.0f, 1.0f, 0.8f);
+	}
 }
