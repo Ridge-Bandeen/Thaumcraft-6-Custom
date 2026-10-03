@@ -15,6 +15,9 @@
   count as player kills, HEAVY treads loudly, eye height; part tick functions run (roller-leg dust and spin,
   flyer-leg motes); AIGoto re-paths at random toward the task when stuck; left-click starts a break (breaks only
   what gives way at once) instead of always destroying.
+- User decisions 2026-10-03: vanilla candles stay separate from Thaumcraft candles (no substitution). Approved
+  bug fixes: the Breaker seal's whitelist breaks a block matching any filter slot (the original demanded every
+  slot), and the Fill seal's world count of nearby items counts them (the original only counted empty stacks).
 - Not gaps: the original's placement nudge in GolemInteractionHelper tested the block box at the world origin, so
   it never fired; golem placer creative variants and seal display were already restored; Butcher's EntityGolem
   exclusion is implied by the Animal check.

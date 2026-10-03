@@ -28,12 +28,7 @@ in a client are tracked in the `thaumcraft-ui-visual-parity-checklist` memory, n
 
 ## Design questions for the user
 
-- Approve two obvious-bug fixes in the golem seals? (1) Breaker seal whitelist: the original required a block to
-  match *every* filled filter slot (so two different whitelisted blocks broke nothing); the port breaks a block
-  matching *any* slot. (2) Fill seal with no container and a stack limit: the original's count of items lying
-  nearby only counted empty stacks, so the limit never applied; the port counts them properly.
-- Should vanilla candles be usable where Thaumcraft recipes want Thaumcraft candles (as glass bottles stand in for
-  phials)?
+(none open)
 
 ## Notes
 
