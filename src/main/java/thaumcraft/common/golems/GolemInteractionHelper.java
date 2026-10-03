@@ -20,23 +20,15 @@ import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import thaumcraft.api.golems.IGolemAPI;
 
 /**
- * Replaces the old (1.12.2) {@code GolemInteractionHelper} - simulates a golem "using" or "breaking" a block
- * by puppeting a real {@link FakePlayer} through it (same real approach the original used, just onto modern
- * {@link net.minecraft.server.level.ServerPlayerGameMode} entry points): {@link
- * net.minecraft.server.level.ServerPlayerGameMode#useItemOn} for a right-click (matches the original's own
- * {@code processRightClickBlock}), {@link net.minecraft.server.level.ServerPlayerGameMode#destroyBlock} for
- * a left-click - the same "one real action, no progressive-mining simulation" simplification {@link
- * thaumcraft.common.golems.seals.SealBreaker} already established for its own block breaking, reused here
- * for the same reason (still real loot-table drops, tool/hardness rules, and XP via the fake player's own
- * game mode - just not spread across multiple ticks).
+ * Replaces the old (1.12.2) {@code GolemInteractionHelper} - simulates a golem "using" or "hitting" a block by
+ * puppeting a {@link FakePlayer} through it, as the original: a right-click goes through
+ * {@link net.minecraft.server.level.ServerPlayerGameMode#useItemOn} (the original's {@code processRightClickBlock}),
+ * a left-click through the start of a block break (the original's {@code onBlockClicked}) - which hits the block, and
+ * breaks it only when it gives way at once (plants, torches, anything the held tool mines instantly). Whatever the
+ * fake player is left holding goes to the golem, or drops at its feet.
  *
- * Real, documented cuts: the original's own pre-placement collision nudge (moving the golem out of the way
- * if it's itself standing where a block would be placed) isn't ported - a golem blocking its own placement
- * simply fails the click, same outcome a real player bumping into their own placement gets. Left-over items
- * are collected via a single loop over {@link Inventory#getContainerSize()} (main array indices 0-35 +
- * armor 36-39 + offhand 40, all through one {@code Container}-interface indexing scheme modern
- * {@link Inventory} already provides) rather than the original's separate main/armor loops - a real
- * simplification of iteration, not of behavior.
+ * <p>(The original also meant to nudge the golem aside when it stood where a block was to be placed, but its test
+ * used the block's box at the world origin, so it never did.)
  */
 public final class GolemInteractionHelper {
 
@@ -49,6 +41,14 @@ public final class GolemInteractionHelper {
 	private GolemInteractionHelper() {
 	}
 
+	/** The golems' shared fake player, stood where {@code golem} is. */
+	public static FakePlayer fakePlayer(ServerLevel level, IGolemAPI golem) {
+		FakePlayer fp = FakePlayerFactory.get(level, PROFILE);
+		var golemEntity = golem.getGolemEntity();
+		fp.moveTo(golemEntity.getX(), golemEntity.getY(), golemEntity.getZ(), golemEntity.getYRot(), golemEntity.getXRot());
+		return fp;
+	}
+
 	public static void golemClick(Level world, IGolemAPI golem, BlockPos pos, Direction face, ItemStack clickStack, boolean sneaking, boolean rightClick) {
 		if (!(world instanceof ServerLevel serverLevel)) return;
 		FakePlayer fp = FakePlayerFactory.get(serverLevel, PROFILE);
@@ -58,7 +58,8 @@ public final class GolemInteractionHelper {
 		fp.setShiftKeyDown(sneaking);
 
 		if (!rightClick) {
-			fp.gameMode.destroyBlock(pos);
+			fp.gameMode.handleBlockBreakAction(pos, net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
+					face, serverLevel.getMaxBuildHeight(), 0);
 		} else {
 			BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), face, pos, false);
 			fp.gameMode.useItemOn(fp, serverLevel, fp.getItemInHand(InteractionHand.MAIN_HAND), InteractionHand.MAIN_HAND, hit);

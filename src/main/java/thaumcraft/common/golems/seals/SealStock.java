@@ -5,35 +5,39 @@ import java.util.Random;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
 import thaumcraft.api.golems.EnumGolemTrait;
 import thaumcraft.api.golems.GolemHelper;
 import thaumcraft.api.golems.IGolemAPI;
+import thaumcraft.api.golems.seals.ISealConfigToggles;
 import thaumcraft.api.golems.seals.ISealEntity;
 import thaumcraft.api.golems.tasks.Task;
 
 /**
- * Replaces the old (1.12.2) {@code SealStock} - a passive requester, not a task source: it never creates
- * a {@link Task} of its own (matches the original's own {@code canGolemPerformTask} always returning
- * {@code false}). Every 20 ticks it checks the real {@link IItemHandler} at its own position/face
- * (NeoForge's own block capability lookup, {@code Capabilities.ItemHandler.BLOCK} - the modern replacement
- * for the original's still-1.12.2 {@code ThaumcraftInvHelper.getItemHandlerAt}) against its 9-slot filter's
- * target counts, and calls the already-real {@code GolemHelper.requestProvisioning} for whatever's short -
- * {@link SealProvide} is the real consumer that fulfills those requests.
- *
- * Real, documented simplification: no metadata/NBT/ore-dictionary/same-mod matching toggles (moot - see
- * {@code SealFiltered}'s own doc comment, real item-identity-only filtering). Always whitelist mode (matches
- * the original's own hardcoded {@code isBlacklist() -> false} override - a stock request list only ever
- * makes sense as "these specific items, this many of each").
+ * Replaces the old (1.12.2) {@code SealStock} - a passive requester, not a task source: as the original, every 20
+ * ticks it counts each filter slot's item in the container it is on (matched with its toggles: damage, NBT, ore,
+ * mod) and, where there are fewer than the slot's size, asks for the difference (as much of it as the container has
+ * room for) through {@code GolemHelper.requestProvisioning}; {@link SealProvide} answers. Always a whitelist.
  */
-public class SealStock extends SealFiltered {
+public class SealStock extends SealFiltered implements ISealConfigToggles {
 
 	private int delay = new Random().nextInt(50);
+	protected final SealToggle[] props = {
+			new SealToggle(true, "pmeta", "golem.prop.meta"),
+			new SealToggle(true, "pnbt", "golem.prop.nbt"),
+			new SealToggle(false, "pore", "golem.prop.ore"),
+			new SealToggle(false, "pmod", "golem.prop.mod"),
+	};
 	private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("thaumcraft", "items/seals/seal_stock");
+
+	@Override
+	protected SealFilters.Match match() {
+		return SealFilters.Match.fromToggles(props[0].getValue(), props[1].getValue(), props[2].getValue(), props[3].getValue());
+	}
 
 	@Override
 	public String getKey() {
@@ -62,24 +66,18 @@ public class SealStock extends SealFiltered {
 		if (inv == null) return;
 		for (int i = 0; i < getFilterSize(); i++) {
 			ItemStack filterStack = getFilterSlot(i);
-			int want = getFilterSlotSize(i);
-			if (filterStack.isEmpty() || want <= 0) continue;
-			int have = countMatching(inv, filterStack.getItem());
-			if (have < want) {
-				ItemStack request = filterStack.copy();
-				request.setCount(Math.min(filterStack.getMaxStackSize(), want - have));
-				GolemHelper.requestProvisioning(world, seal.getSealPos().pos, seal.getSealPos().face, request);
+			if (filterStack.isEmpty()) continue;
+			int amt = SealFilters.countIn(inv, filterStack, match());
+			if (amt < getFilterSlotSize(i)) {
+				ItemStack fs = filterStack.copyWithCount(Math.min(filterStack.getMaxStackSize(), getFilterSlotSize(i) - amt));
+				// the original's hasRoomFor: as much as the container would take
+				ItemStack rest = ItemHandlerHelper.insertItemStacked(inv, fs.copy(), true);
+				fs.shrink(rest.getCount());
+				if (!fs.isEmpty()) {
+					GolemHelper.requestProvisioning(world, seal.getSealPos().pos, seal.getSealPos().face, fs);
+				}
 			}
 		}
-	}
-
-	static int countMatching(IItemHandler inv, Item item) {
-		int total = 0;
-		for (int i = 0; i < inv.getSlots(); i++) {
-			ItemStack stack = inv.getStackInSlot(i);
-			if (stack.getItem() == item) total += stack.getCount();
-		}
-		return total;
 	}
 
 	@Override
@@ -126,6 +124,16 @@ public class SealStock extends SealFiltered {
 
 	@Override
 	public int[] getGuiCategories() {
-		return new int[] { CAT_FILTER, CAT_TAGS };
+		return new int[] { CAT_FILTER, CAT_TOGGLES, CAT_PRIORITY, CAT_TAGS };
+	}
+
+	@Override
+	public SealToggle[] getToggles() {
+		return props;
+	}
+
+	@Override
+	public void setToggle(int index, boolean value) {
+		props[index].setValue(value);
 	}
 }

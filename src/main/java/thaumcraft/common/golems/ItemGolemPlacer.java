@@ -32,13 +32,8 @@ import thaumcraft.common.registry.ThaumcraftEntities;
  * original's own {@code setOwned}/{@code setOwnerId}/{@code setValidSpawn} trio - see
  * {@code EntityThaumcraftGolem}'s own doc comment for why it extends {@code TamableAnimal} directly.
  *
- * Real, documented cuts: {@code getSubItems}'s 4 hardcoded creative-tab starter variants (basic golem, a
- * SMART-headed one, an iron CLAWS fighter, a brass DARTS ranger) aren't wired up - this port hasn't built
- * creative-tab content population for any item yet, see {@link thaumcraft.api.items.ItemGenericEssentiaContainer}'s
- * own {@code createAspectVariants} doc comment for the same still-open gap. A bare placer (default/all-zero
- * properties, i.e. a WOOD/BASIC/BASIC/WALKER/NONE golem) is still real and obtainable via
- * {@code /give}/creative search. Implements the real (if currently inert - no seal-rendering hook exists
- * yet) {@link ISealDisplayer} marker, matching the original.
+ * The original's four creative-tab variants are listed by {@code ThaumcraftCreativeTabs#golemPlacerPresets}. Like the
+ * original it is an {@link ISealDisplayer}: holding it shows the seals.
  */
 public class ItemGolemPlacer extends Item implements ISealDisplayer {
 

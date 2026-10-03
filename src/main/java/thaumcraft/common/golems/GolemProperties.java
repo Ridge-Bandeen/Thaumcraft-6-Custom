@@ -40,13 +40,8 @@ import thaumcraft.api.items.ItemsTC;
  * {@code PartModelHauler} subclasses (client-only rendering hooks with nothing to call them yet - no golem
  * renderer exists in this port). The "DARTS" arm's real {@code IArmFunction}
  * ({@link thaumcraft.common.golems.parts.GolemArmDart}) is wired in - real ranged combat, not cosmetic. The
- * WHEELED/FLYER legs' own real {@code ILegFunction} classes ({@code GolemLegWheels}/{@code GolemLegLevitator})
- * are deliberately NOT ported, for a real reason confirmed by reading the true original's own source
- * directly: both are 100% client-side particle FX (a `world.isRemote`-gated wheel-dust-kick / floating-motes
- * effect) with no server-side behavior at all - the REAL gameplay payoff of those traits (extra speed,
- * flight navigation) is already handled independently, by {@link thaumcraft.common.golems.EntityThaumcraftGolem}'s
- * own {@code getGolemMoveSpeed}/{@code createGolemNavigation} trait checks. Every part is real and
- * selectable with its real traits/components regardless.</li>
+ * roller and flyer legs have their own per-tick functions too ({@link thaumcraft.common.golems.parts.GolemLegWheels},
+ * {@link thaumcraft.common.golems.parts.GolemLegLevitator}: wheel dust and spin, flyer motes), as the original.</li>
  * <li>The FLYER leg's real cost item is {@link BlocksTC#levitator} again, real since the CodeChicken-
  * precision restoration arc (its own earlier {@code Items.FEATHER} placeholder was written when that block
  * wasn't real yet).</li>
@@ -282,13 +277,13 @@ public class GolemProperties implements IGolemProperties {
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_legs_walker.obj"), null, PartModel.EnumAttachPoint.LEGS), new Object[] { "base", "mech" }, new EnumGolemTrait[0]));
 		GolemLeg.register(new GolemLeg("ROLLER", new String[] { "MINDCLOCKWORK" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/legs_roller.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_legs_wheel.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_legs_wheel"), PartModel.EnumAttachPoint.BODY),
-				new Object[] { new ItemStack(Items.BOWL, 2), new ItemStack(Items.LEATHER), "mech" }, new EnumGolemTrait[] { EnumGolemTrait.WHEELED }));
+				new Object[] { new ItemStack(Items.BOWL, 2), new ItemStack(Items.LEATHER), "mech" }, new thaumcraft.common.golems.parts.GolemLegWheels(), new EnumGolemTrait[] { EnumGolemTrait.WHEELED }));
 		GolemLeg.register(new GolemLeg("CLIMBER", new String[] { "GOLEMCLIMBER" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/legs_climber.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_legs_climber.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/blocks/base_metal"), PartModel.EnumAttachPoint.LEGS),
 				new Object[] { new ItemStack(Items.FLINT, 4), "base", "mech", "mech" }, new EnumGolemTrait[] { EnumGolemTrait.CLIMBER }));
 		GolemLeg.register(new GolemLeg("FLYER", new String[] { "GOLEMFLYER" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/legs_flyer.png"),
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_legs_floater.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_legs_floater"), PartModel.EnumAttachPoint.BODY),
-				new Object[] { new ItemStack(BlocksTC.levitator.get()), new ItemStack(ItemsTC.plateIron.get(), 4), new ItemStack(Items.SLIME_BALL), "mech" }, new EnumGolemTrait[] { EnumGolemTrait.FLYER, EnumGolemTrait.FRAGILE }));
+				new Object[] { new ItemStack(BlocksTC.levitator.get()), new ItemStack(ItemsTC.plateIron.get(), 4), new ItemStack(Items.SLIME_BALL), "mech" }, new thaumcraft.common.golems.parts.GolemLegLevitator(), new EnumGolemTrait[] { EnumGolemTrait.FLYER, EnumGolemTrait.FRAGILE }));
 
 		GolemAddon.register(new GolemAddon("NONE", new String[] { "MINDCLOCKWORK" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/blocks/blank"), null, new Object[0], new EnumGolemTrait[0]));
 		GolemAddon.register(new GolemAddon("ARMORED", new String[] { "GOLEMCOMBATADV" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/addon_armored.png"),

@@ -5,23 +5,14 @@ import java.util.List;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.items.IItemHandler;
 import thaumcraft.api.golems.EnumGolemTrait;
-import thaumcraft.api.golems.IGolemAPI;
-import thaumcraft.api.golems.tasks.Task;
 
 /**
- * Replaces the old (1.12.2) {@code SealEmptyAdvanced} - the one Advanced variant that implements genuinely
- * new behavior rather than just exposing an already-real base toggle: real round-robin cycling through the
- * filter's own matching items (gated on the base {@link SealEmpty}'s own real-but-inert {@code pcycle}
- * toggle, whitelist mode only, matching the original's own {@code getToggles()[4].value && !isBlacklist()}
- * gate exactly), so a golem doesn't fixate on always emptying whichever filtered item happens to sort first.
- * {@link #cycleIndex} advances once per completed task, same as the original's own {@code filterInc}.
+ * Replaces the old (1.12.2) {@code SealEmptyAdvanced}: a 9-slot filter, the toggles shown, a smart golem - and with
+ * "cycle" on a whitelist, it takes one whitelisted kind at a time in turn instead of whatever comes first.
  */
 public class SealEmptyAdvanced extends SealEmpty {
 
-	private int cycleIndex;
 	private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("thaumcraft", "items/seals/seal_empty_advanced");
 
 	@Override
@@ -40,29 +31,15 @@ public class SealEmptyAdvanced extends SealEmpty {
 	}
 
 	@Override
-	protected ItemStack findFirstMatching(IItemHandler inv) {
-		if (props[1].getValue() && !isBlacklist()) {
-			List<ItemStack> real = new ArrayList<>();
+	protected net.minecraft.core.NonNullList<ItemStack> getInv(int c) {
+		if (props[4].getValue() && !isBlacklist()) {
+			List<ItemStack> w = new ArrayList<>();
 			for (ItemStack s : getInv()) {
-				if (!s.isEmpty()) real.add(s);
+				if (!s.isEmpty()) w.add(s);
 			}
-			if (!real.isEmpty()) {
-				ItemStack want = real.get(Math.floorMod(cycleIndex, real.size()));
-				for (int i = 0; i < inv.getSlots(); i++) {
-					ItemStack stack = inv.getStackInSlot(i);
-					if (!stack.isEmpty() && stack.getItem() == want.getItem()) return stack.copy();
-				}
-				return ItemStack.EMPTY;
-			}
+			if (!w.isEmpty()) return net.minecraft.core.NonNullList.withSize(1, w.get(Math.abs(c % w.size())));
 		}
-		return super.findFirstMatching(inv);
-	}
-
-	@Override
-	public boolean onTaskCompletion(Level world, IGolemAPI golem, Task task) {
-		boolean result = super.onTaskCompletion(world, golem, task);
-		cycleIndex++;
-		return result;
+		return getInv();
 	}
 
 	@Override

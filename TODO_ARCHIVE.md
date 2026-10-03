@@ -1,5 +1,24 @@
 # Thaumcraft 1.21.1 Port — TODO archive
 
+## Closed 2026-10-03 (golems)
+
+- Seal filters as the original (`SealFilters`, the old InvFilter): whole-stack filters with per-slot sizes, the
+  damage/NBT/ore/mod toggles (NBT = other components, ore = a shared item tag) on every filtered seal, each with
+  the original's toggle list and GUI categories. Pickup ignores fresh items and re-checks on arrival; Breaker mines
+  progressively (bites of hardness, silky slower), Advanced silk-touches; Lumber chops the furthest log first and
+  tracks tasks by id; Harvest clicks then breaks, replants with seeds and can ask a Provider for them; Empty keeps one
+  back, cycles its whitelist, drops what the golem can't hold; Fill re-queues on start, honours stack limits and
+  drops in front with no container; Stock asks for what fits; Provide answers seal, entity and container requests
+  (single, leave one, second delivery task, re-request of the shortfall, prunes unanswered requests every 100
+  ticks); Use clicks with the first carried item when its filter is empty and asks a Provider when provisioning.
+- Golem: goes home on first tick / when stuck in a wall or the void, cactus-proof, PvP target clearing, DEFT kills
+  count as player kills, HEAVY treads loudly, eye height; part tick functions run (roller-leg dust and spin,
+  flyer-leg motes); AIGoto re-paths at random toward the task when stuck; left-click starts a break (breaks only
+  what gives way at once) instead of always destroying.
+- Not gaps: the original's placement nudge in GolemInteractionHelper tested the block box at the world origin, so
+  it never fired; golem placer creative variants and seal display were already restored; Butcher's EntityGolem
+  exclusion is implied by the Animal check.
+
 ## Closed 2026-10-03 (parity sweep, first passes)
 
 - Warp curse post-shaders, Death Gaze vignette, mist/guardian fog (rewritten for 1.21 shaders); mist tiers bring

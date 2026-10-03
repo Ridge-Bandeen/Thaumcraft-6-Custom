@@ -12,7 +12,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
 import thaumcraft.api.golems.EnumGolemTrait;
 import thaumcraft.api.golems.IGolemAPI;
 import thaumcraft.api.golems.seals.ISealConfigToggles;
@@ -21,37 +20,38 @@ import thaumcraft.api.golems.tasks.Task;
 import thaumcraft.common.golems.tasks.TaskHandler;
 
 /**
- * Replaces the old (1.12.2) {@code SealEmpty} - the "pull a matching item out of a container into what a
- * golem carries" half of the fill/empty pair (see {@link SealFill} for the other half). Every 20 ticks it
- * checks the real {@link IItemHandler} at its own position/face for a filter match and, if found, opens a
- * real short-lifespan task (matches the original's own {@code lifespan 5}) caching which stack was matched
- * (by id, same {@code Map<Integer, ItemStack>} approach the original used) so {@link #onTaskCompletion} knows
- * what to actually extract once a golem gets there.
- *
- * Real, documented simplifications: the original's own matching went through {@code InventoryUtils}/
- * {@code ThaumcraftInvHelper.InvFilter} (4 real toggles: metadata/NBT/ore-dictionary/same-mod matching) -
- * not ported, same call {@code SealFiltered} already made for every other filtered seal in this port (exact
- * {@link net.minecraft.world.item.Item} identity only). The original's own round-robin "cycle through filter
- * slots" field ({@code filterInc}) is dropped too - it was already dead code in the original itself (its own
- * {@code getInv(int)} override discarded the index and just returned the full filter every time), so nothing
- * real is lost by not porting it at THIS tier - {@link SealEmptyAdvanced} does implement it for real, see
- * that class's own doc comment. The real "leave one behind" toggle IS kept (see {@code pleave} below,
- * un-GUI'd but functional at this tier - same real-toggle-without-a-screen-yet pattern {@code SealGuard}
- * already established, {@code SealEmptyAdvanced} is what exposes both in the real config GUI).
+ * Replaces the old (1.12.2) {@code SealEmpty}, as the original: every 20 ticks it looks in the container it is on for
+ * a stack that passes the filter (with "leave one", only kinds there are two or more of) and opens a short task for
+ * it; the golem takes as much as it can carry (keeping one back with "leave one"), and anything it then can't hold
+ * is dropped out in front of the seal. The toggles - match damage, NBT, ore, mod, cycle, leave one - are the
+ * original's, shown only on {@link SealEmptyAdvanced}, which alone cycles through its whitelist.
  */
 public class SealEmpty extends SealFiltered implements ISealConfigToggles {
 
 	private int delay = new Random().nextInt(30);
-	/** Task id -> the specific stack matched when that task was created - the original's own tracking map. */
+	/** The original's filterInc: advances with each completed task, for {@link SealEmptyAdvanced}'s cycling. */
+	protected int filterInc;
+	/** Task id -> the stack matched when that task was made. */
 	private final Map<Integer, ItemStack> cache = new HashMap<>();
-	/** {@code pcycle} is real but inert at this tier (matches the original exactly - its own base
-	 * {@code SealEmpty} never consulted it either, only the Advanced variant's own overridden match-finding
-	 * did) - present here only so {@link SealEmptyAdvanced} inherits the field. */
 	protected final ISealConfigToggles.SealToggle[] props = {
-			new ISealConfigToggles.SealToggle(false, "pleave", "golem.prop.leave"),
+			new ISealConfigToggles.SealToggle(true, "pmeta", "golem.prop.meta"),
+			new ISealConfigToggles.SealToggle(true, "pnbt", "golem.prop.nbt"),
+			new ISealConfigToggles.SealToggle(false, "pore", "golem.prop.ore"),
+			new ISealConfigToggles.SealToggle(false, "pmod", "golem.prop.mod"),
 			new ISealConfigToggles.SealToggle(false, "pcycle", "golem.prop.cycle"),
+			new ISealConfigToggles.SealToggle(false, "pleave", "golem.prop.leave"),
 	};
 	private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("thaumcraft", "items/seals/seal_empty");
+
+	@Override
+	protected SealFilters.Match match() {
+		return SealFilters.Match.fromToggles(props[0].getValue(), props[1].getValue(), props[2].getValue(), props[3].getValue());
+	}
+
+	/** The filter as this tick sees it - {@link SealEmptyAdvanced} narrows it to one whitelisted item at a time. */
+	protected net.minecraft.core.NonNullList<ItemStack> getInv(int c) {
+		return getInv();
+	}
 
 	@Override
 	public String getKey() {
@@ -66,76 +66,45 @@ public class SealEmpty extends SealFiltered implements ISealConfigToggles {
 		if (delay++ % 20 != 0) return;
 		IItemHandler inv = world.getCapability(Capabilities.ItemHandler.BLOCK, seal.getSealPos().pos, seal.getSealPos().face);
 		if (inv == null) return;
-		ItemStack match = findFirstMatching(inv);
+		ItemStack match = SealFilters.findFirstIn(getInv(filterInc), isBlacklist(), inv, match(), props[5].getValue());
 		if (!match.isEmpty()) {
 			Task task = new Task(seal.getSealPos(), seal.getSealPos().pos);
 			task.setPriority(seal.getPriority());
 			task.setLifespan((short) 5);
 			TaskHandler.addTask(world.dimension(), task);
-			cache.put(task.getId(), match);
+			cache.put(task.getId(), match.copy());
 		}
-	}
-
-	protected boolean matches(ItemStack stack) {
-		boolean m = matchesFilter(stack.getItem());
-		return isBlacklist() ? !m : m;
-	}
-
-	/** Real, overridable seam - {@link SealEmptyAdvanced} overrides this for real round-robin cycling through
-	 * the filter's own matching items instead of always picking the first, gated on {@code pcycle}. */
-	protected ItemStack findFirstMatching(IItemHandler inv) {
-		for (int i = 0; i < inv.getSlots(); i++) {
-			ItemStack stack = inv.getStackInSlot(i);
-			if (!stack.isEmpty() && matches(stack)) return stack.copy();
-		}
-		return ItemStack.EMPTY;
-	}
-
-	protected static ItemStack extractMatching(IItemHandler inv, ItemStack want) {
-		for (int i = 0; i < inv.getSlots(); i++) {
-			ItemStack slotStack = inv.getStackInSlot(i);
-			if (!slotStack.isEmpty() && slotStack.getItem() == want.getItem()) {
-				ItemStack extracted = inv.extractItem(i, want.getCount(), false);
-				if (!extracted.isEmpty()) return extracted;
-			}
-		}
-		return ItemStack.EMPTY;
 	}
 
 	@Override
 	public boolean onTaskCompletion(Level world, IGolemAPI golem, Task task) {
-		ItemStack want = cache.remove(task.getId());
-		if (want == null || want.isEmpty()) {
-			task.setSuspended(true);
-			return true;
-		}
+		ItemStack stack = cache.get(task.getId());
 		IItemHandler inv = world.getCapability(Capabilities.ItemHandler.BLOCK, task.getSealPos().pos, task.getSealPos().face);
-		if (inv != null) {
-			if (props[0].getValue()) {
-				int have = SealStock.countMatching(inv, want.getItem());
-				if (have <= want.getCount()) {
-					want = want.copy();
-					want.setCount(have - 1);
-				}
+		if (stack != null && !stack.isEmpty() && inv != null) {
+			int have = SealFilters.countIn(inv, stack, match());
+			if (props[5].getValue() && have <= stack.getCount()) {
+				stack = stack.copyWithCount(have - 1);
 			}
-			if (!want.isEmpty()) {
-				int limit = Math.min(want.getCount(), golem.canCarryAmount(want));
+			if (!stack.isEmpty()) {
+				int limit = golem.canCarryAmount(stack);
 				if (limit > 0) {
-					ItemStack toTake = want.copy();
-					toTake.setCount(limit);
-					ItemStack extracted = extractMatching(inv, toTake);
-					if (!extracted.isEmpty()) {
-						ItemStack leftover = golem.holdItem(extracted);
-						if (!leftover.isEmpty()) {
-							ItemHandlerHelper.insertItemStacked(inv, leftover, false);
-						}
-						golem.getGolemEntity().playSound(SoundEvents.ITEM_PICKUP, 0.125f, 2.0f);
-						golem.addRankXp(1);
-						golem.swingArm();
+					ItemStack taken = SealFilters.removeFrom(inv, stack.copyWithCount(Math.min(stack.getCount(), limit)), match(), false);
+					ItemStack leftover = golem.holdItem(taken);
+					if (!leftover.isEmpty()) {
+						// as the original: what it can't hold is dropped out in front of the seal
+						BlockPos front = task.getSealPos().pos.relative(task.getSealPos().face);
+						net.minecraft.world.entity.item.ItemEntity out = new net.minecraft.world.entity.item.ItemEntity(world,
+								front.getX() + 0.5, front.getY() + 0.5, front.getZ() + 0.5, leftover);
+						world.addFreshEntity(out);
 					}
+					golem.getGolemEntity().playSound(SoundEvents.ITEM_PICKUP, 0.125f,
+							((world.random.nextFloat() - world.random.nextFloat()) * 0.7f + 1.0f) * 2.0f);
+					golem.swingArm();
 				}
 			}
 		}
+		cache.remove(task.getId());
+		filterInc++;
 		task.setSuspended(true);
 		return true;
 	}

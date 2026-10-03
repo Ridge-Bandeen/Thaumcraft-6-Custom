@@ -102,10 +102,8 @@ import thaumcraft.common.lib.network.fx.PacketFXSlash;
  * comment), still with one real, documented simplification: every group reveals at once instead of the
  * original's distance-staggered "sonar ping" timing.</li>
  * <li>{@link EnumInfusionEnchantment#BURROWING} - auto-tunnels toward the furthest still-standing block of
- * the same type connected to the one just mined ({@link #findFurthestMatchingBlock}), a plain bounded
- * breadth-first search replacing the original's own recursive "restart the whole cube scan from the new best
- * match" approach in {@code BlockUtils.findBlocks} - same real search (matches by block type, diagonal
- * connections count, a wood log gets a wider reach than an ore block), a clearer/cheaper way to run it.
+ * the same type connected to the one just mined - the original's own walk
+ * ({@link thaumcraft.common.lib.utils.BlockSearch}; a wood log gets a wider reach than an ore block).
  * {@code level.destroyBlock} (already proven by {@code DESTRUCTIVE}) covers the original's own
  * {@code BlockUtils.harvestBlock} - that whole hand-rolled helper turns out to just be a 1.12.2-era
  * reimplementation of what {@code ServerPlayerGameMode#destroyBlock} already does natively now.
@@ -456,7 +454,7 @@ public class ToolEvents {
 			return;
 		}
 		int reach = brokenState.is(BlockTags.LOGS) ? 2 : 1;
-		BlockPos furthest = findFurthestMatchingBlock(level, minedPos, brokenState.getBlock(), reach);
+		BlockPos furthest = thaumcraft.common.lib.utils.BlockSearch.findFurthest(level, minedPos, brokenState.getBlock(), reach);
 		if (furthest.equals(minedPos)) {
 			return;
 		}

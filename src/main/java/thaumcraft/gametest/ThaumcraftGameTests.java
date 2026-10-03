@@ -10291,9 +10291,22 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(golem.getTask() == cropTask, "the golem should have reserved the real harvest task");
 
 		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
-		int age = helper.getLevel().getBlockState(cropAbs).getValue(net.minecraft.world.level.block.CropBlock.AGE);
-		helper.assertTrue(helper.getLevel().getBlockState(cropAbs).is(net.minecraft.world.level.block.Blocks.WHEAT) && age == 0,
-				"completing the harvest task should have broken the grown wheat and replanted it at age 0, found age " + age);
+		helper.assertTrue(helper.getLevel().getBlockState(cropAbs).isAir(), "completing the harvest task should have broken the grown wheat");
+
+		// as the original: replanting is its own task, and only a golem carrying the seed can do it
+		thaumcraft.api.golems.tasks.Task replant = null;
+		for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
+			if (t.getPos().equals(cropAbs) && !t.isSuspended() && t != cropTask) replant = t;
+		}
+		helper.assertTrue(replant != null, "harvesting with replant on should have queued a replant task");
+		helper.assertTrue(!seal.canGolemPerformTask(golem, replant), "a golem without seeds can't replant");
+		golem.holdItem(new ItemStack(net.minecraft.world.item.Items.WHEAT_SEEDS, 3));
+		helper.assertTrue(seal.canGolemPerformTask(golem, replant), "a golem carrying seeds can");
+		thaumcraft.common.golems.tasks.TaskHandler.completeTask(replant, golem);
+		int age = helper.getLevel().getBlockState(cropAbs).is(net.minecraft.world.level.block.Blocks.WHEAT)
+				? helper.getLevel().getBlockState(cropAbs).getValue(net.minecraft.world.level.block.CropBlock.AGE) : -1;
+		helper.assertTrue(age == 0, "the replant task should have planted fresh wheat, found " + helper.getLevel().getBlockState(cropAbs));
+		helper.assertTrue(golem.isCarrying(new ItemStack(net.minecraft.world.item.Items.WHEAT_SEEDS)), "it used one of its seeds");
 
 		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
@@ -10516,15 +10529,16 @@ public class ThaumcraftGameTests {
 		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(provideChestAbs, net.minecraft.core.Direction.UP);
 		thaumcraft.api.golems.seals.ISealEntity sealEntity = thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos);
 
-		thaumcraft.api.golems.GolemHelper.requestProvisioning(helper.getLevel(), destChestAbs, net.minecraft.core.Direction.UP,
-				new ItemStack(net.minecraft.world.item.Items.NETHERITE_INGOT, 4));
-
 		// GolemHelper's per-dimension task/provisioning maps are shared, dimension-wide state across every
 		// concurrently-running GameTest - always scope a search back to our own sealPos, never assume the
 		// first structurally-matching task found is ours (a real cross-test-interference bug caught here).
 		boolean foundFetch = false;
 		thaumcraft.api.golems.tasks.Task fetchTask = null;
 		for (int i = 0; i < 30 && !foundFetch; i++) {
+			// re-posted every tick, as a Stock seal re-posts its own every 20: the Provider (as the original) drops
+			// unanswered requests every 100 ticks, which can land just before it first looks
+			thaumcraft.api.golems.GolemHelper.requestProvisioning(helper.getLevel(), destChestAbs, net.minecraft.core.Direction.UP,
+					new ItemStack(net.minecraft.world.item.Items.NETHERITE_INGOT, 4));
 			sealEntity.tickSealEntity(helper.getLevel());
 			for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
 				if (t.getLinkedProvision() != null && t.getData() == 0 && sealPos.equals(t.getSealPos())) {
@@ -10559,7 +10573,7 @@ public class ThaumcraftGameTests {
 
 		thaumcraft.api.golems.tasks.Task deliverTask = null;
 		for (thaumcraft.api.golems.tasks.Task t : thaumcraft.api.golems.GolemHelper.getTasks(helper.getLevel().dimension()).values()) {
-			if (t.getLinkedProvision() != null && t.getData() == 1 && sealPos.equals(t.getSealPos())) deliverTask = t;
+			if (t.getLinkedProvision() != null && t.getData() == 2 && sealPos.equals(t.getSealPos())) deliverTask = t;
 		}
 		helper.assertTrue(deliverTask != null, "completing the fetch task should have queued a real delivery task");
 
@@ -10730,7 +10744,7 @@ public class ThaumcraftGameTests {
 
 		ServerPlayer owner = spawnCasterAt(helper, leverAbs.above(3));
 		thaumcraft.common.golems.seals.SealUse seal = new thaumcraft.common.golems.seals.SealUse();
-		seal.setToggle(1, true); // pemptyhand - click even without a matching carried item
+		seal.setToggle(6, true); // pemptyhand - click even without a matching carried item
 		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), leverAbs, net.minecraft.core.Direction.UP, seal, owner),
 				"placing a fresh seal should succeed");
 		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(leverAbs, net.minecraft.core.Direction.UP);
@@ -10843,7 +10857,7 @@ public class ThaumcraftGameTests {
 
 		ServerPlayer owner = spawnCasterAt(helper, anchorAbs.above(3));
 		thaumcraft.common.golems.seals.SealBreakerAdvanced seal = new thaumcraft.common.golems.seals.SealBreakerAdvanced();
-		seal.setToggle(0, true); // psilk
+		seal.setToggle(1, true); // psilk
 		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), anchorAbs, net.minecraft.core.Direction.UP, seal, owner),
 				"placing a fresh seal should succeed");
 		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(anchorAbs, net.minecraft.core.Direction.UP);
@@ -10875,7 +10889,11 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(goal.canUse(), "the golem should be able to pick up the break task");
 		helper.assertTrue(golem.getTask() == breakTask, "the golem should have reserved the real break task");
 
-		thaumcraft.common.golems.tasks.TaskHandler.completeTask(golem.getTask(), golem);
+		// silky mining goes 7 at a time: stone (hardness 1.5, 15 work) takes three goes, as the original
+		thaumcraft.api.golems.tasks.Task mining = golem.getTask();
+		for (int bite = 0; bite < 5 && !helper.getLevel().getBlockState(targetAbs).isAir(); bite++) {
+			thaumcraft.common.golems.tasks.TaskHandler.completeTask(mining, golem);
+		}
 		helper.assertTrue(helper.getLevel().getBlockState(targetAbs).isAir(), "completing the break task should have really broken the stone");
 
 		List<net.minecraft.world.entity.item.ItemEntity> drops = helper.getLevel().getEntitiesOfClass(
@@ -10904,7 +10922,7 @@ public class ThaumcraftGameTests {
 		seal.setBlacklist(false);
 		seal.setFilterSlot(0, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT));
 		seal.setFilterSlot(1, new ItemStack(net.minecraft.world.item.Items.GOLD_INGOT));
-		seal.setToggle(1, true); // pcycle
+		seal.setToggle(4, true); // pcycle
 		helper.assertTrue(thaumcraft.common.golems.seals.SealHandler.addSealEntity(helper.getLevel(), chestAbs, net.minecraft.core.Direction.UP, seal, owner),
 				"placing a fresh seal should succeed");
 		thaumcraft.api.golems.seals.SealPos sealPos = new thaumcraft.api.golems.seals.SealPos(chestAbs, net.minecraft.core.Direction.UP);

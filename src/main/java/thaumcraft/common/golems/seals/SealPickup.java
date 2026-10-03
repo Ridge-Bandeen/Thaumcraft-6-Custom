@@ -31,11 +31,8 @@ import thaumcraft.common.golems.tasks.TaskHandler;
  * {@code SealGuard}/{@code SealButcher} already use, since a task type doesn't care whether the "entity" is
  * hostile or a stack of items).
  *
- * Real, documented simplification: the original's own matching went through
- * {@code InventoryUtils.findFirstMatchFromFilter}/{@code ThaumcraftInvHelper.InvFilter} (4 real toggles:
- * metadata/NBT/ore-dictionary/same-mod matching) - neither is ported (still 1.12.2, and this port's own
- * {@link SealFiltered} already made the "match by real Item identity only, no ore-dictionary/metadata
- * fuzziness" call for {@code SealBreaker}, see that class's own doc comment for why). {@link #onTaskCompletion}
+ * As the original it matches with the four toggles (damage, NBT, ore, mod - exact by default; only the advanced seal
+ * shows them), ignores items still too fresh to pick up, and checks the filter again on arrival. {@link #onTaskCompletion}
  * keeps the original's own real "immediately chain into the next pickup task in range" touch - a golem that
  * just grabbed one item doesn't wait for its next AI evaluation to grab another sitting right next to it.
  */
@@ -45,6 +42,17 @@ public class SealPickup extends SealFiltered implements ISealConfigArea {
 	/** Task id -> the picked-item entity's own id - real translation of the original's own tracking map. */
 	private final Map<Integer, Integer> itemEntities = new HashMap<>();
 	private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("thaumcraft", "items/seals/seal_pickup");
+	protected final thaumcraft.api.golems.seals.ISealConfigToggles.SealToggle[] props = {
+			new thaumcraft.api.golems.seals.ISealConfigToggles.SealToggle(true, "pmeta", "golem.prop.meta"),
+			new thaumcraft.api.golems.seals.ISealConfigToggles.SealToggle(true, "pnbt", "golem.prop.nbt"),
+			new thaumcraft.api.golems.seals.ISealConfigToggles.SealToggle(false, "pore", "golem.prop.ore"),
+			new thaumcraft.api.golems.seals.ISealConfigToggles.SealToggle(false, "pmod", "golem.prop.mod"),
+	};
+
+	@Override
+	protected SealFilters.Match match() {
+		return SealFilters.Match.fromToggles(props[0].getValue(), props[1].getValue(), props[2].getValue(), props[3].getValue());
+	}
 
 	@Override
 	public String getKey() {
@@ -57,7 +65,7 @@ public class SealPickup extends SealFiltered implements ISealConfigArea {
 		AABB area = GolemHelper.getBoundsForArea(seal);
 		List<ItemEntity> list = world.getEntitiesOfClass(ItemEntity.class, area);
 		for (ItemEntity ent : list) {
-			if (ent.onGround() && !itemEntities.containsValue(ent.getId()) && matches(ent.getItem())) {
+			if (ent.onGround() && !ent.hasPickUpDelay() && !itemEntities.containsValue(ent.getId()) && passes(ent.getItem())) {
 				Task task = new Task(seal.getSealPos(), ent);
 				task.setPriority(seal.getPriority());
 				itemEntities.put(task.getId(), ent.getId());
@@ -74,23 +82,18 @@ public class SealPickup extends SealFiltered implements ISealConfigArea {
 		}
 	}
 
-	private boolean matches(ItemStack stack) {
-		if (stack.isEmpty()) return false;
-		boolean m = matchesFilter(stack.getItem());
-		return isBlacklist() ? !m : m;
-	}
-
 	@Override
 	public boolean onTaskCompletion(Level world, IGolemAPI golem, Task task) {
 		ItemEntity ei = getItemEntity(world, task);
-		if (ei != null && !ei.getItem().isEmpty()) {
+		if (ei != null && !ei.getItem().isEmpty() && passes(ei.getItem())) {
 			ItemStack leftover = golem.holdItem(ei.getItem());
 			if (leftover.isEmpty()) {
 				ei.discard();
 			} else {
 				ei.setItem(leftover);
 			}
-			golem.getGolemEntity().playSound(SoundEvents.ITEM_PICKUP, 0.2f, 1.0f);
+			golem.getGolemEntity().playSound(SoundEvents.ITEM_PICKUP, 0.125f,
+					((world.random.nextFloat() - world.random.nextFloat()) * 0.7f + 1.0f) * 2.0f);
 			golem.swingArm();
 		}
 		task.setSuspended(true);

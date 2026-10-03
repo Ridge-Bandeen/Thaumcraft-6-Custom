@@ -21,33 +21,30 @@ import thaumcraft.common.golems.tasks.TaskHandler;
 
 /**
  * Replaces the old (1.12.2) {@code SealFill} - the "push what a golem carries into a container" half of the
- * fill/empty pair (see {@link SealEmpty} for the other half). Unlike every other task-generating seal this
- * port has shipped, it doesn't scan for candidates itself - it keeps exactly one standing task open at its
- * own position (re-created whenever the previous one finishes, matching the original's own
- * {@code watchedTask} throttle) for any passing golem to pick up and fulfill.
- *
- * Real, documented simplifications: the original's own matching went through {@code InventoryUtils}/
- * {@code ThaumcraftInvHelper.InvFilter} (4 real toggles: metadata/NBT/ore-dictionary/same-mod matching, plus
- * a real per-filter-slot stacksize-limiter that capped how much of an item to send) - neither is ported,
- * same call {@code SealFiltered} already made for every other filtered seal in this port (exact
- * {@link net.minecraft.world.item.Item} identity only, no stacksize cap - a matching carried item is always
- * deposited in full). {@link #canPlaceAt} keeps the original's own real, looser rule (any non-air block, not
- * just ones with a real inventory) - {@link #onTaskCompletion} drops the item on the ground next to the seal
- * when there's no real {@link IItemHandler} there, exactly like the original's own {@code EntityItem} spawn.
- *
- * <p>One real toggle survives the {@code SealFiltered} matching simplification above: {@code pexist}
- * ("only top up a container that already has some") - real and kept, just like {@link SealGuard}'s own real
- * toggles, only reachable via NBT/creative tools at this tier (no {@code CAT_TOGGLES} in this seal's own
- * {@link #getGuiCategories}) - {@link SealFillAdvanced} is what exposes it in the real config GUI.
+ * fill/empty pair (see {@link SealEmpty} for the other half). As the original it keeps one standing task open at its
+ * own position (a fresh one queued as soon as a golem starts the last, unless redstone stops the seal) for any
+ * passing golem that carries something passing the filter. On a whitelist each filter slot's size is a limit: the
+ * golem only tops the container up to that many. With no inventory at the seal, the item is dropped in front of it
+ * instead (the limit then counting the matching items lying around). The toggles - match damage, NBT, ore, mod,
+ * "only where some already are" - are the original's, shown only on {@link SealFillAdvanced}.
  */
-public class SealFill extends SealFiltered implements ISealConfigToggles {
+public class SealFill extends SealFiltered {
 
 	private int delay = new Random().nextInt(50);
 	private int watchedTask = Integer.MIN_VALUE;
-	protected final SealToggle[] props = {
-			new SealToggle(false, "pexist", "golem.prop.exist"),
+	protected final ISealConfigToggles.SealToggle[] props = {
+			new ISealConfigToggles.SealToggle(true, "pmeta", "golem.prop.meta"),
+			new ISealConfigToggles.SealToggle(true, "pnbt", "golem.prop.nbt"),
+			new ISealConfigToggles.SealToggle(false, "pore", "golem.prop.ore"),
+			new ISealConfigToggles.SealToggle(false, "pmod", "golem.prop.mod"),
+			new ISealConfigToggles.SealToggle(false, "pexist", "golem.prop.exist"),
 	};
 	private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("thaumcraft", "items/seals/seal_fill");
+
+	@Override
+	protected SealFilters.Match match() {
+		return SealFilters.Match.fromToggles(props[0].getValue(), props[1].getValue(), props[2].getValue(), props[3].getValue());
+	}
 
 	@Override
 	public String getKey() {
@@ -66,38 +63,45 @@ public class SealFill extends SealFiltered implements ISealConfigToggles {
 		}
 	}
 
-	private boolean matches(ItemStack stack) {
-		boolean m = matchesFilter(stack.getItem());
-		return isBlacklist() ? !m : m;
+	@Override
+	public void onTaskStarted(Level world, IGolemAPI golem, Task task) {
+		ISealEntity se = SealHandler.getSealEntity(world.dimension(), task.getSealPos());
+		if (se != null && !se.isStoppedByRedstone(world)) {
+			Task newTask = new Task(task.getSealPos(), task.getSealPos().pos);
+			newTask.setPriority(se.getPriority());
+			TaskHandler.addTask(world.dimension(), newTask);
+			watchedTask = newTask.getId();
+		}
 	}
 
-	/** First carried item (main-hand or off-hand carry slot) matching this seal's real filter. */
-	private ItemStack findMatchingCarried(IGolemAPI golem) {
-		for (ItemStack stack : golem.getCarrying()) {
-			if (!stack.isEmpty() && matches(stack)) return stack;
-		}
-		return ItemStack.EMPTY;
+	/** The first carried stack passing the filter, with its slot's size limit. */
+	private SealFilters.Hit carriedMatch(IGolemAPI golem) {
+		return SealFilters.findFirst(getInv(), getSizes(), isBlacklist(), golem.getCarrying(), match());
 	}
 
 	@Override
 	public boolean onTaskCompletion(Level world, IGolemAPI golem, Task task) {
-		ItemStack match = findMatchingCarried(golem);
-		if (!match.isEmpty()) {
-			ItemStack taken = golem.dropItem(match);
-			if (!taken.isEmpty()) {
-				IItemHandler inv = world.getCapability(Capabilities.ItemHandler.BLOCK, task.getSealPos().pos, task.getSealPos().face);
-				if (inv != null) {
-					ItemStack remainder = ItemHandlerHelper.insertItemStacked(inv, taken, false);
-					if (!remainder.isEmpty()) {
-						golem.holdItem(remainder);
-					}
+		SealFilters.Hit hit = carriedMatch(golem);
+		if (!hit.stack().isEmpty()) {
+			BlockPos pos = task.getSealPos().pos;
+			Direction face = task.getSealPos().face;
+			IItemHandler inv = world.getCapability(Capabilities.ItemHandler.BLOCK, pos, face);
+			int limit = hit.stack().getCount();
+			if (hasStacksizeLimiters() && hit.limit() > 0) {
+				int c = inv == null ? SealFilters.countInWorld(world, pos, hit.stack(), 1.5, match()) : SealFilters.countIn(inv, hit.stack(), match());
+				limit = c < hit.limit() ? hit.limit() - c : 0;
+			}
+			if (limit > 0) {
+				ItemStack s = golem.dropItem(hit.stack().copyWithCount(limit));
+				if (inv == null) {
+					ItemEntity ie = new ItemEntity(world, pos.getX() + 0.5 + face.getStepX(), pos.getY() + 0.5 + face.getStepY(),
+							pos.getZ() + 0.5 + face.getStepZ(), s);
+					ie.setDeltaMovement(ie.getDeltaMovement().multiply(0.2, 0.5, 0.2));
+					world.addFreshEntity(ie);
 				} else {
-					BlockPos dropPos = task.getSealPos().pos.relative(task.getSealPos().face);
-					ItemEntity entity = new ItemEntity(world, dropPos.getX() + 0.5, dropPos.getY() + 0.5, dropPos.getZ() + 0.5, taken);
-					entity.setDeltaMovement(entity.getDeltaMovement().multiply(0.2, 0.5, 0.2));
-					world.addFreshEntity(entity);
+					golem.holdItem(ItemHandlerHelper.insertItemStacked(inv, s, false));
 				}
-				golem.getGolemEntity().playSound(SoundEvents.ITEM_PICKUP, 0.125f, 1.0f);
+				golem.getGolemEntity().playSound(SoundEvents.ITEM_PICKUP, 0.125f, (world.random.nextFloat() - world.random.nextFloat()) * 0.7f + 1.0f);
 				golem.addRankXp(1);
 				golem.swingArm();
 			}
@@ -108,17 +112,19 @@ public class SealFill extends SealFiltered implements ISealConfigToggles {
 
 	@Override
 	public boolean canGolemPerformTask(IGolemAPI golem, Task task) {
-		ItemStack match = findMatchingCarried(golem);
-		if (match.isEmpty()) return false;
-		if (props[0].getValue()) {
-			IItemHandler inv = golem.getGolemWorld().getCapability(Capabilities.ItemHandler.BLOCK, task.getSealPos().pos, task.getSealPos().face);
-			if (inv != null && SealStock.countMatching(inv, match.getItem()) <= 0) return false;
+		SealFilters.Hit hit = carriedMatch(golem);
+		if (hit.stack().isEmpty()) return false;
+		Level world = golem.getGolemWorld();
+		BlockPos pos = task.getSealPos().pos;
+		boolean limited = hasStacksizeLimiters() && hit.limit() > 0;
+		IItemHandler inv = world.getCapability(Capabilities.ItemHandler.BLOCK, pos, task.getSealPos().face);
+		if (inv == null) {
+			return !limited || SealFilters.countInWorld(world, pos, hit.stack(), 1.5, match()) < hit.limit();
 		}
-		return true;
-	}
-
-	@Override
-	public void onTaskStarted(Level world, IGolemAPI golem, Task task) {
+		if (props[4].getValue() && SealFilters.countIn(inv, hit.stack(), match()) <= 0) return false;
+		ItemStack rest = ItemHandlerHelper.insertItemStacked(inv, hit.stack().copy(), true);
+		if (rest.getCount() == hit.stack().getCount()) return false;
+		return !limited || SealFilters.countIn(inv, hit.stack(), match()) < hit.limit();
 	}
 
 	@Override
@@ -155,12 +161,7 @@ public class SealFill extends SealFiltered implements ISealConfigToggles {
 	}
 
 	@Override
-	public SealToggle[] getToggles() {
-		return props;
-	}
-
-	@Override
-	public void setToggle(int index, boolean value) {
-		props[index].setValue(value);
+	public boolean hasStacksizeLimiters() {
+		return !isBlacklist();
 	}
 }

@@ -18,32 +18,34 @@ import thaumcraft.common.golems.tasks.TaskHandler;
 
 /**
  * Replaces the old (1.12.2) {@code SealUse} - the most general logistics seal: makes a golem right- or
- * left-click its own position with a real filter-matched carried item (or an empty hand), via {@link
- * GolemInteractionHelper}'s real {@link net.neoforged.neoforge.common.util.FakePlayer} simulation. Same
- * "keep exactly one standing task open" throttle {@link SealFill} already established, gated on the
- * {@code pempty} toggle deciding whether this seal only fires against an empty (air) position or a
- * non-empty one.
- *
- * Real toggles kept (dropping the meta/NBT/ore/mod matching toggles superseded by {@link SealFiltered}'s own
- * simplification, same as every other filtered seal): {@code pempty} (fire on an empty/air position instead
- * of a non-empty one - e.g. for placing rather than using), {@code pemptyhand} (click with an empty hand
- * instead of requiring a filter match), {@code pleft} (left-click/attack instead of right-click/use),
- * {@code psneak} (sneak while clicking), {@code ppro} (request provisioning of the filter's first item when
- * whitelisted and none is currently carried - same real {@code GolemHelper.requestProvisioning} mechanism
- * {@link SealStock} already established).
+ * left-click its own position with a carried item (or an empty hand), via {@link GolemInteractionHelper}'s
+ * {@link net.neoforged.neoforge.common.util.FakePlayer}. As the original it keeps one standing task open, made only
+ * while the position is empty or not as "empty" says. The item is the first carried one passing the filter (with its
+ * toggles: damage, NBT, ore, mod) - or, with nothing in the filter, simply the first one carried. The other toggles:
+ * "left click", "empty" (work on an empty position), "empty hand", "sneak", and "provision" (on a whitelist, ask a
+ * Provider seal for the filter's item when the golem has none).
  */
 public class SealUse extends SealFiltered implements ISealConfigToggles {
 
 	private int delay = new Random().nextInt(49);
 	private int watchedTask = Integer.MIN_VALUE;
-	private final SealToggle[] props = {
+	protected final SealToggle[] props = {
+			new SealToggle(true, "pmeta", "golem.prop.meta"),
+			new SealToggle(true, "pnbt", "golem.prop.nbt"),
+			new SealToggle(false, "pore", "golem.prop.ore"),
+			new SealToggle(false, "pmod", "golem.prop.mod"),
+			new SealToggle(false, "pleft", "golem.prop.left"),
 			new SealToggle(false, "pempty", "golem.prop.empty"),
 			new SealToggle(false, "pemptyhand", "golem.prop.emptyhand"),
-			new SealToggle(false, "pleft", "golem.prop.left"),
 			new SealToggle(false, "psneak", "golem.prop.sneak"),
 			new SealToggle(false, "ppro", "golem.prop.provision.wl"),
 	};
 	private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("thaumcraft", "items/seals/seal_use");
+
+	@Override
+	protected SealFilters.Match match() {
+		return SealFilters.Match.fromToggles(props[0].getValue(), props[1].getValue(), props[2].getValue(), props[3].getValue());
+	}
 
 	@Override
 	public String getKey() {
@@ -55,7 +57,7 @@ public class SealUse extends SealFiltered implements ISealConfigToggles {
 		if (delay++ % 5 != 0) return;
 		Task oldTask = TaskHandler.getTask(world.dimension(), watchedTask);
 		if (oldTask == null || oldTask.isSuspended() || oldTask.isCompleted()) {
-			if (props[0].getValue() != world.isEmptyBlock(seal.getSealPos().pos)) return;
+			if (props[5].getValue() != world.isEmptyBlock(seal.getSealPos().pos)) return;
 			Task task = new Task(seal.getSealPos(), seal.getSealPos().pos);
 			task.setPriority(seal.getPriority());
 			TaskHandler.addTask(world.dimension(), task);
@@ -63,29 +65,25 @@ public class SealUse extends SealFiltered implements ISealConfigToggles {
 		}
 	}
 
-	private boolean matches(ItemStack stack) {
-		boolean m = matchesFilter(stack.getItem());
-		return isBlacklist() ? !m : m;
-	}
-
 	private ItemStack findMatchingCarried(IGolemAPI golem) {
-		for (ItemStack stack : golem.getCarrying()) {
-			if (!stack.isEmpty() && matches(stack)) return stack;
-		}
-		return ItemStack.EMPTY;
+		return SealFilters.findFirst(getInv(), getSizes(), isBlacklist(), golem.getCarrying(), match()).stack();
 	}
 
 	@Override
 	public boolean onTaskCompletion(Level world, IGolemAPI golem, Task task) {
-		if (props[0].getValue() == world.isEmptyBlock(task.getPos())) {
-			ItemStack clickStack = findMatchingCarried(golem);
-			if (!clickStack.isEmpty() || props[1].getValue()) {
-				ItemStack toUse = ItemStack.EMPTY;
+		if (props[5].getValue() == world.isEmptyBlock(task.getPos())) {
+			ItemStack clickStack = golem.getCarrying().get(0);
+			if (!getInv().get(0).isEmpty()) {
+				clickStack = findMatchingCarried(golem);
+			}
+			if (!clickStack.isEmpty() || props[6].getValue()) {
+				ItemStack ss = ItemStack.EMPTY;
 				if (!clickStack.isEmpty()) {
-					toUse = golem.dropItem(clickStack);
+					ss = clickStack.copy();
+					golem.dropItem(clickStack.copy());
 				}
 				GolemInteractionHelper.golemClick(world, golem, task.getPos(), task.getSealPos().face,
-						props[1].getValue() ? ItemStack.EMPTY : toUse, props[3].getValue(), !props[2].getValue());
+						props[6].getValue() ? ItemStack.EMPTY : ss, props[7].getValue(), !props[4].getValue());
 			}
 		}
 		task.setSuspended(true);
@@ -94,12 +92,14 @@ public class SealUse extends SealFiltered implements ISealConfigToggles {
 
 	@Override
 	public boolean canGolemPerformTask(IGolemAPI golem, Task task) {
-		if (props[1].getValue()) return true;
+		if (props[6].getValue()) return true;
 		boolean found = !findMatchingCarried(golem).isEmpty();
-		if (!found && props[4].getValue() && !isBlacklist()) {
-			ItemStack want = getInv().get(0);
-			if (!want.isEmpty()) {
-				GolemHelper.requestProvisioning(golem.getGolemWorld(), task.getSealPos().pos, task.getSealPos().face, want.copy());
+		if (!found && props[8].getValue() && !isBlacklist() && !getInv().get(0).isEmpty()) {
+			ISealEntity se = SealHandler.getSealEntity(golem.getGolemWorld().dimension(), task.getSealPos());
+			if (se != null) {
+				// (the original also asked for any damage when "match damage" was off - a wildcard there is no
+				// longer; the Provider matches the request through its own filter toggles)
+				GolemHelper.requestProvisioning(golem.getGolemWorld(), se, getInv().get(0).copy());
 			}
 		}
 		return found;

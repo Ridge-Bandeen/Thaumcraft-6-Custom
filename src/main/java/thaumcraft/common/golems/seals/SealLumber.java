@@ -1,9 +1,6 @@
 package thaumcraft.common.golems.seals;
 
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Random;
-import java.util.Set;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -30,21 +27,15 @@ import thaumcraft.common.golems.tasks.TaskHandler;
  * all three of which were really just trying to answer "is this a log" without a shared tag to lean on
  * back then) and turns each one into a real chop task.
  *
- * Real, documented simplification: the original's own {@code onTaskCompletion} called
- * {@code BlockUtils.breakFurthestBlock} - a real tree-felling search that walked the whole connected trunk
- * and broke the farthest-out log first, working back down (so a golem would fell an entire tree, not just
- * the one logged block). {@code BlockUtils}/that search algorithm aren't ported (still 1.12.2, and a
- * genuinely separate, reusable piece of infrastructure). This just breaks the exact logged block for real
- * drops via {@code Level#destroyBlock} - still a real, working lumberjack (it finds every log in its area
- * over time, not just one), just without the single-swing whole-tree felling.
+ * As the original, a chop fells the whole tree: each time the golem gets to the task it breaks the log furthest
+ * along the trunk from the one it was sent to ({@link thaumcraft.common.lib.utils.BlockSearch}), keeping the task
+ * open until that log itself is gone.
  */
 public class SealLumber implements ISeal, ISealGui, ISealConfigArea {
 
 	private int delay = new Random().nextInt(33);
-	/** Positions with an already-active, untracked-by-id chop task - a real simplification of the original's
-	 * own {@code HashMap<Integer, Long>} (task id -> position); tracking by position directly is simpler and
-	 * just as effective at preventing duplicate tasks for the same log. */
-	private final Set<Long> tracked = new HashSet<>();
+	/** The original's cache: task id -> the log it chops; a log with a live task gets no second one. */
+	private final java.util.Map<Integer, Long> cache = new java.util.HashMap<>();
 	private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("thaumcraft", "items/seals/seal_lumber");
 
 	@Override
@@ -55,21 +46,15 @@ public class SealLumber implements ISeal, ISealGui, ISealConfigArea {
 	@Override
 	public void tickSeal(Level world, ISealEntity seal) {
 		if (delay % 100 == 0) {
-			// self-heal: a tracked position whose task got suspended/expired without ever reaching
-			// onTaskCompletion (golem died, task timed out, etc.) would otherwise block that log forever.
-			Iterator<Long> it = tracked.iterator();
-			while (it.hasNext()) {
-				BlockPos p = BlockPos.of(it.next());
-				if (!isLog(world, p)) it.remove();
-			}
+			cache.keySet().removeIf(id -> TaskHandler.getTask(world.dimension(), id) == null);
 		}
 		delay++;
 		BlockPos p = GolemHelper.getPosInArea(seal, delay);
-		if (!tracked.contains(p.asLong()) && isLog(world, p)) {
+		if (!cache.containsValue(p.asLong()) && isLog(world, p)) {
 			Task task = new Task(seal.getSealPos(), p);
 			task.setPriority(seal.getPriority());
 			TaskHandler.addTask(world.dimension(), task);
-			tracked.add(p.asLong());
+			cache.put(task.getId(), p.asLong());
 		}
 	}
 
@@ -79,19 +64,24 @@ public class SealLumber implements ISeal, ISealGui, ISealConfigArea {
 
 	@Override
 	public boolean onTaskCompletion(Level world, IGolemAPI golem, Task task) {
-		if (isLog(world, task.getPos())) {
+		if (cache.containsKey(task.getId()) && isLog(world, task.getPos())) {
 			golem.swingArm();
-			world.destroyBlock(task.getPos(), true);
-			golem.addRankXp(1);
+			net.minecraft.world.level.block.state.BlockState state = world.getBlockState(task.getPos());
+			BlockPos furthest = thaumcraft.common.lib.utils.BlockSearch.findFurthest(world, task.getPos(), state.getBlock(), 2);
+			if (world.destroyBlock(furthest, true, golem.getGolemEntity())) {
+				task.setLifespan((short) Math.max(task.getLifespan(), 10L));
+				golem.addRankXp(1);
+				return false;
+			}
+			cache.remove(task.getId());
 		}
-		tracked.remove(task.getPos().asLong());
 		task.setSuspended(true);
 		return true;
 	}
 
 	@Override
 	public boolean canGolemPerformTask(IGolemAPI golem, Task task) {
-		if (isLog(golem.getGolemWorld(), task.getPos())) {
+		if (cache.containsKey(task.getId()) && isLog(golem.getGolemWorld(), task.getPos())) {
 			return true;
 		}
 		task.setSuspended(true);
@@ -100,7 +90,7 @@ public class SealLumber implements ISeal, ISealGui, ISealConfigArea {
 
 	@Override
 	public void onTaskSuspension(Level world, Task task) {
-		tracked.remove(task.getPos().asLong());
+		cache.remove(task.getId());
 	}
 
 	@Override

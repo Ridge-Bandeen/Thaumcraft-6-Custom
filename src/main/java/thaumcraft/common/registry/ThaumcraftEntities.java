@@ -116,6 +116,7 @@ public final class ThaumcraftEntities {
 	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.golems.EntityThaumcraftGolem>> GOLEM = ENTITY_TYPES.register("golem",
 			() -> EntityType.Builder.<thaumcraft.common.golems.EntityThaumcraftGolem>of(thaumcraft.common.golems.EntityThaumcraftGolem::new, MobCategory.MISC)
 					.sized(0.7f, 1.1f)
+					.eyeHeight(0.7f)
 					.clientTrackingRange(64)
 					.build("golem"));
 

@@ -11,17 +11,15 @@ import thaumcraft.api.golems.seals.ISealConfigToggles;
 
 /**
  * Replaces the old (1.12.2) {@code SealBreakerAdvanced}. Adds the one real toggle the base
- * {@link SealBreaker} doesn't have at all: {@code psilk}, real silk-touch dropping (the original's own
- * silk-touch toggle - the ONLY piece of its progressive-mining/silk-touch package this port ships, since
- * {@link SealBreaker}'s own doc comment already explains why progressive mining/crack stages aren't ported).
+ * {@link SealBreaker} doesn't have: {@code psilk}, silk-touch breaking (slower going, see {@link SealBreaker}).
  * A real, bigger (9-slot) filter and an added {@code SMART} trait requirement, same "Advanced tier needs a
  * smarter golem" pattern {@link SealGuardAdvanced} already established.
  */
-public class SealBreakerAdvanced extends SealBreaker implements ISealConfigToggles {
+public class SealBreakerAdvanced extends SealBreaker {
 
-	private final SealToggle[] props = {
-			new SealToggle(false, "psilk", "golem.prop.silk"),
-	};
+	{
+		props = new SealToggle[] { new SealToggle(true, "pmeta", "golem.prop.meta"), new SealToggle(false, "psilk", "golem.prop.silk") };
+	}
 	private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("thaumcraft", "items/seals/seal_breaker_advanced");
 
 	@Override
@@ -39,19 +37,25 @@ public class SealBreakerAdvanced extends SealBreaker implements ISealConfigToggl
 		return ICON;
 	}
 
-	/** Real silk-touch drop: the block's own item form (matching vanilla's own real silk-touch convention),
-	 * via {@link Block#popResource} after removing the block - the same real drop-then-remove order vanilla
-	 * itself uses for a silk-touch harvest. */
+	@Override
+	protected boolean isSilky() {
+		return props[1].getValue();
+	}
+
+	/** Silky: the block drops what a silk-touch tool would get from it (its loot table), then goes. */
 	@Override
 	protected void breakBlock(Level world, BlockPos pos) {
-		if (!props[0].getValue()) {
+		if (!props[1].getValue() || !(world instanceof net.minecraft.server.level.ServerLevel serverLevel)) {
 			super.breakBlock(world, pos);
 			return;
 		}
 		BlockState state = world.getBlockState(pos);
-		ItemStack drop = new ItemStack(state.getBlock());
+		ItemStack tool = new ItemStack(net.minecraft.world.item.Items.NETHERITE_PICKAXE);
+		serverLevel.registryAccess().lookup(net.minecraft.core.registries.Registries.ENCHANTMENT)
+				.flatMap(r -> r.get(net.minecraft.world.item.enchantment.Enchantments.SILK_TOUCH))
+				.ifPresent(silk -> tool.enchant(silk, 1));
+		Block.dropResources(state, world, pos, world.getBlockEntity(pos), null, tool);
 		world.removeBlock(pos, false);
-		Block.popResource(world, pos, drop);
 	}
 
 	@Override
@@ -64,13 +68,5 @@ public class SealBreakerAdvanced extends SealBreaker implements ISealConfigToggl
 		return new int[] { CAT_AREA, CAT_FILTER, CAT_TOGGLES, CAT_PRIORITY, CAT_TAGS };
 	}
 
-	@Override
-	public SealToggle[] getToggles() {
-		return props;
-	}
 
-	@Override
-	public void setToggle(int index, boolean value) {
-		props[index].setValue(value);
-	}
 }

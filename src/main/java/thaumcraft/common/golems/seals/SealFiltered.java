@@ -16,33 +16,47 @@ import thaumcraft.api.golems.seals.ISealEntity;
 import thaumcraft.api.golems.seals.ISealGui;
 
 /**
- * Replaces the old (1.12.2) {@code SealFiltered} - the shared item-filter base {@link SealBreaker} extends.
- * Real, but stores the filter by real {@link Item} identity rather than full {@link ItemStack}s (unlike the
- * original's own {@code NonNullList<ItemStack>} + {@code ItemStackHelper} NBT round trip): a modern
- * {@code ItemStack}'s full NBT serialization needs a {@code HolderLookup.Provider} to (de)serialize its
- * data components, which {@link ISeal#readCustomNBT}/{@link ISeal#writeCustomNBT} have no way to supply
- * (the interface takes only a bare {@link CompoundTag}, matching the original exactly). Storing plain item
- * ids sidesteps that entirely - it's also a better fit for what a block/item TYPE filter conceptually wants
- * anyway (matching item identity, not stack count or NBT/components). {@link #getInv()} still returns real
- * {@link ItemStack}s (one per filter slot, freshly resolved from the stored id) to satisfy
- * {@link ISealConfigFilter}'s own contract.
- *
- * Real, documented simplification: no ore-dictionary-style fuzzy matching or metadata-aware matching (both
- * gone in modern Minecraft anyway - metadata subtypes don't exist, and tags are the nearest modern
- * replacement for ore-dictionary-style grouping, not wired in here) - filter entries match by exact
- * {@link Item} identity only.
+ * Replaces the old (1.12.2) {@code SealFiltered} - the shared item-filter base of the logistics and breaker seals. As
+ * the original, the filter holds whole stacks (their components too), with a size limit per slot and a
+ * blacklist/whitelist switch; each seal matches against it with its own toggles ({@link #match},
+ * {@link SealFilters}). The stacks are saved with the server's registries (the seal NBT hooks get none of their
+ * own); a filter saved before this kept only item ids, which still load.
  */
 public abstract class SealFiltered implements ISeal, ISealGui, ISealConfigFilter {
 
-	protected final ResourceLocation[] filterItems = new ResourceLocation[getFilterSize()];
+	protected final NonNullList<ItemStack> filter = NonNullList.withSize(getFilterSize(), ItemStack.EMPTY);
 	protected final NonNullList<Integer> filterSize = NonNullList.withSize(getFilterSize(), 0);
 	protected boolean blacklist = true;
 
+	/** How this seal compares stacks with its filter (its meta/NBT/ore/mod toggles); exact by default. */
+	protected SealFilters.Match match() {
+		return SealFilters.Match.STRICT;
+	}
+
+	/** Whether {@code stack} passes this seal's filter. */
+	protected boolean passes(ItemStack stack) {
+		return SealFilters.matches(filter, blacklist, stack, match());
+	}
+
+	@javax.annotation.Nullable
+	private static net.minecraft.core.HolderLookup.Provider registries() {
+		var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+		return server != null ? server.registryAccess() : null;
+	}
+
 	@Override
 	public void readCustomNBT(CompoundTag nbt) {
-		for (int i = 0; i < filterItems.length; i++) {
+		var provider = registries();
+		for (int i = 0; i < filter.size(); i++) {
 			String key = "filter" + i;
-			filterItems[i] = nbt.contains(key) ? ResourceLocation.tryParse(nbt.getString(key)) : null;
+			ItemStack stack = ItemStack.EMPTY;
+			if (nbt.contains(key, net.minecraft.nbt.Tag.TAG_COMPOUND) && provider != null) {
+				stack = ItemStack.parseOptional(provider, nbt.getCompound(key));
+			} else if (nbt.contains(key, net.minecraft.nbt.Tag.TAG_STRING)) {
+				ResourceLocation id = ResourceLocation.tryParse(nbt.getString(key));
+				if (id != null && BuiltInRegistries.ITEM.containsKey(id)) stack = new ItemStack(BuiltInRegistries.ITEM.get(id));
+			}
+			filter.set(i, stack);
 			filterSize.set(i, nbt.getInt("filterSize" + i));
 		}
 		blacklist = nbt.getBoolean("bl");
@@ -50,9 +64,15 @@ public abstract class SealFiltered implements ISeal, ISealGui, ISealConfigFilter
 
 	@Override
 	public void writeCustomNBT(CompoundTag nbt) {
-		for (int i = 0; i < filterItems.length; i++) {
-			if (filterItems[i] != null) {
-				nbt.putString("filter" + i, filterItems[i].toString());
+		var provider = registries();
+		for (int i = 0; i < filter.size(); i++) {
+			ItemStack stack = filter.get(i);
+			if (!stack.isEmpty()) {
+				if (provider != null) {
+					nbt.put("filter" + i, stack.save(provider));
+				} else {
+					nbt.putString("filter" + i, BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
+				}
 			}
 			nbt.putInt("filterSize" + i, filterSize.get(i));
 		}
@@ -76,13 +96,7 @@ public abstract class SealFiltered implements ISeal, ISealGui, ISealConfigFilter
 
 	@Override
 	public NonNullList<ItemStack> getInv() {
-		NonNullList<ItemStack> out = NonNullList.withSize(filterItems.length, ItemStack.EMPTY);
-		for (int i = 0; i < filterItems.length; i++) {
-			if (filterItems[i] != null && BuiltInRegistries.ITEM.containsKey(filterItems[i])) {
-				out.set(i, new ItemStack(BuiltInRegistries.ITEM.get(filterItems[i])));
-			}
-		}
-		return out;
+		return filter;
 	}
 
 	@Override
@@ -92,7 +106,7 @@ public abstract class SealFiltered implements ISeal, ISealGui, ISealConfigFilter
 
 	@Override
 	public ItemStack getFilterSlot(int i) {
-		return getInv().get(i);
+		return filter.get(i);
 	}
 
 	@Override
@@ -102,7 +116,7 @@ public abstract class SealFiltered implements ISeal, ISealGui, ISealConfigFilter
 
 	@Override
 	public void setFilterSlot(int i, ItemStack stack) {
-		filterItems[i] = stack.isEmpty() ? null : BuiltInRegistries.ITEM.getKey(stack.getItem());
+		filter.set(i, stack.isEmpty() ? ItemStack.EMPTY : stack.copyWithCount(1));
 	}
 
 	@Override
@@ -122,17 +136,6 @@ public abstract class SealFiltered implements ISeal, ISealGui, ISealConfigFilter
 
 	@Override
 	public boolean hasStacksizeLimiters() {
-		return false;
-	}
-
-	/** Real matching helper every subclass shares: does the given item appear in any real (non-empty)
-	 * filter slot? */
-	protected boolean matchesFilter(Item item) {
-		for (ResourceLocation id : filterItems) {
-			if (id != null && BuiltInRegistries.ITEM.get(id) == item) {
-				return true;
-			}
-		}
 		return false;
 	}
 

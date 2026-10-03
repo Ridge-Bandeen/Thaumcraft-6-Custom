@@ -26,18 +26,31 @@ import thaumcraft.common.golems.tasks.TaskHandler;
  * required - unlike {@code SealLumber}/{@code SealHarvest}, no {@code SMART}/{@code DEFT} requirement,
  * matching the original exactly (breaking generic blocks needs strength, not finesse or judgement).
  *
- * Real, documented simplification: the original's own {@code onTaskCompletion} was a real multi-tick mining
- * simulation - block-hardness-based progress accumulated across repeated task completions, with visible
- * crack-stage updates, all driven through a {@code FakePlayer}'s simulated harvest. None of that
- * (progressive mining, crack stages) is ported - this breaks the matched block in one action via
- * {@link #breakBlock} (default: {@code Level#destroyBlock} for real loot-table drops, arguably a *more*
- * correct drop path than the original's own FakePlayer-harvest simulation). {@link #breakBlock} is a real,
- * protected seam - {@link SealBreakerAdvanced} overrides it for real silk-touch dropping, the one piece of
- * the original's silk-touch toggle that IS ported (just not the progressive mining alongside it). Real
- * ore-dictionary-style fuzzy/metadata matching is also dropped, see {@code SealFiltered}'s own doc comment
- * for why (exact item identity only).
+ * As the original it mines progressively: each task starts with ten times the block's hardness of work, and each
+ * time the golem gets to it it knocks off 21 (7 when breaking silky), the block cracking and clicking as it goes
+ * ({@link #onTaskCompletion}), until it breaks ({@link #breakBlock}; {@link SealBreakerAdvanced} can do it
+ * silky). Filters match exact items (see {@code SealFiltered}).
  */
-public class SealBreaker extends SealFiltered implements ISealConfigArea {
+public class SealBreaker extends SealFiltered implements ISealConfigArea, thaumcraft.api.golems.seals.ISealConfigToggles {
+
+	/** The original's toggles: match damage (and, on the advanced seal, silky). */
+	protected SealToggle[] props = { new SealToggle(true, "pmeta", "golem.prop.meta") };
+
+	@Override
+	public SealToggle[] getToggles() {
+		return props;
+	}
+
+	@Override
+	public void setToggle(int index, boolean value) {
+		props[index].setValue(value);
+	}
+
+	/** As the original: the block's item, compared by damage when "match damage" is on, never by NBT. */
+	@Override
+	protected SealFilters.Match match() {
+		return new SealFilters.Match(!props[0].getValue(), true, false, false);
+	}
 
 	private int delay = new Random().nextInt(42);
 	protected final Set<Long> tracked = new HashSet<>();
@@ -61,6 +74,8 @@ public class SealBreaker extends SealFiltered implements ISealConfigArea {
 		if (!tracked.contains(p.asLong()) && isValidBlock(world, p)) {
 			Task task = new Task(seal.getSealPos(), p);
 			task.setPriority(seal.getPriority());
+			// as the original: the work it takes, ten times the block's hardness
+			task.setData((int) (world.getBlockState(p).getDestroySpeed(world, p) * 10.0f));
 			TaskHandler.addTask(world.dimension(), task);
 			tracked.add(p.asLong());
 		}
@@ -73,8 +88,9 @@ public class SealBreaker extends SealFiltered implements ISealConfigArea {
 		if (world.isEmptyBlock(pos)) return false;
 		BlockState state = world.getBlockState(pos);
 		if (state.getDestroySpeed(world, pos) < 0.0f) return false;
-		boolean matches = matchesFilter(state.getBlock().asItem());
-		return isBlacklist() ? !matches : matches;
+		// (the original's whitelist demanded a match with every filled slot, so two different whitelisted blocks
+		// broke nothing; here any one will do)
+		return passes(new net.minecraft.world.item.ItemStack(state.getBlock().asItem()));
 	}
 
 	/** Real, overridable seam for how the matched block is actually removed - see this class's own doc
@@ -83,11 +99,31 @@ public class SealBreaker extends SealFiltered implements ISealConfigArea {
 		world.destroyBlock(pos, true);
 	}
 
+	/** Whether this seal breaks silky (slower going) - {@link SealBreakerAdvanced}'s toggle. */
+	protected boolean isSilky() {
+		return false;
+	}
+
 	@Override
 	public boolean onTaskCompletion(Level world, IGolemAPI golem, Task task) {
 		BlockPos pos = task.getPos();
 		if (isValidBlock(world, pos)) {
 			golem.swingArm();
+			int speed = isSilky() ? 7 : 21;
+			BlockState state = world.getBlockState(pos);
+			int id = golem.getGolemEntity().getId();
+			if (task.getData() > speed) {
+				// as the original: another bite out of it, with the crack and the clink; the task stays open
+				float work = state.getDestroySpeed(world, pos) * 10.0f;
+				task.setLifespan((short) Math.max(task.getLifespan(), 10L));
+				task.setData(task.getData() - speed);
+				int progress = (int) (9.0f * (1.0f - task.getData() / work));
+				var sound = state.getSoundType(world, pos, golem.getGolemEntity());
+				world.playSound(null, pos, sound.getBreakSound(), net.minecraft.sounds.SoundSource.BLOCKS, (sound.getVolume() + 0.7f) / 8.0f, sound.getPitch() * 0.5f);
+				world.destroyBlockProgress(id, pos, progress);
+				return false;
+			}
+			world.destroyBlockProgress(id, pos, 10);
 			breakBlock(world, pos);
 			golem.addRankXp(1);
 		}
@@ -140,6 +176,6 @@ public class SealBreaker extends SealFiltered implements ISealConfigArea {
 
 	@Override
 	public int[] getGuiCategories() {
-		return new int[] { CAT_AREA, CAT_FILTER, CAT_PRIORITY, CAT_TAGS };
+		return new int[] { CAT_AREA, CAT_FILTER, CAT_TOGGLES, CAT_PRIORITY, CAT_TAGS };
 	}
 }

@@ -288,6 +288,22 @@ public final class ClientFxHandlers {
 		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXFireMote(clientLevel, x, y, z, mx, my, mz, r, g, b, scale));
 	}
 
+	/** The original's {@code FXDispatcher#drawGolemFlyParticles}: a faint, growing, spinning mote under a flying golem. */
+	public static void spawnGolemFly(net.minecraft.world.level.Level level, double x, double y, double z, double mx, double my, double mz) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, mx, my, mz);
+		fb.setMaxAge(20 + level.random.nextInt(5));
+		fb.setAlphaF(0.3f, 0.0f);
+		fb.setGridSize(16);
+		fb.setParticles(56, 1, 1);
+		fb.setScale(1.5f, 3.0f, 8.0f);
+		fb.setLayer(0);
+		fb.setSlowDown(1.0);
+		fb.setWind(0.001);
+		fb.setRotationSpeed(level.random.nextFloat(), level.random.nextBoolean() ? -1.0f : 1.0f);
+		addDelayed(fb, 0);
+	}
+
 	/** The original's {@code FXDispatcher#crucibleFroth}: short-lived pale froth on a hot crucible's surface. */
 	public static void spawnCrucibleFroth(net.minecraft.world.level.Level level, double x, double y, double z) {
 		if (!(level instanceof ClientLevel clientLevel)) return;

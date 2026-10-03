@@ -36,10 +36,7 @@ import thaumcraft.common.golems.tasks.TaskHandler;
  * {@code EntityThaumcraftGolem}) takes it from there, exactly like the original (this seal never itself
  * makes the golem walk anywhere; it only ever assigns a target and instantly suspends the task).
  *
- * Real, documented cut: {@link #returnContainer}/{@link #returnGui} return {@code null} - no seal-config
- * GUI exists in this port yet (same boundary the whole golem arc has kept to); the 3 real toggles
- * ({@code pmob}/{@code panimal}/{@code pplayer}) are still fully real and functional, they're just only
- * reachable via NBT/creative-tools for now, not an in-game config screen.
+ * Its three toggles (mobs, animals, players) are shown only on {@link SealGuardAdvanced}, as the original.
  */
 public class SealGuard implements ISeal, ISealGui, ISealConfigArea, ISealConfigToggles {
 

@@ -22,10 +22,8 @@ import thaumcraft.common.golems.tasks.TaskHandler;
  * {@link Goal}'s lifecycle is conceptually identical to the original's own pre-cursor {@code EntityAIBase},
  * just renamed.
  *
- * Real, documented simplification: the original's {@code updateTask} detected a "stuck" golem (hadn't
- * moved in 5 ticks) and re-pathed toward a random point near the task instead of repeating the same
- * {@link #moveTo}; this just re-issues {@link #moveTo} every 5 ticks unconditionally - simpler, and
- * pathfinding recovers on its own in the overwhelming majority of real cases anyway.
+ * As the original, every 5 ticks on the way it paths again - or, when it has not moved since the last time (stuck),
+ * toward a random spot near the task instead, to work its way around whatever is in the way.
  */
 public abstract class AIGoto extends Goal {
 
@@ -35,6 +33,7 @@ public abstract class AIGoto extends Goal {
 	protected BlockPos targetBlock;
 	private int cooldown;
 	private int pause;
+	private BlockPos prevRamble;
 
 	protected AIGoto(EntityThaumcraftGolem golem) {
 		this.golem = golem;
@@ -88,7 +87,15 @@ public abstract class AIGoto extends Goal {
 			task.setCompletion(false);
 			taskCounter++;
 			if (taskCounter % 5 == 0) {
-				moveTo();
+				if (prevRamble != null && prevRamble.equals(golem.blockPosition())) {
+					Vec3 vec3 = net.minecraft.world.entity.ai.util.DefaultRandomPos.getPosTowards(golem, 6, 4, Vec3.atLowerCornerOf(task.getPos()), Math.PI / 2.0);
+					if (vec3 != null) {
+						golem.getNavigation().moveTo(vec3.x, vec3.y, vec3.z, golem.getGolemMoveSpeed());
+					}
+				} else {
+					moveTo();
+				}
+				prevRamble = golem.blockPosition();
 			}
 		} else {
 			TaskHandler.completeTask(task, golem);

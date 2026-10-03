@@ -95,9 +95,10 @@ import thaumcraft.api.golems.IGolemProperties;
  *       {@code super.doHurtTarget}; only the on-kill rank-XP hook is added on top.</li>
  *   <li>{@code processInteract} is all there (restored 2026-09-28): sneak-click to take the golem back as its
  *       placer item, the Golem Bell's follow/stay toggle (GOLEMDIRECT), and dye recolouring.</li>
- *   <li>The in-wall/out-of-world "teleport home" damage-source special case, the PVP-config attack-target
- *       clear, and the {@code HEAVY}-trait footstep-sound/eye-height tweaks are all dropped as minor
- *       polish, not core behaviour.</li>
+ *   <li>As the original: on its first tick after loading, or when suffocating in a wall or falling out of the
+ *       world, it goes home ({@link #goHome}); cactus can't hurt it; with PvP off it drops player targets; a DEFT
+ *       golem leaves what it hits "recently hit" (so its kills drop XP and player-kill loot); only HEAVY golems
+ *       make footsteps; its eyes sit 0.7 up.</li>
  * </ul>
  */
 public class EntityThaumcraftGolem extends TamableAnimal implements IGolemAPI, RangedAttackMob {
@@ -363,10 +364,22 @@ public class EntityThaumcraftGolem extends TamableAnimal implements IGolemAPI, R
 		if (props.hasTrait(EnumGolemTrait.FLYER)) {
 			setNoGravity(true);
 		}
+		// as the original: each part's own per-tick function (the roller legs' dust, the flyer legs' motes)
+		if (props.getHead().function != null) props.getHead().function.onUpdateTick(this);
+		if (props.getArms().function != null) props.getArms().function.onUpdateTick(this);
+		if (props.getLegs().function != null) props.getLegs().function.onUpdateTick(this);
+		if (props.getAddon().function != null) props.getAddon().function.onUpdateTick(this);
 		if (level().isClientSide) {
 			return;
 		}
+		if (firstRun) {
+			firstRun = false;
+			if (hasRestriction() && !blockPosition().equals(getRestrictCenter())) goHome();
+		}
 		if (getTarget() != null && getTarget().isDeadOrDying()) {
+			setTarget(null);
+		}
+		if (getTarget() instanceof Player && level().getServer() != null && !level().getServer().isPvpAllowed()) {
 			setTarget(null);
 		}
 		if (getTarget() != null && props.hasTrait(EnumGolemTrait.RANGED) && distanceToSqr(getTarget()) > 1024.0) {
@@ -389,11 +402,47 @@ public class EntityThaumcraftGolem extends TamableAnimal implements IGolemAPI, R
 		return super.causeFallDamage(fallDistance, multiplier, source);
 	}
 
+	private boolean firstRun = true;
+
+	/** The original's goHome: to the top of the column at its home, if there's room there; otherwise it stays put. */
+	private void goHome() {
+		BlockPos home = getRestrictCenter();
+		double x = home.getX() + 0.5;
+		double y = home.getY();
+		double z = home.getZ() + 0.5;
+		BlockPos p = home;
+		boolean roof = false;
+		while (!roof && p.getY() < level().getMaxBuildHeight()) {
+			BlockPos up = p.above();
+			if (level().getBlockState(up).blocksMotion()) {
+				roof = true;
+			} else {
+				y++;
+				p = up;
+			}
+		}
+		if (!roof) return;
+		double ox = getX(), oy = getY(), oz = getZ();
+		teleportTo(x, y, z);
+		if (!level().noCollision(this)) {
+			teleportTo(ox, oy, oz);
+		} else {
+			getNavigation().stop();
+		}
+	}
+
 	@Override
 	public boolean hurt(DamageSource source, float amount) {
 		IGolemProperties props = getProperties();
 		if (source.is(DamageTypeTags.IS_FIRE) && props.hasTrait(EnumGolemTrait.FIREPROOF)) {
 			return false;
+		}
+		if (source.is(net.minecraft.world.damagesource.DamageTypes.CACTUS)) {
+			return false;
+		}
+		if (hasRestriction() && (source.is(net.minecraft.world.damagesource.DamageTypes.IN_WALL)
+				|| source.is(net.minecraft.world.damagesource.DamageTypes.FELL_OUT_OF_WORLD))) {
+			goHome();
 		}
 		if (source.is(DamageTypeTags.IS_EXPLOSION) && props.hasTrait(EnumGolemTrait.BLASTPROOF)) {
 			amount = Math.min(getMaxHealth() / 2.0f, amount * 0.3f);
@@ -404,6 +453,9 @@ public class EntityThaumcraftGolem extends TamableAnimal implements IGolemAPI, R
 	@Override
 	public boolean doHurtTarget(Entity target) {
 		boolean success = super.doHurtTarget(target);
+		if (success && target instanceof net.minecraft.world.entity.LivingEntity living && getProperties().hasTrait(EnumGolemTrait.DEFT)) {
+			living.lastHurtByPlayerTime = 100;
+		}
 		if (success && target instanceof Mob mobTarget && mobTarget.isDeadOrDying()) {
 			addRankXp(8);
 		}
@@ -692,5 +744,12 @@ public class EntityThaumcraftGolem extends TamableAnimal implements IGolemAPI, R
 		if (arms.function != null) {
 			arms.function.onRangedAttack(this, target, distanceFactor);
 		}
+	}
+
+	/** As the original's canTriggerWalking: only a heavy, earthbound golem makes footsteps. */
+	@Override
+	protected Entity.MovementEmission getMovementEmission() {
+		IGolemProperties props = getProperties();
+		return props.hasTrait(EnumGolemTrait.HEAVY) && !props.hasTrait(EnumGolemTrait.FLYER) ? Entity.MovementEmission.ALL : Entity.MovementEmission.NONE;
 	}
 }

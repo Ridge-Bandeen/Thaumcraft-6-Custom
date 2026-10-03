@@ -4,16 +4,10 @@ import net.minecraft.resources.ResourceLocation;
 import thaumcraft.api.golems.EnumGolemTrait;
 
 /**
- * Replaces the old (1.12.2) {@code SealPickupAdvanced}. The original's own toggles here (confirmed by
- * reading the still-1.12.2 {@code SealPickup} the original {@code SealPickupAdvanced} extended, via
- * {@code git show master:...}) were exactly the same meta/NBT/ore/mod matching set every {@code SealFiltered}
- * subclass in this port has already dropped as superseded - nothing real survives to expose here, so unlike
- * {@link SealGuardAdvanced}/{@link SealBreakerAdvanced}/{@link SealFillAdvanced}/{@link SealEmptyAdvanced}
- * this one has no {@code CAT_TOGGLES} panel at all (a real, deliberate deviation from the original's own
- * category list, which included one for those since-dropped toggles). Real, bigger (9-slot) filter and an
- * added {@code SMART} trait requirement, same "Advanced tier needs a smarter golem" pattern the others use.
+ * Replaces the old (1.12.2) {@code SealPickupAdvanced}: a 9-slot filter, needs a smart golem, and shows the matching
+ * toggles (damage, NBT, ore, mod), as the original.
  */
-public class SealPickupAdvanced extends SealPickup {
+public class SealPickupAdvanced extends SealPickup implements thaumcraft.api.golems.seals.ISealConfigToggles {
 
 	private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("thaumcraft", "items/seals/seal_pickup_advanced");
 
@@ -35,5 +29,20 @@ public class SealPickupAdvanced extends SealPickup {
 	@Override
 	public EnumGolemTrait[] getRequiredTags() {
 		return new EnumGolemTrait[] { EnumGolemTrait.SMART };
+	}
+
+	@Override
+	public int[] getGuiCategories() {
+		return new int[] { CAT_AREA, CAT_FILTER, CAT_TOGGLES, CAT_PRIORITY, CAT_TAGS };
+	}
+
+	@Override
+	public SealToggle[] getToggles() {
+		return props;
+	}
+
+	@Override
+	public void setToggle(int index, boolean value) {
+		props[index].setValue(value);
 	}
 }

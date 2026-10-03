@@ -2,15 +2,12 @@ package thaumcraft.common.golems.seals;
 
 import net.minecraft.resources.ResourceLocation;
 import thaumcraft.api.golems.EnumGolemTrait;
+import thaumcraft.api.golems.seals.ISealConfigToggles;
 
 /**
- * Replaces the old (1.12.2) {@code SealFillAdvanced}. {@link SealFill} already has a real {@code pexist}
- * toggle (only ever reachable via NBT/creative tools at that tier) - this Advanced tier is what exposes it
- * in the real config GUI, same "Advanced unlocks the base's own real toggles" relationship
- * {@link SealGuardAdvanced} already established. Real, bigger (9-slot) filter and an added {@code SMART}
- * trait requirement.
+ * Replaces the old (1.12.2) {@code SealFillAdvanced}: a 9-slot filter, the toggles shown, and a smart golem.
  */
-public class SealFillAdvanced extends SealFill {
+public class SealFillAdvanced extends SealFill implements ISealConfigToggles {
 
 	private static final ResourceLocation ICON = ResourceLocation.fromNamespaceAndPath("thaumcraft", "items/seals/seal_fill_advanced");
 
@@ -37,5 +34,15 @@ public class SealFillAdvanced extends SealFill {
 	@Override
 	public EnumGolemTrait[] getRequiredTags() {
 		return new EnumGolemTrait[] { EnumGolemTrait.SMART };
+	}
+
+	@Override
+	public SealToggle[] getToggles() {
+		return props;
+	}
+
+	@Override
+	public void setToggle(int index, boolean value) {
+		props[index].setValue(value);
 	}
 }
