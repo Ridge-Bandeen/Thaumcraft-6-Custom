@@ -31,9 +31,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import thaumcraft.common.tiles.crafting.TileCrucible;
 
 /**
- * Replaces the old (1.12.2) {@code BlockCrucible}. See {@link TileCrucible}'s doc for what's simplified
- * this pass. Base class is vanilla {@code Block} directly ({@code BlockTCTile}, the original's shared base,
- * isn't ported).
+ * Replaces the old (1.12.2) {@code BlockCrucible} - see {@link TileCrucible}. Base class is vanilla {@code Block}
+ * directly ({@code BlockTCTile}, the original's shared base, isn't needed).
  */
 public class BlockCrucible extends Block implements EntityBlock {
 
@@ -169,6 +168,13 @@ public class BlockCrucible extends Block implements EntityBlock {
 			tile.spillRemnants(level);
 		}
 		super.onRemove(state, level, pos, newState, movedByPiston);
+	}
+
+	/** The tile's block events, as the original's receiveClientEvent - see {@link TileCrucible}. */
+	@Override
+	protected boolean triggerEvent(BlockState state, Level level, BlockPos pos, int id, int param) {
+		if (level.isClientSide) thaumcraft.client.fx.ClientFxHandlers.crucibleEvent(level, pos, id, param);
+		return id == 1 || id == 2 || id == 99 || super.triggerEvent(state, level, pos, id, param);
 	}
 
 	@Override

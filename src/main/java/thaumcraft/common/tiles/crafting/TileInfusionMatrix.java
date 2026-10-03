@@ -57,46 +57,21 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * {@link InfusionRecipe}'s result - with a chance of an "instability event" each cycle if the structure is
  * imperfect or essentia is scarce.
  *
- * Simplified for this pass (all real features, just not built yet - see the port-tracking memory notes):
+ * As the original:
  * <ul>
- * <li>Activated only with a caster ({@link #onCasterRightClick}), as the original.</li>
- * <li><b>Real pillar/accelerator-block tier system (restored - see the port-tracking memory's parity-review
- * notes).</b> {@link #validLocation} requires four real {@link thaumcraft.common.blocks.basic.BlockPillar}
- * blocks at the structure's corners, same real position/check as the true original. A uniform set of all
- * {@code pillarAncient} (or all {@code pillarEldritch}) gives a real cycle-time/cost/stability bonus; a real
- * {@code matrixSpeed}/{@code matrixCost} block at each of the 4 outer corners (one tier down again) further
- * modifies cycle time and cost independently per corner - see {@link #getSurroundings} for the exact real
- * formula/positions, confirmed via the true pre-port original source. {@code pillarAncient}/
- * {@code pillarEldritch}/{@code matrixSpeed} are real, functional blocks but currently uncraftable (their own
- * true source materials/recipe were never real, even in the original - see each block's own doc comment);
- * {@code matrixCost} is real and craftable via a direct recipe; {@code pillarArcane} is real and reachable via
- * the real Infusion Altar multiblock ritual (see {@code BlockPillar}'s own doc comment) rather than a direct
- * recipe.</li>
- * <li><b>Real {@code TileStabilizer} "instability mitigator", restored 2026-09-15.</b> An instability-event
- * item ejection ({@link #inEvEjectItem}) now really can redirect into a nearby real, energized
- * {@link thaumcraft.common.tiles.devices.TileStabilizer} instead of dropping - see that class's own doc
- * comment for the real mechanics and the one real simplification (a plain BFS replacing the true original's
- * own persistent charge-gradient blockstate search, same real reachability result). {@code BlockInlay} stays
- * a plain passive stabilizer with no real charge propagation of its own (see its own doc comment) - it's
- * still a real, valid hop in that BFS, just not a stateful conduit the way the true original's own version
- * was.</li>
- * <li><b>Instability events - the full real 24-weighted-outcome table, restored 2026-09-15.</b> Originally
- * trimmed to a 12-outcome subset because {@code BlockFluxGoo} and the Taint/Vis-Exhaust potion effects
- * weren't ported yet; both are real now ({@code BlocksTC#fluxGoo}, {@code ThaumcraftMobEffects#FLUX_TAINT}/
- * {@code #VIS_EXHAUST}), so {@link #triggerInstabilityEvent} rolls the real full table again: item ejection
- * (6 real sub-variants via {@link #inEvEjectItem}, matching the true original's own real type 0-5 split -
- * plain drop, flux-goo placement, aura pollution, a pedestal-local explosion, or a silent no-drop clear),
- * living-entity zap damage, player warp gain, and real Flux Taint/Vis Exhaust affliction via
- * {@link #inEvHarm}. Real, deliberate simplification kept: no client FX broadcast (arc particles between
- * the matrix and the affected pedestal/entity), same boundary every other device in this port already
- * accepted; the true original's own Vis-Exhaust-can't-be-milk-cured detail is also dropped as a minor
- * flavor loss.</li>
- * <li><b>Recipe output is always a plain {@code ItemStack}.</b> {@link InfusionRecipe} was redesigned as a
- * modern data-driven {@code Recipe} during this port and dropped the old dynamic
- * {@code Object}-typed output (NBT tag / enchantment / XP-cost variants) - see that class's own doc comment.
- * {@link #craftingFinish} only needs the plain-ItemStack path as a result.</li>
- * <li>No particle/sound FX beyond a couple of vanilla stand-in sounds - the client FX dispatcher used
- * throughout the original for this tile isn't ported (same boundary as every other device this session).</li>
+ * <li>Activated only with a caster ({@link #onCasterRightClick}).</li>
+ * <li>Four {@link thaumcraft.common.blocks.basic.BlockPillar}s at the corners; a uniform set of ancient or eldritch
+ * pillars, and speed/cost matrices at the outer corners, change cycle time, cost and stability
+ * ({@link #getSurroundings}).</li>
+ * <li>Components take 5 cycles each to draw off their pedestals (the stream starts on the first) and leave their
+ * container item behind; a component missing from every pedestal sometimes costs an extra essentia and some
+ * stability.</li>
+ * <li>The full 24-weighted instability table ({@link #triggerInstabilityEvent}): item ejection in its six variants
+ * (which an energised {@link thaumcraft.common.tiles.devices.TileStabilizer} can swallow), zaps, warp, and flux
+ * taint or milk-proof vis exhaustion ({@link #inEvHarm}).</li>
+ * <li>Recipes may carry data components on their results (the elemental tools come out pre-infused).</li>
+ * <li>The original's sounds and client effects ({@link #doEffects}): the infuser hum, streams from the pedestals,
+ * sparks while unstable and over the blocks spoiling the symmetry, and the pedestal puff/shield block events.</li>
  * </ul>
  *
  * The symmetry-based stability scan itself ({@link #getSurroundings}) IS kept close to the original: pedestals
@@ -420,7 +395,7 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 			for (Aspect aspect : recipeEssentia.getAspects()) {
 				int amount = recipeEssentia.getAmount(aspect);
 				if (amount <= 0) continue;
-				if (EssentiaHandler.drainEssentia(this, aspect, ESSENTIA_RANGE)) {
+				if (EssentiaHandler.drainEssentia(this, aspect, null, ESSENTIA_RANGE, amount > 1 ? countDelay : 0)) {
 					recipeEssentia.reduce(aspect, 1);
 					setChanged();
 					return;
@@ -467,11 +442,7 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		setChanged();
 	}
 
-	/** Real client FX broadcast restored 2026-09-17 (was dropped under this port's old blanket "no client FX"
-	 * rule) - see {@link thaumcraft.common.lib.network.fx.PacketFXInfusionSource}'s own doc comment for the
-	 * real simplification (one burst at consumption, not the true original's own real multi-tick trickle) and
-	 * why it's safe to call directly from this common-side class (a plain data record, no client-only type
-	 * anywhere in it). */
+	/** Starts a component's stream into the matrix on the clients (PacketFXInfusionSource, 60 ticks from a pedestal). */
 	private void broadcastInfusionSourceFx(Level level, BlockPos pedestal, ItemStack consumed) {
 		if (!(level instanceof ServerLevel serverLevel)) return;
 		try {
@@ -607,12 +578,8 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		}
 	}
 
-	/** Real port of the true original's own {@code inEvHarm(boolean all)} - restored 2026-09-15 now that
-	 * both {@link thaumcraft.common.registry.ThaumcraftMobEffects#FLUX_TAINT}/{@code #VIS_EXHAUST} are real.
-	 * A coin flip between a real, real short Flux Taint stack and a real, long, low-amplitude Vis Exhaust
-	 * stack. One real, deliberate simplification: the true original's own Vis Exhaust roll cleared its own
-	 * curative-items list (milk couldn't cure it) - dropped here as a minor flavor detail, same "keep the
-	 * mechanic, drop the flourish" precedent this whole port has used consistently. */
+	/** The original's {@code inEvHarm}: a coin flip between a short Flux Taint and a long, milk-proof Vis Exhaustion, for
+	 * one nearby creature or (with {@code all}) every one. */
 	private void inEvHarm(Level level, RandomSource rand, boolean all) {
 		for (net.minecraft.world.entity.LivingEntity target : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, nearbyBox())) {
 			if (rand.nextBoolean()) {
@@ -902,5 +869,11 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		if (level != null && !level.isClientSide) {
 			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
 		}
+	}
+
+	@Override
+	public void setRemoved() {
+		super.setRemoved();
+		thaumcraft.common.lib.events.EssentiaHandler.forget(this);
 	}
 }

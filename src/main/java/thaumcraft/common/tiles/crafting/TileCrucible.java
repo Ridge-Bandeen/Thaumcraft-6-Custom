@@ -32,23 +32,12 @@ import thaumcraft.common.registry.ThaumcraftSounds;
 import thaumcraft.common.world.aura.AuraHandler;
 
 /**
- * Replaces the old (1.12.2) {@code TileCrucible}. Same core loop: heat up (lava/fire/magma below) with
+ * Replaces the old (1.12.2) {@code TileCrucible}. Same core loop: heat up (lava/fire/magma/nitor below) with
  * water in it, throw items in (by hand or by them colliding as dropped item entities), and either they
  * dissolve into the crucible's aspect pool or - once the pool + catalyst match a recipe - get consumed to
- * produce the result.
- *
- * Simplified for this pass (all real features, just not built yet):
- * <ul>
- * <li>No {@code IFluidHandler} capability - "has water" is a plain boolean set by right-clicking with a
- * water bucket, not a real fluid tank other mods/pipes could interact with.</li>
- * <li>Only items implementing {@link IEssentiaContainerItem} (crystal essence, etc.) dissolve into
- * aspects. The original looked up aspects for *any* item via a global object-tag database
- * ({@code ThaumcraftCraftingManager.getObjectTags}, backed by the still-deferred
- * {@code AspectHelper}/{@code ThaumcraftApi.internalMethods} - see the port-tracking memory notes).</li>
- * <li>Boil froth and aspect bubbles are restored (client tick, see {@link #drawEffects}); the over-full froth
- * down the sides and the crucible sounds are not.</li>
- * <li>Collision shape is a plain approximation of the original's legs+walls, not an exact match.</li>
- * </ul>
+ * produce the result. Its one-bucket water tank is a fluid capability on every side, as the original's, so pipes
+ * can fill it; its aspects can only be read, never piped in or out. The original's block events drive the client
+ * effects: 2 (dissolving or spilling: the spill sound and boiling bubbles) and 99 (a craft: a puff).
  *
  * {@link #setChanged()} is overridden below - see
  * {@link thaumcraft.common.tiles.crafting.TilePedestal#setChanged()}'s own doc comment for why plain
@@ -78,6 +67,61 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 
 	public boolean hasWater() {
 		return waterAmount > 0;
+	}
+
+	/** The original's {@code FluidTank(WATER, 0, 1000)} as a capability: water only, any side. */
+	private final net.neoforged.neoforge.fluids.capability.IFluidHandler fluidHandler = new net.neoforged.neoforge.fluids.capability.IFluidHandler() {
+		@Override
+		public int getTanks() {
+			return 1;
+		}
+
+		@Override
+		public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int tank) {
+			return waterAmount > 0 ? new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, waterAmount)
+					: net.neoforged.neoforge.fluids.FluidStack.EMPTY;
+		}
+
+		@Override
+		public int getTankCapacity(int tank) {
+			return WATER_CAPACITY;
+		}
+
+		@Override
+		public boolean isFluidValid(int tank, net.neoforged.neoforge.fluids.FluidStack stack) {
+			return stack.is(net.minecraft.world.level.material.Fluids.WATER);
+		}
+
+		@Override
+		public int fill(net.neoforged.neoforge.fluids.FluidStack resource, FluidAction action) {
+			if (!isFluidValid(0, resource)) return 0;
+			int filled = Math.min(WATER_CAPACITY - waterAmount, resource.getAmount());
+			if (filled > 0 && action.execute()) {
+				waterAmount += filled;
+				setChanged();
+			}
+			return Math.max(0, filled);
+		}
+
+		@Override
+		public net.neoforged.neoforge.fluids.FluidStack drain(net.neoforged.neoforge.fluids.FluidStack resource, FluidAction action) {
+			return isFluidValid(0, resource) ? drain(resource.getAmount(), action) : net.neoforged.neoforge.fluids.FluidStack.EMPTY;
+		}
+
+		@Override
+		public net.neoforged.neoforge.fluids.FluidStack drain(int maxDrain, FluidAction action) {
+			int drained = Math.min(waterAmount, maxDrain);
+			if (drained <= 0) return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
+			if (action.execute()) {
+				waterAmount -= drained;
+				setChanged();
+			}
+			return new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, drained);
+		}
+	};
+
+	public net.neoforged.neoforge.fluids.capability.IFluidHandler getFluidHandler() {
+		return fluidHandler;
 	}
 
 	public TileCrucible(BlockPos pos, BlockState state) {
@@ -193,17 +237,15 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 					break; // nothing more of this stack can do anything here
 				}
 			}
-			if (!hasWater()) break;
 		}
 
 		if (level instanceof ServerLevel serverLevel) {
 			if (bubble) {
 				serverLevel.playSound(null, worldPosition, ThaumcraftSounds.BUBBLE.get(), SoundSource.BLOCKS, 0.2f, 1.0f + level.random.nextFloat() * 0.4f);
-				sendBamf(serverLevel, worldPosition.getX() + 0.5, worldPosition.getY() + 1.25, worldPosition.getZ() + 0.5, false);
+				level.blockEvent(worldPosition, getBlockState().getBlock(), 2, 1);
 			}
 			if (craftDone) {
-				serverLevel.playSound(null, worldPosition, ThaumcraftSounds.SPILL.get(), SoundSource.BLOCKS, 0.2f, 1.0f);
-				sendBamf(serverLevel, worldPosition.getX() + 0.5, worldPosition.getY() + 1.25, worldPosition.getZ() + 0.5, true);
+				level.blockEvent(worldPosition, getBlockState().getBlock(), 99, 0);
 			}
 		}
 		if (bubble || craftDone) setChanged();
@@ -246,15 +288,6 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 		return best;
 	}
 
-	private static void sendBamf(ServerLevel level, double x, double y, double z, boolean sound) {
-		try {
-			net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(level, null, x, y, z, 32.0,
-					new thaumcraft.common.lib.network.fx.PacketFXBlockBamf(x, y, z, 0, sound, true));
-		} catch (Exception e) {
-			thaumcraft.Thaumcraft.LOGGER.debug("Crucible bamf FX packet failed to send (no real client connection?)", e);
-		}
-	}
-
 	public void tryConsume(ItemEntity itemEntity) {
 		Player thrower = itemEntity.getOwner() instanceof Player p ? p : null;
 		ItemStack remaining = attemptSmelt(itemEntity.getItem(), thrower, itemEntity.level());
@@ -287,14 +320,13 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 		int vis = aspects.visSize();
 		if (hasWater() || vis > 0) {
 			waterAmount = 0;
-			heat = 0;
 			if (vis > 0) {
 				AuraHandler.addFlux(level, worldPosition, vis * 0.25f);
 				int flux = aspects.getAmount(Aspect.FLUX);
 				if (flux > 0) AuraHandler.addFlux(level, worldPosition, flux * 0.75f);
 			}
 			aspects = new AspectList();
-			level.playSound(null, worldPosition, SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 0.5f, 1.0f);
+			level.blockEvent(worldPosition, getBlockState().getBlock(), 2, 5);
 			setChanged();
 		}
 	}
@@ -306,7 +338,6 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 
 	@Override
 	public void setAspects(AspectList aspects) {
-		this.aspects = aspects;
 	}
 
 	@Override
@@ -316,14 +347,12 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 
 	@Override
 	public int addToContainer(Aspect tag, int amount) {
-		aspects.add(tag, amount);
-		setChanged();
 		return 0;
 	}
 
 	@Override
 	public boolean takeFromContainer(Aspect tag, int amount) {
-		return aspects.reduce(tag, amount);
+		return false;
 	}
 
 	@Override
@@ -333,7 +362,7 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 
 	@Override
 	public boolean doesContainerContainAmount(Aspect tag, int amount) {
-		return aspects.getAmount(tag) >= amount;
+		return false;
 	}
 
 	@Override
@@ -343,7 +372,7 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 
 	@Override
 	public int containerContains(Aspect tag) {
-		return aspects.getAmount(tag);
+		return 0;
 	}
 
 	public int getComparatorSignal() {

@@ -142,9 +142,8 @@ public class TileStabilizer extends BlockEntity {
 		tag.putInt("Energy", energy);
 	}
 
-	/** Real port of the true original's own {@code TilePedestal#findInstabilityMitigator}/
-	 * {@code seekSourceRecursive} - see this class's own doc comment for why a plain BFS through connected
-	 * real {@link BlockInlay} positions stands in for the original's own persistent charge-gradient search. */
+	/** The original's {@code TilePedestal#findInstabilityMitigator}/{@code seekSourceRecursive}: from a charged pedestal,
+	 * climb the {@link BlockInlay} charge gradient to a stabilizer. */
 	public static BlockPos findNearbyStabilizer(Level level, BlockPos from) {
 		// the original's TilePedestal.findInstabilityMitigator: only from a charged pedestal, climbing to ever higher
 		// charge along the inlay until a stabilizer with at least 5 energy is next to it

@@ -279,6 +279,10 @@ public class Thaumcraft {
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ThaumcraftBlockEntities.WATER_JUG.get(),
                 (tile, side) -> side == net.minecraft.core.Direction.UP ? tile.tank : null);
 
+        // the Crucible's water tank, on every side as the original
+        event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, ThaumcraftBlockEntities.CRUCIBLE.get(),
+                (tile, side) -> tile.getFluidHandler());
+
         // Same "expose the single item slot to hoppers/pipes" precedent as TileRechargePedestal above.
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, ThaumcraftBlockEntities.FOCAL_MANIPULATOR.get(),
                 (tile, side) -> ((thaumcraft.common.tiles.crafting.TileFocalManipulator) tile).getItemHandler());
@@ -557,6 +561,7 @@ public class Thaumcraft {
     public void onServerStopping(ServerStoppingEvent event) {
         AuraHandler.stopAllThreads();
         AuraHandler.server = null;
+        thaumcraft.common.lib.events.EssentiaHandler.clear();
     }
 
     @SubscribeEvent

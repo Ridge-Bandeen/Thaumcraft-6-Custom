@@ -1179,6 +1179,22 @@ public class ThaumcraftGameTests {
 		return tile;
 	}
 
+	/** As the original, the Crucible's tank is a water-only fluid capability on every side, so pipes can fill it. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleTankTakesPipedWaterOnly(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(1, 1, 1);
+		helper.setBlock(pos, BlocksTC.crucible.get());
+		TileCrucible tile = helper.getBlockEntity(pos);
+		var handler = helper.getLevel().getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.BLOCK, helper.absolutePos(pos), net.minecraft.core.Direction.NORTH);
+		helper.assertTrue(handler != null, "the crucible should expose a fluid handler");
+		int lava = handler.fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.LAVA, 1000),
+				net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+		int water = handler.fill(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1500),
+				net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+		helper.assertTrue(lava == 0 && water == 1000 && tile.waterAmount == 1000, "only water, up to a bucket: lava " + lava + ", water " + water);
+		helper.succeed();
+	}
+
 	/** As the original: a Casting Gauntlet, or anything used while sneaking, is not thrown into a boiling crucible
 	 * (the port dissolved a gauntlet clicked on it); a plain item is. */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
@@ -1279,7 +1295,7 @@ public class ThaumcraftGameTests {
 		// focus_1_crucible.json's requirement: quartz catalyst + vitreus 5 / praecantatio 3 / auram 2.
 		// Setting the pool directly rather than dissolving essentia items one at a time for this test -
 		// crucibleDissolvesEssentiaItemsIntoItsAspectPool already covers dissolving itself.
-		crucible.setAspects(new AspectList().add(Aspect.CRYSTAL, 5).add(Aspect.MAGIC, 3).add(Aspect.AURA, 2));
+		crucible.aspects = (new AspectList().add(Aspect.CRYSTAL, 5).add(Aspect.MAGIC, 3).add(Aspect.AURA, 2));
 
 		ItemStack catalyst = new ItemStack(Items.QUARTZ);
 		ItemStack remainder = crucible.attemptSmelt(catalyst, researchingPlayerAt(helper, pos), helper.getLevel());
@@ -1306,7 +1322,7 @@ public class ThaumcraftGameTests {
 	public static void crucibleCompletesTheThaumiumIngotRecipe(GameTestHelper helper) {
 		BlockPos pos = BlockPos.ZERO;
 		TileCrucible crucible = placeActiveCrucible(helper, pos);
-		crucible.setAspects(new AspectList().add(Aspect.MAGIC, 5).add(Aspect.EARTH, 5));
+		crucible.aspects = (new AspectList().add(Aspect.MAGIC, 5).add(Aspect.EARTH, 5));
 
 		ItemStack catalyst = new ItemStack(Items.IRON_INGOT);
 		ItemStack remainder = crucible.attemptSmelt(catalyst, researchingPlayerAt(helper, pos), helper.getLevel());
@@ -1342,7 +1358,7 @@ public class ThaumcraftGameTests {
 	public static void crucibleRecipesNeedAPlayerWhoKnowsTheResearch(GameTestHelper helper) {
 		BlockPos pos = BlockPos.ZERO;
 		TileCrucible crucible = placeActiveCrucible(helper, pos);
-		crucible.setAspects(new AspectList().add(Aspect.MAGIC, 5).add(Aspect.EARTH, 5));
+		crucible.aspects = (new AspectList().add(Aspect.MAGIC, 5).add(Aspect.EARTH, 5));
 		crucible.attemptSmelt(new ItemStack(Items.IRON_INGOT), null, helper.getLevel());
 		BlockPos absolute = helper.absolutePos(pos);
 		boolean crafted = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0)).stream()
@@ -1363,7 +1379,7 @@ public class ThaumcraftGameTests {
 	public static void crucibleCompletesTheBrassIngotRecipe(GameTestHelper helper) {
 		BlockPos pos = BlockPos.ZERO;
 		TileCrucible crucible = placeActiveCrucible(helper, pos);
-		crucible.setAspects(new AspectList().add(Aspect.TOOL, 5));
+		crucible.aspects = (new AspectList().add(Aspect.TOOL, 5));
 
 		ItemStack catalyst = new ItemStack(Items.IRON_INGOT);
 		ItemStack remainder = crucible.attemptSmelt(catalyst, researchingPlayerAt(helper, pos), helper.getLevel());
@@ -4310,7 +4326,7 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(source.applyBrace(), "applying a brace to a fresh jar should succeed");
 		helper.assertTrue(source.isBlocked(), "the source jar should really be blocked");
 
-		boolean drained = thaumcraft.common.lib.events.EssentiaHandler.drainEssentia(origin, Aspect.FIRE, 8);
+		boolean drained = thaumcraft.common.lib.events.EssentiaHandler.drainEssentia(origin, Aspect.FIRE, null, 8, 0);
 		helper.assertTrue(!drained, "a real pull-based scan should really skip a blocked jar entirely, even though it holds a matching aspect");
 		helper.succeed();
 	}
@@ -7820,7 +7836,7 @@ public class ThaumcraftGameTests {
 	public static void crucibleCompletesAClusterIronRecipe(GameTestHelper helper) {
 		BlockPos pos = BlockPos.ZERO;
 		TileCrucible crucible = placeActiveCrucible(helper, pos);
-		crucible.setAspects(new AspectList().add(Aspect.METAL, 5).add(Aspect.ORDER, 5));
+		crucible.aspects = (new AspectList().add(Aspect.METAL, 5).add(Aspect.ORDER, 5));
 
 		ItemStack catalyst = new ItemStack(Items.IRON_ORE);
 		ItemStack remainder = crucible.attemptSmelt(catalyst, researchingPlayerAt(helper, pos), helper.getLevel());
@@ -7851,7 +7867,7 @@ public class ThaumcraftGameTests {
 	public static void crucibleCompletesAClusterCinnabarRecipe(GameTestHelper helper) {
 		BlockPos pos = BlockPos.ZERO;
 		TileCrucible crucible = placeActiveCrucible(helper, pos);
-		crucible.setAspects(new AspectList().add(Aspect.METAL, 5).add(Aspect.ORDER, 5));
+		crucible.aspects = (new AspectList().add(Aspect.METAL, 5).add(Aspect.ORDER, 5));
 
 		ItemStack catalyst = new ItemStack(BlocksTC.oreCinnabar.get());
 		ItemStack remainder = crucible.attemptSmelt(catalyst, researchingPlayerAt(helper, pos), helper.getLevel());
@@ -7881,7 +7897,7 @@ public class ThaumcraftGameTests {
 	public static void crucibleCompletesAClusterGoldRecipe(GameTestHelper helper) {
 		BlockPos pos = BlockPos.ZERO;
 		TileCrucible crucible = placeActiveCrucible(helper, pos);
-		crucible.setAspects(new AspectList().add(Aspect.METAL, 5).add(Aspect.ORDER, 5));
+		crucible.aspects = (new AspectList().add(Aspect.METAL, 5).add(Aspect.ORDER, 5));
 
 		ItemStack catalyst = new ItemStack(Items.GOLD_ORE);
 		ItemStack remainder = crucible.attemptSmelt(catalyst, researchingPlayerAt(helper, pos), helper.getLevel());

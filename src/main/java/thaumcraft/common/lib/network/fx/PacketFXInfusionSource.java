@@ -9,19 +9,11 @@ import net.minecraft.world.item.ItemStack;
 import thaumcraft.Thaumcraft;
 
 /**
- * Replaces the old (1.12.2) {@code PacketFXInfusionSource} - a client-bound "this pedestal's own item is
- * being consumed toward the infusion altar's own current craft" notification, restored 2026-09-17 alongside
- * {@link thaumcraft.client.fx.ClientFxHandlers#handleInfusionSource}. Real, disclosed simplification: the
- * true original's own real client-side tracking used a persistent, per-tile {@code SourceFX} map with its own
- * real countdown (particles trickled from the pedestal for several real ticks BEFORE the item actually
- * vanished) - this port's own already-simplified {@code TileInfusionMatrix#craftCycle} consumes a matching
- * pedestal's own item in one real step, not a multi-tick countdown, so this fires one real short burst of the
- * same real particles at the moment of consumption instead of a real persistent multi-tick stream - same real
- * visual language (something flies from the pedestal toward the altar), simpler real trigger shape to match
- * this port's own already-simpler real crafting flow. The true original's own real XP-cost recipe branch
- * ({@code drawInfusionParticles4}, a player→altar variant) isn't ported either - {@code recipeXP}/
- * {@code recipeType} don't exist in this port's own real crafting model at all (a real, separate,
- * already-existing simplification, not new here).
+ * Replaces the old (1.12.2) {@code PacketFXInfusionSource}: a component on {@code source} has started flowing into the
+ * matrix at {@code target}. The client registers a stream in the matrix's {@code sourceFX} map
+ * ({@link thaumcraft.client.fx.ClientFxHandlers#handleInfusionSource}), which trickles particles for 60 ticks while
+ * the matrix's 5 cycles draw the item off. (The original's XP-cost variant, a player-to-altar stream, was dead code:
+ * its recipe type was always 0.)
  *
  * <p>Carries the real consumed {@link ItemStack} directly (not just its registry id) so the client can tell a
  * real {@code BlockItem} (draws the real block's own particle icon, {@link

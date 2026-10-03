@@ -17,8 +17,8 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * {@code EssentiaHandler}'s own doc comment for how that was confirmed by reading the original's real
  * {@code EssentiaHandler} directly rather than assumed from the recipe's flavor). Every 5 ticks, peeks at
  * the real {@link IEssentiaTransport} neighbor behind it (the tube network side, {@code getFacing().getOpposite()}),
- * and if it has essentia to spare, tries {@link EssentiaHandler#addEssentia} (an omnidirectional scan for
- * the nearest real {@code IAspectSource} within range - a jar, altar, etc.) to actually deposit it; only
+ * and if it has essentia to spare, tries {@link EssentiaHandler#addEssentia} (the nearest {@code IAspectSource} in
+ * the 16-deep box in front of its face - a jar, altar, etc.) to actually deposit it; only
  * once that succeeds does it really drain the network neighbor. Mounted with a real always-128 suction (its
  * own {@link #getSuctionAmount}) so a plain tube's own suction calculation preferentially routes flow toward
  * it over a weaker downstream demand - it's meant to win that competition, not participate passively.
@@ -53,7 +53,7 @@ public class TileEssentiaInput extends BlockEntity implements IEssentiaTransport
 
 		Aspect aspect = neighbor.getEssentiaType(towardTile);
 		if (aspect == null) return;
-		if (EssentiaHandler.addEssentia(tile, aspect, RANGE)) {
+		if (EssentiaHandler.addEssentia(tile, aspect, towardTile, RANGE, false, 5)) {
 			neighbor.takeEssentia(aspect, 1, towardTile);
 		}
 	}
@@ -110,5 +110,11 @@ public class TileEssentiaInput extends BlockEntity implements IEssentiaTransport
 	@Override
 	public int addEssentia(Aspect aspect, int amount, Direction face) {
 		return amount;
+	}
+
+	@Override
+	public void setRemoved() {
+		super.setRemoved();
+		thaumcraft.common.lib.events.EssentiaHandler.forget(this);
 	}
 }

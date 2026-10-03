@@ -2,9 +2,15 @@ package thaumcraft.common.lib.events;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -13,110 +19,241 @@ import thaumcraft.Thaumcraft;
 import thaumcraft.api.aspects.Aspect;
 import thaumcraft.api.aspects.IAspectSource;
 import thaumcraft.common.lib.network.fx.PacketFXEssentiaSource;
+import thaumcraft.common.tiles.devices.TileMirrorEssentia;
 
 /**
- * Replaces the old (1.12.2) {@code EssentiaHandler}. Lets a device pull ({@link #drainEssentia}) or push
- * ({@link #addEssentia}) one unit of a given aspect against the nearest matching {@link IAspectSource}
- * within range, rather than needing a direct {@code IEssentiaTransport} connection the way jars/tubes/the
- * condenser do. Real consumers: {@link thaumcraft.common.tiles.crafting.TileInfusionMatrix} (drain only),
- * {@link thaumcraft.common.tiles.devices.TileEssentiaInput}/{@code TileEssentiaOutput} (both directions -
- * a real long-range bridge between a tube network and a distant jar/altar/etc., not the physical-inventory
- * item interaction the original's own dispenser/hopper-themed crafting recipe might suggest at a glance;
- * confirmed by reading the original's own real {@code EssentiaHandler} directly - both methods only ever
- * scan for {@code IAspectSource} block entities, never inventory slots).
+ * Replaces the old (1.12.2) {@code EssentiaHandler}, as the original: lets a device pull ({@link #drainEssentia}) or
+ * push ({@link #addEssentia}) one unit of an aspect against the nearest {@link IAspectSource} in range, without a tube
+ * connection. Used by the Infusion Matrix (any direction, range 12), the essentia input/output blocks (a box in front
+ * of their face, range 16) and the Essentia Mirror (in front of its partner, range 8).
  *
- * Simplified for this pass (all real features, just not built yet):
- * <ul>
- * <li>No source-list caching / retry-delay bookkeeping - the original cached each tile's scan result and
- * only rescanned every 10 real-world seconds (per calling tile) to avoid repeating an expensive cube scan.
- * This does a fresh scan every call. Callers that poll this rarely (the infusion altar calls it roughly
- * once per craft cycle, the essentia input/output tiles every 5 ticks) are fine; a high-frequency consumer
- * would want a cache added back.</li>
- * <li>No directional cone restriction - the original supported scanning a narrow cone off one face
- * ({@code direction != null}); only the omnidirectional cube scan ({@code direction == null} in the
- * original) is ported. Real, deliberate simplification for the essentia input/output tiles specifically
- * (their own real original behavior scanned a cone off their front face) - same "drop the directional
- * precision, keep the core mechanic" precedent this port has used elsewhere.</li>
- * <li>No essentia-beam FX packet - dropped like everywhere else this session under this port's old blanket
- * "no client FX" rule; restored 2026-09-17, see {@link #broadcastStreamFx}'s own doc comment.</li>
- * </ul>
+ * <p>Each device's sources are found once and cached, nearest first; when none of them can serve a request the cache
+ * is dropped and that device isn't rescanned for 10 seconds. A mirror never counts its own partner as a source, and
+ * the mirror's own lookups skip every mirror. Adding fills containers already holding something before empty ones.
+ * Every unit moved shows a stream between the two ({@code ext}: how long the stream lingers, in ticks).
  */
-public class EssentiaHandler {
+public final class EssentiaHandler {
+
+	private static final long DELAY = 10000L;
+	private static final Map<GlobalPos, List<BlockPos>> SOURCES = new HashMap<>();
+	private static final Map<GlobalPos, Long> SOURCES_DELAY = new HashMap<>();
+
+	@Nullable
+	private static BlockEntity lat;
+	@Nullable
+	private static BlockEntity las;
+	@Nullable
+	private static Aspect lasp;
+	private static int lext;
 
 	private EssentiaHandler() {
 	}
 
-	/**
-	 * Finds the nearest {@link IAspectSource} within {@code range} blocks of {@code tile} (cube scan, any
-	 * direction) that isn't blocked and actually holds {@code aspect}, and takes one unit from it.
-	 *
-	 * @return true if a unit of the aspect was found and drained.
-	 */
-	public static boolean drainEssentia(BlockEntity tile, Aspect aspect, int range) {
-		BlockPos target = findNearest(tile, range, source -> source.doesContainerContainAmount(aspect, 1));
-		if (target == null) return false;
-		boolean taken = ((IAspectSource) tile.getLevel().getBlockEntity(target)).takeFromContainer(aspect, 1);
-		if (taken) {
-			broadcastStreamFx(tile.getLevel(), target, tile.getBlockPos(), aspect);
-		}
-		return taken;
+	private static GlobalPos key(BlockEntity tile) {
+		return GlobalPos.of(tile.getLevel().dimension(), tile.getBlockPos());
 	}
 
-	/**
-	 * Finds the nearest {@link IAspectSource} within {@code range} blocks of {@code tile} (cube scan, any
-	 * direction) that isn't blocked and can accept {@code aspect}, and adds one unit to it. Real mirror of
-	 * {@link #drainEssentia} - added for {@code TileEssentiaInput}'s own real "pull from the tube network,
-	 * push into a distant source" mechanic, which the original itself built on this exact same class.
-	 *
-	 * @return true if a real acceptor was found and given one unit.
-	 */
-	public static boolean addEssentia(BlockEntity tile, Aspect aspect, int range) {
-		BlockPos target = findNearest(tile, range, source -> source.doesContainerAccept(aspect));
-		if (target == null) return false;
-		boolean added = ((IAspectSource) tile.getLevel().getBlockEntity(target)).addToContainer(aspect, 1) == 0;
-		if (added) {
-			broadcastStreamFx(tile.getLevel(), tile.getBlockPos(), target, aspect);
-		}
-		return added;
+	/** The cached sources for {@code tile}, scanning for them if needed; null while none (or still in the delay). */
+	@Nullable
+	private static List<BlockPos> sources(BlockEntity tile, @Nullable Direction direction, int range) {
+		GlobalPos key = key(tile);
+		if (!SOURCES.containsKey(key)) getSources(tile, key, direction, range);
+		return SOURCES.get(key);
 	}
 
-	/** Real client FX broadcast restored 2026-09-17 (was dropped under this port's old blanket "no client FX"
-	 * rule) - a real vanilla-network client-bound packet ({@link PacketFXEssentiaSource}, matching the true
-	 * original's own real packet-based mechanism exactly, not a shared-static-field trick that would break
-	 * real multiplayer) notifying nearby clients that a unit of essentia just moved from {@code from} to
-	 * {@code to}, so they can show a real flowing {@link thaumcraft.client.fx.particles.FXEssentiaStream}. Safe
-	 * to call directly from this common-side class - {@link PacketFXEssentiaSource} is a plain data record with
-	 * no client-only type anywhere in it, the same real dist-safety property {@code PacketFXBlockArc} already
-	 * established. */
-	private static void broadcastStreamFx(Level level, BlockPos from, BlockPos to, Aspect aspect) {
+	private static void forget(GlobalPos key) {
+		SOURCES.remove(key);
+		SOURCES_DELAY.put(key, System.currentTimeMillis() + DELAY);
+	}
+
+	public static boolean drainEssentia(BlockEntity tile, Aspect aspect, @Nullable Direction direction, int range, int ext) {
+		return drainEssentia(tile, aspect, direction, range, false, ext);
+	}
+
+	/** Takes one {@code aspect} from the nearest source that has it. */
+	public static boolean drainEssentia(BlockEntity tile, Aspect aspect, @Nullable Direction direction, int range, boolean ignoreMirror, int ext) {
+		Level level = tile.getLevel();
+		if (level == null) return false;
+		List<BlockPos> es = sources(tile, direction, range);
+		if (es == null) return false;
+		for (BlockPos source : es) {
+			if (!(level.getBlockEntity(source) instanceof IAspectSource as)) break;
+			if (as.isBlocked() || (ignoreMirror && as instanceof TileMirrorEssentia)) continue;
+			if (as.takeFromContainer(aspect, 1)) {
+				broadcastStreamFx(level, source, tile.getBlockPos(), aspect, ext);
+				return true;
+			}
+		}
+		forget(key(tile));
+		return false;
+	}
+
+	/** As {@link #drainEssentia}, but only finds the source; {@link #confirmDrain} then takes the unit. */
+	public static boolean drainEssentiaWithConfirmation(BlockEntity tile, Aspect aspect, @Nullable Direction direction, int range, boolean ignoreMirror, int ext) {
+		Level level = tile.getLevel();
+		if (level == null) return false;
+		List<BlockPos> es = sources(tile, direction, range);
+		if (es == null) return false;
+		for (BlockPos source : es) {
+			if (!(level.getBlockEntity(source) instanceof IAspectSource as)) break;
+			if (as.isBlocked() || (ignoreMirror && as instanceof TileMirrorEssentia)) continue;
+			if (as.doesContainerContainAmount(aspect, 1)) {
+				las = (BlockEntity) as;
+				lasp = aspect;
+				lat = tile;
+				lext = ext;
+				return true;
+			}
+		}
+		forget(key(tile));
+		return false;
+	}
+
+	public static void confirmDrain() {
+		if (las != null && lasp != null && lat != null && ((IAspectSource) las).takeFromContainer(lasp, 1)) {
+			broadcastStreamFx(lat.getLevel(), las.getBlockPos(), lat.getBlockPos(), lasp, lext);
+		}
+		las = null;
+		lasp = null;
+		lat = null;
+	}
+
+	/** Gives one {@code aspect} to the nearest source that takes it - one already holding essentia before an empty one. */
+	public static boolean addEssentia(BlockEntity tile, Aspect aspect, @Nullable Direction direction, int range, boolean ignoreMirror, int ext) {
+		Level level = tile.getLevel();
+		if (level == null) return false;
+		List<BlockPos> es = sources(tile, direction, range);
+		if (es == null) return false;
+		List<BlockPos> empties = new ArrayList<>();
+		for (BlockPos source : es) {
+			if (!(level.getBlockEntity(source) instanceof IAspectSource as)) break;
+			if (as.isBlocked() || (ignoreMirror && as instanceof TileMirrorEssentia)) continue;
+			if (as.doesContainerAccept(aspect) && (as.getAspects() == null || as.getAspects().visSize() == 0)) {
+				empties.add(source);
+			} else if (as.doesContainerAccept(aspect) && as.addToContainer(aspect, 1) <= 0) {
+				broadcastStreamFx(level, tile.getBlockPos(), source, aspect, ext);
+				return true;
+			}
+		}
+		for (BlockPos source : empties) {
+			if (!(level.getBlockEntity(source) instanceof IAspectSource as)) break;
+			if (as.doesContainerAccept(aspect) && as.addToContainer(aspect, 1) <= 0) {
+				broadcastStreamFx(level, tile.getBlockPos(), source, aspect, ext);
+				return true;
+			}
+		}
+		forget(key(tile));
+		return false;
+	}
+
+	/** Whether any source in range holds {@code aspect}. */
+	public static boolean findEssentia(BlockEntity tile, Aspect aspect, @Nullable Direction direction, int range, boolean ignoreMirror) {
+		Level level = tile.getLevel();
+		if (level == null) return false;
+		List<BlockPos> es = sources(tile, direction, range);
+		if (es == null) return false;
+		for (BlockPos source : es) {
+			if (!(level.getBlockEntity(source) instanceof IAspectSource as)) break;
+			if (as.isBlocked() || (ignoreMirror && as instanceof TileMirrorEssentia)) continue;
+			if (as.doesContainerContainAmount(aspect, 1)) return true;
+		}
+		return false;
+	}
+
+	/** Whether any source in range would take {@code aspect}. (As the original, the very first call - before the
+	 * sources are cached - answers whether one holds it instead.) */
+	public static boolean canAcceptEssentia(BlockEntity tile, Aspect aspect, @Nullable Direction direction, int range, boolean ignoreMirror) {
+		Level level = tile.getLevel();
+		if (level == null) return false;
+		GlobalPos key = key(tile);
+		if (!SOURCES.containsKey(key)) {
+			getSources(tile, key, direction, range);
+			return SOURCES.containsKey(key) && findEssentia(tile, aspect, direction, range, ignoreMirror);
+		}
+		for (BlockPos source : SOURCES.get(key)) {
+			if (!(level.getBlockEntity(source) instanceof IAspectSource as)) break;
+			if (ignoreMirror && as instanceof TileMirrorEssentia) continue;
+			if (!as.isBlocked() && as.doesContainerAccept(aspect)) return true;
+		}
+		return false;
+	}
+
+	/** Forgets {@code tile}'s cached sources, so the next request scans again. */
+	public static void refreshSources(BlockEntity tile) {
+		SOURCES.remove(key(tile));
+	}
+
+	/** A device was removed: forget its sources and its retry delay too, so whatever is placed there next starts
+	 * fresh (the original kept them, so a new device could inherit a stale list or wait out a stale delay). */
+	public static void forget(BlockEntity tile) {
+		if (tile.getLevel() == null) return;
+		SOURCES.remove(key(tile));
+		SOURCES_DELAY.remove(key(tile));
+	}
+
+	/** The server stopped: the caches belong to its levels. */
+	public static void clear() {
+		SOURCES.clear();
+		SOURCES_DELAY.clear();
+		las = null;
+		lasp = null;
+		lat = null;
+	}
+
+	/** The original's getSources: a cube of {@code range} around {@code tile} with no direction, else the
+	 * {@code range}-deep box in front of {@code direction}'s face; nearest first. */
+	private static void getSources(BlockEntity tile, GlobalPos key, @Nullable Direction direction, int range) {
+		Long delay = SOURCES_DELAY.get(key);
+		if (delay != null) {
+			if (delay > System.currentTimeMillis()) return;
+			SOURCES_DELAY.remove(key);
+		}
+		Level level = tile.getLevel();
+		BlockPos origin = tile.getBlockPos();
+		int start = 0;
+		if (direction == null) {
+			start = -range;
+			direction = Direction.UP;
+		}
+		List<BlockPos> found = new ArrayList<>();
+		for (int aa = -range; aa <= range; aa++) {
+			for (int bb = -range; bb <= range; bb++) {
+				for (int cc = start; cc < range; cc++) {
+					if (aa == 0 && bb == 0 && cc == 0) continue;
+					BlockPos p;
+					if (direction.getStepY() != 0) {
+						p = origin.offset(aa, cc * direction.getStepY(), bb);
+					} else if (direction.getStepX() == 0) {
+						p = origin.offset(aa, bb, cc * direction.getStepZ());
+					} else {
+						p = origin.offset(cc * direction.getStepX(), aa, bb);
+					}
+					if (!(level.getBlockEntity(p) instanceof IAspectSource)) continue;
+					// a mirror never draws through the mirror linked to it
+					if (tile instanceof TileMirrorEssentia && level.getBlockEntity(p) instanceof TileMirrorEssentia other
+							&& other.getLink() != null && other.getLink().pos().equals(origin) && other.getLink().dimension().equals(level.dimension())) {
+						continue;
+					}
+					found.add(p);
+				}
+			}
+		}
+		if (found.isEmpty()) {
+			SOURCES_DELAY.put(key, System.currentTimeMillis() + DELAY);
+			return;
+		}
+		found.sort(Comparator.comparingDouble(p -> p.distSqr(origin)));
+		SOURCES.put(key, found);
+	}
+
+	/** A stream of essentia from {@code from} to {@code to} on nearby clients (PacketFXEssentiaSource). */
+	private static void broadcastStreamFx(Level level, BlockPos from, BlockPos to, Aspect aspect, int ext) {
 		if (!(level instanceof ServerLevel serverLevel)) return;
 		try {
 			PacketDistributor.sendToPlayersNear(serverLevel, null, to.getX(), to.getY(), to.getZ(), 32.0,
-					PacketFXEssentiaSource.of(from, to, aspect.getColor(), 0));
+					PacketFXEssentiaSource.of(from, to, aspect.getColor(), ext));
 		} catch (Exception e) {
 			Thaumcraft.LOGGER.debug("Essentia stream FX packet failed to send (no real client connection?)", e);
 		}
-	}
-
-	private static BlockPos findNearest(BlockEntity tile, int range, java.util.function.Predicate<IAspectSource> matches) {
-		Level level = tile.getLevel();
-		if (level == null) return null;
-
-		BlockPos origin = tile.getBlockPos();
-		List<BlockPos> candidates = new ArrayList<>();
-		for (BlockPos p : BlockPos.betweenClosed(origin.offset(-range, -range, -range), origin.offset(range, range, range))) {
-			if (p.equals(origin)) continue;
-			if (level.getBlockEntity(p) instanceof IAspectSource) {
-				candidates.add(p.immutable());
-			}
-		}
-		candidates.sort(Comparator.comparingDouble(p -> p.distSqr(origin)));
-
-		for (BlockPos p : candidates) {
-			if (level.getBlockEntity(p) instanceof IAspectSource source && !source.isBlocked() && matches.test(source)) {
-				return p;
-			}
-		}
-		return null;
 	}
 }

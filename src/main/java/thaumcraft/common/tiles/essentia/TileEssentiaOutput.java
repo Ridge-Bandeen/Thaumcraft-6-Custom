@@ -15,9 +15,9 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * Replaces the old (1.12.2) {@code TileEssentiaOutput} - {@link TileEssentiaInput}'s exact mirror image (see
  * that class's own doc comment for the real "long-range bridge, not a physical-inventory device" mechanic
  * and why). Every 5 ticks, checks whether the real {@link IEssentiaTransport} neighbor behind it (the tube
- * network side) actually wants anything, and if so tries {@link EssentiaHandler#drainEssentia} (an
- * omnidirectional scan for the nearest real {@code IAspectSource} within range) to pull 1 unit, pushing it
- * into the network neighbor only once that succeeds.
+ * network side) actually wants anything, and if so finds that essentia in the nearest {@code IAspectSource} in the
+ * 16-deep box in front of its face ({@link EssentiaHandler#drainEssentiaWithConfirmation}), taking the unit only once
+ * the network neighbor has accepted it.
  *
  * {@link #canInputFrom} is always {@code false} and {@link #addEssentia} is a real, deliberate no-op accept
  * - this tile holds no essentia of its own and is never a legitimate push target from the network side; it
@@ -48,8 +48,9 @@ public class TileEssentiaOutput extends BlockEntity implements IEssentiaTranspor
 		Aspect aspect = neighbor.getSuctionType(towardTile);
 		if (aspect == null) return;
 
-		if (EssentiaHandler.drainEssentia(tile, aspect, RANGE)) {
-			neighbor.addEssentia(aspect, 1, towardTile);
+		// as the original: find the essentia, and only take it once the network has accepted the unit
+		if (EssentiaHandler.drainEssentiaWithConfirmation(tile, aspect, towardTile, RANGE, false, 5) && neighbor.addEssentia(aspect, 1, towardTile) > 0) {
+			EssentiaHandler.confirmDrain();
 		}
 	}
 
@@ -105,5 +106,11 @@ public class TileEssentiaOutput extends BlockEntity implements IEssentiaTranspor
 	@Override
 	public int addEssentia(Aspect aspect, int amount, Direction face) {
 		return amount;
+	}
+
+	@Override
+	public void setRemoved() {
+		super.setRemoved();
+		thaumcraft.common.lib.events.EssentiaHandler.forget(this);
 	}
 }

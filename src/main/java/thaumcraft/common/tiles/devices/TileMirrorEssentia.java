@@ -3,6 +3,9 @@ package thaumcraft.common.tiles.devices;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
+import thaumcraft.common.lib.events.EssentiaHandler;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
@@ -32,30 +35,15 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * able to transport essentia that has been drawn from a source towards something like an Infusion Matrix. In
  * effect the mirrors allow these things to draw essentia from sources via the mirror."). A puller
  * ({@link thaumcraft.common.tiles.crafting.TileInfusionMatrix} via {@link thaumcraft.common.lib.events.EssentiaHandler})
- * calls {@link #takeFromContainer}/{@link #doesContainerAccept} on THIS tile; this tile, in turn, does its own
- * small local cube-scan for a real {@link IAspectContainer} near the LINKED partner's position (any
- * dimension) and forwards the request there - the original's own real "let things draw from sources via the
- * mirror" relay, just expressed as a direct local scan instead of the original's {@code EssentiaHandler}
- * overload (direction + range + a live {@code TileMirrorEssentia}-aware exclusion) that was never itself
- * ported (see this port's own {@code EssentiaHandler} doc comment, which explicitly flags exactly this gap).
- *
- * Real, documented simplifications vs. the original:
- * <ul>
- * <li>Omnidirectional scan around the linked partner (range {@value #SCAN_RANGE}) instead of the original's
- * single-facing cone off the partner's own facing - this port's {@code EssentiaHandler.drainEssentia} already
- * established the omnidirectional-cube-scan-instead-of-a-directional-cone simplification for the exact same
- * reason (its own doc comment); kept consistent here rather than inventing a second, narrower scan shape.</li>
- * <li>The scan explicitly skips any other {@code TileMirrorEssentia} it finds, so two mirrors placed near
- * each other can never accidentally chain a pull through one another - the original has no such guard, but
- * also has no real scenario needing one (mirrors are normally placed far apart); a defensive addition, not a
- * missing feature.</li>
- * </ul>
+ * calls {@link #takeFromContainer}/{@link #doesContainerAccept} on THIS tile, which, as the original, looks for a
+ * source in the 8-deep box in front of its LINKED partner (through {@code EssentiaHandler}, skipping other mirrors)
+ * and forwards the request there. Each unit moved adds instability.
  */
 public class TileMirrorEssentia extends BlockEntity implements IAspectSource {
 
 	private static final int BASE_CYCLE = 40;
 	private static final int MAX_CYCLE = 600;
-	private static final int SCAN_RANGE = 8;
+	private static final int RANGE = 8;
 
 	@Nullable
 	private MirrorLink link;
@@ -157,38 +145,41 @@ public class TileMirrorEssentia extends BlockEntity implements IAspectSource {
 	public void setAspects(AspectList aspects) {
 	}
 
+	/** The partner's facing - where its essentia is looked for. */
+	private static Direction facingOf(TileMirrorEssentia target) {
+		BlockState state = target.getBlockState();
+		return state.hasProperty(BlockStateProperties.FACING) ? state.getValue(BlockStateProperties.FACING) : Direction.UP;
+	}
+
 	@Override
 	public boolean doesContainerAccept(Aspect tag) {
+		// as the original: a mirror without a partner says yes (and then takes nothing)
 		TileMirrorEssentia target = targetTile();
-		return target != null && scanFor(target, tag, true) != null;
+		return target == null || EssentiaHandler.canAcceptEssentia(target, tag, facingOf(target), RANGE, true);
 	}
 
 	@Override
 	public int addToContainer(Aspect tag, int amount) {
-		if (amount != 1 || !isLinkValid()) {
+		if (!isLinkValid() || amount > 1) {
 			return amount;
 		}
 		TileMirrorEssentia target = targetTile();
-		IAspectContainer sink = target == null ? null : scanFor(target, tag, true);
-		if (sink != null && sink.addToContainer(tag, 1) == 0) {
-			addInstability(1);
-			return 0;
-		}
-		return amount;
+		if (target == null) return amount;
+		boolean added = EssentiaHandler.addEssentia(target, tag, facingOf(target), RANGE, true, 5);
+		if (added) addInstability(amount);
+		return added ? 0 : 1;
 	}
 
 	@Override
 	public boolean takeFromContainer(Aspect tag, int amount) {
-		if (amount != 1 || !isLinkValid()) {
+		if (!isLinkValid() || amount > 1) {
 			return false;
 		}
 		TileMirrorEssentia target = targetTile();
-		IAspectContainer source = target == null ? null : scanFor(target, tag, false);
-		if (source != null && source.takeFromContainer(tag, 1)) {
-			addInstability(1);
-			return true;
-		}
-		return false;
+		if (target == null) return false;
+		boolean taken = EssentiaHandler.drainEssentia(target, tag, facingOf(target), RANGE, true, 5);
+		if (taken) addInstability(amount);
+		return taken;
 	}
 
 	@Override
@@ -198,11 +189,11 @@ public class TileMirrorEssentia extends BlockEntity implements IAspectSource {
 
 	@Override
 	public boolean doesContainerContainAmount(Aspect tag, int amount) {
-		if (amount != 1 || !isLinkValid()) {
+		if (!isLinkValid() || amount > 1) {
 			return false;
 		}
 		TileMirrorEssentia target = targetTile();
-		return target != null && scanFor(target, tag, false) != null;
+		return target != null && EssentiaHandler.findEssentia(target, tag, facingOf(target), RANGE, true);
 	}
 
 	@Override
@@ -213,34 +204,6 @@ public class TileMirrorEssentia extends BlockEntity implements IAspectSource {
 	@Override
 	public int containerContains(Aspect tag) {
 		return 0;
-	}
-
-	/** Cube-scans (range {@value #SCAN_RANGE}) around {@code target}'s own position for the nearest real
-	 * {@link IAspectContainer} - excluding {@code target} itself and any other {@code TileMirrorEssentia} - that
-	 * either accepts ({@code forAdd}) or holds ({@code !forAdd}) {@code tag}. */
-	@Nullable
-	private static IAspectContainer scanFor(TileMirrorEssentia target, Aspect tag, boolean forAdd) {
-		Level targetLevel = target.getLevel();
-		if (targetLevel == null) {
-			return null;
-		}
-		BlockPos origin = target.getBlockPos();
-		BlockPos best = null;
-		double bestDist = Double.MAX_VALUE;
-		for (BlockPos p : BlockPos.betweenClosed(origin.offset(-SCAN_RANGE, -SCAN_RANGE, -SCAN_RANGE), origin.offset(SCAN_RANGE, SCAN_RANGE, SCAN_RANGE))) {
-			if (p.equals(origin)) continue;
-			BlockEntity be = targetLevel.getBlockEntity(p);
-			if (!(be instanceof IAspectContainer container) || be instanceof TileMirrorEssentia) continue;
-			if (be instanceof IAspectSource source && source.isBlocked()) continue;
-			boolean matches = forAdd ? container.doesContainerAccept(tag) : container.doesContainerContainAmount(tag, 1);
-			if (!matches) continue;
-			double dist = p.distSqr(origin);
-			if (dist < bestDist) {
-				bestDist = dist;
-				best = p.immutable();
-			}
-		}
-		return best == null ? null : (IAspectContainer) targetLevel.getBlockEntity(best);
 	}
 
 	@Override
@@ -260,5 +223,11 @@ public class TileMirrorEssentia extends BlockEntity implements IAspectSource {
 				? MirrorLink.CODEC.parse(registries.createSerializationContext(NbtOps.INSTANCE), tag.get("link")).result().orElse(null)
 				: null;
 		instability = tag.getInt("instability");
+	}
+
+	@Override
+	public void setRemoved() {
+		super.setRemoved();
+		thaumcraft.common.lib.events.EssentiaHandler.forget(this);
 	}
 }

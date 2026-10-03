@@ -313,6 +313,50 @@ public final class ClientFxHandlers {
 		addDelayed(fb, 0);
 	}
 
+	/** The Crucible's block events, as the original's receiveClientEvent: 99 a craft (a puff over it and the spill
+	 * sound), 1 a puff above it, 2 dissolving or spilling (the spill sound and boiling bubbles rising {@code param} fast). */
+	public static void crucibleEvent(net.minecraft.world.level.Level level, BlockPos pos, int id, int param) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		switch (id) {
+			case 99 -> {
+				drawBamf(clientLevel, pos.getX() + 0.5, pos.getY() + 1.25, pos.getZ() + 0.5, 0.5f, 0.1f, 0.6f, true, true, net.minecraft.core.Direction.UP);
+				level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, thaumcraft.common.registry.ThaumcraftSounds.SPILL.get(),
+						SoundSource.BLOCKS, 0.2f, 1.0f, false);
+			}
+			case 1 -> drawBamf(clientLevel, pos.getX() + 0.5, pos.getY() + 1.5, pos.getZ() + 0.5, 0.5f, 0.1f, 0.6f, true, true, net.minecraft.core.Direction.UP);
+			case 2 -> {
+				level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, thaumcraft.common.registry.ThaumcraftSounds.SPILL.get(),
+						SoundSource.BLOCKS, 0.2f, 1.0f, false);
+				if (level.getBlockEntity(pos) instanceof thaumcraft.common.tiles.crafting.TileCrucible tile) {
+					for (int q = 0; q < 10; q++) spawnCrucibleBoil(clientLevel, pos, tile, param);
+				}
+			}
+			default -> {
+			}
+		}
+	}
+
+	/** The original's {@code FXDispatcher#crucibleBoil}: two bubbles off the surface, coloured by a dissolved aspect. */
+	private static void spawnCrucibleBoil(ClientLevel level, BlockPos pos, thaumcraft.common.tiles.crafting.TileCrucible tile, int j) {
+		for (int a = 0; a < 2; a++) {
+			var fb = new thaumcraft.client.fx.particles.FXGeneric(level, pos.getX() + 0.2f + level.random.nextFloat() * 0.6f, pos.getY() + 0.1f + tile.getFluidHeight(),
+					pos.getZ() + 0.2f + level.random.nextFloat() * 0.6f, 0.0, 0.002, 0.0);
+			fb.setMaxAge((int) (7.0 + 8.0 / (Math.random() * 0.8 + 0.2)));
+			fb.setScale(level.random.nextFloat() * 0.3f + 0.2f);
+			if (tile.aspects.size() == 0) {
+				fb.setRBGColorF(1.0f, 1.0f, 1.0f);
+			} else {
+				int color = tile.aspects.getAspects()[level.random.nextInt(tile.aspects.getAspects().length)].getColor();
+				fb.setRBGColorF(((color >> 16) & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, (color & 255) / 255.0f);
+			}
+			fb.setRandomMovementScale(0.001f, 0.001f, 0.001f);
+			fb.setGravity(-0.025f * j);
+			fb.setParticle(64);
+			fb.setFinalFrames(65, 66);
+			addDelayed(fb, 0);
+		}
+	}
+
 	/** The original's {@code FXDispatcher#crucibleBubble}: a bubble coloured by a dissolved aspect, drifting up. */
 	public static void spawnCrucibleBubble(net.minecraft.world.level.Level level, double x, double y, double z, float r, float g, float b) {
 		if (!(level instanceof ClientLevel clientLevel)) return;
