@@ -14129,23 +14129,43 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
-	 * Real coverage for {@link thaumcraft.common.lib.events.WarpEvents#checkDeathGaze} - a real nearby
-	 * visible living entity should really be forced to target the wearer and inflicted with real Wither.
+	 * {@link thaumcraft.common.lib.events.WarpEvents#checkDeathGaze}: what the player looks at turns on them and
+	 * withers; what's behind them doesn't (the original's view cone), and neither does the player.
 	 */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void deathGazeForcesNearbyVisibleEntitiesToTargetAndWither(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
-		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(1, 0, 1)));
 		player.addEffect(new net.minecraft.world.effect.MobEffectInstance(thaumcraft.common.registry.ThaumcraftMobEffects.DEATH_GAZE, 200, 0));
+		player.setYRot(-90.0f); // facing +x
+		player.setXRot(0.0f);
 
 		Pig pig = EntityType.PIG.create(level);
 		pig.moveTo(player.getX() + 3, player.getY(), player.getZ());
 		level.addFreshEntity(pig);
+		Pig behind = EntityType.PIG.create(level);
+		behind.moveTo(player.getX() - 1, player.getY(), player.getZ());
+		level.addFreshEntity(behind);
 
 		thaumcraft.common.lib.events.WarpEvents.checkDeathGaze(player);
 
 		helper.assertTrue(pig.hasEffect(MobEffects.WITHER), "a real nearby visible entity should really be inflicted with Wither by Death Gaze");
 		helper.assertTrue(pig.getLastHurtByMob() == player, "the entity's real last-hurt-by-mob should really be set to the death-gaze wearer");
+		helper.assertTrue(!behind.hasEffect(MobEffects.WITHER), "a pig behind the player is outside the gaze");
+		helper.assertTrue(!player.hasEffect(MobEffects.WITHER), "the gaze never withers the player themself");
+		helper.succeed();
+	}
+
+	/** As the original, warp curses and vis exhaustion from flux can't be drunk away with milk; other effects can. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void warpCursesResistMilk(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.addEffect(thaumcraft.common.registry.ThaumcraftMobEffects.milkProof(new net.minecraft.world.effect.MobEffectInstance(
+				thaumcraft.common.registry.ThaumcraftMobEffects.DEATH_GAZE, 200, 0, true, true)));
+		player.addEffect(new net.minecraft.world.effect.MobEffectInstance(MobEffects.NIGHT_VISION, 200, 0, true, true));
+		player.removeEffectsCuredBy(net.neoforged.neoforge.common.EffectCures.MILK);
+		helper.assertTrue(player.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.DEATH_GAZE), "milk shouldn't cure a warp curse");
+		helper.assertTrue(!player.hasEffect(MobEffects.NIGHT_VISION), "milk still cures an ordinary effect");
 		helper.succeed();
 	}
 

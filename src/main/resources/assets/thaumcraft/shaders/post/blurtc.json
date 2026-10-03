@@ -4,9 +4,10 @@
     ],
     "passes": [
         {
-            "name": "blur",
+            "name": "box_blur",
             "intarget": "minecraft:main",
             "outtarget": "swap",
+            "use_linear_filter": true,
             "uniforms": [
                 {
                     "name": "BlurDir",
@@ -19,9 +20,10 @@
             ]
         },
         {
-            "name": "blur",
+            "name": "box_blur",
             "intarget": "swap",
             "outtarget": "minecraft:main",
+            "use_linear_filter": true,
             "uniforms": [
                 {
                     "name": "BlurDir",

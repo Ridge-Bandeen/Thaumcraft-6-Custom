@@ -365,7 +365,7 @@ public class EntityFluxRift extends Entity {
 						player.displayClientMessage(Component.translatable("tc.fluxevent.2").withStyle(net.minecraft.ChatFormatting.DARK_PURPLE, net.minecraft.ChatFormatting.ITALIC), true);
 					}
 					try {
-						target.addEffect(new MobEffectInstance(ThaumcraftMobEffects.INFECTIOUS_VIS_EXHAUST, 3000, 2, false, true));
+						target.addEffect(ThaumcraftMobEffects.milkProof(new MobEffectInstance(ThaumcraftMobEffects.INFECTIOUS_VIS_EXHAUST, 3000, 2, false, true)));
 					} catch (Exception ignored) {
 					}
 				}

@@ -32,18 +32,11 @@ import thaumcraft.common.registry.ThaumcraftEntities;
 import thaumcraft.common.registry.ThaumcraftMobEffects;
 
 /**
- * Replaces the old (1.12.2) {@code WarpEvents} - the real periodic "Warp misfortune" system, ported as-is
- * from that class's own real logic. Two real, deliberate cuts from the original:
- * <ul>
- * <li>The original's mid-tier misfortune spawned real {@code EntityEldritchGuardian} adds alongside the
- * warning message - that entity is still entirely stale/unported (a whole separate boss-tier mob), so this
- * keeps the real sound/message/screen-mist cue but spawns no guardians. {@code EntityMindSpider} and {@code
- * EntityCultistPortalLesser} (the other two "something is coming for you" spawns) ARE already real, modern
- * entities from earlier this session and are ported in full.</li>
- * <li>Every warp event sends the heartbeat to the player (unless their {@code nostress} option is on), and the two
- * mildest tiers play the original's creeper hiss / distant explosion. The original's fog-thickening packet codes
- * have no client effect here.</li>
- * </ul>
+ * Replaces the old (1.12.2) {@code WarpEvents} - the periodic "Warp misfortune" system, as the original: every warp
+ * event sends the heartbeat (unless the player's {@code nostress} option is on), the two mildest tiers play the
+ * creeper hiss / distant explosion, the mist tiers thicken the player's fog and bring Eldritch Guardians, and the
+ * curses can't be drunk away with milk. The screen effects of the curses are client-side
+ * ({@link thaumcraft.client.lib.WarpScreenEffects}).
  * {@code getWarpFromGear} is rebuilt around {@link WornGearHelper} (hotbar/offhand) plus armor, replacing
  * the original's Baubles-slot scan - same real substitution this session's whole bauble-adaptation pass
  * already established.
@@ -98,12 +91,7 @@ public class WarpEvents {
 		}
 
 		if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
-			try {
-				net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(sp,
-						new thaumcraft.common.lib.network.ClientboundMiscEventPacket(thaumcraft.common.lib.network.ClientboundMiscEventPacket.HEARTBEAT));
-			} catch (Exception e) {
-				Thaumcraft.LOGGER.debug("Heartbeat packet failed to send (no real client connection?)", e);
-			}
+			thaumcraft.common.lib.network.ClientboundMiscEventPacket.send(sp, thaumcraft.common.lib.network.ClientboundMiscEventPacket.HEARTBEAT);
 		}
 		// The two mildest tiers are scare sounds. As in the original they're played to everyone nearby *except* the
 		// warped player themselves (Level#playSound with a player excludes that player), and skipped under nostress.
@@ -124,57 +112,57 @@ public class WarpEvents {
 		} else if (eff <= 12) {
 			message(player, "warp.text.11");
 		} else if (eff <= 16) {
-			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.VIS_EXHAUST, 5000, Math.min(3, warp / 15), false, true));
+			player.addEffect(curse(ThaumcraftMobEffects.VIS_EXHAUST, 5000, Math.min(3, warp / 15)));
 			message(player, "warp.text.1");
 		} else if (eff <= 20) {
-			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.THAUMARHIA, Math.min(32000, 10 * warp), 0, false, true));
+			player.addEffect(curse(ThaumcraftMobEffects.THAUMARHIA, Math.min(32000, 10 * warp), 0));
 			message(player, "warp.text.15");
 		} else if (eff <= 24) {
-			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.UNNATURAL_HUNGER, 5000, Math.min(3, warp / 15), false, true));
+			player.addEffect(curse(ThaumcraftMobEffects.UNNATURAL_HUNGER, 5000, Math.min(3, warp / 15)));
 			message(player, "warp.text.2");
 		} else if (eff <= 28) {
 			message(player, "warp.text.12");
 		} else if (eff <= 32) {
-			spawnMist(player);
+			spawnMist(player, 1);
 		} else if (eff <= 36) {
-			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.BLURRED_VISION, Math.min(32000, 10 * warp), 0, false, true));
+			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.BLURRED_VISION, Math.min(32000, 10 * warp), 0, true, true));
 		} else if (eff <= 40) {
-			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.SUN_SCORNED, 5000, Math.min(3, warp / 15), false, true));
+			player.addEffect(curse(ThaumcraftMobEffects.SUN_SCORNED, 5000, Math.min(3, warp / 15)));
 			message(player, "warp.text.5");
 		} else if (eff <= 44) {
-			player.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 1200, Math.min(3, warp / 15), false, true));
+			player.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 1200, Math.min(3, warp / 15), true, true));
 			message(player, "warp.text.9");
 		} else if (eff <= 48) {
-			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.INFECTIOUS_VIS_EXHAUST, 6000, Math.min(3, warp / 15), false, true));
+			player.addEffect(ThaumcraftMobEffects.milkProof(new MobEffectInstance(ThaumcraftMobEffects.INFECTIOUS_VIS_EXHAUST, 6000, Math.min(3, warp / 15))));
 			message(player, "warp.text.1");
 		} else if (eff <= 52) {
-			player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, Math.min(40 * warp, 6000), 0, false, true));
+			player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, Math.min(40 * warp, 6000), 0, true, true));
 			message(player, "warp.text.10");
 		} else if (eff <= 56) {
-			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.DEATH_GAZE, 6000, Math.min(3, warp / 15), false, true));
+			player.addEffect(curse(ThaumcraftMobEffects.DEATH_GAZE, 6000, Math.min(3, warp / 15)));
 			message(player, "warp.text.4");
 		} else if (eff <= 60) {
 			suddenlySpiders(player, warp, false);
 		} else if (eff <= 64) {
 			message(player, "warp.text.13");
 		} else if (eff <= 68) {
-			spawnMist(player);
+			spawnMist(player, warp / 30);
 		} else if (eff <= 72) {
-			player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, Math.min(32000, 5 * warp), 0, false, true));
+			player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, Math.min(32000, 5 * warp), 0, true, true));
 		} else if (eff == 76) {
 			if (nw > 0) {
 				ThaumcraftApi.internalMethods.addWarpToPlayer(player, -1, EnumWarpType.NORMAL);
 			}
 			message(player, "warp.text.14");
 		} else if (eff <= 80) {
-			player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.UNNATURAL_HUNGER, 6000, Math.min(3, warp / 15), false, true));
+			player.addEffect(curse(ThaumcraftMobEffects.UNNATURAL_HUNGER, 6000, Math.min(3, warp / 15)));
 			message(player, "warp.text.2");
 		} else if (eff <= 88) {
 			spawnPortal(player);
 		} else if (eff <= 92) {
 			suddenlySpiders(player, warp, true);
 		} else {
-			spawnMist(player);
+			spawnMist(player, warp / 15);
 		}
 
 		if (actualWarp > 10 && !ThaumcraftCapabilities.knowsResearch(player, "BATHSALTS") && !ThaumcraftCapabilities.knowsResearch(player, "!BATHSALTS")) {
@@ -193,10 +181,37 @@ public class WarpEvents {
 		player.displayClientMessage(Component.translatable(key).withStyle(net.minecraft.ChatFormatting.DARK_PURPLE, net.minecraft.ChatFormatting.ITALIC), true);
 	}
 
-	/** Real port of the original's own {@code spawnMist} - minus the (dropped, see this class's own doc
-	 * comment) real {@code EntityEldritchGuardian} spawns it triggered on some tiers. */
-	private static void spawnMist(Player player) {
+	/** A warp curse as the original applied it: ambient, with particles, and immune to milk. */
+	private static MobEffectInstance curse(net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> effect, int duration, int amplifier) {
+		return ThaumcraftMobEffects.milkProof(new MobEffectInstance(effect, duration, amplifier, true, true));
+	}
+
+	/** The original's spawnMist: the player's fog thickens for two minutes and up to 8 Eldritch Guardians come. */
+	private static void spawnMist(Player player, int guardians) {
+		if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+			thaumcraft.common.lib.network.ClientboundMiscEventPacket.send(sp, thaumcraft.common.lib.network.ClientboundMiscEventPacket.MIST);
+		}
+		for (int a = 0; a < Math.min(8, guardians); a++) {
+			spawnGuardian(player);
+		}
 		message(player, "warp.text.6");
+	}
+
+	private static void spawnGuardian(Player player) {
+		if (!(player.level() instanceof ServerLevel level)) return;
+		BlockPos origin = player.blockPosition();
+		for (int l = 0; l < 50; l++) {
+			BlockPos candidate = randomOffset(level.random, origin);
+			if (!level.getBlockState(candidate.below()).isCollisionShapeFullBlock(level, candidate.below())) continue;
+			var guardian = ThaumcraftEntities.ELDRITCH_GUARDIAN.get().create(level);
+			if (guardian == null) return;
+			guardian.moveTo(candidate.getX(), candidate.getY(), candidate.getZ(), 0, 0);
+			if (level.noCollision(guardian) && !level.containsAnyLiquid(guardian.getBoundingBox())) {
+				guardian.setTarget(player);
+				level.addFreshEntity(guardian);
+				return;
+			}
+		}
 	}
 
 	private static void spawnPortal(Player player) {
@@ -250,22 +265,18 @@ public class WarpEvents {
 		return origin.offset(dx, dy, dz);
 	}
 
-	/** Real port of the original's own {@code checkDeathGaze} - while under Death Gaze, every real nearby
-	 * visible living entity (undead-immune-to-Wither and already-Withering ones skipped, matching the
-	 * original) is forced to target the wearer and inflicted with real Wither. Line-of-sight is checked via
-	 * the plain vanilla {@code hasLineOfSight} raycast - the original's own custom FOV-cone helper
-	 * ({@code EntityUtils#isVisibleTo}) isn't ported (that whole utility class is still stale), a real, minor
-	 * fidelity loss (this version doesn't require the target be roughly in front of the player, just
-	 * unobstructed). */
+	/** The original's {@code checkDeathGaze}: under Death Gaze, every living thing the player looks at (within a
+	 * 0.75-radian cone, in range and in sight; other players only with PvP on; ones already withering skipped) turns on
+	 * the player and withers. */
 	public static void checkDeathGaze(Player player) {
 		MobEffectInstance pe = player.getEffect(ThaumcraftMobEffects.DEATH_GAZE);
 		if (pe == null) return;
 		int level = pe.getAmplifier();
 		double range = Math.min(8 + level * 3, 24);
-		List<Entity> nearby = player.level().getEntitiesOfClass(Entity.class, player.getBoundingBox().inflate(range));
+		List<Entity> nearby = player.level().getEntities(player, player.getBoundingBox().inflate(range));
 		for (Entity entity : nearby) {
 			if (!entity.isPickable() || !(entity instanceof LivingEntity living) || !living.isAlive()) continue;
-			if (!player.hasLineOfSight(entity)) continue;
+			if (!isVisibleTo(0.75f, player, entity, (float) range) || !player.hasLineOfSight(entity)) continue;
 			if (entity instanceof Player && !player.level().getServer().isPvpAllowed()) continue;
 			if (living.hasEffect(MobEffects.WITHER)) continue;
 			living.setLastHurtByMob(player);
@@ -275,6 +286,17 @@ public class WarpEvents {
 			}
 			living.addEffect(new MobEffectInstance(MobEffects.WITHER, 80));
 		}
+	}
+
+	/** The original's EntityUtils#isVisibleTo: whether {@code target}'s middle lies in a cone of {@code fov} radians
+	 * (full aperture) along {@code viewer}'s look, no further along it than {@code range}. */
+	static boolean isVisibleTo(float fov, Entity viewer, Entity target, float range) {
+		net.minecraft.world.phys.Vec3 apex = new net.minecraft.world.phys.Vec3(viewer.getX(), viewer.getBoundingBox().minY + viewer.getEyeHeight(), viewer.getZ());
+		net.minecraft.world.phys.Vec3 toTarget = new net.minecraft.world.phys.Vec3(target.getX(), target.getBoundingBox().minY + target.getBbHeight() / 2.0f, target.getZ()).subtract(apex);
+		net.minecraft.world.phys.Vec3 axis = viewer.getLookAngle().scale(range);
+		double dot = toTarget.dot(axis);
+		if (dot / toTarget.length() / axis.length() <= Math.cos(fov / 2.0f)) return false;
+		return dot / axis.length() < axis.length();
 	}
 
 	/** Real port of the original's own {@code getWarpFromGear} - sums {@link IWarpingGear} off worn armor

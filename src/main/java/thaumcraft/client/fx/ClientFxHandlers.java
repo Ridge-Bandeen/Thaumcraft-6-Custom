@@ -808,6 +808,11 @@ public final class ClientFxHandlers {
 
 	public static void handleMiscEvent(thaumcraft.common.lib.network.ClientboundMiscEventPacket payload) {
 		var mc = net.minecraft.client.Minecraft.getInstance();
+		if (payload.kind() == thaumcraft.common.lib.network.ClientboundMiscEventPacket.MIST
+				|| payload.kind() == thaumcraft.common.lib.network.ClientboundMiscEventPacket.GUARDIAN) {
+			thaumcraft.client.lib.WarpScreenEffects.thickenFog(payload.kind() == thaumcraft.common.lib.network.ClientboundMiscEventPacket.MIST);
+			return;
+		}
 		if (payload.kind() == thaumcraft.common.lib.network.ClientboundMiscEventPacket.HEARTBEAT && mc.player != null && mc.level != null
 				&& !thaumcraft.common.config.ThaumcraftConfig.client(thaumcraft.common.config.ThaumcraftConfig.NO_STRESS)) {
 			mc.level.playLocalSound(mc.player.getX(), mc.player.getY(), mc.player.getZ(), thaumcraft.common.registry.ThaumcraftSounds.HEARTBEAT.get(),

@@ -636,9 +636,7 @@ public class Thaumcraft {
      * {@link thaumcraft.api.items.ItemsTC#brain} steps the curse's own amplifier/duration down (matching the
      * original's real {@code -1} amplifier / {@code -600} duration formula, ending the effect outright once
      * either would go negative); eating anything else edible instead just sends the original's own warning
-     * message, doing nothing mechanical. Real, minor cut: the original also swapped the re-applied effect's
-     * "cured by" item list down to just Rotten Flesh - cosmetic only (which items a status-effect tooltip
-     * lists as curing it), not ported.
+     * message, doing nothing mechanical. As the original, the stepped-down curse can't be drunk away with milk.
      */
     @SubscribeEvent
     public void onFinishEating(net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish event) {
@@ -662,8 +660,8 @@ public class Thaumcraft {
             int duration = current.getDuration() - 600;
             player.removeEffect(thaumcraft.common.registry.ThaumcraftMobEffects.UNNATURAL_HUNGER);
             if (duration > 0 && amplifier >= 0) {
-                player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                        thaumcraft.common.registry.ThaumcraftMobEffects.UNNATURAL_HUNGER, duration, amplifier, true, false));
+                player.addEffect(thaumcraft.common.registry.ThaumcraftMobEffects.milkProof(new net.minecraft.world.effect.MobEffectInstance(
+                        thaumcraft.common.registry.ThaumcraftMobEffects.UNNATURAL_HUNGER, duration, amplifier, true, false)));
             }
             player.displayClientMessage(net.minecraft.network.chat.Component.translatable("warp.text.hunger.2")
                     .withStyle(net.minecraft.ChatFormatting.DARK_GREEN, net.minecraft.ChatFormatting.ITALIC), false);

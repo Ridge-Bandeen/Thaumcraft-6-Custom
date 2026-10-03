@@ -44,6 +44,13 @@ public final class ThaumcraftMobEffects {
 	public static final DeferredHolder<MobEffect, thaumcraft.common.lib.potions.MobEffectWarpWard> WARP_WARD =
 			MOB_EFFECTS.register("warp_ward", thaumcraft.common.lib.potions.MobEffectWarpWard::new);
 
+	/** The original's {@code getCurativeItems().clear()}: milk won't cure this instance (warp curses, vis exhaustion
+	 * from flux). */
+	public static net.minecraft.world.effect.MobEffectInstance milkProof(net.minecraft.world.effect.MobEffectInstance instance) {
+		instance.getCures().clear();
+		return instance;
+	}
+
 	private ThaumcraftMobEffects() {
 	}
 }

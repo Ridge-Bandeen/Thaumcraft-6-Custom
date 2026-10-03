@@ -4,8 +4,8 @@
         "srcrgb": "one",
         "dstrgb": "zero"
     },
-    "vertex": "bloomvertexbase",
-    "fragment": "bloomcolor",
+    "vertex": "thaumcraft:bloomvertexbase",
+    "fragment": "thaumcraft:bloom2",
     "attributes": [ "Position" ],
     "samplers": [
         { "name": "DiffuseSampler" }

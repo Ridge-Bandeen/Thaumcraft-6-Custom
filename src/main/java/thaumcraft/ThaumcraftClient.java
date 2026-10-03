@@ -46,6 +46,12 @@ public class ThaumcraftClient {
     }
 
     @SubscribeEvent
+    static void onRegisterGuiLayers(net.neoforged.neoforge.client.event.RegisterGuiLayersEvent event) {
+        event.registerAbove(net.neoforged.neoforge.client.gui.VanillaGuiLayers.CAMERA_OVERLAYS,
+                ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "warp_vignette"), thaumcraft.client.lib.WarpScreenEffects::renderVignette);
+    }
+
+    @SubscribeEvent
     static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(thaumcraft.client.gui.KeyBindings.CHANGE_CASTER_FOCUS);
     }

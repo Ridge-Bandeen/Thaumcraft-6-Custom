@@ -134,7 +134,7 @@ public class BlockFluxGoo extends Block {
 		Vec3 motion = entity.getDeltaMovement();
 		entity.setDeltaMovement(motion.x * (1.0 - resistance), motion.y, motion.z * (1.0 - resistance));
 		if (!level.isClientSide && entity instanceof LivingEntity living) {
-			living.addEffect(new MobEffectInstance(ThaumcraftMobEffects.VIS_EXHAUST, 600, lvl / 3, true, true));
+			living.addEffect(ThaumcraftMobEffects.milkProof(new MobEffectInstance(ThaumcraftMobEffects.VIS_EXHAUST, 600, lvl / 3, true, true)));
 		}
 	}
 

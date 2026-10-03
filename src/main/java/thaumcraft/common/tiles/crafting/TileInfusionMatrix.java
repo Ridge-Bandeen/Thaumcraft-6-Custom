@@ -619,8 +619,8 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 				target.addEffect(new net.minecraft.world.effect.MobEffectInstance(
 						thaumcraft.common.registry.ThaumcraftMobEffects.FLUX_TAINT, 120, 0, false, true));
 			} else {
-				target.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-						thaumcraft.common.registry.ThaumcraftMobEffects.VIS_EXHAUST, 2400, 0, true, true));
+				target.addEffect(thaumcraft.common.registry.ThaumcraftMobEffects.milkProof(new net.minecraft.world.effect.MobEffectInstance(
+						thaumcraft.common.registry.ThaumcraftMobEffects.VIS_EXHAUST, 2400, 0, true, true)));
 			}
 			if (!all) break;
 		}

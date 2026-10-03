@@ -138,6 +138,14 @@ public class EntityEldritchGuardian extends Monster implements RangedAttackMob, 
 			float x = (float) (getX() + (random.nextFloat() - random.nextFloat()) * 0.2f);
 			float z = (float) (getZ() + (random.nextFloat() - random.nextFloat()) * 0.2f);
 			thaumcraft.client.fx.ClientFxHandlers.spawnWispEG(level(), x, getY() + 0.22 * getBbHeight(), z, this);
+		} else if ((tickCount == 0 || tickCount % 100 == 0) && level().getDifficulty() != net.minecraft.world.Difficulty.EASY) {
+			// as the original: the fog thickens around anyone within 16 blocks (24 on Hard)
+			double range = level().getDifficulty() == net.minecraft.world.Difficulty.HARD ? 576.0 : 256.0;
+			for (Player player : level().players()) {
+				if (player.isAlive() && player.distanceToSqr(this) < range && player instanceof net.minecraft.server.level.ServerPlayer sp) {
+					thaumcraft.common.lib.network.ClientboundMiscEventPacket.send(sp, thaumcraft.common.lib.network.ClientboundMiscEventPacket.GUARDIAN);
+				}
+			}
 		}
 	}
 

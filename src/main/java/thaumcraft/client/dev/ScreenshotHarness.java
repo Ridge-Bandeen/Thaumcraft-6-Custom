@@ -31,7 +31,8 @@ import thaumcraft.common.container.ThaumonomiconMenu;
  *
  * <p>Plan: comma-separated steps - {@code book}, {@code all} (grant all research), {@code cat:KEY},
  * {@code entry:KEY}, {@code page:N}, {@code press} (open a Golem Press), {@code recipe:KEY}, {@code aspects:}, {@code back}, {@code shot:name}, {@code wait:ticks},
- * {@code config} (the mod's config screen), {@code close}, {@code hold:ITEM}/{@code offhand:ITEM}, {@code sneak:true|false}.
+ * {@code config} (the mod's config screen), {@code close}, {@code hold:ITEM}/{@code offhand:ITEM}, {@code sneak:true|false},
+ * {@code cmd:COMMAND} (a command, {@code +} for spaces).
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID, value = Dist.CLIENT)
 public final class ScreenshotHarness {
@@ -160,6 +161,7 @@ public final class ScreenshotHarness {
 				sp.setItemInHand(step.startsWith("hold") ? net.minecraft.world.InteractionHand.MAIN_HAND : net.minecraft.world.InteractionHand.OFF_HAND,
 						new net.minecraft.world.item.ItemStack(item));
 			});
+			case "cmd" -> mc.player.connection.sendCommand(arg.replace('+', ' ')); // cmd:effect+give+@s+...
 			case "sneak" -> mc.options.keyShift.setDown(Boolean.parseBoolean(arg));
 			case "face" -> { // square up to the nearest cardinal direction, level
 				mc.player.setYRot(mc.player.getDirection().toYRot());
