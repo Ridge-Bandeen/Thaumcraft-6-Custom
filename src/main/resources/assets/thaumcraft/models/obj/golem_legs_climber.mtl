@@ -1,3 +1,6 @@
-# Minimal synthetic material-library stub, added 2026-09-25 - see golem_base.mtl for why this exists.
+# Minimal synthetic material-library stub (map_Kd lines added 2026-10-02: a material without one bakes as the
+# missing texture - every golem drew magenta/black; "#name" binds the model JSON's own "textures" entry of that name), added 2026-09-25 - see golem_base.mtl for why this exists.
 newmtl Material__2
+	map_Kd #Material__2
 newmtl Material__3
+	map_Kd #Material__3

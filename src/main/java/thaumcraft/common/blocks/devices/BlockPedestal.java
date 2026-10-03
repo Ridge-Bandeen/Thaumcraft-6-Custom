@@ -73,6 +73,16 @@ public class BlockPedestal extends Block implements EntityBlock, IInfusionStabil
 		}
 	}
 
+	/** The original's receiveClientEvent ids 5/11/12 (shield, puffs) - see ClientFxHandlers#pedestalEvent. */
+	@Override
+	protected boolean triggerEvent(BlockState state, Level level, BlockPos pos, int id, int param) {
+		if (id == 5 || id == 11 || id == 12) {
+			if (level.isClientSide) thaumcraft.client.fx.ClientFxHandlers.pedestalEvent(level, pos, id);
+			return true;
+		}
+		return super.triggerEvent(state, level, pos, id, param);
+	}
+
 	/** The original's offering cue: a charged pedestal shows red runes. */
 	@Override
 	public void animateTick(BlockState state, Level level, BlockPos pos, net.minecraft.util.RandomSource random) {

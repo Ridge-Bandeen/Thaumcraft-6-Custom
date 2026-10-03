@@ -86,6 +86,16 @@ public final class ScreenshotHarness {
 					sp.openMenu(tile);
 				}
 			});
+			case "fx" -> {
+				// a client effect 3 blocks ahead at eye height: fx:bamf (the infusion puff) or fx:shield (the pedestal shield)
+				var look = mc.player.getLookAngle();
+				double x = mc.player.getX() + look.x * 3, y = mc.player.getEyeY() + look.y * 3, z = mc.player.getZ() + look.z * 3;
+				if (arg.equals("bamf")) {
+					thaumcraft.client.fx.ClientFxHandlers.drawBamf(mc.level, x, y, z, 0.5f, 0.1f, 0.6f, true, true, null);
+				} else {
+					thaumcraft.client.render.ShieldRunesFx.spawn(x, y - 1, z, null, 40, 0.0f, 90.0f);
+				}
+			}
 			case "press" -> mc.getSingleplayerServer().execute(() -> {
 				// a Golem Press two blocks ahead, a chest beside it with some iron golem parts, then open it
 				ServerPlayer sp = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
@@ -155,15 +165,25 @@ public final class ScreenshotHarness {
 				mc.player.setYRot(mc.player.getDirection().toYRot());
 				mc.player.setXRot(Float.parseFloat(arg.isEmpty() ? "0" : arg));
 			}
-			case "golem" -> mc.getSingleplayerServer().execute(() -> {
-				// a golem N blocks ahead (behind whatever is there), plus a stone wall 2 blocks in front of it
+			case "turn" -> {
+				// turn the player to a yaw (degrees), client and server, so later steps face that way
+				float yaw = Float.parseFloat(arg.isEmpty() ? "0" : arg);
+				mc.player.setYRot(yaw);
+				mc.getSingleplayerServer().execute(() -> {
+					ServerPlayer sp = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+					if (sp != null) sp.teleportTo(sp.serverLevel(), sp.getX(), sp.getY(), sp.getZ(), yaw, sp.getXRot());
+				});
+			}
+			case "golem", "golemopen" -> mc.getSingleplayerServer().execute(() -> {
+				// a golem N blocks ahead (behind whatever is there), plus a stone wall 2 blocks in front of it ("golemopen": no wall)
 				ServerPlayer sp = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
 				if (sp == null) return;
 				int dist = arg.isEmpty() ? 6 : Integer.parseInt(arg);
 				net.minecraft.core.BlockPos at = sp.blockPosition().relative(sp.getDirection(), dist);
+				boolean open = step.startsWith("golemopen");
 				for (int dx = -2; dx <= 2; dx++) for (int dy = 0; dy <= 3; dy++) {
 					net.minecraft.core.BlockPos w = sp.blockPosition().relative(sp.getDirection(), dist - 2).relative(sp.getDirection().getClockWise(), dx).above(dy);
-					sp.serverLevel().setBlockAndUpdate(w, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+					sp.serverLevel().setBlockAndUpdate(w, (open ? net.minecraft.world.level.block.Blocks.AIR : net.minecraft.world.level.block.Blocks.STONE).defaultBlockState());
 				}
 				thaumcraft.common.golems.EntityThaumcraftGolem golem = thaumcraft.common.registry.ThaumcraftEntities.GOLEM.get().create(sp.serverLevel());
 				thaumcraft.common.golems.GolemProperties props = new thaumcraft.common.golems.GolemProperties();
@@ -172,7 +192,7 @@ public final class ScreenshotHarness {
 				props.setArms(thaumcraft.api.golems.parts.GolemArm.getArms()[0]);
 				props.setLegs(thaumcraft.api.golems.parts.GolemLeg.getLegs()[0]);
 				props.setAddon(thaumcraft.api.golems.parts.GolemAddon.getAddons()[0]);
-				golem.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, sp.getYRot() + 180, 0);
+				golem.moveTo(at.getX() + 0.5, at.getY() + (open ? 2 : 0), at.getZ() + 0.5, sp.getYRot() + 180, 0);
 				golem.initializeGolem(props, 0);
 				golem.setNoAi(true);
 				sp.serverLevel().addFreshEntity(golem);

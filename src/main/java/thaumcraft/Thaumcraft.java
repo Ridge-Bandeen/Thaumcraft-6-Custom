@@ -390,6 +390,8 @@ public class Thaumcraft {
         registrar.playToServer(thaumcraft.common.lib.network.ServerboundLogisticsPackets.Request.TYPE,
                 thaumcraft.common.lib.network.ServerboundLogisticsPackets.Request.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> payload.handle((net.minecraft.server.level.ServerPlayer) context.player())));
+        registrar.playToClient(thaumcraft.common.lib.network.fx.PacketFXShield.TYPE, thaumcraft.common.lib.network.fx.PacketFXShield.STREAM_CODEC,
+                (payload, context) -> thaumcraft.client.fx.ClientFxHandlers.handleShield(payload));
         registrar.playToServer(thaumcraft.common.lib.network.ServerboundGolemBuilderPacket.TYPE,
                 thaumcraft.common.lib.network.ServerboundGolemBuilderPacket.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> payload.handle((net.minecraft.server.level.ServerPlayer) context.player())));

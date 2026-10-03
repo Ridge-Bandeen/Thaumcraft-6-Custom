@@ -107,14 +107,35 @@ public class BlockCrucible extends Block implements EntityBlock {
 		if (level.isClientSide) return ItemInteractionResult.sidedSuccess(true);
 		if (!(level.getBlockEntity(pos) instanceof TileCrucible tile)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
-		if (stack.is(Items.WATER_BUCKET) && tile.waterAmount + 1000 <= TileCrucible.WATER_CAPACITY) {
-			tile.waterAmount += 1000;
-			tile.setChanged();
-			if (!player.getAbilities().instabuild) {
-				player.setItemInHand(hand, new ItemStack(Items.BUCKET));
+		// As the original (FluidUtil): any fluid container holding a bucket's worth of water fills a crucible that isn't full,
+		// pouring in what fits (a bucket can only empty whole, so it needs an empty crucible); the click is used up either way.
+		net.neoforged.neoforge.fluids.FluidStack held = net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(stack).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY);
+		if (held.is(net.minecraft.world.level.material.Fluids.WATER) && held.getAmount() >= 1000) {
+			if (tile.waterAmount < TileCrucible.WATER_CAPACITY) {
+				ItemStack container = stack.copyWithCount(1);
+				var handler = container.getCapability(net.neoforged.neoforge.capabilities.Capabilities.FluidHandler.ITEM);
+				if (handler != null) {
+					var drained = handler.drain(new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER,
+							TileCrucible.WATER_CAPACITY - tile.waterAmount), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+					if (!drained.isEmpty()) {
+						tile.waterAmount += drained.getAmount();
+						tile.setChanged();
+						if (!player.getAbilities().instabuild) {
+							ItemStack emptied = handler.getContainer();
+							stack.shrink(1);
+							if (stack.isEmpty()) {
+								player.setItemInHand(hand, emptied);
+							} else if (!player.getInventory().add(emptied)) {
+								player.drop(emptied, false);
+							}
+						}
+						level.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, SoundEvents.BOTTLE_FILL, SoundSource.BLOCKS, 0.33f,
+								1.0f + (level.random.nextFloat() - level.random.nextFloat()) * 0.3f);
+					}
+				}
+				return ItemInteractionResult.SUCCESS;
 			}
-			level.playSound(null, pos, SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 0.5f, 1.0f);
-			return ItemInteractionResult.SUCCESS;
+			return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 		}
 
 		// As the original: an item used on the top of a boiling crucible goes in - but not while sneaking, and never a

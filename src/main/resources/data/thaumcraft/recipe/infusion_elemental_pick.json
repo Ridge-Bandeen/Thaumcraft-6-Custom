@@ -37,6 +37,12 @@
     }
   ],
   "result": {
-    "id": "thaumcraft:elemental_pick"
+    "id": "thaumcraft:elemental_pick",
+    "components": {
+      "thaumcraft:infusion_enchantments": {
+        "REFINING": 1,
+        "SOUNDING": 2
+      }
+    }
   }
 }

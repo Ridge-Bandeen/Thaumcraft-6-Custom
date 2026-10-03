@@ -92,9 +92,15 @@ public class ChampionModEvents {
 		DamageSource source = event.getSource();
 		Entity attackerEntity = source.getEntity();
 
-		if (victim instanceof Mob victimMob && attackerEntity instanceof LivingEntity attacker) {
+		if (victim instanceof net.minecraft.world.entity.monster.Monster victimMob
+				&& (championId(victimMob) >= 0 || victimMob instanceof thaumcraft.api.entities.IEldritchMob)) {
 			int t = championId(victimMob);
-			if (t >= 0 && ChampionModifier.MODS[t].type == 2) {
+			// as the original: a warded (5) or eldritch mob's absorption shows a shield flash and the shield sound...
+			if ((t == 5 || victimMob instanceof thaumcraft.api.entities.IEldritchMob) && victimMob.getAbsorptionAmount() > 0.0f) {
+				thaumcraft.common.lib.network.fx.PacketFXShield.send(victimMob, source);
+				victimMob.playSound(thaumcraft.common.registry.ThaumcraftSounds.RUNICSHIELDCHARGE.get(), 0.66f, 1.1f + victimMob.getRandom().nextFloat() * 0.1f);
+			} else if (t >= 0 && ChampionModifier.MODS[t].type == 2 && attackerEntity instanceof LivingEntity attacker) {
+				// ...else the defensive champion effects
 				event.setAmount(ChampionModifier.MODS[t].effect.performEffect(victimMob, attacker, source, event.getAmount()));
 			}
 		}

@@ -37,6 +37,11 @@
     }
   ],
   "result": {
-    "id": "thaumcraft:elemental_sword"
+    "id": "thaumcraft:elemental_sword",
+    "components": {
+      "thaumcraft:infusion_enchantments": {
+        "ARCING": 2
+      }
+    }
   }
 }

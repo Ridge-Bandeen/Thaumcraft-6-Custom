@@ -5773,6 +5773,26 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** The elemental tools and the Primal Crusher come out of the infusion altar already infused, as the original's
+	 * recipes made them (the port's results were plain items until 2026-10-02). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infusedToolsCarryTheOriginalsInfusionEnchantments(GameTestHelper helper) {
+		java.util.Map<String, java.util.Map<String, Integer>> expect = java.util.Map.of(
+				"infusion_elemental_axe", java.util.Map.of("COLLECTOR", 1, "BURROWING", 1),
+				"infusion_elemental_pick", java.util.Map.of("REFINING", 1, "SOUNDING", 2),
+				"infusion_elemental_sword", java.util.Map.of("ARCING", 2),
+				"infusion_elemental_shovel", java.util.Map.of("DESTRUCTIVE", 1),
+				"primal_crusher", java.util.Map.of("DESTRUCTIVE", 1, "REFINING", 1));
+		for (var e : expect.entrySet()) {
+			var holder = helper.getLevel().getRecipeManager().byKey(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, e.getKey()));
+			helper.assertTrue(holder.isPresent(), "recipe " + e.getKey() + " should exist");
+			ItemStack result = holder.get().value().getResultItem(helper.getLevel().registryAccess());
+			helper.assertTrue(e.getValue().equals(result.get(thaumcraft.api.items.ThaumcraftDataComponents.INFUSION_ENCHANTMENTS.get())),
+					e.getKey() + " should give " + e.getValue() + ", gave " + result.get(thaumcraft.api.items.ThaumcraftDataComponents.INFUSION_ENCHANTMENTS.get()));
+		}
+		helper.succeed();
+	}
+
 	/** The original's names: "%s Vis Crystal" and "Phial of %s Essentia" with the aspect's own name ("Ignis", not its
 	 * description "Fire"), a "Marked Label" once it carries an aspect. */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")

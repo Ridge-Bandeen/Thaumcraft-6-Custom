@@ -36,6 +36,12 @@
     }
   ],
   "result": {
-    "id": "thaumcraft:elemental_axe"
+    "id": "thaumcraft:elemental_axe",
+    "components": {
+      "thaumcraft:infusion_enchantments": {
+        "COLLECTOR": 1,
+        "BURROWING": 1
+      }
+    }
   }
 }

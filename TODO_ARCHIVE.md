@@ -1,5 +1,24 @@
 # Thaumcraft 1.21.1 Port — TODO archive
 
+## Closed 2026-10-02
+
+- Infusion recipes checked one by one against the original: all present; the elemental tools and Primal Crusher now
+  come out pre-infused (Collector/Burrowing, Refining/Sounding II, Arcing II, Destructive, Destructive/Refining) and
+  are listed that way in the creative tab, as the original. The original's XP-cost infusion branch is dead code there.
+- Infusion altar effects: craftstart/craftfail/wand sounds (were beacon/level-up), the infuser hum loop, the per-tick
+  streams from pedestals (60 ticks; the port drew one burst), sparks while unstable and over problem blocks; components
+  take the original's 5 cycles and leave their container item; a missing component costs essentia/stability; pedestal
+  puffs (11, 12) and the stabilizer shield (5).
+- The original's drawBamf (poof sound, tinted smoke, wispy motes, flash, curly wisps) replaces the vanilla stand-in for
+  every puff (rift collapse, curse focus, pedestals); FXGeneric gained the original's angled mode.
+- Shield runes (FXShieldRunes -> ShieldRunesFx): runic shielding, warded champions and eldritch mobs flash a rune dome
+  where a blow lands (PacketFXShield; the port had none), with the shield sound for mobs.
+- Crucible fills from any fluid container holding a bucket of water (FluidUtil), with the original's sound.
+- Golem .mtl stubs lacked map_Kd: every golem part drew the missing texture.
+- Pech held items: the original's offset; vanilla's own ItemInHandLayer had been drawing them a second time.
+- FXGeneric's gravity default is 0 again (the port's 1.0 made every effect without setGravity fall).
+- getNearestPlayer-style traps swept: the only raw call (Brain in a Jar) already matched; now explicit.
+
 ## Closed 2026-10-01
 
 - Golem Press screen rebuilt from the original's GuiGolemBuilder (research-gated part carousel, traits, stats, Machina

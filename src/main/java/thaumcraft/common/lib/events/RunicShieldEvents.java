@@ -56,6 +56,15 @@ public class RunicShieldEvents {
 		checkRunicShield(event.getEntity());
 	}
 
+	/** As the original: a runic-shielded player whose shield takes a blow shows the shield flash. */
+	@SubscribeEvent
+	public static void onIncomingDamage(net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent event) {
+		if (event.getEntity() instanceof Player player && !player.level().isClientSide()
+				&& (int) player.getAbsorptionAmount() > 0 && maxCharge.containsKey(player.getId()) && lastCharge.containsKey(player.getId())) {
+			thaumcraft.common.lib.network.fx.PacketFXShield.send(player, event.getSource());
+		}
+	}
+
 	@SubscribeEvent
 	public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
 		forget(event.getEntity());

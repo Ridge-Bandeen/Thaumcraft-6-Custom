@@ -15,6 +15,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import javax.annotation.Nullable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -687,41 +688,57 @@ public final class ClientFxHandlers {
 		Minecraft.getInstance().particleEngine.add(fb);
 	}
 
-	/** Real client-bound handler for {@link thaumcraft.common.lib.network.fx.PacketFXInfusionSource} - a real
-	 * short burst (4 particles) of whichever real variant matches the consumed item, plus a real 1-in-3 chance
-	 * of a real {@link thaumcraft.client.fx.particles.FXBoreSparkle} instead - matching the true original's
-	 * own real dispatch and weighting exactly (see that packet's own doc comment for the real "one burst at
-	 * consumption" vs. the true original's own real multi-tick trickle). */
+	/** The original's PacketFXInfusionSource handler: starts (or renews) a stream into the matrix at {@code target} from
+	 * {@code source} - 60 ticks from a pedestal, 15 otherwise - which the matrix's client tick draws each tick
+	 * ({@link #spawnInfusionStream}). */
 	public static void handleInfusionSource(thaumcraft.common.lib.network.fx.PacketFXInfusionSource payload) {
 		var level = Minecraft.getInstance().level;
 		if (level == null) return;
 		BlockPos source = payload.source();
-		BlockPos target = payload.target();
-		net.minecraft.world.item.ItemStack stack = payload.stack();
-		var particleEngine = Minecraft.getInstance().particleEngine;
-		var random = level.random;
+		if (!(level.getBlockEntity(payload.target()) instanceof thaumcraft.common.tiles.crafting.TileInfusionMatrix matrix)) return;
+		int color = 0;
+		String key = source.getX() + ":" + source.getY() + ":" + source.getZ() + ":" + color;
+		int count = level.getBlockEntity(source) instanceof thaumcraft.common.tiles.crafting.TilePedestal ? 60 : 15;
+		var existing = matrix.sourceFX.get(key);
+		if (existing != null) {
+			existing.ticks = count;
+		} else {
+			matrix.sourceFX.put(key, new thaumcraft.common.tiles.crafting.TileInfusionMatrix.SourceFX(source, count, color));
+		}
+	}
 
+	/** One tick of a stream into the matrix at {@code matrix}: the original's drawInfusionParticles1-4 - green sparkles
+	 * from an entity ({@code fromEntity}, at x/y/z), or from a pedestal (block x/y/z): a purple sparkle one time in three,
+	 * else four bits of the item (or block) flying in. */
+	public static void spawnInfusionStream(net.minecraft.world.level.Level level, double x, double y, double z, BlockPos matrix,
+			net.minecraft.world.item.ItemStack stack, boolean fromEntity) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var particleEngine = Minecraft.getInstance().particleEngine;
+		var random = clientLevel.random;
+		double tx = matrix.getX() + 0.5, ty = matrix.getY() - 0.5, tz = matrix.getZ() + 0.5;
+		if (fromEntity) {
+			var sparkle = new thaumcraft.client.fx.particles.FXBoreSparkle(clientLevel, x, y, z, tx, ty, tz);
+			sparkle.setRBGColorF(0.2f, 0.6f + random.nextFloat() * 0.3f, 0.3f);
+			particleEngine.add(sparkle);
+			return;
+		}
 		if (random.nextInt(3) == 0) {
-			var sparkle = new thaumcraft.client.fx.particles.FXBoreSparkle(level,
-					source.getX() + random.nextFloat(), source.getY() + 1 + random.nextFloat(), source.getZ() + random.nextFloat(),
-					target.getX() + 0.5, target.getY() - 0.5, target.getZ() + 0.5);
+			var sparkle = new thaumcraft.client.fx.particles.FXBoreSparkle(clientLevel,
+					x + random.nextFloat(), y + random.nextFloat() + 1.0, z + random.nextFloat(), tx, ty, tz);
 			sparkle.setRBGColorF(0.4f + random.nextFloat() * 0.2f, 0.2f, 0.6f + random.nextFloat() * 0.3f);
 			particleEngine.add(sparkle);
 		} else if (stack.getItem() instanceof net.minecraft.world.item.BlockItem blockItem) {
 			var state = blockItem.getBlock().defaultBlockState();
 			for (int a = 0; a < 4; a++) {
-				var fb = new thaumcraft.client.fx.particles.FXBoreParticles(level,
-						source.getX() + random.nextFloat(), source.getY() + 1 + random.nextFloat(), source.getZ() + random.nextFloat(),
-						target.getX() + 0.5, target.getY() - 0.5, target.getZ() + 0.5, state);
+				var fb = new thaumcraft.client.fx.particles.FXBoreParticles(clientLevel,
+						x + random.nextFloat(), y + random.nextFloat() + 1.0, z + random.nextFloat(), tx, ty, tz, state);
 				fb.setAlphaF(0.3f);
 				particleEngine.add(fb);
 			}
 		} else {
 			for (int a = 0; a < 4; a++) {
-				var fb = new thaumcraft.client.fx.particles.FXBoreParticlesItem(level,
-						source.getX() + 0.4 + random.nextFloat() * 0.2, source.getY() + 1.23 + random.nextFloat() * 0.2, source.getZ() + 0.4 + random.nextFloat() * 0.2,
-						target.getX() + 0.5, target.getY() - 0.5, target.getZ() + 0.5, stack);
-				particleEngine.add(fb);
+				particleEngine.add(new thaumcraft.client.fx.particles.FXBoreParticlesItem(clientLevel,
+						x + 0.4 + random.nextFloat() * 0.2, y + 1.23 + random.nextFloat() * 0.2, z + 0.4 + random.nextFloat() * 0.2, tx, ty, tz, stack));
 			}
 		}
 	}
@@ -1033,31 +1050,145 @@ public final class ClientFxHandlers {
 				0.65f + level.random.nextFloat() * 0.1f, 1.0f, 1.0f, 1.0f - arcing / 10.0f));
 	}
 
-	/** {@link thaumcraft.common.entities.EntityFluxRift}'s collapse "poof" - the original drew a custom
-	 * billboard flash ({@code FXDispatcher.drawBamf}) tinted by the packed {@code color} it carries; this
-	 * drops that tint (every real call site sends a fixed placeholder colour anyway) in favour of a plain
-	 * void/portal-themed vanilla particle burst, with an optional teleport-ish sound standing in for the
-	 * original's own bamf sound effect (same "no custom audio subsystem" simplification {@code EntityWisp}
-	 * already established). {@code flair} adds a second, larger burst on top of the base one. */
+	/** The original's PacketFXBlockBamf: a puff in the packet's colour (-9999 = the default purple). */
 	public static void handleBlockBamf(PacketFXBlockBamf payload) {
-		Minecraft mc = Minecraft.getInstance();
-		ClientLevel level = mc.level;
-		if (level == null) {
-			return;
+		ClientLevel level = Minecraft.getInstance().level;
+		if (level == null) return;
+		if (payload.color() != -9999) {
+			drawBamf(level, payload.x(), payload.y(), payload.z(), payload.color(), payload.sound(), payload.flair(), null);
+		} else {
+			drawBamf(level, payload.x(), payload.y(), payload.z(), 0.5f, 0.1f, 0.6f, payload.sound(), payload.flair(), null);
 		}
-		double x = payload.x();
-		double y = payload.y();
-		double z = payload.z();
-		int count = payload.flair() ? 24 : 10;
-		for (int i = 0; i < count; i++) {
-			double ox = (level.random.nextFloat() - level.random.nextFloat()) * 1.2;
-			double oy = (level.random.nextFloat() - level.random.nextFloat()) * 1.2;
-			double oz = (level.random.nextFloat() - level.random.nextFloat()) * 1.2;
-			level.addParticle(ParticleTypes.REVERSE_PORTAL, x + ox, y + oy, z + oz, 0.0, 0.05, 0.0);
+	}
+
+	/** The Pedestal's block events, as the original's receiveClientEvent: 11 a purple-pink puff (an item thrown off by
+	 * instability), 12 the default puff (an infusion finished), 5 the shield (a stabilizer took the instability). */
+	public static void pedestalEvent(net.minecraft.world.level.Level level, BlockPos pos, int id) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		BlockPos up = pos.above();
+		switch (id) {
+			case 11 -> drawBamf(clientLevel, up.getX() + 0.5, up.getY() + 0.5, up.getZ() + 0.5, 0.75f, 0.0f, 0.5f, true, true, null);
+			case 12 -> drawBamf(clientLevel, up.getX() + 0.5, up.getY() + 0.5, up.getZ() + 0.5, 0.5f, 0.1f, 0.6f, true, true, null);
+			case 5 -> thaumcraft.client.render.ShieldRunesFx.spawn(pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5, null, 8, 0.0f, 90.0f);
+			default -> {
+			}
 		}
-		if (payload.sound()) {
-			level.playLocalSound(x, y, z, SoundEvents.ENDERMAN_TELEPORT, SoundSource.NEUTRAL, 1.0f, 0.7f, false);
+	}
+
+	public static void handleShield(thaumcraft.common.lib.network.fx.PacketFXShield payload) {
+		ClientLevel level = Minecraft.getInstance().level;
+		if (level == null) return;
+		Entity source = level.getEntity(payload.source());
+		if (source != null) thaumcraft.client.render.ShieldRunesFx.forEntity(source, payload.target());
+	}
+
+	public static void drawBamf(ClientLevel level, double x, double y, double z, int color, boolean sound, boolean flair, @Nullable net.minecraft.core.Direction side) {
+		drawBamf(level, x, y, z, ((color >> 16) & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, (color & 255) / 255.0f, sound, flair, side);
+	}
+
+	/** The original's FXDispatcher#drawBamf: the poof sound, a burst of tinted smoke puffs, with {@code flair} a few wispy
+	 * motes and a bright flash, and some curly wisps. */
+	public static void drawBamf(ClientLevel level, double x, double y, double z, float r, float g, float b, boolean sound, boolean flair,
+			@Nullable net.minecraft.core.Direction side) {
+		var random = level.random;
+		if (sound) {
+			level.playLocalSound(x, y, z, thaumcraft.common.registry.ThaumcraftSounds.POOF.get(), SoundSource.BLOCKS, 0.4f,
+					1.0f + (float) random.nextGaussian() * 0.05f, false);
 		}
+		for (int a = 0; a < 6 + random.nextInt(3) + 2; ++a) {
+			double vx = (0.05f + random.nextFloat() * 0.05f) * (random.nextBoolean() ? -1 : 1);
+			double vy = (0.05f + random.nextFloat() * 0.05f) * (random.nextBoolean() ? -1 : 1);
+			double vz = (0.05f + random.nextFloat() * 0.05f) * (random.nextBoolean() ? -1 : 1);
+			if (side != null) {
+				vx += side.getStepX() * 0.1f;
+				vy += side.getStepY() * 0.1f;
+				vz += side.getStepZ() * 0.1f;
+			}
+			var fb = new thaumcraft.client.fx.particles.FXGeneric(level, x + vx * 2.0, y + vy * 2.0, z + vz * 2.0, vx / 2.0, vy / 2.0, vz / 2.0);
+			fb.setMaxAge(20 + random.nextInt(15));
+			fb.setRBGColorF(Mth.clamp(r * (1.0f + (float) random.nextGaussian() * 0.1f), 0f, 1f),
+					Mth.clamp(g * (1.0f + (float) random.nextGaussian() * 0.1f), 0f, 1f),
+					Mth.clamp(b * (1.0f + (float) random.nextGaussian() * 0.1f), 0f, 1f));
+			fb.setAlphaF(1.0f, 0.1f);
+			fb.setGridSize(16);
+			fb.setParticles(123, 5, 1);
+			fb.setScale(3.0f, 4.0f + random.nextFloat() * 3.0f);
+			fb.setLayer(1);
+			fb.setSlowDown(0.7);
+			fb.setRotationSpeed(random.nextFloat(), random.nextBoolean() ? -1.0f : 1.0f);
+			Minecraft.getInstance().particleEngine.add(fb);
+		}
+		if (flair) {
+			for (int a = 0; a < 2 + random.nextInt(3); ++a) {
+				double vx = (0.025f + random.nextFloat() * 0.025f) * (random.nextBoolean() ? -1 : 1);
+				double vy = (0.025f + random.nextFloat() * 0.025f) * (random.nextBoolean() ? -1 : 1);
+				double vz = (0.025f + random.nextFloat() * 0.025f) * (random.nextBoolean() ? -1 : 1);
+				drawWispyMotes(level, x + vx * 2.0, y + vy * 2.0, z + vz * 2.0, vx, vy, vz, 15 + random.nextInt(10), -0.01f);
+			}
+			var flash = new thaumcraft.client.fx.particles.FXGeneric(level, x, y, z, 0.0, 0.0, 0.0);
+			flash.setMaxAge(10 + random.nextInt(5));
+			flash.setRBGColorF(1.0f, 0.9f, 1.0f);
+			flash.setAlphaF(1.0f, 0.0f);
+			flash.setGridSize(16);
+			flash.setParticles(77, 1, 1);
+			flash.setScale(10.0f + random.nextFloat() * 2.0f, 0.0f);
+			flash.setLayer(0);
+			flash.setRotationSpeed(random.nextFloat(), (float) random.nextGaussian());
+			Minecraft.getInstance().particleEngine.add(flash);
+		}
+		for (int a = 0; a < (flair ? 2 : 0) + random.nextInt(3); ++a) {
+			drawCurlyWisp(level, x, y, z, 0.0, 0.0, 0.0, 1.0f, (0.9f + random.nextFloat() * 0.1f + r) / 2.0f, (0.1f + g) / 2.0f,
+					(0.5f + random.nextFloat() * 0.1f + b) / 2.0f, 0.75f, side, a, 0, 0);
+		}
+	}
+
+	/** The original's drawWispyMotes with a random tint. */
+	public static void drawWispyMotes(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, int age, float grav) {
+		var random = level.random;
+		drawWispyMotes(level, x, y, z, vx, vy, vz, age, 0.25f + random.nextFloat() * 0.75f, 0.25f + random.nextFloat() * 0.75f,
+				0.25f + random.nextFloat() * 0.75f, grav);
+	}
+
+	public static void drawWispyMotes(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, int age, float r, float g, float b, float grav) {
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(level, x, y, z, vx, vy, vz);
+		fb.setMaxAge((int) (age + age / 2 * level.random.nextFloat()));
+		fb.setRBGColorF(r, g, b);
+		fb.setAlphaF(0.0f, 0.6f, 0.6f, 0.0f);
+		fb.setGridSize(64);
+		fb.setParticles(512, 16, 1);
+		fb.setScale(1.0f, 0.5f);
+		fb.setLoop(true);
+		fb.setWind(0.001);
+		fb.setGravity(grav);
+		fb.setRandomMovementScale(0.0025f, 0.0f, 0.0025f);
+		Minecraft.getInstance().particleEngine.add(fb);
+	}
+
+	/** The original's drawCurlyWisp: a slow, spinning curl of smoke, sometimes at a fixed angle (FXGeneric#setAngles). */
+	public static void drawCurlyWisp(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, float scale, float r, float g, float b,
+			float a, @Nullable net.minecraft.core.Direction side, int seed, int layer, int delay) {
+		var random = level.random;
+		vx += (0.0025f + random.nextFloat() * 0.005f) * (random.nextBoolean() ? -1 : 1);
+		vy += (0.0025f + random.nextFloat() * 0.005f) * (random.nextBoolean() ? -1 : 1);
+		vz += (0.0025f + random.nextFloat() * 0.005f) * (random.nextBoolean() ? -1 : 1);
+		if (side != null) {
+			vx += side.getStepX() * 0.025f;
+			vy += side.getStepY() * 0.025f;
+			vz += side.getStepZ() * 0.025f;
+		}
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(level, x + vx * 5.0, y + vy * 5.0, z + vz * 5.0, vx, vy, vz);
+		if (seed > 0 && random.nextBoolean()) {
+			fb.setAngles(90.0f * (float) random.nextGaussian(), 90.0f * (float) random.nextGaussian());
+		}
+		fb.setMaxAge(25 + random.nextInt(20 + 20 * seed));
+		fb.setRBGColorF(r, g, b, 0.1f, 0.0f, 0.1f);
+		fb.setAlphaF(a, 0.0f);
+		fb.setGridSize(16);
+		fb.setParticles(60 + random.nextInt(4), 1, 1);
+		fb.setScale(5.0f * scale, (10.0f + random.nextFloat() * 4.0f) * scale);
+		fb.setLayer(layer);
+		fb.setRotationSpeed(random.nextFloat(), random.nextBoolean() ? (-2.0f - random.nextFloat() * 2.0f) : (2.0f + random.nextFloat() * 2.0f));
+		addDelayed(fb, delay);
 	}
 
 	/** {@link thaumcraft.common.lib.enchantment.EnumInfusionEnchantment#SOUNDING}'s ore-vein radar - scans a

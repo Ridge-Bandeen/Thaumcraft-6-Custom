@@ -136,7 +136,8 @@ public class TileJarBrain extends BlockEntity {
 	 * ease into it" formula - see this class's own doc comment. */
 	private void tickClient(Level level, BlockPos pos) {
 		rotb = rota;
-		Player nearest = level.getNearestPlayer(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 6.0, false);
+		// the original's getClosestPlayer(..., false): any player but spectators - creative ones too
+		Player nearest = level.getNearestPlayer(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 6.0, net.minecraft.world.entity.EntitySelector.NO_SPECTATORS);
 		if (nearest != null) {
 			if (nextSighTime < System.currentTimeMillis()) {
 				level.playLocalSound(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, ThaumcraftSounds.BRAIN.get(),

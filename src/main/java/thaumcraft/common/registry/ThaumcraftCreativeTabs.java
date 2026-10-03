@@ -35,7 +35,7 @@ import thaumcraft.common.items.consumables.ItemPhial;
  * placeholder blocks) or that are only test scaffolding ({@code test_} prefix) are skipped.
  *
  * <p>The Cheater's Thaumonomicon is listed only when {@code allowCheatSheet} is on, as in the original. Still not
- * listed: the pre-infused Primal Crusher / elemental-tool tab copies.
+ * The elemental tools and the Primal Crusher are listed pre-infused, as the original's getSubItems did.
  */
 public final class ThaumcraftCreativeTabs {
 
@@ -62,6 +62,9 @@ public final class ThaumcraftCreativeTabs {
 								}
 							} else if (item == ItemsTC.golemPlacer.get()) {
 								golemPlacerPresets().forEach(output::accept);
+							} else if (preInfused(item) != null) {
+								// as the original's getSubItems: only the pre-infused copy, as its infusion recipe makes it
+								output.accept(preInfused(item));
 							} else {
 								output.accept(item);
 							}
@@ -70,6 +73,26 @@ public final class ThaumcraftCreativeTabs {
 					.build());
 
 	private ThaumcraftCreativeTabs() {
+	}
+
+	/** The original's tab copies (and what their infusion recipes produce). The hoe has none. */
+	private static final java.util.Map<Item, java.util.Map<String, Integer>> PRE_INFUSED = new java.util.IdentityHashMap<>();
+
+	private static ItemStack preInfused(Item item) {
+		if (PRE_INFUSED.isEmpty()) fillPreInfused();
+		java.util.Map<String, Integer> levels = PRE_INFUSED.get(item);
+		if (levels == null) return null;
+		ItemStack stack = new ItemStack(item);
+		stack.set(ThaumcraftDataComponents.INFUSION_ENCHANTMENTS.get(), levels);
+		return stack;
+	}
+
+	private static void fillPreInfused() {
+		PRE_INFUSED.put(ItemsTC.elementalAxe.get(), java.util.Map.of("BURROWING", 1, "COLLECTOR", 1));
+		PRE_INFUSED.put(ItemsTC.elementalPick.get(), java.util.Map.of("REFINING", 1, "SOUNDING", 2));
+		PRE_INFUSED.put(ItemsTC.elementalSword.get(), java.util.Map.of("ARCING", 2));
+		PRE_INFUSED.put(ItemsTC.elementalShovel.get(), java.util.Map.of("DESTRUCTIVE", 1));
+		PRE_INFUSED.put(ItemsTC.primalCrusher.get(), java.util.Map.of("DESTRUCTIVE", 1, "REFINING", 1));
 	}
 
 	private static boolean isHidden(ResourceLocation id) {

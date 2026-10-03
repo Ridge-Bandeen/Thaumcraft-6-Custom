@@ -36,6 +36,11 @@
     }
   ],
   "result": {
-    "id": "thaumcraft:elemental_shovel"
+    "id": "thaumcraft:elemental_shovel",
+    "components": {
+      "thaumcraft:infusion_enchantments": {
+        "DESTRUCTIVE": 1
+      }
+    }
   }
 }

@@ -1,81 +1,46 @@
 package thaumcraft.common.lib.network.fx;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.client.particle.Particle;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.MathHelper;
-import net.minecraftforge.fml.client.FMLClientHandler;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
-import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
+
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import thaumcraft.Thaumcraft;
-import thaumcraft.client.fx.other.FXShieldRunes;
 
+/**
+ * The original's PacketFXShield: a shield flashing on entity {@code source} where it took a blow from entity
+ * {@code target} (-1 no attacker, -2 a fall, -3 a falling block) - sent when runic shielding or a warded/eldritch
+ * mob's absorption soaks up damage. Drawn by {@code thaumcraft.client.render.ShieldRunesFx}.
+ */
+public record PacketFXShield(int source, int target) implements CustomPacketPayload {
 
-public class PacketFXShield implements IMessage, IMessageHandler<PacketFXShield, IMessage>
-{
-    private int source;
-    private int target;
-    
-    public PacketFXShield() {
-    }
-    
-    public PacketFXShield(int source, int target) {
-        this.source = source;
-        this.target = target;
-    }
-    
-    public void toBytes(ByteBuf buffer) {
-        buffer.writeInt(source);
-        buffer.writeInt(target);
-    }
-    
-    public void fromBytes(ByteBuf buffer) {
-        source = buffer.readInt();
-        target = buffer.readInt();
-    }
-    
-    @SideOnly(Side.CLIENT)
-    public IMessage onMessage(PacketFXShield message, MessageContext ctx) {
-        Entity p = Thaumcraft.proxy.getClientWorld().getEntityByID(message.source);
-        if (p == null) {
-            return null;
-        }
-        float pitch = 0.0f;
-        float yaw = 0.0f;
-        if (message.target >= 0) {
-            Entity t = Thaumcraft.proxy.getClientWorld().getEntityByID(message.target);
-            if (t != null) {
-                double d0 = p.posX - t.posX;
-                double d2 = (p.getEntityBoundingBox().minY + p.getEntityBoundingBox().maxY) / 2.0 - (t.getEntityBoundingBox().minY + t.getEntityBoundingBox().maxY) / 2.0;
-                double d3 = p.posZ - t.posZ;
-                double d4 = MathHelper.sqrt(d0 * d0 + d3 * d3);
-                float f = (float)(Math.atan2(d3, d0) * 180.0 / 3.141592653589793) - 90.0f;
-                float f2 = pitch = (float)(-(Math.atan2(d2, d4) * 180.0 / 3.141592653589793));
-                yaw = f;
-            }
-            else {
-                pitch = 90.0f;
-                yaw = 0.0f;
-            }
-            FXShieldRunes fb = new FXShieldRunes(Thaumcraft.proxy.getClientWorld(), p.posX, p.posY, p.posZ, p, 8, yaw, pitch);
-            FMLClientHandler.instance().getClient().effectRenderer.addEffect(fb);
-        }
-        else if (message.target == -1) {
-            FXShieldRunes fb2 = new FXShieldRunes(Thaumcraft.proxy.getClientWorld(), p.posX, p.posY, p.posZ, p, 8, 0.0f, 90.0f);
-            FMLClientHandler.instance().getClient().effectRenderer.addEffect(fb2);
-            fb2 = new FXShieldRunes(Thaumcraft.proxy.getClientWorld(), p.posX, p.posY, p.posZ, p, 8, 0.0f, 270.0f);
-            FMLClientHandler.instance().getClient().effectRenderer.addEffect(fb2);
-        }
-        else if (message.target == -2) {
-            FXShieldRunes fb2 = new FXShieldRunes(Thaumcraft.proxy.getClientWorld(), p.posX, p.posY, p.posZ, p, 8, 0.0f, 270.0f);
-            FMLClientHandler.instance().getClient().effectRenderer.addEffect(fb2);
-        }
-        else if (message.target == -3) {
-            FXShieldRunes fb2 = new FXShieldRunes(Thaumcraft.proxy.getClientWorld(), p.posX, p.posY, p.posZ, p, 8, 0.0f, 90.0f);
-            FMLClientHandler.instance().getClient().effectRenderer.addEffect(fb2);
-        }
-        return null;
-    }
+	public static final Type<PacketFXShield> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "fx_shield"));
+
+	public static final StreamCodec<RegistryFriendlyByteBuf, PacketFXShield> STREAM_CODEC = StreamCodec.composite(
+			ByteBufCodecs.VAR_INT, PacketFXShield::source,
+			ByteBufCodecs.VAR_INT, PacketFXShield::target,
+			PacketFXShield::new);
+
+	@Override
+	public Type<? extends CustomPacketPayload> type() {
+		return TYPE;
+	}
+
+	/** The original's target code for a damage source. */
+	public static int targetOf(net.minecraft.world.damagesource.DamageSource source) {
+		int target = source.getEntity() != null ? source.getEntity().getId() : -1;
+		if (source.is(net.minecraft.world.damagesource.DamageTypes.FALL)) target = -2;
+		if (source.is(net.minecraft.world.damagesource.DamageTypes.FALLING_BLOCK) || source.is(net.minecraft.world.damagesource.DamageTypes.FALLING_ANVIL)) target = -3;
+		return target;
+	}
+
+	public static void send(net.minecraft.world.entity.Entity entity, net.minecraft.world.damagesource.DamageSource source) {
+		if (!(entity.level() instanceof net.minecraft.server.level.ServerLevel level)) return;
+		try {
+			net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(level, null, entity.getX(), entity.getY(), entity.getZ(), 32.0,
+					new PacketFXShield(entity.getId(), targetOf(source)));
+		} catch (Exception e) {
+			Thaumcraft.LOGGER.debug("Shield FX packet failed to send", e);
+		}
+	}
 }

@@ -441,6 +441,8 @@ sourceSets {
             include 'thaumcraft/client/fx/particles/FXEssentiaStream.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXEssentiaSource.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXInfusionSource.java'
+            include 'thaumcraft/common/lib/network/fx/PacketFXShield.java'
+            include 'thaumcraft/client/render/ShieldRunesFx.java'
             include 'thaumcraft/client/fx/particles/FXFireMote.java'
             include 'thaumcraft/client/fx/particles/FXVisSparkle.java'
             include 'thaumcraft/client/fx/particles/FXSmokeSpiral.java'

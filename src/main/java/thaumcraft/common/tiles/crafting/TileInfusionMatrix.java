@@ -140,6 +140,26 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 	 * does the same for {@link #crafting} (a real ramping halo-intensity signal). */
 	private int activatedTick;
 	private int craftTick;
+	/** The original's itemCount: a component takes 5 cycles to draw off its pedestal (the stream starts on the first). */
+	private int itemCount;
+	/** Client only: the original's craftCount (infuser sound loop) and sourceFX (streams into the matrix), keyed by
+	 * "x:y:z:color" as the original's packet did. */
+	private int craftCount;
+	public final java.util.Map<String, SourceFX> sourceFX = new java.util.HashMap<>();
+
+	/** A stream feeding the matrix: from a pedestal's item (60 ticks), or from the entity {@code color} names when
+	 * {@code loc} is the matrix itself (15 ticks). */
+	public static final class SourceFX {
+		public final BlockPos loc;
+		public int ticks;
+		public final int color;
+
+		public SourceFX(BlockPos loc, int ticks, int color) {
+			this.loc = loc;
+			this.ticks = ticks;
+			this.color = color;
+		}
+	}
 
 	private AspectList recipeEssentia = new AspectList();
 	private List<ItemStack> recipeIngredients = new ArrayList<>();
@@ -164,10 +184,7 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		// client FX" rule) - routed through ClientFxHandlers#spawnBlockRunes for the same real
 		// dist-crash-avoidance reason every other client-only trigger in this port uses.
 		if (level.isClientSide) {
-			if (tile.crafting) {
-				thaumcraft.client.fx.ClientFxHandlers.spawnBlockRunes(level, pos.getX(), pos.getY() - 2, pos.getZ(),
-						0.5f + level.random.nextFloat() * 0.2f, 0.1f, 0.7f + level.random.nextFloat() * 0.3f, 25, -0.03f);
-			}
+			tile.doEffects(level, pos);
 			return;
 		}
 
@@ -182,6 +199,61 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		}
 		if (tile.active && tile.crafting && tile.countDelay > 0 && tile.count % tile.countDelay == 0) {
 			tile.craftCycle(level);
+		}
+	}
+
+	/** The original's client-side doEffects: the infuser sound (a start, then every 65 ticks), the crafting runes, the
+	 * streams from pedestals into the matrix, sparks while unstable, and sparks over the blocks spoiling the symmetry. */
+	private void doEffects(Level level, BlockPos pos) {
+		RandomSource rand = level.random;
+		if (crafting) {
+			if (craftCount == 0) {
+				level.playLocalSound(pos.getX(), pos.getY(), pos.getZ(), thaumcraft.common.registry.ThaumcraftSounds.INFUSERSTART.get(),
+						SoundSource.BLOCKS, 0.5f, 1.0f, false);
+			} else if (craftCount % 65 == 0) {
+				level.playLocalSound(pos.getX(), pos.getY(), pos.getZ(), thaumcraft.common.registry.ThaumcraftSounds.INFUSER.get(),
+						SoundSource.BLOCKS, 0.5f, 1.0f, false);
+			}
+			craftCount++;
+			thaumcraft.client.fx.ClientFxHandlers.spawnBlockRunes(level, pos.getX(), pos.getY() - 2, pos.getZ(),
+					0.5f + rand.nextFloat() * 0.2f, 0.1f, 0.7f + rand.nextFloat() * 0.3f, 25, -0.03f);
+		} else if (craftCount > 0) {
+			craftCount = Math.min(50, Math.max(0, craftCount - 2));
+		}
+		for (String key : sourceFX.keySet().toArray(new String[0])) {
+			SourceFX fx = sourceFX.get(key);
+			if (fx.ticks <= 0) {
+				sourceFX.remove(key);
+				continue;
+			}
+			if (fx.loc.equals(pos)) {
+				net.minecraft.world.entity.Entity source = level.getEntity(fx.color);
+				if (source != null) {
+					for (int a = 0; a < 4; a++) {
+						thaumcraft.client.fx.ClientFxHandlers.spawnInfusionStream(level,
+								source.getX() + (rand.nextFloat() - rand.nextFloat()) * source.getBbWidth(),
+								source.getBoundingBox().minY + rand.nextFloat() * source.getBbHeight(),
+								source.getZ() + (rand.nextFloat() - rand.nextFloat()) * source.getBbWidth(), pos, ItemStack.EMPTY, true);
+					}
+				}
+			} else if (level.getBlockEntity(fx.loc) instanceof TilePedestal pedestal) {
+				ItemStack is = pedestal.getItem();
+				if (!is.isEmpty()) {
+					thaumcraft.client.fx.ClientFxHandlers.spawnInfusionStream(level, fx.loc.getX(), fx.loc.getY(), fx.loc.getZ(), pos, is, false);
+				}
+			} else {
+				fx.ticks = 0;
+			}
+			fx.ticks--;
+		}
+		if (crafting && stability < 0.0f && rand.nextInt(250) <= Math.abs(stability)) {
+			thaumcraft.client.fx.ClientFxHandlers.spawnSpark(level, pos.getX() + rand.nextFloat(), pos.getY() + rand.nextFloat(), pos.getZ() + rand.nextFloat(),
+					3.0f + rand.nextFloat() * 2.0f, 0.7f + rand.nextFloat() * 0.1f, 0.1f, 0.65f + rand.nextFloat() * 0.1f, 0.8f);
+		}
+		if (active && !problemBlocks.isEmpty() && rand.nextInt(25) == 0) {
+			BlockPos p = problemBlocks.get(rand.nextInt(problemBlocks.size()));
+			thaumcraft.client.fx.ClientFxHandlers.spawnSpark(level, p.getX() + rand.nextFloat(), p.getY() + rand.nextFloat(), p.getZ() + rand.nextFloat(),
+					2.0f + rand.nextFloat(), 0.7f + rand.nextFloat() * 0.1f, 0.1f, 0.65f + rand.nextFloat() * 0.1f, 0.8f);
 		}
 	}
 
@@ -211,6 +283,8 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 
 	@Override
 	public boolean onCasterRightClick(Level level, ItemStack casterStack, Player player, BlockPos pos, Direction side, InteractionHand hand) {
+		// as the original: the client rescans its surroundings (for the problem-block sparks) when an idle altar is poked
+		if (level.isClientSide && active && !crafting) checkSurroundings = true;
 		return activate(level, player);
 	}
 
@@ -224,7 +298,7 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		}
 		if (!active && validLocation(level)) {
 			active = true;
-			level.playSound(null, worldPosition, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 0.5f, 1.0f);
+			level.playSound(null, worldPosition, thaumcraft.common.registry.ThaumcraftSounds.CRAFTSTART.get(), SoundSource.BLOCKS, 0.5f, 1.0f);
 			setChanged();
 			return true;
 		}
@@ -276,7 +350,8 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		recipeInputSnapshot = central.copy();
 		recipePlayer = player.getUUID();
 		crafting = true;
-		level.playSound(null, worldPosition, SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 0.5f, 1.0f);
+		itemCount = 0;
+		level.playSound(null, worldPosition, thaumcraft.common.registry.ThaumcraftSounds.CRAFTSTART.get(), SoundSource.BLOCKS, 0.5f, 1.0f);
 		setChanged();
 	}
 
@@ -336,7 +411,7 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 			crafting = false;
 			recipeEssentia = new AspectList();
 			recipeInstability = 0;
-			level.playSound(null, worldPosition, SoundEvents.BEACON_DEACTIVATE, SoundSource.BLOCKS, 1.0f, 0.6f);
+			level.playSound(null, worldPosition, thaumcraft.common.registry.ThaumcraftSounds.CRAFTFAIL.get(), SoundSource.BLOCKS, 1.0f, 0.6f);
 			setChanged();
 			return;
 		}
@@ -363,13 +438,25 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 					if (level.getBlockEntity(pp) instanceof TilePedestal ped2
 							&& !ped2.getItem().isEmpty()
 							&& ItemStack.isSameItemSameComponents(ped2.getItem(), recipeIngredients.get(a))) {
-						ItemStack consumed = ped2.getItem().copy();
-						ped2.setItem(ItemStack.EMPTY);
-						recipeIngredients.remove(a);
-						broadcastInfusionSourceFx(level, pp, consumed);
+						// as the original: the stream starts, and 5 cycles later the item is gone (leaving its container)
+						if (itemCount == 0) {
+							itemCount = 5;
+							broadcastInfusionSourceFx(level, pp, ped2.getItem().copy());
+						} else if (itemCount-- <= 1) {
+							ItemStack remainder = ped2.getItem().getCraftingRemainingItem();
+							ped2.setItem(remainder.isEmpty() ? ItemStack.EMPTY : remainder.copy());
+							recipeIngredients.remove(a);
+						}
 						setChanged();
 						return;
 					}
+				}
+				// as the original: a component missing from every pedestal sometimes costs an extra essentia and some stability
+				Aspect[] ingEss = recipeEssentia.getAspects();
+				if (ingEss != null && ingEss.length > 0 && rand.nextInt(1 + a) == 0) {
+					recipeEssentia.add(ingEss[rand.nextInt(ingEss.length)], 1);
+					stability -= 0.25f;
+					setChanged();
 				}
 			}
 			return;
@@ -478,6 +565,7 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 				BlockPos stabPos = ped.findInstabilityMitigator();
 				if (stabPos != null && level.getBlockEntity(stabPos) instanceof thaumcraft.common.tiles.devices.TileStabilizer stabilizer
 						&& stabilizer.mitigate(5 + rand.nextInt(6))) {
+					level.blockEvent(pp, level.getBlockState(pp).getBlock(), 5, 0);
 					sendArcPulse(serverLevel, worldPosition, pp.above(), pp, rand);
 					sendArcPulse(serverLevel, pp.above(), stabPos, stabPos, rand);
 					return;
@@ -496,6 +584,7 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 				} else if (type == 5) {
 					level.explode(null, pp.getX() + 0.5, pp.getY() + 0.5, pp.getZ() + 0.5, 1.0f, false, Level.ExplosionInteraction.BLOCK);
 				}
+				level.blockEvent(pp, level.getBlockState(pp).getBlock(), 11, 0);
 				sendArcPulse(serverLevel, worldPosition, pp.above(), pp, rand);
 				return;
 			}
@@ -563,7 +652,9 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 		recipeEssentia = new AspectList();
 		recipeInstability = 0;
 		recipeOutput = ItemStack.EMPTY;
-		level.playSound(null, worldPosition, SoundEvents.PLAYER_LEVELUP, SoundSource.BLOCKS, 0.5f, 1.0f);
+		// the original: a puff off the central pedestal, and the wand sound
+		level.blockEvent(worldPosition.below(2), level.getBlockState(worldPosition.below(2)).getBlock(), 12, 0);
+		level.playSound(null, worldPosition, thaumcraft.common.registry.ThaumcraftSounds.WAND.get(), SoundSource.BLOCKS, 0.5f, 1.0f);
 		setChanged();
 	}
 

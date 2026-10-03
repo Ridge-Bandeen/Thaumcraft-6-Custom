@@ -43,11 +43,8 @@ import thaumcraft.Thaumcraft;
  * odd layers = normal alpha blend - matches the two real blend functions the true original's own {@code ParticleEngine}
  * used ({@code [770,1]} additive, {@code [770,771]} normal), not the literal bucket-array mechanism itself.
  *
- * <p>Real, documented simplification: the true original's own "angled" mode ({@link #setAngles}, a fixed
- * yaw/pitch orientation instead of always facing the camera - used for ground-decal-style particles) isn't
- * supported yet, since it needs a real full {@code render()} override bypassing {@code SingleQuadParticle}'s
- * own camera-facing math entirely, not just new getters - deferred until a real effect that actually needs
- * it gets restored. {@link #setFinalFrames} (an explicit end-of-life frame-index override sequence) is kept
+ * <p>The original's "angled" mode ({@link #setAngles}): a fixed yaw/pitch orientation instead of facing the camera
+ * (curly wisps, Pech curses, ground-decal particles) - see {@link #render}. {@link #setFinalFrames} (an explicit end-of-life frame-index override sequence) is kept
  * for real API fidelity but not yet exercised by any real restored caller.
  */
 public class FXGeneric extends SingleQuadParticle {
@@ -117,6 +114,9 @@ public class FXGeneric extends SingleQuadParticle {
 	private float randomX, randomY, randomZ;
 	private double windX, windZ;
 	private float rotationSpeed;
+	private boolean angled;
+	private float angleYaw;
+	private float anglePitch;
 
 	public FXGeneric(ClientLevel level, double x, double y, double z, double xd, double yd, double zd) {
 		// Real 3-arg super() on purpose, not the 6-arg one - Particle's own 6-arg constructor adds random
@@ -127,11 +127,10 @@ public class FXGeneric extends SingleQuadParticle {
 		this.yd = yd;
 		this.zd = zd;
 		this.baseQuadSize = this.quadSize;
-		// Matches real vanilla 1.12.2 Particle's own real default particleGravity (1.0) - modern Particle's
-		// own gravity field defaults to 0.0 with no explicit initializer, which would silently leave any
-		// real effect that never calls setGravity (e.g. FocusEffectBreak/FocusEffectRift) with no fall at
-		// all instead of the true original's own real subtle drift.
-		this.gravity = 1.0f;
+		// 1.12's Particle never set particleGravity (vanilla's falling particles set their own), so the original's
+		// FXGeneric hovered unless setGravity was called - e.g. Nitor's motes. The port had defaulted this to 1.0,
+		// making every effect without its own setGravity fall (fixed 2026-10-02).
+		this.gravity = 0.0f;
 	}
 
 	public FXGeneric(ClientLevel level, double x, double y, double z) {
@@ -341,6 +340,30 @@ public class FXGeneric extends SingleQuadParticle {
 		this.randomY = y;
 		this.randomZ = z;
 		return this;
+	}
+
+	/** The original's setAngles: the quad keeps this orientation instead of turning to the camera. */
+	public FXGeneric setAngles(float yaw, float pitch) {
+		this.angleYaw = yaw;
+		this.anglePitch = pitch;
+		this.angled = true;
+		return this;
+	}
+
+	/** Angled particles turn as the original's GL did - yaw (-yaw + 90) about Y, then pitch + 90 about X, then their
+	 * spin about Z; others face the camera as usual. */
+	@Override
+	public void render(com.mojang.blaze3d.vertex.VertexConsumer buffer, net.minecraft.client.Camera camera, float partialTicks) {
+		if (!angled) {
+			super.render(buffer, camera, partialTicks);
+			return;
+		}
+		org.joml.Quaternionf q = new org.joml.Quaternionf()
+				.rotateY((float) Math.toRadians(-angleYaw + 90.0f))
+				.rotateX((float) Math.toRadians(anglePitch + 90.0f));
+		float spin = Mth.lerp(partialTicks, oRoll, roll);
+		if (spin != 0.0f) q.rotateZ(spin);
+		renderRotatedQuad(buffer, camera, q, partialTicks);
 	}
 
 	public FXGeneric setRotationSpeed(float rot) {
