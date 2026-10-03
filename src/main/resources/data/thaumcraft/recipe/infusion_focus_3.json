@@ -8,7 +8,7 @@
     "vacuos": 100
   },
   "central": {
-    "item": "thaumcraft:focus_blank_2"
+    "item": "thaumcraft:focus_2"
   },
   "components": [
     {
@@ -25,6 +25,6 @@
     }
   ],
   "result": {
-    "id": "thaumcraft:focus_blank_3"
+    "id": "thaumcraft:focus_3"
   }
 }

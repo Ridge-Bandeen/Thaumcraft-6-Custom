@@ -58,7 +58,7 @@ final class LegacyRecipeKeys {
 		put("voidingot", "ingot_void");
 		put("hedge_tallow", "tallow");
 		put("hedge_leather", "hedge_leather");
-		put("focus_1", "focus_blank_1");
+		put("focus_1", "focus_1");
 		put("metal_purification_iron", "cluster_iron");
 		put("metal_purification_gold", "cluster_gold");
 		put("metal_purification_cinnabar", "cluster_cinnabar");
@@ -180,8 +180,8 @@ final class LegacyRecipeKeys {
 		put("CrystalClusterOrder", "infusion_crystal_cluster_order");
 		put("CrystalClusterEntropy", "infusion_crystal_cluster_entropy");
 		put("CrystalClusterFlux", "infusion_crystal_cluster_flux");
-		put("focus_2", "infusion_focus_blank_2");
-		put("focus_3", "infusion_focus_blank_3");
+		put("focus_2", "infusion_focus_2");
+		put("focus_3", "infusion_focus_3");
 		put("JarBrain", "jar_brain");
 		put("VisAmulet", "infusion_vis_amulet");
 		put("RunicArmorFake0", "runic_armor_fake_0");

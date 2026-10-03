@@ -138,10 +138,6 @@ public class ResearchRequirements {
 			Map.entry("thaumcraft:amulet_vis;0", "thaumcraft:amulet_vis_stone"),
 			Map.entry("thaumcraft:amulet_vis;1", "thaumcraft:amulet_vis"),
 			Map.entry("thaumcraft:seal", "thaumcraft:seal_blank"),
-			// the original's blank foci (ItemFocus focus_1/2/3) are focus_blank_1/2/3 here - this port's own focus_1 is a fire focus
-			Map.entry("thaumcraft:focus_1", "thaumcraft:focus_blank_1"),
-			Map.entry("thaumcraft:focus_2", "thaumcraft:focus_blank_2"),
-			Map.entry("thaumcraft:focus_3", "thaumcraft:focus_blank_3"),
 			// ItemCurio("curio", {arcane, preserved, ancient, eldritch, knowledge, twisted, rites})
 			Map.entry("thaumcraft:curio;1", "thaumcraft:curio_preserved"),
 			Map.entry("thaumcraft:curio;2", "thaumcraft:curio_ancient"),

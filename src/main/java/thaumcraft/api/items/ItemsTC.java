@@ -22,18 +22,6 @@ import thaumcraft.api.blocks.BlocksTC;
 import thaumcraft.common.items.casters.ItemCaster;
 import thaumcraft.common.items.consumables.ItemAlumentum;
 import thaumcraft.common.items.resources.ItemMagicDust;
-import thaumcraft.common.items.casters.ItemFocusAir;
-import thaumcraft.common.items.casters.ItemFocusBreak;
-import thaumcraft.common.items.casters.ItemFocusCurse;
-import thaumcraft.common.items.casters.ItemFocusEarth;
-import thaumcraft.common.items.casters.ItemFocusFire;
-import thaumcraft.common.items.casters.ItemFocusFireball;
-import thaumcraft.common.items.casters.ItemFocusFlux;
-import thaumcraft.common.items.casters.ItemFocusFireBolt;
-import thaumcraft.common.items.casters.ItemFocusFrost;
-import thaumcraft.common.items.casters.ItemFocusHeal;
-import thaumcraft.common.items.casters.ItemFocusSanctuary;
-import thaumcraft.common.items.casters.ItemFocusTrap;
 import thaumcraft.common.items.curios.ItemCurio;
 import thaumcraft.common.items.curios.ItemPechWand;
 
@@ -59,8 +47,15 @@ public final class ItemsTC {
 	public static final DeferredItem<ItemCaster> casterBasic =
 			ITEMS.registerItem("caster_basic", ItemCaster::new);
 
-	public static final DeferredItem<ItemFocusFire> focus1 =
-			ITEMS.registerItem("focus_1", ItemFocusFire::new);
+	/** The original's three focus tiers (complexity 15/25/50), built into spells at the Focal Manipulator. */
+	public static final DeferredItem<thaumcraft.common.items.casters.ItemFocus> focus1 =
+			ITEMS.registerItem("focus_1", props -> new thaumcraft.common.items.casters.ItemFocus(props, 15));
+
+	public static final DeferredItem<thaumcraft.common.items.casters.ItemFocus> focus2 =
+			ITEMS.registerItem("focus_2", props -> new thaumcraft.common.items.casters.ItemFocus(props, 25));
+
+	public static final DeferredItem<thaumcraft.common.items.casters.ItemFocus> focus3 =
+			ITEMS.registerItem("focus_3", props -> new thaumcraft.common.items.casters.ItemFocus(props, 50));
 
 	public static final DeferredItem<BlockItem> crucible =
 			ITEMS.registerSimpleBlockItem("crucible", BlocksTC.crucible);
@@ -136,50 +131,6 @@ public final class ItemsTC {
 	 * vanilla fluid bucket's own real "using it up returns an empty bucket" behavior. */
 	public static final DeferredItem<BucketItem> bucketDeath = ITEMS.registerItem("bucket_death",
 			props -> new BucketItem(thaumcraft.common.registry.ThaumcraftFluids.LIQUID_DEATH.get(), props.craftRemainder(Items.BUCKET).stacksTo(1)));
-
-	public static final DeferredItem<ItemFocusFrost> focusFrost =
-			ITEMS.registerItem("focus_frost", ItemFocusFrost::new);
-
-	public static final DeferredItem<ItemFocusBreak> focusBreak =
-			ITEMS.registerItem("focus_break", ItemFocusBreak::new);
-
-	public static final DeferredItem<ItemFocusFireBolt> focusFireBolt =
-			ITEMS.registerItem("focus_fire_bolt", ItemFocusFireBolt::new);
-
-	public static final DeferredItem<ItemFocusHeal> focusHeal =
-			ITEMS.registerItem("focus_heal", ItemFocusHeal::new);
-
-	public static final DeferredItem<ItemFocusCurse> focusCurse =
-			ITEMS.registerItem("focus_curse", ItemFocusCurse::new);
-
-	public static final DeferredItem<ItemFocusEarth> focusEarth =
-			ITEMS.registerItem("focus_earth", ItemFocusEarth::new);
-
-	public static final DeferredItem<ItemFocusFireball> focusFireball =
-			ITEMS.registerItem("focus_fireball", ItemFocusFireball::new);
-
-	public static final DeferredItem<ItemFocusFlux> focusFlux =
-			ITEMS.registerItem("focus_flux", ItemFocusFlux::new);
-
-	public static final DeferredItem<ItemFocusAir> focusAir =
-			ITEMS.registerItem("focus_air", ItemFocusAir::new);
-
-	public static final DeferredItem<ItemFocusTrap> focusTrap =
-			ITEMS.registerItem("focus_trap", ItemFocusTrap::new);
-
-	public static final DeferredItem<ItemFocusSanctuary> focusSanctuary =
-			ITEMS.registerItem("focus_sanctuary", ItemFocusSanctuary::new);
-
-	/** The original's real, genuinely blank foci - see {@link thaumcraft.common.items.casters.ItemFocusBlank}'s
-	 * own doc comment for why these coexist with the 10 fixed-chain foci above instead of replacing them. */
-	public static final DeferredItem<thaumcraft.common.items.casters.ItemFocusBlank> focusBlank1 =
-			ITEMS.registerItem("focus_blank_1", props -> new thaumcraft.common.items.casters.ItemFocusBlank(props, 15));
-
-	public static final DeferredItem<thaumcraft.common.items.casters.ItemFocusBlank> focusBlank2 =
-			ITEMS.registerItem("focus_blank_2", props -> new thaumcraft.common.items.casters.ItemFocusBlank(props, 25));
-
-	public static final DeferredItem<thaumcraft.common.items.casters.ItemFocusBlank> focusBlank3 =
-			ITEMS.registerItem("focus_blank_3", props -> new thaumcraft.common.items.casters.ItemFocusBlank(props, 50));
 
 	/** The real 18-slot portable focus container - see {@code ItemFocusPouch}'s own doc comment. */
 	public static final DeferredItem<thaumcraft.common.items.casters.ItemFocusPouch> focusPouch =

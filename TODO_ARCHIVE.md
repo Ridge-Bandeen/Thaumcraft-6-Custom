@@ -1,5 +1,15 @@
 # Thaumcraft 1.21.1 Port — TODO archive
 
+## Closed 2026-10-03 (foci)
+
+- The 12 port-invented fixed foci (Fire as `focus_1`, Frost, Break, Fire Bolt, Heal, Curse, Earth, Fireball, Flux,
+  Air, Trap, Sanctuary) are gone with their 24 arcane/crucible recipes, models and lang: the original had no
+  per-effect focus items. `ItemFocus` is the original's single class again (`focus_1/2/3`, complexity 15/25/50, rare),
+  with spells only from the Focal Manipulator; its tooltip is the original's (only on a built focus, no root node,
+  split branches indented). `focus_blank_N` ids are now `focus_N`; recipes `focus_1` (crucible) and
+  `infusion_focus_2/3`; the research aliases for them are gone. Tests cast built spells directly and use the
+  original banner (workbench) and hedge-alchemy clay (Thaumatorium) recipes.
+
 ## Closed 2026-10-03 (golems)
 
 - Seal filters as the original (`SealFilters`, the old InvFilter): whole-stack filters with per-slot sizes, the

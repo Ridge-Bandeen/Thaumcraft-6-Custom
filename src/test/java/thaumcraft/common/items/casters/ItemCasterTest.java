@@ -78,8 +78,8 @@ class ItemCasterTest {
 		ItemStack wand = new ItemStack(caster());
 		caster().setFocus(wand, new ItemStack(ItemsTC.focus1.get()));
 
-		caster().setFocus(wand, new ItemStack(ItemsTC.focusFrost.get()));
+		caster().setFocus(wand, new ItemStack(ItemsTC.focus2.get()));
 
-		assertEquals(ItemsTC.focusFrost.get(), caster().getFocus(wand));
+		assertEquals(ItemsTC.focus2.get(), caster().getFocus(wand));
 	}
 }

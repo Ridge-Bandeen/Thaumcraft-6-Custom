@@ -37,10 +37,9 @@ import thaumcraft.common.registry.ThaumcraftSounds;
 import thaumcraft.common.world.aura.AuraHandler;
 
 /**
- * Replaces the old (1.12.2) {@code TileFocalManipulator} - where a player assembles a real node graph onto
- * a blank {@link thaumcraft.common.items.casters.ItemFocusBlank} (build cost paid in vis + matching essentia
- * crystals + XP), rather than being stuck with the fixed-chain foci this session shipped earlier as a
- * stand-in for this exact device. See {@link ItemFocus}'s own doc comment for how the two coexist.
+ * Replaces the old (1.12.2) {@code TileFocalManipulator} - where a player builds a spell (a node graph) onto a
+ * {@link ItemFocus} tier (build cost paid in vis + matching essentia crystals + XP), as the original; the only way a
+ * focus gets a spell.
  *
  * Purpose-built {@link BlockEntity} + real {@link ItemStackHandler}, same "no shared inventory-tile base"
  * pattern {@code TileRechargePedestal}/{@code TileCrucible} already established - see that class's own doc

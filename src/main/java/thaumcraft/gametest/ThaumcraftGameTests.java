@@ -531,18 +531,7 @@ public class ThaumcraftGameTests {
 	public static void focusRecipesRegistered(GameTestHelper helper) {
 		RecipeManager recipes = helper.getLevel().getRecipeManager();
 		String[] expectedIds = {
-				"focus_1", "focus_1_crucible",
-				"focus_frost", "focus_frost_crucible",
-				"focus_break", "focus_break_crucible",
-				"focus_fire_bolt", "focus_fire_bolt_crucible",
-				"focus_heal", "focus_heal_crucible",
-				"focus_curse", "focus_curse_crucible",
-				"focus_earth", "focus_earth_crucible",
-				"focus_fireball", "focus_fireball_crucible",
-				"focus_flux", "focus_flux_crucible",
-				"focus_air", "focus_air_crucible",
-				"focus_trap", "focus_trap_crucible",
-				"focus_sanctuary", "focus_sanctuary_crucible",
+				"focus_1",
 				"caster_basic", "thaumometer", "quicksilver_smelting", "mirrored_glass", "mirror_essentia", "vis_resonator", "alumentum",
 				"recharge_pedestal", "hungry_chest", "salis_mundus", "lamp_arcane",
 				"amber_block", "amber_block_to_amber", "amber_brick", "amber_brick_to_block",
@@ -1082,11 +1071,19 @@ public class ThaumcraftGameTests {
 		return mob;
 	}
 
-	private static void cast(ItemFocus focusItem, ServerPlayer caster) {
-		ItemStack focusStack = new ItemStack(focusItem);
-		FocusPackage core = focusItem.getPackage(focusStack);
+	/** Casts a spell of {@code medium} + {@code effect} (behind the root every package starts with), as a focus built
+	 * at the Focal Manipulator would. */
+	private static void cast(ServerPlayer caster, thaumcraft.api.casters.IFocusElement medium, thaumcraft.api.casters.IFocusElement effect) {
+		FocusPackage core = spell(medium, effect);
 		core.initialize(caster);
 		FocusEngine.castFocusPackage(caster, core, true);
+	}
+
+	private static FocusPackage spell(thaumcraft.api.casters.IFocusElement... nodes) {
+		FocusPackage core = new FocusPackage();
+		core.addNode(new thaumcraft.api.casters.FocusMediumRoot());
+		for (thaumcraft.api.casters.IFocusElement node : nodes) core.addNode(node);
+		return core;
 	}
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
@@ -1096,7 +1093,7 @@ public class ThaumcraftGameTests {
 		Zombie zombie = spawnZombieFacedBy(helper, caster, origin);
 		float startingHealth = zombie.getHealth();
 
-		cast(ItemsTC.focus1.get(), caster);
+		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumTouch(), new thaumcraft.common.items.casters.foci.FocusEffectFire());
 
 		helper.assertTrue(zombie.getHealth() < startingHealth, "casting Fire at the zombie should have damaged it");
 		helper.assertTrue(zombie.getRemainingFireTicks() > 0, "casting Fire at the zombie should have ignited it");
@@ -1110,7 +1107,7 @@ public class ThaumcraftGameTests {
 		Zombie zombie = spawnZombieFacedBy(helper, caster, origin);
 		float startingHealth = zombie.getHealth();
 
-		cast(ItemsTC.focusFrost.get(), caster);
+		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumTouch(), new thaumcraft.common.items.casters.foci.FocusEffectFrost());
 
 		helper.assertTrue(zombie.getHealth() < startingHealth, "casting Frost at the zombie should have damaged it");
 		helper.assertTrue(zombie.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN),
@@ -1125,7 +1122,7 @@ public class ThaumcraftGameTests {
 		Pig pig = spawnPigFacedBy(helper, caster, origin);
 		pig.setHealth(1.0f);
 
-		cast(ItemsTC.focusHeal.get(), caster);
+		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumTouch(), new thaumcraft.common.items.casters.foci.FocusEffectHeal());
 
 		helper.assertTrue(pig.getHealth() > 1.0f, "casting Heal at a damaged living target should have healed it");
 		helper.succeed();
@@ -1140,7 +1137,7 @@ public class ThaumcraftGameTests {
 		Zombie zombie = spawnZombieFacedBy(helper, caster, origin);
 		float startingHealth = zombie.getHealth();
 
-		cast(ItemsTC.focusHeal.get(), caster);
+		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumTouch(), new thaumcraft.common.items.casters.foci.FocusEffectHeal());
 
 		helper.assertTrue(zombie.getHealth() < startingHealth, "casting Heal at an undead target should have hurt it instead of healing it");
 		helper.succeed();
@@ -1153,7 +1150,7 @@ public class ThaumcraftGameTests {
 		Pig pig = spawnPigFacedBy(helper, caster, origin);
 		float startingHealth = pig.getHealth();
 
-		cast(ItemsTC.focusCurse.get(), caster);
+		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumTouch(), new thaumcraft.common.items.casters.foci.FocusEffectCurse());
 
 		helper.assertTrue(pig.getHealth() < startingHealth, "casting Curse at the pig should have damaged it");
 		helper.assertTrue(pig.hasEffect(net.minecraft.world.effect.MobEffects.POISON),
@@ -1292,12 +1289,12 @@ public class ThaumcraftGameTests {
 		BlockPos pos = BlockPos.ZERO;
 		TileCrucible crucible = placeActiveCrucible(helper, pos);
 
-		// focus_1_crucible.json's requirement: quartz catalyst + vitreus 5 / praecantatio 3 / auram 2.
+		// focus_1.json (the original's blank Lesser Focus): Order crystal catalyst + vitreus 20 / praecantatio 10 / auram 5.
 		// Setting the pool directly rather than dissolving essentia items one at a time for this test -
 		// crucibleDissolvesEssentiaItemsIntoItsAspectPool already covers dissolving itself.
-		crucible.aspects = (new AspectList().add(Aspect.CRYSTAL, 5).add(Aspect.MAGIC, 3).add(Aspect.AURA, 2));
+		crucible.aspects = (new AspectList().add(Aspect.CRYSTAL, 20).add(Aspect.MAGIC, 10).add(Aspect.AURA, 5));
 
-		ItemStack catalyst = new ItemStack(Items.QUARTZ);
+		ItemStack catalyst = thaumcraft.common.items.resources.ItemCrystalEssence.of(Aspect.ORDER);
 		ItemStack remainder = crucible.attemptSmelt(catalyst, researchingPlayerAt(helper, pos), helper.getLevel());
 
 		helper.assertTrue(remainder.getCount() == 0, "the catalyst item should have been fully consumed (shrunk from 1 to 0)");
@@ -1307,7 +1304,7 @@ public class ThaumcraftGameTests {
 		List<ItemEntity> ejected = helper.getLevel()
 				.getEntitiesOfClass(ItemEntity.class, new AABB(absolute).inflate(2.0));
 		boolean foundFocus = ejected.stream().anyMatch(e -> e.getItem().is(ItemsTC.focus1.get()));
-		helper.assertTrue(foundFocus, "completing focus_1_crucible should have ejected a thaumcraft:focus_1 item near the crucible, found: "
+		helper.assertTrue(foundFocus, "completing focus_1 should have ejected a thaumcraft:focus_1 item near the crucible, found: "
 				+ ejected.stream().map(e -> e.getItem().toString()).toList());
 		helper.succeed();
 	}
@@ -1537,7 +1534,7 @@ public class ThaumcraftGameTests {
 		ServerPlayer caster = spawnCasterAt(helper, origin);
 		BlockPos relPos = placeTargetBlock(helper, caster, Blocks.STONE);
 
-		cast(ItemsTC.focusBreak.get(), caster);
+		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumTouch(), new thaumcraft.common.items.casters.foci.FocusEffectBreak());
 		tickSchedulerUntilBroken(helper, relPos, 200);
 
 		helper.assertTrue(helper.getBlockState(relPos).isAir(), "casting Excavation at a real stone block should really have broken it within a generous real tick budget (a real gradual break, not instant - see BlockScheduler)");
@@ -1562,7 +1559,7 @@ public class ThaumcraftGameTests {
 		ServerPlayer stoneCaster = spawnCasterAt(helper, origin);
 		BlockPos stonePos = placeTargetBlock(helper, stoneCaster, Blocks.STONE);
 		ensureChunkVis(helper, stonePos);
-		cast(ItemsTC.focusBreak.get(), stoneCaster);
+		cast(stoneCaster, new thaumcraft.common.items.casters.foci.FocusMediumTouch(), new thaumcraft.common.items.casters.foci.FocusEffectBreak());
 		int stoneTicks = 0;
 		while (stoneTicks < 200 && !helper.getBlockState(stonePos).isAir()) {
 			thaumcraft.common.lib.scheduling.BlockScheduler.tick(helper.getLevel());
@@ -1575,7 +1572,7 @@ public class ThaumcraftGameTests {
 		helper.setBlock(obsidianPos, Blocks.OBSIDIAN);
 		obsidianCaster.lookAt(EntityAnchorArgument.Anchor.EYES, Vec3.atCenterOf(helper.absolutePos(obsidianPos)));
 		ensureChunkVis(helper, obsidianPos);
-		cast(ItemsTC.focusBreak.get(), obsidianCaster);
+		cast(obsidianCaster, new thaumcraft.common.items.casters.foci.FocusMediumTouch(), new thaumcraft.common.items.casters.foci.FocusEffectBreak());
 		int obsidianTicks = 0;
 		while (obsidianTicks < 500 && !helper.getBlockState(obsidianPos).isAir()) {
 			thaumcraft.common.lib.scheduling.BlockScheduler.tick(helper.getLevel());
@@ -1594,7 +1591,7 @@ public class ThaumcraftGameTests {
 		// unconditionally, regardless of power.
 		BlockPos relPos = placeTargetBlock(helper, caster, Blocks.BEDROCK);
 
-		cast(ItemsTC.focusBreak.get(), caster);
+		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumTouch(), new thaumcraft.common.items.casters.foci.FocusEffectBreak());
 
 		helper.assertFalse(helper.getBlockState(relPos).isAir(), "casting Excavation at bedrock should never break it, no matter the power setting");
 		helper.succeed();
@@ -1609,17 +1606,19 @@ public class ThaumcraftGameTests {
 	// --------------------------------------------------------------------------------------------------
 
 	@SuppressWarnings("removal")
-	private static ArcaneWorkbenchMenu placeWorkbenchWithFocus1Ingredients(GameTestHelper helper, ServerPlayer player) {
+	private static ArcaneWorkbenchMenu placeWorkbenchWithBannerIngredients(GameTestHelper helper, ServerPlayer player) {
 		BlockPos relPos = new BlockPos(0, 0, 0);
 		helper.setBlock(relPos, BlocksTC.arcaneWorkbench.get());
 		TileArcaneWorkbench tile = helper.getBlockEntity(relPos);
 
-		// focus_1.json's pattern: " B " / "BRB" / " B " over a 3x3 grid (indices 0-8, row-major).
-		tile.setItem(1, new ItemStack(Items.BLAZE_POWDER));
-		tile.setItem(3, new ItemStack(Items.BLAZE_POWDER));
-		tile.setItem(4, new ItemStack(Items.REDSTONE));
-		tile.setItem(5, new ItemStack(Items.BLAZE_POWDER));
-		tile.setItem(7, new ItemStack(Items.BLAZE_POWDER));
+		// banner_white.json (BASEINFUSION, 10 vis): "WS" / "WS" / "WB" - wool, stick, slab - over the grid's left
+		// two columns (indices 0-8, row-major).
+		tile.setItem(0, new ItemStack(Items.WHITE_WOOL));
+		tile.setItem(1, new ItemStack(Items.STICK));
+		tile.setItem(3, new ItemStack(Items.WHITE_WOOL));
+		tile.setItem(4, new ItemStack(Items.STICK));
+		tile.setItem(6, new ItemStack(Items.WHITE_WOOL));
+		tile.setItem(7, new ItemStack(Items.OAK_SLAB));
 
 		ArcaneWorkbenchMenu menu = new ArcaneWorkbenchMenu(0, player.getInventory(), tile);
 		menu.slotsChanged(tile);
@@ -1630,22 +1629,22 @@ public class ThaumcraftGameTests {
 	public static void workbenchCraftsAMatchingRecipeAndConsumesVisAndIngredients(GameTestHelper helper) {
 		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
 		ServerPlayer player = spawnCasterAt(helper, origin);
-		forceResearch(player, "FIRSTSTEPS");
+		forceResearch(player, "BASEINFUSION");
 		float visBefore = AuraHandler.getVis(helper.getLevel(), origin);
 
-		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithBannerIngredients(helper, player);
 
 		ItemStack result = menu.slots.get(0).getItem();
-		helper.assertTrue(result.is(ItemsTC.focus1.get()), "matching ingredients, enough vis, and known research should have produced a focus_1 in the result slot, got " + result);
+		helper.assertTrue(result.is(ItemsTC.banners.get(net.minecraft.world.item.DyeColor.WHITE).get()), "matching ingredients, enough vis, and known research should have produced a banner in the result slot, got " + result);
 
 		menu.slots.get(0).onTake(player, result);
 
 		helper.assertTrue(menu.slots.get(1).getItem().isEmpty(), "taking the result should have consumed the grid ingredients");
 		float visAfter = AuraHandler.getVis(helper.getLevel(), origin);
 		// The aura thread regrows chunk vis once a second on its own thread (a moon-phase step, under 1), and now and
-		// then did so between the two readings (seen: 154.0 -> 139.25). So: 15 drained, give or take one regrowth step.
+		// then did so between the two readings (seen: 154.0 -> 139.25). So: 10 drained, give or take one regrowth step.
 		float drained = visBefore - visAfter;
-		helper.assertTrue(drained > 14.0f && drained <= 15.0f, "taking the result should have drained the recipe's vis cost (15), before=" + visBefore + " after=" + visAfter);
+		helper.assertTrue(drained > 9.0f && drained <= 10.0f, "taking the result should have drained the recipe's vis cost (10), before=" + visBefore + " after=" + visAfter);
 		helper.succeed();
 	}
 
@@ -1653,11 +1652,11 @@ public class ThaumcraftGameTests {
 	public static void workbenchRefusesToCraftWithoutEnoughVis(GameTestHelper helper) {
 		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
 		ServerPlayer player = spawnCasterAt(helper, origin);
-		// Drain the workbench's chunk down to less than focus_1's 15-vis cost.
+		// Drain the workbench's chunk down to less than the banner's 10-vis cost.
 		AuraHandler.drainVis(helper.getLevel(), origin, AuraHandler.getVis(helper.getLevel(), origin), false);
 		AuraHandler.addVis(helper.getLevel(), origin, 5.0f);
 
-		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithBannerIngredients(helper, player);
 
 		helper.assertTrue(menu.slots.get(0).getItem().isEmpty(), "matching ingredients with insufficient vis should not have produced a result");
 		helper.succeed();
@@ -1669,7 +1668,7 @@ public class ThaumcraftGameTests {
 		ServerPlayer player = spawnCasterAt(helper, origin);
 		ThaumcraftCapabilities.getKnowledge(player).clear();
 
-		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithBannerIngredients(helper, player);
 
 		helper.assertTrue(menu.slots.get(0).getItem().isEmpty(), "matching ingredients and enough vis with no known research should not have produced a result");
 		helper.succeed();
@@ -1679,18 +1678,18 @@ public class ThaumcraftGameTests {
 	public static void workbenchChargerDrawsVisFromNeighbouringChunksToo(GameTestHelper helper) {
 		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
 		ServerPlayer player = spawnCasterAt(helper, origin);
-		forceResearch(player, "FIRSTSTEPS");
-		// Drain the workbench's own chunk below focus_1's 15-vis cost, same setup as the insufficient-vis
+		forceResearch(player, "BASEINFUSION");
+		// Drain the workbench's own chunk below the banner's 10-vis cost, same setup as the insufficient-vis
 		// test above, but seed a real neighbouring chunk (16 blocks over) with plenty instead.
 		AuraHandler.drainVis(helper.getLevel(), origin, AuraHandler.getVis(helper.getLevel(), origin), false);
 		AuraHandler.addVis(helper.getLevel(), origin, 5.0f);
 		AuraHandler.addVis(helper.getLevel(), origin.offset(16, 0, 0), 500.0f);
 
 		helper.setBlock(BlockPos.ZERO.above(), BlocksTC.arcaneWorkbenchCharger.get());
-		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithBannerIngredients(helper, player);
 
 		ItemStack result = menu.slots.get(0).getItem();
-		helper.assertTrue(result.is(ItemsTC.focus1.get()),
+		helper.assertTrue(result.is(ItemsTC.banners.get(net.minecraft.world.item.DyeColor.WHITE).get()),
 				"a charger above the workbench should draw vis from neighbouring chunks too, even though the workbench's own chunk alone doesn't have enough, got " + result);
 		helper.succeed();
 	}
@@ -1734,23 +1733,23 @@ public class ThaumcraftGameTests {
 	public static void workbenchDiscountGearReducesTheVisCostInsteadOfMakingCraftsFree(GameTestHelper helper) {
 		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
 		ServerPlayer player = spawnCasterAt(helper, origin);
-		forceResearch(player, "FIRSTSTEPS");
+		forceResearch(player, "BASEINFUSION");
 		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new ItemStack(ItemsTC.clothChest.get()));
 		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.LEGS, new ItemStack(ItemsTC.clothLegs.get()));
 		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, new ItemStack(ItemsTC.clothBoots.get()));
 		float visBefore = AuraHandler.getVis(helper.getLevel(), origin);
 
-		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithBannerIngredients(helper, player);
 		helper.assertTrue(menu.getShownDiscount() == 0 || menu.getShownDiscount() == 8, "the readout should be 0 (not yet refreshed) or 8, got " + menu.getShownDiscount());
 		menu.broadcastChanges();
-		helper.assertTrue(menu.getShownCost() == 14 && menu.getShownDiscount() == 8,
-				"an 8% discount on focus_1's 15 vis should cost 14 and read 8%, got cost " + menu.getShownCost() + " discount " + menu.getShownDiscount());
+		helper.assertTrue(menu.getShownCost() == 9 && menu.getShownDiscount() == 8,
+				"an 8% discount on the banner's 10 vis should cost 9 and read 8%, got cost " + menu.getShownCost() + " discount " + menu.getShownDiscount());
 
 		ItemStack result = menu.slots.get(0).getItem();
-		helper.assertTrue(result.is(ItemsTC.focus1.get()), "the discounted craft should still produce its result, got " + result);
+		helper.assertTrue(result.is(ItemsTC.banners.get(net.minecraft.world.item.DyeColor.WHITE).get()), "the discounted craft should still produce its result, got " + result);
 		menu.slots.get(0).onTake(player, result);
 		float spent = visBefore - AuraHandler.getVis(helper.getLevel(), origin);
-		helper.assertTrue(Math.round(spent) == 14, "the craft should drain the discounted 14 vis - not 0 (the original's bug) and not 15, spent " + spent);
+		helper.assertTrue(Math.round(spent) == 9, "the craft should drain the discounted 9 vis - not 0 (the original's bug) and not 10, spent " + spent);
 		helper.succeed();
 	}
 
@@ -1758,23 +1757,23 @@ public class ThaumcraftGameTests {
 	public static void workbenchVisExhaustMakesCraftsDearer(GameTestHelper helper) {
 		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
 		ServerPlayer player = spawnCasterAt(helper, origin);
-		forceResearch(player, "FIRSTSTEPS");
+		forceResearch(player, "BASEINFUSION");
 		player.addEffect(new net.minecraft.world.effect.MobEffectInstance(thaumcraft.common.registry.ThaumcraftMobEffects.VIS_EXHAUST, 600, 0));
 		float visBefore = AuraHandler.getVis(helper.getLevel(), origin);
 
-		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithBannerIngredients(helper, player);
 		ItemStack result = menu.slots.get(0).getItem();
-		helper.assertTrue(result.is(ItemsTC.focus1.get()), "an exhausted player with plenty of vis can still craft, got " + result);
+		helper.assertTrue(result.is(ItemsTC.banners.get(net.minecraft.world.item.DyeColor.WHITE).get()), "an exhausted player with plenty of vis can still craft, got " + result);
 		menu.slots.get(0).onTake(player, result);
 		float spent = visBefore - AuraHandler.getVis(helper.getLevel(), origin);
-		helper.assertTrue(Math.round(spent) == 17, "Vis Exhaust I adds 10% (15 -> 16.5 -> 17), spent " + spent);
+		helper.assertTrue(Math.round(spent) == 11, "Vis Exhaust I adds 10% (10 -> 11), spent " + spent);
 		helper.succeed();
 	}
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void workbenchCrystalSlotsOnlyTakeTheirOwnAspect(GameTestHelper helper) {
 		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
-		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithBannerIngredients(helper, player);
 		ItemStack fire = thaumcraft.common.items.resources.ItemCrystalEssence.of(thaumcraft.api.aspects.Aspect.FIRE);
 		ItemStack air = thaumcraft.common.items.resources.ItemCrystalEssence.of(thaumcraft.api.aspects.Aspect.AIR);
 		helper.assertTrue(menu.slots.get(10).mayPlace(air) && !menu.slots.get(10).mayPlace(fire), "ring slot 0 is the air slot");
@@ -1794,7 +1793,7 @@ public class ThaumcraftGameTests {
 	}
 
 	// --------------------------------------------------------------------------------------------------
-	// Focus: Fire Bolt - the wand's only non-Touch medium so far. Every entity-targeting test above uses
+	// Bolt + Fire spells. Every entity-targeting test above uses
 	// FocusMediumTouch's 5-block range; these confirm FocusMediumBolt's 16-block range is actually
 	// different in practice, not just in the getRange() override - a target 6 blocks out is exactly the
 	// kind of distance Touch is documented to miss and Bolt is documented to reach.
@@ -1807,7 +1806,7 @@ public class ThaumcraftGameTests {
 		Pig pig = spawnPigFacedBy(helper, caster, origin, 6.5);
 		float startingHealth = pig.getHealth();
 
-		cast(ItemsTC.focusFireBolt.get(), caster);
+		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumBolt(), new thaumcraft.common.items.casters.foci.FocusEffectFire());
 
 		helper.assertTrue(pig.getHealth() < startingHealth, "Fire Bolt's 16-block range should have reached a target 6 blocks away");
 		helper.succeed();
@@ -1820,7 +1819,7 @@ public class ThaumcraftGameTests {
 		Pig pig = spawnPigFacedBy(helper, caster, origin, 6.5);
 		float startingHealth = pig.getHealth();
 
-		cast(ItemsTC.focus1.get(), caster);
+		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumTouch(), new thaumcraft.common.items.casters.foci.FocusEffectFire());
 
 		helper.assertTrue(pig.getHealth() == startingHealth,
 				"the plain Fire focus (Touch medium, 5-block range) should not have reached a target 6 blocks away - if this starts failing, Touch's range changed");
@@ -1893,7 +1892,7 @@ public class ThaumcraftGameTests {
 		Pig pig = spawnPigFacedBy(helper, caster, origin);
 		float startingHealth = pig.getHealth();
 
-		cast(ItemsTC.focusEarth.get(), caster);
+		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumTouch(), new thaumcraft.common.items.casters.foci.FocusEffectEarth());
 
 		helper.assertTrue(pig.getHealth() < startingHealth, "casting Earth at the pig should have damaged it");
 		helper.succeed();
@@ -1914,8 +1913,7 @@ public class ThaumcraftGameTests {
 		// that's 0.08, under even dirt's own real 0.5 hardness. A real caster with a stronger catalyst would
 		// clear it easily; multiplyPower stands in for that here rather than inventing a softer-than-real
 		// target block just to make the default power work.
-		ItemStack focusStack = new ItemStack(ItemsTC.focusEarth.get());
-		FocusPackage core = ItemsTC.focusEarth.get().getPackage(focusStack);
+		FocusPackage core = spell(new thaumcraft.common.items.casters.foci.FocusMediumTouch(), new thaumcraft.common.items.casters.foci.FocusEffectEarth());
 		core.initialize(caster);
 		core.multiplyPower(20.0f);
 		FocusEngine.castFocusPackage(caster, core, true);
@@ -1963,7 +1961,7 @@ public class ThaumcraftGameTests {
 		exchangePackage.addNode(new thaumcraft.api.casters.FocusMediumRoot());
 		exchangePackage.addNode(new thaumcraft.common.items.casters.foci.FocusMediumTouch());
 		exchangePackage.addNode(new thaumcraft.common.items.casters.foci.FocusEffectExchange());
-		ItemStack exchangeFocus = new ItemStack(ItemsTC.focusBlank1.get());
+		ItemStack exchangeFocus = new ItemStack(ItemsTC.focus1.get());
 		exchangeFocus.set(thaumcraft.api.items.ThaumcraftDataComponents.ASSEMBLED_FOCUS.get(),
 				new thaumcraft.api.items.ThaumcraftDataComponents.AssembledFocus(exchangePackage));
 		casterItem.setFocus(casterStack, exchangeFocus);
@@ -1983,7 +1981,7 @@ public class ThaumcraftGameTests {
 		plainPackage.addNode(new thaumcraft.api.casters.FocusMediumRoot());
 		plainPackage.addNode(new thaumcraft.common.items.casters.foci.FocusMediumTouch());
 		plainPackage.addNode(new thaumcraft.common.items.casters.foci.FocusEffectEarth());
-		ItemStack plainFocus = new ItemStack(ItemsTC.focusBlank1.get());
+		ItemStack plainFocus = new ItemStack(ItemsTC.focus1.get());
 		plainFocus.set(thaumcraft.api.items.ThaumcraftDataComponents.ASSEMBLED_FOCUS.get(),
 				new thaumcraft.api.items.ThaumcraftDataComponents.AssembledFocus(plainPackage));
 		casterItem.setFocus(casterStack, plainFocus);
@@ -2031,7 +2029,7 @@ public class ThaumcraftGameTests {
 		exchangePackage.addNode(new thaumcraft.common.items.casters.foci.FocusMediumTouch());
 		exchangePackage.addNode(new thaumcraft.common.items.casters.foci.FocusMediumPlan());
 		exchangePackage.addNode(new thaumcraft.common.items.casters.foci.FocusEffectExchange());
-		ItemStack blankFocus = new ItemStack(ItemsTC.focusBlank1.get());
+		ItemStack blankFocus = new ItemStack(ItemsTC.focus1.get());
 		blankFocus.set(thaumcraft.api.items.ThaumcraftDataComponents.ASSEMBLED_FOCUS.get(),
 				new thaumcraft.api.items.ThaumcraftDataComponents.AssembledFocus(exchangePackage));
 		casterItem.setFocus(casterStack, blankFocus);
@@ -2074,7 +2072,7 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
-	 * Focus: Fireball - the wand's first entity-backed medium (see
+	 * Projectile + Fire spells - the first entity-backed medium (see
 	 * {@link thaumcraft.common.entities.projectile.EntityFocusProjectile}'s doc comment). Unlike every
 	 * other cast test, the effect doesn't run synchronously with {@code cast()} - the projectile has to
 	 * actually fly there first, so this polls every tick via {@code succeedWhen} until the pig actually
@@ -2099,7 +2097,7 @@ public class ThaumcraftGameTests {
 		caster.lookAt(EntityAnchorArgument.Anchor.EYES, pig.getBoundingBox().getCenter());
 		float startingHealth = pig.getHealth();
 
-		cast(ItemsTC.focusFireball.get(), caster);
+		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumProjectile(), new thaumcraft.common.items.casters.foci.FocusEffectFire());
 
 		helper.succeedWhen(() -> helper.assertTrue(pig.getHealth() < startingHealth,
 				"the fireball should have flown to the pig and burned it by now, health=" + pig.getHealth() + " (was " + startingHealth + ")"));
@@ -2112,7 +2110,7 @@ public class ThaumcraftGameTests {
 		Pig pig = spawnPigFacedBy(helper, caster, origin);
 		float startingHealth = pig.getHealth();
 
-		cast(ItemsTC.focusFlux.get(), caster);
+		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumTouch(), new thaumcraft.common.items.casters.foci.FocusEffectFlux());
 
 		helper.assertTrue(pig.getHealth() < startingHealth, "casting Flux at the pig should have damaged it");
 		helper.succeed();
@@ -2126,7 +2124,7 @@ public class ThaumcraftGameTests {
 		float startingHealth = pig.getHealth();
 		Vec3 startingVelocity = pig.getDeltaMovement();
 
-		cast(ItemsTC.focusAir.get(), caster);
+		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumTouch(), new thaumcraft.common.items.casters.foci.FocusEffectAir());
 
 		helper.assertTrue(pig.getHealth() < startingHealth, "casting Air at the pig should have damaged it");
 		helper.assertTrue(!pig.getDeltaMovement().equals(startingVelocity), "casting Air at the pig should have knocked it back");
@@ -2156,7 +2154,7 @@ public class ThaumcraftGameTests {
 		helper.getLevel().addFreshEntity(zombie);
 		float startingHealth = zombie.getHealth();
 
-		cast(ItemsTC.focusTrap.get(), caster);
+		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumMine(), new thaumcraft.common.items.casters.foci.FocusEffectCurse());
 
 		helper.succeedWhen(() -> helper.assertTrue(zombie.getHealth() < startingHealth,
 				"the trap should have armed on the block and cursed the zombie waiting next to it, health=" + zombie.getHealth()));
@@ -2176,7 +2174,7 @@ public class ThaumcraftGameTests {
 		Pig pig = spawnPigFacedBy(helper, caster, origin, 0.8);
 		pig.setHealth(1.0f);
 
-		cast(ItemsTC.focusSanctuary.get(), caster);
+		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumCloud(), new thaumcraft.common.items.casters.foci.FocusEffectHeal());
 
 		helper.succeedWhen(() -> helper.assertTrue(pig.getHealth() > 1.0f,
 				"the sanctuary cloud should have healed the nearby damaged pig by now, health=" + pig.getHealth()));
@@ -3755,10 +3753,10 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos.below(), BlocksTC.crucible.get()); // the body reverts to Metal Alchemical without its crucible
 
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
-		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
-		// focus_air_crucible.json: catalyst feather, aspects vitreus:5/praecantatio:3/aer:3, result Focus: Air.
-		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
-		helper.assertFalse(tile.getItem().isEmpty(), "the feather catalyst should have been accepted");
+		selectThaumatoriumRecipe(helper, tile, Items.CLAY_BALL);
+		// hedge_clay.json: catalyst dirt, aspects aqua:5, result a clay ball.
+		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT));
+		helper.assertFalse(tile.getItem().isEmpty(), "the dirt catalyst should have been accepted");
 
 		helper.setBlock(pos.east(), TEST_ESSENTIA_SOURCE_BLOCK.get());
 		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(pos.east());
@@ -3773,11 +3771,11 @@ public class ThaumcraftGameTests {
 			thaumcraft.common.tiles.crafting.TileThaumatorium.tick(helper.getLevel(), absolute, state, tile);
 		}
 
-		helper.assertTrue(tile.getItem().isEmpty(), "the feather catalyst should have been consumed crafting the focus");
+		helper.assertTrue(tile.getItem().isEmpty(), "the dirt catalyst should have been consumed crafting the clay");
 		java.util.List<net.minecraft.world.entity.item.ItemEntity> drops = helper.getLevel().getEntitiesOfClass(
 				net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(absolute).inflate(2));
-		boolean foundFocus = drops.stream().anyMatch(e -> e.getItem().is(thaumcraft.api.items.ItemsTC.focusAir.get()));
-		helper.assertTrue(foundFocus, "the thaumatorium should have crafted and ejected a Focus: Air");
+		boolean foundFocus = drops.stream().anyMatch(e -> e.getItem().is(Items.CLAY_BALL));
+		helper.assertTrue(foundFocus, "the thaumatorium should have crafted and ejected a clay ball");
 		helper.succeed();
 	}
 
@@ -3790,8 +3788,8 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos.below(), BlocksTC.crucible.get()); // the body reverts to Metal Alchemical without its crucible
 
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
-		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
-		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
+		selectThaumatoriumRecipe(helper, tile, Items.CLAY_BALL);
+		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT));
 
 		helper.setBlock(pos.east(), TEST_ESSENTIA_SOURCE_BLOCK.get());
 		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(pos.east());
@@ -3887,10 +3885,10 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos.below(), BlocksTC.crucible.get()); // the body reverts to Metal Alchemical without its crucible
 		helper.setBlock(pos.north(), Blocks.CHEST); // it faces north by default: the front is where the result goes
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
-		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
-		tile.setItem(new ItemStack(Items.FEATHER));
+		selectThaumatoriumRecipe(helper, tile, Items.CLAY_BALL);
+		tile.setItem(new ItemStack(Items.DIRT));
 		// pre-stock the essentia so the craft completes on the first cycle
-		tile.setAspects(new AspectList().add(Aspect.CRYSTAL, 5).add(Aspect.MAGIC, 3).add(Aspect.AIR, 3));
+		tile.setAspects(new AspectList().add(Aspect.WATER, 5));
 		var state = helper.getBlockState(pos);
 		for (int i = 0; i < 60 && !tile.getItem().isEmpty(); i++) {
 			thaumcraft.common.tiles.crafting.TileThaumatorium.tick(helper.getLevel(), absolute, state, tile);
@@ -3899,7 +3897,7 @@ public class ThaumcraftGameTests {
 		net.minecraft.world.level.block.entity.ChestBlockEntity chest = helper.getBlockEntity(pos.north());
 		boolean inChest = false;
 		for (int i = 0; i < chest.getContainerSize(); i++) {
-			if (chest.getItem(i).is(thaumcraft.api.items.ItemsTC.focusAir.get())) inChest = true;
+			if (chest.getItem(i).is(Items.CLAY_BALL)) inChest = true;
 		}
 		helper.assertTrue(inChest, "the result should have been put into the neighbouring chest");
 		helper.succeed();
@@ -3914,9 +3912,9 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos, BlocksTC.thaumatorium.get());
 		helper.setBlock(pos.below(), BlocksTC.crucible.get());
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
-		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
-		tile.setItem(new ItemStack(Items.FEATHER));
-		tile.setAspects(new AspectList().add(Aspect.CRYSTAL, 5).add(Aspect.MAGIC, 3).add(Aspect.AIR, 3));
+		selectThaumatoriumRecipe(helper, tile, Items.CLAY_BALL);
+		tile.setItem(new ItemStack(Items.DIRT));
+		tile.setAspects(new AspectList().add(Aspect.WATER, 5));
 		var state = helper.getBlockState(pos);
 		for (int i = 0; i < 60 && !tile.getItem().isEmpty(); i++) {
 			thaumcraft.common.tiles.crafting.TileThaumatorium.tick(helper.getLevel(), absolute, state, tile);
@@ -3924,7 +3922,7 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(tile.getItem().isEmpty(), "the craft should have completed");
 		java.util.List<net.minecraft.world.entity.item.ItemEntity> drops = helper.getLevel().getEntitiesOfClass(
 				net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(absolute).inflate(3));
-		net.minecraft.world.entity.item.ItemEntity focus = drops.stream().filter(e -> e.getItem().is(thaumcraft.api.items.ItemsTC.focusAir.get())).findFirst().orElse(null);
+		net.minecraft.world.entity.item.ItemEntity focus = drops.stream().filter(e -> e.getItem().is(Items.CLAY_BALL)).findFirst().orElse(null);
 		helper.assertTrue(focus != null, "the focus should have been dropped");
 		helper.assertTrue(focus.getZ() < absolute.getZ() && focus.getDeltaMovement().z < 0, "it should come out the north (front) side, moving away from the device, at z=" + focus.getZ()
 				+ " (device z=" + absolute.getZ() + ")");
@@ -3992,8 +3990,8 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos, BlocksTC.thaumatorium.get());
 		helper.setBlock(pos.below(), BlocksTC.crucible.get()); // the body reverts to Metal Alchemical without its crucible
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
-		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
-		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
+		selectThaumatoriumRecipe(helper, tile, Items.CLAY_BALL);
+		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT));
 		helper.setBlock(pos.north(), TEST_ESSENTIA_SOURCE_BLOCK.get());
 		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(pos.north());
 		source.aspect = Aspect.EARTH;
@@ -4014,13 +4012,13 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos, BlocksTC.thaumatorium.get());
 		helper.setBlock(pos.below(), BlocksTC.crucible.get()); // the body reverts to Metal Alchemical without its crucible
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
-		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
+		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT));
 		var all = thaumcraft.common.tiles.crafting.TileThaumatorium.allRecipes(helper.getLevel());
 		int air = -1;
 		for (int i = 0; i < all.size(); i++) {
-			if (all.get(i).value().getRecipeOutput().is(thaumcraft.api.items.ItemsTC.focusAir.get())) air = i;
+			if (all.get(i).value().getRecipeOutput().is(Items.CLAY_BALL)) air = i;
 		}
-		helper.assertTrue(air >= 0, "the focus_air crucible recipe should exist");
+		helper.assertTrue(air >= 0, "the hedge_clay crucible recipe should exist");
 
 		// New players start with the basics (FIRSTSTEPS) - find a recipe that is genuinely gated behind other research.
 		ServerPlayer novice = spawnCasterAt(helper, helper.absolutePos(pos).above());
@@ -4034,7 +4032,7 @@ public class ThaumcraftGameTests {
 			tile.setItem(all.get(gated).value().getCatalyst().getItems().length > 0 ? all.get(gated).value().getCatalyst().getItems()[0] : ItemStack.EMPTY);
 			tile.toggleSelection(novice, gated);
 			helper.assertTrue(tile.getSelected().isEmpty(), "a player without the research must not be able to select the recipe");
-			tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
+			tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT));
 		}
 		ServerPlayer scholar = researchingPlayerAt(helper, pos);
 		tile.toggleSelection(scholar, air);
@@ -4073,18 +4071,17 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos.below(), BlocksTC.crucible.get()); // the body reverts to Metal Alchemical without its crucible
 		thaumcraft.common.tiles.crafting.TileThaumatorium tile = helper.getBlockEntity(pos);
 
-		selectThaumatoriumRecipe(helper, tile, thaumcraft.api.items.ItemsTC.focusAir.get());
+		selectThaumatoriumRecipe(helper, tile, Items.CLAY_BALL);
 		helper.assertTrue(tile.getPreviewResult().isEmpty(), "with no real catalyst inserted, the real preview should really be empty");
 
 		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK));
 		helper.assertTrue(tile.getPreviewResult().isEmpty(), "with a real catalyst that matches no real recipe, the real preview should really be empty");
 
-		// focus_air_crucible.json: catalyst feather, result Focus: Air - same real recipe the other real
-		// Thaumatorium tests above already exercise.
-		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER));
+		// hedge_clay.json: catalyst dirt, result a clay ball - same recipe the other Thaumatorium tests above exercise.
+		tile.setItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT));
 		ItemStack preview = tile.getPreviewResult();
-		helper.assertTrue(preview.is(thaumcraft.api.items.ItemsTC.focusAir.get()),
-				"with a real matching feather catalyst, the real preview should really show Focus: Air, found " + preview);
+		helper.assertTrue(preview.is(Items.CLAY_BALL),
+				"with a matching dirt catalyst, the preview should show a clay ball, found " + preview);
 		helper.succeed();
 	}
 
@@ -8995,7 +8992,7 @@ public class ThaumcraftGameTests {
 		player.getInventory().add(makeAspectCrystal(thaumcraft.api.aspects.Aspect.AVERSION));
 		player.getInventory().add(makeAspectCrystal(thaumcraft.api.aspects.Aspect.FIRE));
 
-		ItemStack blank = new ItemStack(ItemsTC.focusBlank1.get());
+		ItemStack blank = new ItemStack(ItemsTC.focus1.get());
 		tile.setFocus(blank);
 
 		thaumcraft.common.tiles.crafting.FocusElementNode root = new thaumcraft.common.tiles.crafting.FocusElementNode();
@@ -9054,7 +9051,7 @@ public class ThaumcraftGameTests {
 		thaumcraft.api.ThaumcraftApi.internalMethods.completeResearch(player, "BASEAUROMANCY");
 		player.getInventory().add(makeAspectCrystal(thaumcraft.api.aspects.Aspect.FIRE));
 
-		tile.setFocus(new ItemStack(ItemsTC.focusBlank1.get()));
+		tile.setFocus(new ItemStack(ItemsTC.focus1.get()));
 		thaumcraft.common.tiles.crafting.FocusElementNode root = new thaumcraft.common.tiles.crafting.FocusElementNode();
 		root.id = 0;
 		root.node = (thaumcraft.api.casters.FocusNode) thaumcraft.api.casters.FocusEngine.getElement("thaumcraft.FIRE");
@@ -9079,12 +9076,12 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.container.FocalManipulatorMenu menu = new thaumcraft.common.container.FocalManipulatorMenu(0, player.getInventory(), tile);
 
 		helper.assertTrue(menu.stillValid(player), "the menu should remain valid while the player is near the real placed tile");
-		helper.assertTrue(menu.slots.get(0).mayPlace(new ItemStack(ItemsTC.focusBlank1.get())), "slot 0 should accept a real ItemFocus");
+		helper.assertTrue(menu.slots.get(0).mayPlace(new ItemStack(ItemsTC.focus1.get())), "slot 0 should accept a real ItemFocus");
 		helper.assertTrue(!menu.slots.get(0).mayPlace(new ItemStack(Items.STICK)), "slot 0 should reject a non-focus item");
 
-		ItemStack blank = new ItemStack(ItemsTC.focusBlank1.get());
+		ItemStack blank = new ItemStack(ItemsTC.focus1.get());
 		tile.setFocus(blank);
-		helper.assertTrue(menu.slots.get(0).getItem().is(ItemsTC.focusBlank1.get()),
+		helper.assertTrue(menu.slots.get(0).getItem().is(ItemsTC.focus1.get()),
 				"the menu's own slot 0 should reflect a focus set directly on the tile, found " + menu.slots.get(0).getItem());
 		helper.succeed();
 	}
@@ -9111,7 +9108,7 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(gotBaseAuromancy, "BASEAUROMANCY should complete once its real prerequisite chain is satisfied");
 		player.getInventory().add(makeAspectCrystal(thaumcraft.api.aspects.Aspect.AVERSION));
 		player.getInventory().add(makeAspectCrystal(thaumcraft.api.aspects.Aspect.FIRE));
-		tile.setFocus(new ItemStack(ItemsTC.focusBlank1.get()));
+		tile.setFocus(new ItemStack(ItemsTC.focus1.get()));
 
 		thaumcraft.common.tiles.crafting.FocusElementNode root = new thaumcraft.common.tiles.crafting.FocusElementNode();
 		root.id = 0;
@@ -14140,21 +14137,21 @@ public class ThaumcraftGameTests {
 	 * Names the real focus-tier-upgrade recipes (last of the 4 "let's do them all" infusion-content
 	 * families) and asserts each one is actually registered - same "name every id" pattern as {@link
 	 * #focusRecipesRegistered} and siblings. Also confirms the real per-tier complexity cap {@link
-	 * thaumcraft.common.items.casters.ItemFocusBlank} already exposes actually increases across the tiers -
+	 * thaumcraft.common.items.casters.ItemFocus} already exposes actually increases across the tiers -
 	 * these recipes are only worth anything if a bigger focus can really hold a bigger real node graph.
 	 */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
-	public static void focusBlankTierUpgradeRecipesRegistered(GameTestHelper helper) {
+	public static void focusTierUpgradeRecipesRegistered(GameTestHelper helper) {
 		RecipeManager recipes = helper.getLevel().getRecipeManager();
-		String[] expectedIds = { "infusion_focus_blank_2", "infusion_focus_blank_3" };
+		String[] expectedIds = { "infusion_focus_2", "infusion_focus_3" };
 		for (String id : expectedIds) {
 			Optional<RecipeHolder<?>> recipe = recipes.byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, id));
 			helper.assertTrue(recipe.isPresent(), "expected recipe '" + id + "' to be registered, but it wasn't");
 		}
 
-		thaumcraft.common.items.casters.ItemFocusBlank tier1 = (thaumcraft.common.items.casters.ItemFocusBlank) ItemsTC.focusBlank1.get();
-		thaumcraft.common.items.casters.ItemFocusBlank tier2 = (thaumcraft.common.items.casters.ItemFocusBlank) ItemsTC.focusBlank2.get();
-		thaumcraft.common.items.casters.ItemFocusBlank tier3 = (thaumcraft.common.items.casters.ItemFocusBlank) ItemsTC.focusBlank3.get();
+		thaumcraft.common.items.casters.ItemFocus tier1 = (thaumcraft.common.items.casters.ItemFocus) ItemsTC.focus1.get();
+		thaumcraft.common.items.casters.ItemFocus tier2 = (thaumcraft.common.items.casters.ItemFocus) ItemsTC.focus2.get();
+		thaumcraft.common.items.casters.ItemFocus tier3 = (thaumcraft.common.items.casters.ItemFocus) ItemsTC.focus3.get();
 		helper.assertTrue(tier1.getMaxComplexity() < tier2.getMaxComplexity() && tier2.getMaxComplexity() < tier3.getMaxComplexity(),
 				"each real focus tier should really hold a bigger node graph than the last, found " + tier1.getMaxComplexity() + "/" + tier2.getMaxComplexity() + "/" + tier3.getMaxComplexity());
 		helper.succeed();
@@ -16788,7 +16785,7 @@ public class ThaumcraftGameTests {
 		ServerLevel level = helper.getLevel();
 		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
 		player.getInventory().clearContent();
-		player.getInventory().setItem(3, new ItemStack(thaumcraft.api.items.ItemsTC.focusFireball.get()));
+		player.getInventory().setItem(3, new ItemStack(thaumcraft.api.items.ItemsTC.focus2.get()));
 		player.getInventory().setItem(7, new ItemStack(thaumcraft.api.items.ItemsTC.focus1.get()));
 		player.getInventory().setItem(20, new ItemStack(Items.STICK));
 
@@ -16810,10 +16807,10 @@ public class ThaumcraftGameTests {
 		thaumcraft.api.casters.ICaster caster = (thaumcraft.api.casters.ICaster) casterStack.getItem();
 		caster.setFocus(casterStack, new ItemStack(thaumcraft.api.items.ItemsTC.focus1.get()));
 
-		player.getInventory().setItem(5, new ItemStack(thaumcraft.api.items.ItemsTC.focusFireball.get(), 2));
+		player.getInventory().setItem(5, new ItemStack(thaumcraft.api.items.ItemsTC.focus2.get(), 2));
 		thaumcraft.common.items.casters.CasterFocusHelper.changeFocus(casterStack, player, 5);
 
-		helper.assertTrue(caster.getFocus(casterStack) == thaumcraft.api.items.ItemsTC.focusFireball.get(),
+		helper.assertTrue(caster.getFocus(casterStack) == thaumcraft.api.items.ItemsTC.focus2.get(),
 				"the caster should really now have the real newly-selected focus bound");
 		// makeMockServerPlayerInLevel's player is unavoidably creative (see the port-tracking memory) - real
 		// creative players don't lose the consumed item, matching changeFocus's own real instabuild check.
@@ -17168,11 +17165,11 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(contents.size() == 18, "a real fresh pouch should really report 18 real slots, found " + contents.size());
 		helper.assertTrue(contents.stream().allMatch(ItemStack::isEmpty), "a real fresh pouch should really start with every real slot empty");
 
-		contents.set(3, new ItemStack(thaumcraft.api.items.ItemsTC.focusAir.get()));
+		contents.set(3, new ItemStack(thaumcraft.api.items.ItemsTC.focus2.get()));
 		thaumcraft.common.items.casters.ItemFocusPouch.setContents(pouch, contents);
 
 		net.minecraft.core.NonNullList<ItemStack> readBack = thaumcraft.common.items.casters.ItemFocusPouch.getContents(pouch);
-		helper.assertTrue(readBack.get(3).is(thaumcraft.api.items.ItemsTC.focusAir.get()), "the real focus placed in slot 3 should really round-trip through the real container component, found " + readBack.get(3));
+		helper.assertTrue(readBack.get(3).is(thaumcraft.api.items.ItemsTC.focus2.get()), "the real focus placed in slot 3 should really round-trip through the real container component, found " + readBack.get(3));
 		helper.assertTrue(readBack.get(0).isEmpty(), "an untouched real slot should really still read back empty");
 		helper.succeed();
 	}
@@ -17181,12 +17178,12 @@ public class ThaumcraftGameTests {
 	public static void focusPouchMenuSeedsItsRealSlotsFromTheRealPouchStack(GameTestHelper helper) {
 		ItemStack pouch = new ItemStack(thaumcraft.api.items.ItemsTC.focusPouch.get());
 		net.minecraft.core.NonNullList<ItemStack> contents = thaumcraft.common.items.casters.ItemFocusPouch.getContents(pouch);
-		contents.set(0, new ItemStack(thaumcraft.api.items.ItemsTC.focusAir.get()));
+		contents.set(0, new ItemStack(thaumcraft.api.items.ItemsTC.focus2.get()));
 		thaumcraft.common.items.casters.ItemFocusPouch.setContents(pouch, contents);
 
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
 		thaumcraft.common.container.FocusPouchMenu menu = new thaumcraft.common.container.FocusPouchMenu(1, player.getInventory(), pouch);
-		helper.assertTrue(menu.getSlot(0).getItem().is(thaumcraft.api.items.ItemsTC.focusAir.get()), "the real menu's slot 0 should really be seeded from the real pouch stack's own real contents, found " + menu.getSlot(0).getItem());
+		helper.assertTrue(menu.getSlot(0).getItem().is(thaumcraft.api.items.ItemsTC.focus2.get()), "the real menu's slot 0 should really be seeded from the real pouch stack's own real contents, found " + menu.getSlot(0).getItem());
 		helper.assertTrue(menu.getSlot(1).getItem().isEmpty(), "an untouched real pouch slot should really seed an empty real menu slot");
 		helper.succeed();
 	}
@@ -17198,7 +17195,7 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.container.FocusPouchMenu menu = new thaumcraft.common.container.FocusPouchMenu(1, player.getInventory(), pouch);
 
 		helper.assertTrue(!menu.getSlot(0).mayPlace(new ItemStack(Items.STICK)), "a real non-focus item should really be rejected by a real pouch slot");
-		helper.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(thaumcraft.api.items.ItemsTC.focusAir.get())), "a real focus item should really be accepted by a real pouch slot");
+		helper.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(thaumcraft.api.items.ItemsTC.focus2.get())), "a real focus item should really be accepted by a real pouch slot");
 		helper.succeed();
 	}
 
@@ -17208,11 +17205,11 @@ public class ThaumcraftGameTests {
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
 		thaumcraft.common.container.FocusPouchMenu menu = new thaumcraft.common.container.FocusPouchMenu(1, player.getInventory(), pouch);
 
-		menu.getSlot(5).set(new ItemStack(thaumcraft.api.items.ItemsTC.focusAir.get()));
+		menu.getSlot(5).set(new ItemStack(thaumcraft.api.items.ItemsTC.focus2.get()));
 		menu.removed(player);
 
 		net.minecraft.core.NonNullList<ItemStack> contents = thaumcraft.common.items.casters.ItemFocusPouch.getContents(pouch);
-		helper.assertTrue(contents.get(5).is(thaumcraft.api.items.ItemsTC.focusAir.get()), "closing a real pouch menu should really write its real slot contents back to the real pouch stack, found " + contents.get(5));
+		helper.assertTrue(contents.get(5).is(thaumcraft.api.items.ItemsTC.focus2.get()), "closing a real pouch menu should really write its real slot contents back to the real pouch stack, found " + contents.get(5));
 		helper.succeed();
 	}
 
@@ -17866,13 +17863,13 @@ public class ThaumcraftGameTests {
 	public static void workbenchResultsCountAsCraftingForResearch(GameTestHelper helper) {
 		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
 		ServerPlayer player = spawnCasterAt(helper, origin);
-		forceResearch(player, "FIRSTSTEPS");
-		String key = ResearchRequirements.researchKeyFor(ResearchRequirements.registerCraftReference(ItemsTC.focus1.get()));
+		forceResearch(player, "BASEINFUSION");
+		String key = ResearchRequirements.researchKeyFor(ResearchRequirements.registerCraftReference(ItemsTC.banners.get(net.minecraft.world.item.DyeColor.WHITE).get()));
 		ThaumcraftCapabilities.getKnowledge(player).removeResearch(key);
 		ensureChunkVis(helper, BlockPos.ZERO);
-		ArcaneWorkbenchMenu menu = placeWorkbenchWithFocus1Ingredients(helper, player);
+		ArcaneWorkbenchMenu menu = placeWorkbenchWithBannerIngredients(helper, player);
 		ItemStack result = menu.slots.get(0).getItem();
-		helper.assertTrue(result.is(ItemsTC.focus1.get()), "sanity: the focus should be craftable here, got " + result);
+		helper.assertTrue(result.is(ItemsTC.banners.get(net.minecraft.world.item.DyeColor.WHITE).get()), "sanity: the banner should be craftable here, got " + result);
 		menu.slots.get(0).onTake(player, result);
 		helper.assertTrue(ThaumcraftCapabilities.getKnowledge(player).isResearchKnown(key),
 				"taking an arcane result counts as crafting it (e.g. First Steps asks you to craft a Thaumometer)");

@@ -536,11 +536,9 @@ sourceSets {
 
             include 'thaumcraft/common/items/casters/ItemCaster.java'
             include 'thaumcraft/common/items/casters/ItemFocus.java'
-            include 'thaumcraft/common/items/casters/ItemFocusBlank.java'
             include 'thaumcraft/common/tiles/crafting/FocusElementNode.java'
             include 'thaumcraft/common/tiles/crafting/TileFocalManipulator.java'
             include 'thaumcraft/common/blocks/crafting/BlockFocalManipulator.java'
-            include 'thaumcraft/common/items/casters/ItemFocusFire.java'
             include 'thaumcraft/common/items/casters/foci/FocusMediumTouch.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectFire.java'
 
@@ -561,47 +559,36 @@ sourceSets {
             include 'thaumcraft/common/blocks/crafting/BlockCrucible.java'
             include 'thaumcraft/common/tiles/crafting/TileCrucible.java'
 
-            include 'thaumcraft/common/items/casters/ItemFocusFrost.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectFrost.java'
 
-            include 'thaumcraft/common/items/casters/ItemFocusBreak.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectBreak.java'
 
-            include 'thaumcraft/common/items/casters/ItemFocusFireBolt.java'
             include 'thaumcraft/common/items/casters/foci/FocusMediumBolt.java'
 
-            include 'thaumcraft/common/items/casters/ItemFocusHeal.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectHeal.java'
 
-            include 'thaumcraft/common/items/casters/ItemFocusCurse.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectCurse.java'
 
-            include 'thaumcraft/common/items/casters/ItemFocusEarth.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectEarth.java'
 
             include 'thaumcraft/common/registry/ThaumcraftEntities.java'
             include 'thaumcraft/common/entities/projectile/EntityFocusProjectile.java'
             include 'thaumcraft/common/items/casters/foci/FocusMediumProjectile.java'
-            include 'thaumcraft/common/items/casters/ItemFocusFireball.java'
             include 'thaumcraft/client/render/RenderFocusProjectile.java'
 
-            include 'thaumcraft/common/items/casters/ItemFocusFlux.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectFlux.java'
 
             include 'thaumcraft/common/blocks/misc/BlockHole.java'
             include 'thaumcraft/common/tiles/misc/TileHole.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectRift.java'
 
-            include 'thaumcraft/common/items/casters/ItemFocusAir.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectAir.java'
 
             include 'thaumcraft/common/entities/projectile/EntityFocusMine.java'
             include 'thaumcraft/common/items/casters/foci/FocusMediumMine.java'
-            include 'thaumcraft/common/items/casters/ItemFocusTrap.java'
 
             include 'thaumcraft/common/entities/projectile/EntityFocusCloud.java'
             include 'thaumcraft/common/items/casters/foci/FocusMediumCloud.java'
-            include 'thaumcraft/common/items/casters/ItemFocusSanctuary.java'
 
             include 'thaumcraft/common/items/casters/foci/FocusMediumPlan.java'
             include 'thaumcraft/common/items/casters/foci/FocusEffectExchange.java'
