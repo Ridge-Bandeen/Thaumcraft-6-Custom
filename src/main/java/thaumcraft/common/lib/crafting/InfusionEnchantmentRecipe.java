@@ -45,9 +45,8 @@ import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
  * {@code ItemTags} instead of {@code getToolClasses()}, and why bauble-slot classes never match).</li>
  * </ul>
  *
- * The original's rare bonus warp gain on craft (a {@code "TC.WARP"} NBT tag written onto the *output item*,
- * whose real effect depended on since-unported pickup logic) is dropped rather than reproduced as a direct
- * player warp grant - out of scope for this pass, see the port-tracking memory notes.
+ * As the original, each enchanting has a chance - one in ten per infusion enchantment already on the item - to make the
+ * item itself warping: +1 {@link thaumcraft.api.items.ThaumcraftDataComponents#ITEM_WARP} (the original's "TC.WARP").
  */
 public class InfusionEnchantmentRecipe extends InfusionRecipe {
 
@@ -95,6 +94,11 @@ public class InfusionEnchantmentRecipe extends InfusionRecipe {
 			return ItemStack.EMPTY;
 		}
 		ItemStack out = input.copy();
+		int existing = EnumInfusionEnchantment.getInfusionEnchantments(input).size();
+		if (net.minecraft.util.RandomSource.create().nextInt(10) < existing) {
+			out.set(thaumcraft.api.items.ThaumcraftDataComponents.ITEM_WARP.get(),
+					input.getOrDefault(thaumcraft.api.items.ThaumcraftDataComponents.ITEM_WARP.get(), 0) + 1);
+		}
 		EnumInfusionEnchantment.addInfusionEnchantment(out, enchantment, nextLevel);
 		return out;
 	}

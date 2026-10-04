@@ -11,7 +11,7 @@ import net.neoforged.neoforge.registries.datamaps.DataMapType;
 import net.neoforged.neoforge.registries.datamaps.RegisterDataMapTypesEvent;
 import thaumcraft.Thaumcraft;
 
-/** Thaumcraft's item data maps (data/&lt;ns&gt;/data_maps/item/&lt;name&gt;.json). */
+/** Thaumcraft's data maps (data/&lt;ns&gt;/data_maps/&lt;registry&gt;/&lt;name&gt;.json). */
 public final class ThaumcraftDataMaps {
 
 	/**
@@ -42,11 +42,26 @@ public final class ThaumcraftDataMaps {
 	public static final DataMapType<Item, java.util.List<SmeltingBonus>> SMELTING_BONUS = DataMapType.builder(
 			ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "smelting_bonus"), Registries.ITEM, SmeltingBonus.CODEC.listOf()).build();
 
+	/** A champion-capable monster's weight: the original's "championWhiteList" ({@code [Entity]:[level]}). */
+	public record ChampionWeight(int weight) {
+		public static final Codec<ChampionWeight> CODEC = RecordCodecBuilder.create(i -> i.group(
+				Codec.INT.optionalFieldOf("weight", 0).forGetter(ChampionWeight::weight)).apply(i, ChampionWeight::new));
+	}
+
+	/**
+	 * The monsters that may spawn as champions (data/&lt;ns&gt;/data_maps/entity_type/champion_weight.json) - the original's
+	 * champion whitelist, which matched a listed class and its subclasses, so zombie kin are listed one by one here.
+	 * A weight above 1 makes champions likelier: weight - 1 more in a hundred.
+	 */
+	public static final DataMapType<net.minecraft.world.entity.EntityType<?>, ChampionWeight> CHAMPION_WEIGHT = DataMapType.builder(
+			ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "champion_weight"), Registries.ENTITY_TYPE, ChampionWeight.CODEC).build();
+
 	private ThaumcraftDataMaps() {
 	}
 
 	public static void register(RegisterDataMapTypesEvent event) {
 		event.register(REFINING);
 		event.register(SMELTING_BONUS);
+		event.register(CHAMPION_WEIGHT);
 	}
 }

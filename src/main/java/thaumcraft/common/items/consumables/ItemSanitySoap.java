@@ -20,10 +20,8 @@ import thaumcraft.api.capabilities.ThaumcraftCapabilities;
  * shipped early this session with no consumer until {@link thaumcraft.common.items.consumables.ItemZombieBrain}
  * added the first one a moment ago; this is the second.
  *
- * Simplified vs the original: no bonus extra point removed while standing in Purifying Fluid or under
- * {@code PotionWarpWard} - both are still-unbuilt/blocked subsystems (a custom finite fluid; a MobEffect with
- * no other consumer yet), so the soap just always removes the base amount. No client-side bubble particle FX
- * during the use-tick or on release - visual-only, dropped like everywhere else this session.
+ * As the original: a point more while under Warp Ward, and another standing in Purifying Fluid; using it finishes on its
+ * own after 95 ticks, with bubbles and a soft hiss while scrubbing and a burst of bubbles at the end.
  */
 public class ItemSanitySoap extends Item {
 
@@ -50,11 +48,34 @@ public class ItemSanitySoap extends Item {
 	}
 
 	@Override
+	public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int remaining) {
+		if (USE_DURATION - remaining > 95) entity.releaseUsingItem();
+		if (level.isClientSide) {
+			if (level.random.nextFloat() < 0.2f) {
+				level.playLocalSound(entity.getX(), entity.getY(), entity.getZ(), net.minecraft.sounds.SoundEvents.CHORUS_FLOWER_DEATH,
+						net.minecraft.sounds.SoundSource.PLAYERS, 0.1f, 1.5f + level.random.nextFloat() * 0.2f, false);
+			}
+			for (int a = 0; a < 10; a++) {
+				thaumcraft.client.fx.ClientFxHandlers.spawnCrucibleBubble(level, entity.getX() - 0.5 + level.random.nextFloat(),
+						entity.getBoundingBox().minY + level.random.nextFloat() * entity.getBbHeight(), entity.getZ() - 0.5 + level.random.nextFloat(), 1.0f, 0.8f, 0.9f);
+			}
+		}
+	}
+
+	@Override
 	public void releaseUsing(ItemStack stack, Level level, LivingEntity livingEntity, int timeLeft) {
 		int ticksUsed = getUseDuration(stack, livingEntity) - timeLeft;
 		if (ticksUsed <= 95 || !(livingEntity instanceof Player player)) return;
 		stack.shrink(1);
-		if (level.isClientSide) return;
+		if (level.isClientSide) {
+			level.playLocalSound(player.getX(), player.getY(), player.getZ(), thaumcraft.common.registry.ThaumcraftSounds.CRAFTSTART.get(),
+					net.minecraft.sounds.SoundSource.PLAYERS, 0.25f, 1.0f, false);
+			for (int a = 0; a < 40; a++) {
+				thaumcraft.client.fx.ClientFxHandlers.spawnCrucibleBubble(level, player.getX() - 0.5 + level.random.nextFloat() * 1.5,
+						player.getBoundingBox().minY + level.random.nextFloat() * player.getBbHeight(), player.getZ() - 0.5 + level.random.nextFloat() * 1.5, 1.0f, 0.7f, 0.9f);
+			}
+			return;
+		}
 		cleanse(player);
 	}
 
@@ -62,8 +83,11 @@ public class ItemSanitySoap extends Item {
 	 * on holding a real item down for 95 ticks. */
 	public static void cleanse(Player player) {
 		IPlayerWarp warp = ThaumcraftCapabilities.getWarp(player);
+		int amt = 1;
+		if (player.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.WARP_WARD)) amt++;
+		if (player.level().getBlockState(player.blockPosition()).is(thaumcraft.api.blocks.BlocksTC.purifyingFluid.get())) amt++;
 		if (warp.get(IPlayerWarp.EnumWarpType.NORMAL) > 0) {
-			ThaumcraftApi.internalMethods.addWarpToPlayer(player, -1, IPlayerWarp.EnumWarpType.NORMAL);
+			ThaumcraftApi.internalMethods.addWarpToPlayer(player, -amt, IPlayerWarp.EnumWarpType.NORMAL);
 		}
 		if (warp.get(IPlayerWarp.EnumWarpType.TEMPORARY) > 0) {
 			ThaumcraftApi.internalMethods.addWarpToPlayer(player, -warp.get(IPlayerWarp.EnumWarpType.TEMPORARY), IPlayerWarp.EnumWarpType.TEMPORARY);

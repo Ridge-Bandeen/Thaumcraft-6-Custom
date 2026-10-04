@@ -27,11 +27,8 @@ import thaumcraft.common.items.resources.ItemCrystalEssence;
  * whole stale file" precedent {@code ChampionModEvents}/{@code FortressMaskEvents}/
  * {@code PassiveResearchEvents} already established for this same source file.
  *
- * A regular (non-Brainy) {@link Zombie} kill has a real 1-in-10 chance (the original's own
- * {@code rand.nextInt(10) - lootingLevel < 1} formula, minus the Looting-level bonus - modern
- * {@link LivingDropsEvent} doesn't expose a looting level the way the 1.12.2 event did, and this port has no
- * other real "resolve the killer's Looting enchant level" helper to reach for one; a real, minor, disclosed
- * simplification) to drop a real {@link ItemsTC#brain}. A real
+ * A regular (non-Brainy) {@link Zombie} kill has the original's {@code rand.nextInt(10) - lootingLevel < 1} chance
+ * (Looting read by {@link thaumcraft.common.lib.utils.LootingHelper}) to drop a {@link ItemsTC#brain}. A real
  * {@link EntityCultist} kill by a real player has a real chance to drop a real {@link ItemsTC#curio} -
  * 1-in-4 normally, 1-in-20 once the killer already knows the real {@code !CrimsonCultist} scan (matches the
  * original's own two-tier rate, adapted to that entry's real single-stage shape in this port's data - see

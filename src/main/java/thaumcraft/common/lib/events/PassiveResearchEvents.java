@@ -43,11 +43,8 @@ import thaumcraft.common.items.resources.ItemCrystalEssence;
  * Also covers 2 of the old {@code PlayerEvents#pickupItem}'s own real "gameplay experience" flags for the
  * same reason - picking up a real {@link ItemCrystalEssence} grants "!gotcrystals" (with the original's own
  * real status message), picking up a real {@link ItemThaumonomicon} grants "!gotthaumonomicon" (no message
- * in the original either). Real, documented cut: the original's own "!gotcrystals" branch also gave the
- * player a Dream Journal book (via the wake-up-triggered {@code giveDreamJournal}, itself gated on
- * {@code ModConfig.CONFIG_MISC.noSleep}) - dropped here, {@code ConfigItems.startBook} isn't ported (part of
- * the still-open config-system gap tracked elsewhere in this session's memory), and the flag itself is the
- * part with real, independent value (nothing currently requires the Dream Journal item specifically).
+ * in the original either). With the {@code noSleep} config on, the crystal pickup also hands over the Dream Journal
+ * straight away; otherwise it comes on waking up (see {@link #giveDreamJournal}).
  *
  * Also covers the stale {@code ConfigResearch#checkPeriodicStuff} - 8 more real "gameplay experience teaches
  * you something" flags (checked every 200 real ticks, same real cadence the original used), same real

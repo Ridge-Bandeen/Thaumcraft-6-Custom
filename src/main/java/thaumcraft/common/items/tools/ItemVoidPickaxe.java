@@ -12,14 +12,10 @@ import net.minecraft.world.level.Level;
 import thaumcraft.api.items.IWarpingGear;
 
 /**
- * Replaces the old (1.12.2) {@code ItemVoidPickaxe} - a real {@link PickaxeItem} sharing the exact same
- * real mechanics as {@link ItemVoidSword} (its own doc comment covers the rest of what's simplified for
- * this whole "void" item family): self-repair (1 durability every 20 ticks while damaged) and real on-hit
- * Weakness (skipped in unauthorized PvP), plus the same real {@link IWarpingGear} +1 warp while held. The
- * original applied Weakness from a real left-click hook fired before damage resolution
- * ({@code onLeftClickEntity}); modern Minecraft's closest real equivalent is {@link #hurtEnemy}, the same
- * hook the already-shipped {@link ItemVoidSword} uses - fires once the tool actually lands a hit, which is
- * the meaningfully equivalent moment for a real on-hit debuff.
+ * Replaces the old (1.12.2) {@code ItemVoidPickaxe}, as the original: it mends a point every second while damaged,
+ * a swing at a living thing weakens it for 4 seconds (players only with PvP on) - from the left-click itself, as the
+ * original, so even a swing that does no damage - and it adds 1 warp while held. The Void Axe, Shovel and Hoe are the
+ * same; the Void Sword weakens on a landed hit instead (3 seconds).
  */
 public class ItemVoidPickaxe extends PickaxeItem implements IWarpingGear {
 
@@ -27,13 +23,14 @@ public class ItemVoidPickaxe extends PickaxeItem implements IWarpingGear {
 		super(tier, properties);
 	}
 
+	/** The original's onLeftClickEntity: Weakness on any living thing a player swings at (players only with PvP on). */
 	@Override
-	public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
-		if (!target.level().isClientSide
-				&& (!(target instanceof Player) || !(attacker instanceof Player) || target.level().getServer().isPvpAllowed())) {
+	public boolean onLeftClickEntity(ItemStack stack, Player player, Entity entity) {
+		if (!player.level().isClientSide && entity instanceof LivingEntity target
+				&& (!(target instanceof Player) || player.level().getServer().isPvpAllowed())) {
 			target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80));
 		}
-		return super.hurtEnemy(stack, target, attacker);
+		return super.onLeftClickEntity(stack, player, entity);
 	}
 
 	@Override

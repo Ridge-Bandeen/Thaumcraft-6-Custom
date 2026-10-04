@@ -95,7 +95,8 @@ public class ScanningManager {
 						scanned++;
 					}
 					if (scanned >= 100) {
-						player.displayClientMessage(Component.translatable("tc.invtoolarge"), true);
+						player.displayClientMessage(Component.translatable("tc.invtoolarge")
+								.withStyle(net.minecraft.ChatFormatting.DARK_PURPLE, net.minecraft.ChatFormatting.ITALIC), true);
 						break;
 					}
 				}

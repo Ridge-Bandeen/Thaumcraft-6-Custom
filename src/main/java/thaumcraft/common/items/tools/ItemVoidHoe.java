@@ -19,13 +19,14 @@ public class ItemVoidHoe extends HoeItem implements IWarpingGear {
 		super(tier, properties);
 	}
 
+	/** The original's onLeftClickEntity: Weakness on any living thing a player swings at (players only with PvP on). */
 	@Override
-	public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
-		if (!target.level().isClientSide
-				&& (!(target instanceof Player) || !(attacker instanceof Player) || target.level().getServer().isPvpAllowed())) {
+	public boolean onLeftClickEntity(ItemStack stack, Player player, Entity entity) {
+		if (!player.level().isClientSide && entity instanceof LivingEntity target
+				&& (!(target instanceof Player) || player.level().getServer().isPvpAllowed())) {
 			target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80));
 		}
-		return super.hurtEnemy(stack, target, attacker);
+		return super.onLeftClickEntity(stack, player, entity);
 	}
 
 	@Override

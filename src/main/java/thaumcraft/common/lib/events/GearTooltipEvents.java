@@ -42,9 +42,8 @@ import thaumcraft.common.lib.enchantment.EnumInfusionEnchantment;
  * exist yet when this class was first written; closed once {@code RunicArmorRecipe}/{@code RunicShieldEvents}
  * shipped.
  *
- * Real, documented cut: no "TC.WARP" NBT/data-component addend to the Warping total - only the real
- * {@link IWarpingGear} interface value is shown, same missing-component reason as before (nothing currently
- * writes a bonus warp value onto an item stack in this port).
+ * The Warping total is the original's getFinalWarp: the {@link IWarpingGear} value plus the item's own
+ * {@link ThaumcraftDataComponents#ITEM_WARP} (the original's "TC.WARP" tag).
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID, value = Dist.CLIENT)
 public class GearTooltipEvents {
@@ -66,12 +65,11 @@ public class GearTooltipEvents {
 		}
 
 		// NeoForge documents ItemTooltipEvent#getEntity() as nullable (e.g. the creative-search tooltip index
-		// builds tooltips at resource-reload time with no player) - both of these need the player's capabilities.
-		if (player != null && stack.getItem() instanceof IWarpingGear warpingGear) {
-			int warp = warpingGear.getWarp(stack, player);
-			if (warp > 0) {
-				tooltip.add(Component.translatable("item.warping").append(" " + warp).withStyle(ChatFormatting.DARK_PURPLE));
-			}
+		// builds tooltips at resource-reload time with no player) - the gear's own warp needs the player.
+		int warp = player != null ? thaumcraft.common.lib.events.WarpEvents.getFinalWarp(stack, player)
+				: stack.getOrDefault(ThaumcraftDataComponents.ITEM_WARP.get(), 0);
+		if (warp > 0) {
+			tooltip.add(Component.translatable("item.warping").append(" " + warp).withStyle(ChatFormatting.DARK_PURPLE));
 		}
 
 		if (player != null && stack.getItem() instanceof IVisDiscountGear discountGear) {

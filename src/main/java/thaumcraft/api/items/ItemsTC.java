@@ -1196,10 +1196,9 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemElementalAxe> elementalAxe = ITEMS.registerItem("elemental_axe",
 			props -> new thaumcraft.common.items.tools.ItemElementalAxe(TIER_ELEMENTAL, props.attributes(AxeItem.createAttributes(TIER_ELEMENTAL, 5.0F, -3.0F)).rarity(net.minecraft.world.item.Rarity.RARE)));
 
-	/** A plain upgrade over {@link #thaumiumPick} - the original's own {@code ItemElementalPick} had no
-	 * special ability of its own either, just the better {@link #TIER_ELEMENTAL} tier. */
-	public static final DeferredItem<Item> elementalPick = ITEMS.registerItem("elemental_pick",
-			props -> new PickaxeItem(TIER_ELEMENTAL, props.attributes(PickaxeItem.createAttributes(TIER_ELEMENTAL, 1.0F, -2.8F)).rarity(net.minecraft.world.item.Rarity.RARE)));
+	/** See {@link thaumcraft.common.items.tools.ItemElementalPickaxe}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemElementalPickaxe> elementalPick = ITEMS.registerItem("elemental_pick",
+			props -> new thaumcraft.common.items.tools.ItemElementalPickaxe(TIER_ELEMENTAL, props.attributes(PickaxeItem.createAttributes(TIER_ELEMENTAL, 1.0F, -2.8F)).rarity(net.minecraft.world.item.Rarity.RARE)));
 
 	/** See {@link thaumcraft.common.items.tools.ItemElementalSword}'s own doc comment. */
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemElementalSword> elementalSword = ITEMS.registerItem("elemental_sword",

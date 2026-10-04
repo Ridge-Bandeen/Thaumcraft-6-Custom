@@ -26,6 +26,9 @@ import thaumcraft.common.registry.ThaumcraftMenus;
  * stack in {@link #removed} (menu close), not continuously. This assumes nothing else touches the same pouch
  * stack's contents while its own menu is open - true here, since nothing else in this port reads or writes a
  * Focus Pouch's contents.
+ *
+ * As the original, the hotbar slot holding the open pouch is locked (no clicks, no shift-moves) and the number keys
+ * can't swap items while it is open.
  */
 public class FocusPouchMenu extends AbstractContainerMenu {
 
@@ -35,6 +38,8 @@ public class FocusPouchMenu extends AbstractContainerMenu {
 
 	private final ItemStackHandler handler;
 	private final ItemStack pouchStack;
+	/** The menu slot of the hotbar slot the pouch was opened from (the original's blockSlot). */
+	private final int blockSlot;
 
 	/** Client-side reconstruction - see {@code PechMenu}'s own doc comment for why: the client doesn't have
 	 * the real pouch stack's own contents at construction time, but every real slot gets synced right after
@@ -46,6 +51,7 @@ public class FocusPouchMenu extends AbstractContainerMenu {
 	public FocusPouchMenu(int containerId, Inventory playerInventory, ItemStack pouchStack) {
 		super(ThaumcraftMenus.FOCUS_POUCH.get(), containerId);
 		this.pouchStack = pouchStack;
+		this.blockSlot = PLAYER_INV_START + 27 + playerInventory.selected;
 		this.handler = new ItemStackHandler(POUCH_SLOTS) {
 			@Override
 			public boolean isItemValid(int slot, ItemStack stack) {
@@ -90,7 +96,14 @@ public class FocusPouchMenu extends AbstractContainerMenu {
 	}
 
 	@Override
+	public void clicked(int slotId, int button, net.minecraft.world.inventory.ClickType clickType, Player player) {
+		if (slotId == blockSlot || clickType == net.minecraft.world.inventory.ClickType.SWAP) return;
+		super.clicked(slotId, button, clickType, player);
+	}
+
+	@Override
 	public ItemStack quickMoveStack(Player player, int index) {
+		if (index == blockSlot) return ItemStack.EMPTY;
 		ItemStack copy = ItemStack.EMPTY;
 		Slot slot = slots.get(index);
 		if (slot != null && slot.hasItem()) {

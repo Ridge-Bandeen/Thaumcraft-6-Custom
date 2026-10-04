@@ -20,8 +20,7 @@ import thaumcraft.api.items.IWarpingGear;
  * {@code ServerLevel#getServer().isPvpAllowed()}). Real {@link IWarpingGear} implementer (+1 warp while
  * held), matching the original's own "void" item family risk/reward.
  *
- * Simplified vs the original: no custom tooltip translation key registered yet (the original's own
- * {@code enchantment.special.sapless} lang entry) - a real, minor, documented cosmetic cut.
+ * Its tooltip shows "Lesser Sapping" ({@code enchantment.special.sapless}), as the original.
  */
 public class ItemVoidSword extends SwordItem implements IWarpingGear {
 

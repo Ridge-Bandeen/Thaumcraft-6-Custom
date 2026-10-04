@@ -30,10 +30,9 @@ import thaumcraft.common.tiles.essentia.TileJarFillable;
  * {@code ItemProperties} predicate in {@code ThaumcraftClient} (the "focus" predicate on {@code caster_basic}
  * is the same technique, reused here as "filled").
  *
- * Simplified vs the original: no Alembic fill path (the Alembic itself isn't ported yet - deferred like every
- * other Alembic-dependent feature this session) - only the Jar fill/empty interactions are ported. Uses
- * NeoForge's {@code onItemUseFirst} (still present on {@code IItemExtension}, unchanged in spirit from the
- * original's own use of the same hook) to intercept the click before the jar's own right-click handling runs.
+ * As the original: an empty phial takes 10 essentia from an Alembic or a (normal or void) Warded Jar, a filled one
+ * empties into a jar with room that accepts it. Uses NeoForge's {@code onItemUseFirst} (as the original did) so the
+ * click happens before the block's own right-click.
  */
 public class ItemPhial extends Item implements IEssentiaContainerItem {
 
@@ -82,45 +81,67 @@ public class ItemPhial extends Item implements IEssentiaContainerItem {
 		if (player == null) return InteractionResult.PASS;
 		BlockPos pos = context.getClickedPos();
 		BlockState bs = level.getBlockState(pos);
-		if (bs.getBlock() != BlocksTC.jarNormal.get()) return InteractionResult.PASS;
-		if (!(level.getBlockEntity(pos) instanceof TileJarFillable tile)) return InteractionResult.PASS;
-
 		AspectList held = getAspects(stack);
+		if (held == null && level.getBlockEntity(pos) instanceof thaumcraft.common.tiles.essentia.TileAlembic alembic) {
+			AspectList in = alembic.getAspects();
+			if (in.size() == 1 && in.getAmount(in.getAspects()[0]) >= BASE) {
+				if (level.isClientSide) {
+					player.swing(context.getHand());
+					return InteractionResult.PASS;
+				}
+				Aspect aspect = in.getAspects()[0];
+				if (alembic.takeFromContainer(aspect, BASE)) {
+					ItemStack filled = new ItemStack(this);
+					setAspects(filled, new AspectList().add(aspect, BASE));
+					stack.shrink(1);
+					if (!player.getInventory().add(filled)) player.drop(filled, false);
+					level.playSound(null, player.blockPosition(), SoundEvents.BOTTLE_FILL, SoundSource.PLAYERS, 0.25f, 1.0f);
+					return InteractionResult.SUCCESS;
+				}
+			}
+		}
+		boolean jar = bs.getBlock() == BlocksTC.jarNormal.get() || bs.getBlock() == BlocksTC.jarVoid.get();
+		if (!jar || !(level.getBlockEntity(pos) instanceof TileJarFillable tile)) return InteractionResult.PASS;
+
 		if (held == null) {
 			// Empty phial: fill from the jar.
 			AspectList jarContents = tile.getAspects();
 			if (jarContents.size() != 1) return InteractionResult.PASS;
 			Aspect aspect = jarContents.getAspects()[0];
 			if (jarContents.getAmount(aspect) < BASE) return InteractionResult.PASS;
-			if (level.isClientSide) return InteractionResult.SUCCESS;
+			if (level.isClientSide) {
+				player.swing(context.getHand());
+				return InteractionResult.PASS;
+			}
 			if (!tile.takeFromContainer(aspect, BASE)) return InteractionResult.PASS;
-
 			ItemStack filled = new ItemStack(this);
 			setAspects(filled, new AspectList().add(aspect, BASE));
-			giveOrDrop(player, stack, filled);
+			giveOrDrop(player, stack, filled, pos);
 			level.playSound(null, pos, SoundEvents.BOTTLE_FILL, SoundSource.PLAYERS, 0.25f, 1.0f);
-			return InteractionResult.CONSUME;
+			return InteractionResult.SUCCESS;
 		} else if (held.size() == 1) {
-			// Filled phial: empty into the jar.
+			// Filled phial: empty into the jar, if it has room.
 			Aspect aspect = held.getAspects()[0];
-			if (!tile.doesContainerAccept(aspect)) return InteractionResult.PASS;
-			if (level.isClientSide) return InteractionResult.SUCCESS;
+			if (tile.getAspects().visSize() > 250 - BASE || !tile.doesContainerAccept(aspect)) return InteractionResult.PASS;
+			if (level.isClientSide) {
+				player.swing(context.getHand());
+				return InteractionResult.PASS;
+			}
 			if (tile.addToContainer(aspect, BASE) != 0) return InteractionResult.PASS;
-
-			ItemStack empty = new ItemStack(this);
-			giveOrDrop(player, stack, empty);
+			giveOrDrop(player, stack, new ItemStack(this), pos);
 			level.playSound(null, pos, SoundEvents.BOTTLE_FILL, SoundSource.PLAYERS, 0.25f, 1.0f);
-			return InteractionResult.CONSUME;
+			return InteractionResult.SUCCESS;
 		}
 		return InteractionResult.PASS;
 	}
 
 	/** Shrinks the held stack by 1 and either stacks the result into the player's inventory or drops it -
 	 * same "consume one, hand back the transformed item" shape as vanilla's own bottle-filling. */
-	private static void giveOrDrop(Player player, ItemStack held, ItemStack result) {
+	private static void giveOrDrop(Player player, ItemStack held, ItemStack result, BlockPos jar) {
 		held.shrink(1);
 		if (!player.getInventory().add(result)) {
-			player.drop(result, false);
+			// as the original: dropped at the jar
+			player.level().addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(player.level(), jar.getX() + 0.5, jar.getY() + 0.5, jar.getZ() + 0.5, result));
 		}
 	}
 }

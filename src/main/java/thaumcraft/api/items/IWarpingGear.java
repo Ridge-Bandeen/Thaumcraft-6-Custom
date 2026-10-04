@@ -10,7 +10,7 @@ import net.minecraft.world.item.ItemStack;
  * Armor, held items or bauble slot items that implement this interface add warp when equipped or held.
  *
  * IMPORTANT:
- * You can also add a "TC.WARP" data component to an item which serves much the same function without having to implement this interface.
+ * You can also add a {@link ThaumcraftDataComponents#ITEM_WARP} component to an item which serves much the same function without having to implement this interface.
  * Warp from this interface and the component stack.
  *
  */

@@ -4176,7 +4176,7 @@ public class ThaumcraftGameTests {
 		net.minecraft.world.item.context.UseOnContext context = new net.minecraft.world.item.context.UseOnContext(player, hand, hit);
 		net.minecraft.world.InteractionResult result = player.getItemInHand(hand).getItem().onItemUseFirst(player.getItemInHand(hand), context);
 
-		helper.assertTrue(result == net.minecraft.world.InteractionResult.CONSUME, "filling from a jar with enough essentia should succeed, got: " + result);
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.SUCCESS, "filling from a jar with enough essentia should succeed, got: " + result);
 		helper.assertTrue(jar.getAspects().getAmount(Aspect.AIR) == 40, "the jar should have given up 10 essentia, found: " + jar.getAspects().getAmount(Aspect.AIR));
 
 		boolean foundFilled = false;
@@ -4195,7 +4195,7 @@ public class ThaumcraftGameTests {
 		context = new net.minecraft.world.item.context.UseOnContext(player, hand, hit);
 		result = player.getItemInHand(hand).getItem().onItemUseFirst(player.getItemInHand(hand), context);
 
-		helper.assertTrue(result == net.minecraft.world.InteractionResult.CONSUME, "emptying a filled phial into an accepting jar should succeed, got: " + result);
+		helper.assertTrue(result == net.minecraft.world.InteractionResult.SUCCESS, "emptying a filled phial into an accepting jar should succeed, got: " + result);
 		helper.assertTrue(jar.getAspects().getAmount(Aspect.AIR) == 50, "the jar should be back to 50 essentia, found: " + jar.getAspects().getAmount(Aspect.AIR));
 		helper.succeed();
 	}
@@ -7554,12 +7554,15 @@ public class ThaumcraftGameTests {
 		ItemStack boots = new ItemStack(ItemsTC.travellerBoots.get());
 		thaumcraft.api.items.RechargeHelper.rechargeItemBlindly(boots, player, 240);
 		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, boots);
+		ItemStack worn = player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET);
 		player.zza = 1.0f;
+		player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
 
-		boots.getItem().inventoryTick(boots, helper.getLevel(), player, 0, false);
+		worn.getItem().inventoryTick(worn, helper.getLevel(), player, 0, false);
 
-		helper.assertTrue(player.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED),
-				"worn, charged traveller boots moving forward should grant a Speed boost");
+		helper.assertTrue(player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.STEP_HEIGHT)
+				.hasModifier(thaumcraft.common.items.armor.ItemBootsTraveller.STEP_ID), "charged boots running forward should step up a whole block");
+		helper.assertTrue(player.getDeltaMovement().horizontalDistanceSqr() > 0, "charged boots running forward should push the wearer along");
 		helper.succeed();
 	}
 
@@ -7570,10 +7573,12 @@ public class ThaumcraftGameTests {
 		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, boots);
 		player.zza = 1.0f;
 
+		player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
 		boots.getItem().inventoryTick(boots, helper.getLevel(), player, 0, false);
 
-		helper.assertTrue(!player.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED),
-				"uncharged traveller boots shouldn't grant a Speed boost");
+		helper.assertTrue(player.getDeltaMovement().horizontalDistanceSqr() == 0
+				&& !player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.STEP_HEIGHT)
+						.hasModifier(thaumcraft.common.items.armor.ItemBootsTraveller.STEP_ID), "uncharged traveller boots should do nothing");
 		helper.succeed();
 	}
 
@@ -18473,6 +18478,199 @@ public class ThaumcraftGameTests {
 		var after = thaumcraft.common.items.casters.ItemFocusPouch.getContents(player.getInventory().getItem(9));
 		helper.assertTrue(after.stream().anyMatch(st -> st.is(thaumcraft.api.items.ItemsTC.focus1.get())) && after.stream().noneMatch(st -> st.is(thaumcraft.api.items.ItemsTC.focus3.get())),
 				"the old focus should have gone into the pouch in place of the new one, pouch: " + after);
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Item parity: Boots of the Traveller, Fortress armour, Primordial Pearl, Bath Salts.
+	// --------------------------------------------------------------------------------------------------
+
+	/** Boots of the Traveller spend one charge per minute of use (the original's 60-step energy), not every 3 seconds. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void travellerBootsSpendOneChargeAMinute(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(1, 2, 1)));
+		ItemStack boots = new ItemStack(ItemsTC.travellerBoots.get());
+		thaumcraft.api.items.RechargeHelper.rechargeItemBlindly(boots, player, 10);
+		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, boots);
+		ItemStack worn = player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET);
+		int before = thaumcraft.api.items.RechargeHelper.getCharge(worn);
+		for (int t = 1; t <= 30; t++) {
+			player.tickCount = t * 20;
+			worn.getItem().inventoryTick(worn, helper.getLevel(), player, 36, false);
+		}
+		int spent = before - thaumcraft.api.items.RechargeHelper.getCharge(worn);
+		helper.assertTrue(spent == 1, "30 seconds of wear should spend exactly one charge, spent " + spent);
+		helper.succeed();
+	}
+
+	/** Each Fortress piece worn adds a point of armour (two with a masked helm) and a point of toughness. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void fortressArmourSetBonus(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(1, 2, 1)));
+		double base = player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS);
+		ItemStack helm = new ItemStack(ItemsTC.fortressHelm.get());
+		helm.set(thaumcraft.api.items.ThaumcraftDataComponents.FORTRESS_MASK.get(), 0);
+		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, helm);
+		player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new ItemStack(ItemsTC.fortressChest.get()));
+		net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.tick.PlayerTickEvent.Post(player));
+		var armor = player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR);
+		var bonus = armor.getModifier(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "fortress_set_armor"));
+		helper.assertTrue(bonus != null && bonus.amount() == 4.0, "two pieces with a masked helm should add 2 x (1 + 1) = 4 armour, got " + bonus);
+		var tough = player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS)
+				.getModifier(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "fortress_set_toughness"));
+		helper.assertTrue(tough != null && tough.amount() == 2.0, "two pieces should add 2 toughness, got " + tough);
+		helper.succeed();
+	}
+
+	/** A Primordial Pearl used in a recipe comes back one step more worn, and the last use takes it. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void primordialPearlWearsAsACraftingRemnant(GameTestHelper helper) {
+		ItemStack pearl = new ItemStack(ItemsTC.primordialPearl.get());
+		ItemStack after = pearl.getCraftingRemainingItem();
+		helper.assertTrue(after.is(ItemsTC.primordialPearl.get()) && after.getDamageValue() == 1, "a fresh pearl should come back worn once, got " + after);
+		pearl.setDamageValue(7);
+		helper.assertTrue(pearl.getCraftingRemainingItem().isEmpty(), "the eighth use should take the pearl");
+		helper.succeed();
+	}
+
+	/** Bath Salts dropped into still water turn it into Purifying Fluid when they expire, and last 10 seconds. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void bathSaltsExpiringInWaterMakePurifyingFluid(GameTestHelper helper) {
+		BlockPos water = new BlockPos(1, 2, 1);
+		helper.setBlock(water.below(), Blocks.STONE);
+		helper.setBlock(water, Blocks.WATER);
+		BlockPos abs = helper.absolutePos(water);
+		ItemStack salts = new ItemStack(ItemsTC.bathSalts.get());
+		helper.assertTrue(salts.getEntityLifespan(helper.getLevel()) == 200, "dropped salts should last 200 ticks");
+		net.minecraft.world.entity.item.ItemEntity item = new net.minecraft.world.entity.item.ItemEntity(helper.getLevel(), abs.getX() + 0.5, abs.getY() + 0.2, abs.getZ() + 0.5, salts);
+		thaumcraft.common.items.consumables.ItemBathSalts.onExpire(new net.neoforged.neoforge.event.entity.item.ItemExpireEvent(item));
+		helper.assertBlockPresent(thaumcraft.api.blocks.BlocksTC.purifyingFluid.get(), water);
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Tool parity: void tools, the elemental tools, Arcing, item warp, the champion list.
+	// --------------------------------------------------------------------------------------------------
+
+	/** The Void Pickaxe (like the axe, shovel and hoe) weakens what a player swings at, from the left-click itself. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void voidPickaxeWeakensOnLeftClick(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(1, 2, 1)));
+		Pig pig = helper.spawn(EntityType.PIG, new BlockPos(2, 2, 1));
+		ItemStack pick = new ItemStack(ItemsTC.voidPick.get());
+		pick.getItem().onLeftClickEntity(pick, player, pig);
+		helper.assertTrue(pig.hasEffect(net.minecraft.world.effect.MobEffects.WEAKNESS), "a swing with the Void Pickaxe should weaken the target");
+		helper.succeed();
+	}
+
+	/** The Pickaxe of the Core sets what it swings at alight. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void pickaxeOfTheCoreIgnitesOnLeftClick(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(1, 2, 1)));
+		Pig pig = helper.spawn(EntityType.PIG, new BlockPos(2, 2, 1));
+		ItemStack pick = new ItemStack(ItemsTC.elementalPick.get());
+		pick.getItem().onLeftClickEntity(pick, player, pig);
+		helper.assertTrue(pig.getRemainingFireTicks() > 0, "a swing with the Pickaxe of the Core should set the target alight");
+		helper.succeed();
+	}
+
+	/** The Sword of the Zephyr wears a point each second of use and leaves other players alone. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void zephyrSwordWearsAndSparesPlayers(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer player = spawnSurvivalPlayerAt(helper, helper.absolutePos(new BlockPos(2, 2, 2)));
+		player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL); // the test server's default mode is creative
+		ServerPlayer other = spawnCasterAt(helper, helper.absolutePos(new BlockPos(3, 2, 2)));
+		other.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+		ItemStack sword = new ItemStack(ItemsTC.elementalSword.get());
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, sword);
+		var item = (thaumcraft.common.items.tools.ItemElementalSword) sword.getItem();
+		int duration = item.getUseDuration(sword, player);
+		for (int t = 0; t < 21; t++) item.onUseTick(level, player, sword, duration - t);
+		helper.assertTrue(sword.getDamageValue() == 2, "ticks 0 and 20 of use should each wear a point, damage " + sword.getDamageValue());
+		helper.assertTrue(other.getDeltaMovement().horizontalDistanceSqr() == 0, "the gust should not push another player");
+		helper.succeed();
+	}
+
+	/** Arcing never cleaves a friendly mob - here the attacker's own tamed wolf. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void arcingSparesFriendlyMobs(GameTestHelper helper) {
+		BlockPos origin = helper.absolutePos(new BlockPos(3, 2, 3));
+		ServerLevel level = helper.getLevel();
+		ServerPlayer attacker = spawnCasterAt(helper, origin);
+		ItemStack sword = new ItemStack(Items.IRON_SWORD);
+		thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.addInfusionEnchantment(sword,
+				thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.ARCING, 2);
+		attacker.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, sword);
+		Pig primary = EntityType.PIG.create(level);
+		primary.moveTo(origin.getX() + 1.0, origin.getY(), origin.getZ() + 0.5);
+		level.addFreshEntity(primary);
+		net.minecraft.world.entity.animal.Wolf wolf = EntityType.WOLF.create(level);
+		wolf.moveTo(origin.getX() + 1.5, origin.getY(), origin.getZ() + 0.5);
+		wolf.tame(attacker);
+		level.addFreshEntity(wolf);
+		float before = wolf.getHealth();
+		thaumcraft.common.lib.events.ToolEvents.onAttackEntity(new net.neoforged.neoforge.event.entity.player.AttackEntityEvent(attacker, primary));
+		helper.assertTrue(wolf.getHealth() == before, "Arcing should not cleave the attacker's own wolf");
+		helper.succeed();
+	}
+
+	/** An item's own warp (the original's TC.WARP) adds to its warping-gear warp. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void itemWarpComponentAddsToGearWarp(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(1, 2, 1)));
+		ItemStack sword = new ItemStack(ItemsTC.voidSword.get());
+		sword.set(thaumcraft.api.items.ThaumcraftDataComponents.ITEM_WARP.get(), 2);
+		int warp = thaumcraft.common.lib.events.WarpEvents.getFinalWarp(sword, player);
+		helper.assertTrue(warp == 3, "a Void Sword (1) with 2 item warp should total 3, got " + warp);
+		ItemStack plain = new ItemStack(Items.IRON_SWORD);
+		plain.set(thaumcraft.api.items.ThaumcraftDataComponents.ITEM_WARP.get(), 1);
+		helper.assertTrue(thaumcraft.common.lib.events.WarpEvents.getFinalWarp(plain, player) == 1, "item warp alone should count");
+		helper.succeed();
+	}
+
+	/** The champion list: the original's whitelisted monsters (zombie kin included), not the rest. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void championListMatchesTheOriginalWhitelist(GameTestHelper helper) {
+		var map = thaumcraft.common.registry.ThaumcraftDataMaps.CHAMPION_WEIGHT;
+		for (EntityType<?> type : new EntityType<?>[] { EntityType.ZOMBIE, EntityType.HUSK, EntityType.SPIDER, EntityType.SKELETON,
+				EntityType.BLAZE, EntityType.ENDERMAN, EntityType.WITCH, thaumcraft.common.registry.ThaumcraftEntities.INHABITED_ZOMBIE.get() }) {
+			helper.assertTrue(type.builtInRegistryHolder().getData(map) != null, type + " should be on the champion list");
+		}
+		for (EntityType<?> type : new EntityType<?>[] { EntityType.CREEPER, EntityType.STRAY, EntityType.WITHER_SKELETON }) {
+			helper.assertTrue(type.builtInRegistryHolder().getData(map) == null, type + " should not be on the champion list");
+		}
+		helper.assertTrue(EntityType.WITCH.builtInRegistryHolder().getData(map).weight() == 1, "the witch keeps the original's weight 1");
+		helper.succeed();
+	}
+
+	/** Picking a block for an Exchange focus stores its silk-touch drop: lit redstone ore gives redstone ore. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void casterPicksTheSilkTouchDrop(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(1, 2, 1);
+		helper.setBlock(pos, Blocks.REDSTONE_ORE.defaultBlockState().setValue(net.minecraft.world.level.block.RedStoneOreBlock.LIT, true));
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(1, 3, 1)));
+		ItemStack drop = thaumcraft.common.items.casters.ItemCaster.silkTouchDrop(helper.getLevel(), helper.absolutePos(pos),
+				helper.getBlockState(pos), player);
+		helper.assertTrue(drop.is(Items.REDSTONE_ORE), "lit redstone ore should pick as redstone ore, got " + drop);
+		helper.setBlock(pos, Blocks.GRASS_BLOCK);
+		drop = thaumcraft.common.items.casters.ItemCaster.silkTouchDrop(helper.getLevel(), helper.absolutePos(pos), helper.getBlockState(pos), player);
+		helper.assertTrue(drop.is(Items.GRASS_BLOCK), "grass should pick as grass, got " + drop);
+		helper.succeed();
+	}
+
+	/** The open Focus Pouch's own hotbar slot is locked: a click there picks nothing up, a number-key swap does nothing. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focusPouchLocksItsOwnSlot(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(1, 2, 1)));
+		player.getInventory().selected = 2;
+		ItemStack pouch = new ItemStack(ItemsTC.focusPouch.get());
+		player.getInventory().setItem(2, pouch);
+		var menu = new thaumcraft.common.container.FocusPouchMenu(0, player.getInventory(), pouch);
+		menu.clicked(18 + 27 + 2, 0, net.minecraft.world.inventory.ClickType.PICKUP, player);
+		helper.assertTrue(menu.getCarried().isEmpty() && player.getInventory().getItem(2) == pouch, "the pouch's own slot should not be clickable");
+		menu.clicked(18, 2, net.minecraft.world.inventory.ClickType.SWAP, player);
+		helper.assertTrue(player.getInventory().getItem(2) == pouch, "number-key swaps should do nothing while the pouch is open");
 		helper.succeed();
 	}
 }

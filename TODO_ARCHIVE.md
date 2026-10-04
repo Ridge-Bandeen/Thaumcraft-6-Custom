@@ -1,5 +1,35 @@
 # Thaumcraft 1.21.1 Port — TODO archive
 
+## Closed 2026-10-04 (items and tools)
+
+- Boots of the Traveller: one charge per minute of running ("energy"), whole-block step-up until you sneak, ground
+  push / water push / air control, +0.275 jumps; the invented Speed effect removed. Cloud Ring's mid-air jump (client
+  key, bamf, sweep sound, server flag packet). Fortress armour's ISpecialArmor share (/25, magic /35, fire and
+  explosions /20) and set bonus (armour per piece, doubled with masks; toughness). Sanity Soap auto-finishes at 95
+  ticks, bonus under Warp Ward / in Purifying Fluid; Bath Salts last 10 s and turn still water into Purifying Fluid.
+  Phial fills from an Alembic and empties into void jars; Primordial Pearl comes back one use more worn; Resonator
+  chime.
+- Void Axe/Shovel/Hoe/Pickaxe weaken on the left-click itself (the original's onLeftClickEntity); the sword keeps its
+  on-hit. Pickaxe of the Core ignites (2 s) - it had been a plain pickaxe. Axe of the Stream: the original's pull and
+  blue bubbles. Sword of the Zephyr: 1 durability and a wind gust per second of use, players not pushed, flying-kick
+  counter reset. Hoe of Growth: tills on the server again (vanilla returns CONSUME there), bamfs, bonemeal mist.
+- Arcing as the original: only non-friendly mobs, knockback along the swing, thorns, the wind sound.
+- Item warp (`thaumcraft:warp`, the original's TC.WARP): infusion enchanting may add it (1 in 10 per enchantment
+  already on), counted in gear warp and tooltips.
+- Champions: only the original's whitelist rolls (`data_maps/entity_type/champion_weight.json`, zombie kin listed
+  since the original matched subclasses), spooky/Nether/End biome tags, Outer Lands dim id, base-health floor, the
+  config-off branch. Not a gap: the original's Eldritch Crab / Taintacle / Inhabited Zombie whitelist names never
+  resolved (1.12 `EntityList.getClassFromName` on "Thaumcraft.X"), so only vanilla entries ever applied.
+- Caster block picking stores the silk-touch drop (lit redstone ore -> redstone ore). Focus Pouch / Hand Mirror screens:
+  their own hotbar slot locked (no clicks, shift-moves or number-key swaps), lock icon, no labels; the pouch screen
+  closes if its slot empties; a Hand Mirror can't be clicked at all while one is open. "Inventory too large" scan
+  message in purple italics.
+- Research/scans reviewed against the original: no further gaps.
+- Stale notes corrected (already ported): Dream Journal, Sounding's staggered reveal, zombie-brain Looting, the
+  research requirement checklist.
+- Not a gap: mound vs. Cultist portal exclusivity (the original's `else if` makes the portal 1% rarer); BiomeHandler's
+  first-match / table-only picks (the original's results depended on HashSet order of 1.12 dictionary types).
+
 ## Closed 2026-10-04 (projectiles)
 
 - Alumentum's explosion breaks blocks again; Bottled Taint splashes Flux Goo; Eldritch orb: no burst without its

@@ -16,11 +16,9 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Replaces the old (1.12.2) {@code ItemElementalAxe} (the Water-aspect elemental tool). Real ability, ported
- * as-is: hold right-click to pull every nearby item entity within 10 blocks gently toward you (capped speed
- * per axis), same "magnet" effect the original had via a bow-style multi-tick use action. The original's
- * client-only crucible-bubble particle trail on each pulled item is dropped (a purely cosmetic per-item-per-
- * tick VFX, not worth chasing for this pass).
+ * Replaces the old (1.12.2) {@code ItemElementalAxe}, the Axe of the Stream: as the original, holding right-click
+ * pulls every item within 10 blocks (a box) toward you - 0.3 along the line to a point half your height below your
+ * feet, plus a 0.1 lift, each axis capped at 0.25 - with blue bubbles rising off each one.
  */
 public class ItemElementalAxe extends AxeItem {
 
@@ -46,17 +44,25 @@ public class ItemElementalAxe extends AxeItem {
 
 	@Override
 	public void onUseTick(Level level, LivingEntity player, ItemStack stack, int remainingUseDuration) {
-		List<ItemEntity> nearby = level.getEntitiesOfClass(ItemEntity.class, player.getBoundingBox().inflate(10.0));
+		List<ItemEntity> nearby = level.getEntitiesOfClass(ItemEntity.class, new AABB(player.position(), player.position()).inflate(10.0));
 		for (ItemEntity item : nearby) {
 			if (item.isRemoved()) continue;
-			Vec3 toPlayer = player.position().add(0, player.getBbHeight() / 2.0, 0).subtract(item.position());
-			double distance = toPlayer.length() + 0.1;
-			Vec3 pull = toPlayer.scale(0.3 / distance);
-			Vec3 motion = item.getDeltaMovement().add(pull.x, pull.y + 0.1, pull.z);
+			// as the original: (item - player) + half the player's height, normalised
+			Vec3 away = new Vec3(item.getX() - player.getX(), item.getY() - player.getY() + player.getBbHeight() / 2.0f, item.getZ() - player.getZ());
+			double d = away.length();
+			if (d <= 0) continue;
+			away = away.scale(1.0 / d);
+			Vec3 motion = item.getDeltaMovement().add(-away.x * 0.3, -(away.y * 0.3 - 0.1), -away.z * 0.3);
 			item.setDeltaMovement(
 					Math.clamp(motion.x, -0.25, 0.25),
 					Math.clamp(motion.y, -0.25, 0.25),
 					Math.clamp(motion.z, -0.25, 0.25));
+			if (level.isClientSide) {
+				var r = level.random;
+				thaumcraft.client.fx.ClientFxHandlers.spawnCrucibleBubble(level, item.getX() + (r.nextFloat() - r.nextFloat()) * 0.2f,
+						item.getY() + item.getBbHeight() + (r.nextFloat() - r.nextFloat()) * 0.2f, item.getZ() + (r.nextFloat() - r.nextFloat()) * 0.2f,
+						0.33f, 0.33f, 1.0f);
+			}
 		}
 	}
 }

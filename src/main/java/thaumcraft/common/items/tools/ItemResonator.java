@@ -33,8 +33,7 @@ import thaumcraft.common.tiles.essentia.TileTubeBuffer;
  * <li>No CodeChicken raytrace face refinement ({@code RayTracer.retraceBlock}/{@code subHit}) - uses
  * {@link UseOnContext#getClickedFace()} directly, which is exactly what the original itself already fell
  * back to whenever that raytrace came back null, so this is a lossless simplification, not a cut feature.</li>
- * <li>Vanilla {@code ITEM_PICKUP} chime in place of the original's custom "shield block" resonance sound -
- * no mod-specific sound registry ({@code SoundsTC}) is ported.</li>
+ * <li>The shield-block chime, as the original.</li>
  * </ul>
  */
 public class ItemResonator extends Item {
@@ -72,7 +71,7 @@ public class ItemResonator extends Item {
 		String suctionLabel = suctionType != null ? suctionType.getName() : Component.translatable("tc.resonator3").getString();
 		player.sendSystemMessage(Component.translatable("tc.resonator2", transport.getSuctionAmount(face), suctionLabel));
 
-		level.playSound(null, context.getClickedPos(), SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.5f, 1.9f + level.random.nextFloat() * 0.1f);
+		level.playSound(null, context.getClickedPos(), SoundEvents.SHIELD_BLOCK, SoundSource.BLOCKS, 0.5f, 1.9f + level.random.nextFloat() * 0.1f);
 
 		if (level.getBlockEntity(context.getClickedPos()) instanceof TileCondenser condenser) {
 			player.sendSystemMessage(Component.translatable("tc.condenser1", condenser.getCost()));

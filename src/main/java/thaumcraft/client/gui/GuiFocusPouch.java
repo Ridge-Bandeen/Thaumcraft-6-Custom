@@ -9,12 +9,9 @@ import net.minecraft.world.entity.player.Inventory;
 import thaumcraft.common.container.FocusPouchMenu;
 
 /**
- * Replaces the old (1.12.2) {@code GuiFocusPouch}. Same "lighter, real simplification" treatment every
- * client-only screen this session has gotten - see {@code GuiPechTrade}'s own doc comment. Real background
- * texture ({@code gui_focuspouch.png}, 175x232) and real 18 focus slots; the original's own extra "which
- * hotbar slot is this pouch in" icon overlay is dropped - a purely decorative readout of state the player
- * already knows (they just clicked the item), same "drop the dynamic overlay, keep the real mechanic"
- * precedent as every other device screen this session.
+ * Replaces the old (1.12.2) {@code GuiFocusPouch}, as the original: the {@code gui_focuspouch.png} background (175x232)
+ * with its 18 focus slots and no labels, a lock icon over the hotbar slot the pouch sits in, and the screen closes if
+ * that slot empties.
  */
 public class GuiFocusPouch extends AbstractContainerScreen<FocusPouchMenu> {
 
@@ -24,7 +21,26 @@ public class GuiFocusPouch extends AbstractContainerScreen<FocusPouchMenu> {
 		super(menu, playerInventory, title);
 		imageWidth = 175;
 		imageHeight = 232;
-		inventoryLabelY = imageHeight - 94;
+		blockSlot = playerInventory.selected;
+	}
+
+	private final int blockSlot;
+
+	@Override
+	protected void containerTick() {
+		super.containerTick();
+		if (minecraft != null && minecraft.player != null && minecraft.player.getInventory().getItem(blockSlot).isEmpty()) onClose();
+	}
+
+	/** No labels (the original drew none) - only the lock icon over the pouch's hotbar slot, above the item. */
+	@Override
+	protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+		graphics.pose().pushPose();
+		graphics.pose().translate(0, 0, 300);
+		com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+		graphics.blit(TEXTURE, 8 + blockSlot * 18, 209, 240, 0, 16, 16);
+		com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+		graphics.pose().popPose();
 	}
 
 	/** {@code AbstractContainerScreen#render} doesn't draw item tooltips by itself in 1.21 - vanilla's own container

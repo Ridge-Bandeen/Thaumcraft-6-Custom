@@ -14,6 +14,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
@@ -87,18 +88,17 @@ import thaumcraft.common.lib.network.fx.PacketFXSlash;
  * <li>{@link EnumInfusionEnchantment#ARCING} - cleaves up to {@code level} nearby living entities for half
  * the player's attack damage whenever they land a hit, real for the first time this port has a working
  * client packet ({@link PacketFXSlash}, see {@code Thaumcraft#registerPayloads}) - the visual cue (a small
- * particle burst at each secondary hit, plus one more at the primary target) rides along it. No "friendly
- * fire" check (the original's own {@code EntityUtils.isFriendly} isn't ported) - any nearby
- * {@link LivingEntity} other than the primary target and the attacker themself is fair game, a real,
- * documented simplification.</li>
+ * particle burst at each secondary hit, plus one more at the primary target) rides along it. As the original only
+ * mobs are cleaved (not players or armour stands), never friendly ones ({@link thaumcraft.common.lib.utils.EntityChecks#isFriendly}),
+ * each knocked back along the swing with thorns applied, and the cleave whooshes with the wind sound (played as the
+ * original did, for those around the attacker).</li>
  * <li>{@link EnumInfusionEnchantment#SOUNDING} - damages the tool, plays a resonating sound, and sends a
  * targeted {@code PacketFXScanSource} to the scanning player on a sneak right-click, matching the original's
  * own server-side behaviour exactly. The actual scan (reading nearby block state, grouping connected ore
  * blocks, colouring each group) happens entirely client-side in
  * {@link thaumcraft.client.fx.ClientFxHandlers#handleScanSource} - a real {@code FXGeneric} marker per group,
  * restored 2026-09-15 (matches the true original's own real config exactly - see that method's own doc
- * comment), still with one real, documented simplification: every group reveals at once instead of the
- * original's distance-staggered "sonar ping" timing.</li>
+ * comment), each group revealed 3 ticks per block of distance later, as the original's "sonar ping".</li>
  * <li>{@link EnumInfusionEnchantment#BURROWING} - auto-tunnels toward the furthest still-standing block of
  * the same type connected to the one just mined - the original's own walk
  * ({@link thaumcraft.common.lib.utils.BlockSearch}; a wood log gets a wider reach than an ore block).
@@ -170,30 +170,40 @@ public class ToolEvents {
 		if (tool.isEmpty() || !EnumInfusionEnchantment.getInfusionEnchantments(tool).contains(EnumInfusionEnchantment.ARCING)) {
 			return;
 		}
-		if (!(event.getTarget() instanceof LivingEntity primary) || !primary.isAlive()) {
+		Entity primary = event.getTarget();
+		if (!primary.isAlive()) {
 			return;
 		}
 
 		int rank = EnumInfusionEnchantment.getInfusionEnchantmentLevel(tool, EnumInfusionEnchantment.ARCING);
 		AABB area = primary.getBoundingBox().inflate(1.5 + rank, 1.0 + rank / 2.0, 1.5 + rank);
-		List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class, area,
-				e -> e != primary && e != attacker && e.isAlive());
+		List<Entity> nearby = level.getEntities(attacker, area);
+		if (nearby.size() <= 1) {
+			return;
+		}
 
 		float damage = (float) attacker.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.5f;
 		DamageSource source = level.damageSources().playerAttack(attacker);
+		float yaw = attacker.getYRot() * Mth.DEG_TO_RAD;
 		int count = 0;
-		for (LivingEntity secondary : nearby) {
-			if (count >= rank) {
-				break;
+		for (Entity e : nearby) {
+			if (!(e instanceof net.minecraft.world.entity.Mob secondary) || e == primary || !e.isAlive()
+					|| thaumcraft.common.lib.utils.EntityChecks.isFriendly(attacker, e)) {
+				continue;
 			}
+			attacker.setLastHurtMob(secondary);
 			if (secondary.hurt(source, damage)) {
+				net.minecraft.world.item.enchantment.EnchantmentHelper.doPostAttackEffects(level, secondary, source);
+				secondary.push(-Mth.sin(yaw) * 0.5, 0.1, Mth.cos(yaw) * 0.5);
 				count++;
 				sendSlashFx(level, primary.getX(), primary.getY(), primary.getZ(), primary.getId(), secondary.getId());
 			}
+			if (count >= rank) {
+				break;
+			}
 		}
 		if (count > 0) {
-			level.playSound(null, attacker.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.0f,
-					0.9f + level.getRandom().nextFloat() * 0.2f);
+			attacker.playSound(thaumcraft.common.registry.ThaumcraftSounds.WIND.get(), 1.0f, 0.9f + level.getRandom().nextFloat() * 0.2f);
 			sendSlashFx(level, attacker.getX(), attacker.getY(), attacker.getZ(), attacker.getId(), primary.getId());
 		}
 	}

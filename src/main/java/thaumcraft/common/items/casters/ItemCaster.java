@@ -182,12 +182,28 @@ public class ItemCaster extends Item implements ICaster, thaumcraft.api.items.IA
 	 * {@code BlockEntity}, matching the true original's own {@code world.getTileEntity(pos) == null} gate)
 	 * while a real {@link IFocusBlockPicker} focus (e.g. {@code FocusEffectExchange}) is loaded stores that
 	 * block into {@link ThaumcraftDataComponents#WAND_PICKED_BLOCK}, readable back via {@link #getPickedBlock}.
-	 * Real, deliberate simplification: the true original's own silk-touch-aware drop lookup
-	 * ({@code BlockUtils#getSilkTouchDrop}, part of the still-unported {@code BlockUtils} utility class) is
-	 * replaced with the block's own plain item form ({@code Block#asItem}) - the picked block is only ever
-	 * used as a real placement template by {@code FocusEffectExchange}, never actually given to a player, so
-	 * the silk-touch-specific item form doesn't matter here the way it would for an actual drop.
+	 * As the original the stored item is the block's silk-touch drop (its loot table run with a Silk Touch pick - lit
+	 * redstone ore gives redstone ore, grass gives grass), else its plain item.
 	 */
+	/** The original's BlockUtils.getSilkTouchDrop: what the block drops to a Silk Touch tool (the first such drop that
+	 * is a block's item), else the block's own item. */
+	public static ItemStack silkTouchDrop(net.minecraft.server.level.ServerLevel level, net.minecraft.core.BlockPos pos,
+			net.minecraft.world.level.block.state.BlockState state, Player player) {
+		ItemStack plain = new ItemStack(state.getBlock().asItem());
+		if (state.isAir()) return plain;
+		try {
+			ItemStack tool = new ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE);
+			tool.enchant(level.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+					.getHolderOrThrow(net.minecraft.world.item.enchantment.Enchantments.SILK_TOUCH), 1);
+			for (ItemStack drop : net.minecraft.world.level.block.Block.getDrops(state, level, pos, null, player, tool)) {
+				if (drop.getItem() instanceof net.minecraft.world.item.BlockItem) return drop.copyWithCount(1);
+			}
+		} catch (Exception ex) {
+			// as the original: fall back to the plain item
+		}
+		return plain;
+	}
+
 	@Override
 	public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
 		Player player = context.getPlayer();
@@ -203,7 +219,7 @@ public class ItemCaster extends Item implements ICaster, thaumcraft.api.items.IA
 			if (!level.isClientSide) {
 				net.minecraft.world.level.block.state.BlockState picked = level.getBlockState(context.getClickedPos());
 				stack.set(ThaumcraftDataComponents.WAND_PICKED_BLOCK.get(),
-						new ThaumcraftDataComponents.WandFocus(new ItemStack(picked.getBlock().asItem())));
+						new ThaumcraftDataComponents.WandFocus(silkTouchDrop((net.minecraft.server.level.ServerLevel) level, context.getClickedPos(), picked, player)));
 			}
 			player.swing(context.getHand());
 			return level.isClientSide ? InteractionResult.SUCCESS : InteractionResult.CONSUME;

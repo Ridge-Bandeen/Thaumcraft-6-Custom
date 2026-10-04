@@ -14,13 +14,8 @@ import net.minecraft.world.item.Rarity;
  * used - see {@code primordial_pearl.json}'s overrides and {@code Thaumcraft#clientSetup}'s registration of
  * it.
  *
- * The original's other behaviour - {@code getContainerItem}/{@code hasContainerItem} making it a "crafting
- * remnant" that returns one damage-tier-further-degraded instead of being fully consumed - is deliberately
- * cut. Every real recipe that used it that way ({@code AdvAlchemyConstruct}, {@code focus_3},
- * {@code PrimalCrusher}, {@code VoidseerPearl}) itself needs further unbuilt deep-tier items (a void
- * pickaxe, a Voidseer charm, baubles support), so nothing in this port can trigger that mechanic yet. It
- * ships instead as a plain (if non-repairable, non-enchantable) collectible - the same cut this session
- * already made for other items whose only remaining real use is future-tier content.
+ * As the original it is a crafting remnant: a recipe that uses it (at a table, the workbench or an Infusion Altar) hands
+ * it back one step more worn, until the eighth use takes it.
  */
 public class ItemPrimordialPearl extends Item {
 
@@ -33,6 +28,19 @@ public class ItemPrimordialPearl extends Item {
 		int damage = stack.getDamageValue();
 		String suffix = damage < 3 ? "pearl" : damage < 6 ? "nodule" : "mote";
 		return Component.translatable("item.thaumcraft.primordial_pearl." + suffix);
+	}
+
+	@Override
+	public boolean hasCraftingRemainingItem(ItemStack stack) {
+		return stack.getDamageValue() < 7;
+	}
+
+	@Override
+	public ItemStack getCraftingRemainingItem(ItemStack stack) {
+		if (!hasCraftingRemainingItem(stack)) return ItemStack.EMPTY;
+		ItemStack next = stack.copy();
+		next.setDamageValue(stack.getDamageValue() + 1);
+		return next;
 	}
 
 	public static float typeProperty(ItemStack stack) {

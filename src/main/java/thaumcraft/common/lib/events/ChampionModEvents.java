@@ -28,15 +28,14 @@ import thaumcraft.api.ThaumcraftAttributes;
  * their own focused class rather than porting that whole file (which also handles a dozen unrelated
  * mechanics, most already ported elsewhere for real, some genuinely unported).
  *
- * <p>The world-config on/off toggle ({@code allowChampionMobs}) is now a real, live {@link
- * thaumcraft.common.config.ThaumcraftConfig#ALLOW_CHAMPION_MOBS} check, wired in {@link #onJoinLevel} - since
- * {@code isDangerousLocation} was already dead code (an unconditional {@code return false}) even in the real
- * original, disabling the toggle there meant champions never spawned at all, which is exactly what this
- * does too. Real, deliberate cut kept: the original's whole {@code ConfigEntities.championModWhitelist}
- * per-species weighting is dropped (no per-species config surface in this port). The core real formula
- * - base roll, difficulty adjustment, nether/end adjustment, a real minimum-health floor - is kept as-is.
- * "Spooky" biomes (1.12's {@code BiomeDictionary.Type.SPOOKY}) have no direct modern tag equivalent and are
- * dropped rather than guessed at.
+ * <p>The spawn roll is the original's: only monsters on the champion list
+ * ({@link thaumcraft.common.registry.ThaumcraftDataMaps#CHAMPION_WEIGHT}) with at least 10 base health can roll; a d100
+ * becomes a champion at 0 or below, +2 on Easy or with {@code allowChampionMobs} off, -2 on Hard (with it on), -3 in the
+ * Outer Lands dimension, -2 (-1 with it off) in a spooky, Nether or End biome ({@code c:is_spooky}/{@code is_nether}/{@code
+ * is_end}), and minus the species' weight - 1 (with it off, only for Thaumcraft bosses). The original's whitelist also
+ * named the Eldritch Crab, Taintacle and Inhabited Zombie, but by names its entity lookup could not resolve, so only its
+ * vanilla entries (and their subclasses, like the Inhabited Zombie) ever applied. Its "dangerous location" bonus was
+ * a stub that never fired.
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID)
 public class ChampionModEvents {
@@ -54,22 +53,28 @@ public class ChampionModEvents {
 		AttributeInstance championAttr = mob.getAttribute(ThaumcraftAttributes.CHAMPION_MOD);
 		if (championAttr == null || championAttr.getValue() > -2.0) return;
 
-		if (!ThaumcraftConfig.ALLOW_CHAMPION_MOBS.get() || !naturalRolls) {
+		if (!naturalRolls) {
 			ChampionUtils.markNotChampion(mob);
 			return;
 		}
 
 		Level level = event.getLevel();
-		int c = mob.getRandom().nextInt(100);
-		switch (level.getDifficulty()) {
-			case EASY, PEACEFUL -> c += 2;
-			case HARD -> c -= 2;
-			default -> {
-			}
+		boolean allowed = ThaumcraftConfig.ALLOW_CHAMPION_MOBS.get();
+		int c = level.getRandom().nextInt(100);
+		if (level.getDifficulty() == net.minecraft.world.Difficulty.EASY || !allowed) c += 2;
+		if (level.getDifficulty() == net.minecraft.world.Difficulty.HARD) c -= allowed ? 2 : 0;
+		if (level.dimension().location().toString().equals(ThaumcraftConfig.DIMENSION_OUTER_ID.get())) c -= 3;
+		var biome = level.getBiome(mob.blockPosition());
+		if (biome.is(net.neoforged.neoforge.common.Tags.Biomes.IS_SPOOKY) || biome.is(net.neoforged.neoforge.common.Tags.Biomes.IS_NETHER)
+				|| biome.is(net.neoforged.neoforge.common.Tags.Biomes.IS_END)) {
+			c -= allowed ? 2 : 1;
 		}
-		if (level.dimension() == Level.NETHER || level.dimension() == Level.END) c -= 2;
+		var weight = mob.getType().builtInRegistryHolder().getData(thaumcraft.common.registry.ThaumcraftDataMaps.CHAMPION_WEIGHT);
+		if (weight != null && (allowed || mob instanceof thaumcraft.common.entities.monster.boss.EntityThaumcraftBoss)) {
+			c -= Math.max(0, weight.weight() - 1);
+		}
 
-		if (c <= 0 && mob.getAttributeValue(Attributes.MAX_HEALTH) >= 10.0) {
+		if (weight != null && c <= 0 && mob.getAttributeBaseValue(Attributes.MAX_HEALTH) >= 10.0) {
 			ChampionUtils.makeChampion(mob);
 		} else {
 			ChampionUtils.markNotChampion(mob);

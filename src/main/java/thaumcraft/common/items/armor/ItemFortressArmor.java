@@ -26,15 +26,9 @@ import thaumcraft.api.items.ThaumcraftDataComponents;
  * Grinning Devil's own real Warp-misfortune-dampening effect lives in {@code
  * thaumcraft.common.lib.events.WarpEvents#checkWarpEvent}, once that whole system existed to check it).
  *
- * Real, deliberate simplification vs the original: the original's real {@code ISpecialArmor} damage curve
- * (gone in modern MC - real vanilla armor/toughness stats cover the "better tier" role instead, same
- * precedent as every other armor piece this session) and its "a helm can wear a mask AND the goggles mod at
- * once, stacking recipes" combinability are both dropped. Each of the 4 real upgrade recipes sets its own
- * component(s) on a FRESH result stack rather than reading-and-preserving whatever the central item already
- * had, so applying a second upgrade recipe to an already-upgraded helm replaces the first rather than
- * stacking with it - a real, minor fidelity loss; a proper fix would need a small custom recipe class
- * (matching {@code InfusionCrystalRecipe}'s own precedent) to carry the central item's existing components
- * forward, not attempted this pass.
+ * The original's {@code ISpecialArmor} damage share and set bonus live in
+ * {@link thaumcraft.common.lib.events.FortressArmorEvents}. The helm upgrades (goggles, the three masks) are
+ * {@code infusion_modifier} recipes, so they keep what the helm already has and stack, as the original.
  */
 public class ItemFortressArmor extends ArmorItem implements IGoggles {
 

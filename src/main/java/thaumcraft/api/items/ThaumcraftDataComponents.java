@@ -100,6 +100,10 @@ public final class ThaumcraftDataComponents {
 	public static final DeferredHolder<DataComponentType<?>, DataComponentType<CasterArea>> CASTER_AREA = DATA_COMPONENTS.register("caster_area",
 			() -> DataComponentType.<CasterArea>builder().persistent(CasterArea.CODEC).networkSynchronized(CasterArea.STREAM_CODEC).build());
 
+	/** Boots of the Traveller's "energy": minutes of running paid for by the last charge spent (the original's {@code energy} tag). */
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> TRAVELLER_ENERGY = DATA_COMPONENTS.register("traveller_energy",
+			() -> DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build());
+
 	/** The Elemental Shovel's placement orientation, 0-2 - the original's {@code "or"} tag (see {@code ItemElementalShovel}). */
 	public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> SHOVEL_ORIENTATION = DATA_COMPONENTS.register("shovel_orientation",
 			() -> DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build());
@@ -217,14 +221,19 @@ public final class ThaumcraftDataComponents {
 
 	/** Was the {@code "mask"} NBT int tag on the original {@code ItemFortressArmor} - which of the 3 real
 	 * Fortress Helm mask upgrades (0=Grinning Devil, 1=Angry Ghost, 2=Sipping Fiend) is applied. Absent means
-	 * no mask. Orthogonal to {@link #FORTRESS_GOGGLES} - the original's own real design lets a helm carry
-	 * both at once (see {@code thaumcraft.common.items.armor.ItemFortressArmor}'s own doc comment for the
-	 * real, documented simplification this port makes there instead). */
+	 * no mask. Orthogonal to {@link #FORTRESS_GOGGLES}: a helm can carry both at once, as the original
+	 * (the upgrades are {@code infusion_modifier} recipes, which keep what the helm already has). */
 	public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> FORTRESS_MASK = DATA_COMPONENTS.register("fortress_mask",
 			() -> DataComponentType.<Integer>builder()
 					.persistent(Codec.INT)
 					.networkSynchronized(ByteBufCodecs.VAR_INT)
 					.build());
+
+	/** The original's {@code "TC.WARP"} tag: warp an item gives while worn or held, on top of any {@link IWarpingGear}
+	 * value - set by infusion enchanting (each one has a chance per enchantment already on the item to add 1), and open to
+	 * addons as the original's was. */
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> ITEM_WARP = DATA_COMPONENTS.register("warp",
+			() -> DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build());
 
 	/** Was the {@code "TC.RUNIC"} NBT byte tag - how many times a real
 	 * {@link thaumcraft.common.lib.crafting.RunicArmorRecipe} craft has augmented this item. Absent (or 0)

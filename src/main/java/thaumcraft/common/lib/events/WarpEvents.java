@@ -316,8 +316,16 @@ public class WarpEvents {
 	}
 
 	private static int getWarp(ItemStack stack, Player player) {
-		if (stack.isEmpty() || !(stack.getItem() instanceof IWarpingGear gear)) return 0;
-		return gear.getWarp(stack, player);
+		return getFinalWarp(stack, player);
+	}
+
+	/** The original's {@code PlayerEvents#getFinalWarp}: an item's {@link IWarpingGear} warp plus its
+	 * {@link thaumcraft.api.items.ThaumcraftDataComponents#ITEM_WARP} (the player may be null, for a tooltip). */
+	public static int getFinalWarp(ItemStack stack, @javax.annotation.Nullable Player player) {
+		if (stack.isEmpty()) return 0;
+		int warp = stack.getOrDefault(thaumcraft.api.items.ThaumcraftDataComponents.ITEM_WARP.get(), 0);
+		if (stack.getItem() instanceof IWarpingGear gear) warp += gear.getWarp(stack, player);
+		return warp;
 	}
 
 	/**

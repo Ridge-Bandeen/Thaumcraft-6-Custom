@@ -64,6 +64,27 @@ public class WornGearEvents {
 		}
 	}
 
+	/** The original's PlayerEvents tick: Boots of the Traveller's step-up ends when you sneak or take them off. */
+	@SubscribeEvent
+	public static void travellerStep(PlayerTickEvent.Post event) {
+		Player player = event.getEntity();
+		var step = player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.STEP_HEIGHT);
+		if (step == null || !step.hasModifier(thaumcraft.common.items.armor.ItemBootsTraveller.STEP_ID)) return;
+		if (player.isShiftKeyDown() || player.getItemBySlot(EquipmentSlot.FEET).getItem() != ItemsTC.travellerBoots.get()) {
+			step.removeModifier(thaumcraft.common.items.armor.ItemBootsTraveller.STEP_ID);
+		}
+	}
+
+	/** The original's playerJumps: charged Boots of the Traveller add 0.275 to a jump. */
+	@SubscribeEvent
+	public static void travellerJump(net.neoforged.neoforge.event.entity.living.LivingEvent.LivingJumpEvent event) {
+		if (!(event.getEntity() instanceof Player player)) return;
+		ItemStack boots = player.getItemBySlot(EquipmentSlot.FEET);
+		if (boots.getItem() == ItemsTC.travellerBoots.get() && thaumcraft.api.items.RechargeHelper.getCharge(boots) > 0) {
+			player.setDeltaMovement(player.getDeltaMovement().add(0, 0.275, 0));
+		}
+	}
+
 	/** Real port of both halves of the original's {@code PlayerEvents#onFallDamage} - the Cloud Ring (Baubles
 	 * slot, now {@link WornGearHelper#getWornItems}) and Traveller's Boots (a real armor piece, checked
 	 * directly off {@link EquipmentSlot#FEET} - it was never a Baubles item to begin with). Traveller's Boots

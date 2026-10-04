@@ -1170,6 +1170,11 @@ public final class ClientFxHandlers {
 		}
 	}
 
+	/** {@link #drawBlockMist} callable from common code (a plain {@code Level}; does nothing off the client). */
+	public static void spawnBlockMist(net.minecraft.world.level.Level level, BlockPos p, int c) {
+		if (level instanceof ClientLevel) drawBlockMist(p, c);
+	}
+
 	/** The original's FXDispatcher#drawBlockMistParticles: eight slow, swelling puffs of coloured mist rising out of
 	 * the block's shape. */
 	public static void drawBlockMist(BlockPos p, int c) {

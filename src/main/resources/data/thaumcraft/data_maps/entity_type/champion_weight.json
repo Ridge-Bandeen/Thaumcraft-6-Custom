@@ -1,0 +1,43 @@
+{
+  "values": {
+    "minecraft:zombie": {
+      "weight": 0
+    },
+    "minecraft:husk": {
+      "weight": 0
+    },
+    "minecraft:drowned": {
+      "weight": 0
+    },
+    "minecraft:zombie_villager": {
+      "weight": 0
+    },
+    "minecraft:zombified_piglin": {
+      "weight": 0
+    },
+    "thaumcraft:brainy_zombie": {
+      "weight": 0
+    },
+    "thaumcraft:inhabited_zombie": {
+      "weight": 0
+    },
+    "minecraft:spider": {
+      "weight": 0
+    },
+    "minecraft:cave_spider": {
+      "weight": 0
+    },
+    "minecraft:blaze": {
+      "weight": 0
+    },
+    "minecraft:enderman": {
+      "weight": 0
+    },
+    "minecraft:skeleton": {
+      "weight": 0
+    },
+    "minecraft:witch": {
+      "weight": 1
+    }
+  }
+}

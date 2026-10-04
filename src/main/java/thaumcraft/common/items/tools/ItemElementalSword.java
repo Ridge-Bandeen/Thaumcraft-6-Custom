@@ -16,15 +16,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Replaces the old (1.12.2) {@code ItemElementalSword} (the Air-aspect elemental tool - real aspect cost
- * includes AVERSION, matching this real ability). Real ability, ported as-is: hold right-click to hover
- * (real upward thrust, damping any existing downward fall) while gently pushing every nearby real
- * {@link LivingEntity} (other than the wielder) away from you - a real "air gust" repulsion effect, the
- * opposite direction from {@link ItemElementalAxe}'s own item-pulling "magnet" (confirmed against the
- * original's real motion-vector math: the axe subtracts the away-pointing unit vector to pull inward, this
- * adds it to push outward). The original's anti-cheat "reset float kick counter" call is dropped - that was
- * a 1.12.2-era vanilla-server workaround with no real modern equivalent needed (a modern server doesn't kick
- * a player for server-applied vertical motion the way the old float-kick heuristic could).
+ * Replaces the old (1.12.2) {@code ItemElementalSword}, the Sword of the Zephyr: as the original, holding right-click
+ * lifts you (slowing a fall, and the fall distance with it) and pushes every non-player living thing within 2.5 blocks
+ * away, wearing a point of durability each second with a gust of wind. It resets the server's flying-kick counter as
+ * the original did, so a long hover is not taken for cheating.
  *
  * <p>Real client-only hover trail restored 2026-09-17 (was dropped under this port's old blanket "no client
  * FX" rule) - a real faithful port of the true original's own real per-tick smoke-spiral burst (5 real
@@ -58,13 +53,17 @@ public class ItemElementalSword extends SwordItem {
 	public void onUseTick(Level level, LivingEntity player, ItemStack stack, int remainingUseDuration) {
 		Vec3 motion = player.getDeltaMovement();
 		double y = motion.y;
-		if (y < 0.0) y /= 1.2;
+		int ticks = getUseDuration(stack, player) - remainingUseDuration;
+		if (y < 0.0) {
+			y /= 1.2;
+			player.fallDistance /= 1.2f;
+		}
 		y += 0.08;
 		if (y > 0.5) y = 0.2;
 		player.setDeltaMovement(motion.x, y, motion.z);
-		player.fallDistance /= 1.2f;
+		if (player instanceof net.minecraft.server.level.ServerPlayer sp) sp.connection.aboveGroundTickCount = 0;
 
-		List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(2.5), e -> e != player);
+		List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(2.5), e -> e != player && !(e instanceof Player));
 		for (LivingEntity target : nearby) {
 			if (target.isRemoved() || player.getVehicle() == target) continue;
 			Vec3 toTarget = target.position().subtract(player.position());
@@ -84,6 +83,12 @@ public class ItemElementalSword extends SwordItem {
 				float mz = Mth.cos(r2 / 180.0f * Mth.PI) / 5.0f;
 				level.addParticle(ParticleTypes.SMOKE, player.getX(), player.getBoundingBox().minY + 0.1, player.getZ(), mx, 0.0, mz);
 			}
+		} else if (ticks % 20 == 0) {
+			player.playSound(thaumcraft.common.registry.ThaumcraftSounds.WIND.get(), 0.5f, 0.9f + level.random.nextFloat() * 0.2f);
+		}
+		if (ticks % 20 == 0) {
+			stack.hurtAndBreak(1, player, player.getUsedItemHand() == InteractionHand.OFF_HAND ? net.minecraft.world.entity.EquipmentSlot.OFFHAND
+					: net.minecraft.world.entity.EquipmentSlot.MAINHAND);
 		}
 	}
 }

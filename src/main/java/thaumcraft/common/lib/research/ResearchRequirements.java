@@ -49,9 +49,8 @@ import thaumcraft.api.research.ResearchStage;
  * every one of its stages atomically on a single click, ignoring every stage's own {@code required_item}/
  * {@code required_craft}/{@code required_knowledge} gate for every research entry in the game, not only the
  * 3 stages that happen to use the enchantment-placeholder trick. See {@link ThaumonomiconMenu#startResearch}
- * for the real per-stage consumer this class now feeds, and that menu's own doc comment for what's still a
- * real, deliberate simplification (the original's own graphical per-requirement checklist is a genuine
- * separate client-rendering project; a plain status line stands in for it for now).
+ * for the real per-stage consumer this class now feeds; the book page shows each requirement as a ticked
+ * checklist row, as the original.
  *
  * <p><b>Real correction found while wiring this up</b>: an earlier pass here left a doc comment claiming the
  * gate was "any ONE of the listed items/crafts" - checked directly against the true original's own

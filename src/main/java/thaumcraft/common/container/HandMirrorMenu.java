@@ -23,7 +23,8 @@ import thaumcraft.common.tiles.devices.TileMirror;
  * session) the item bounces back into the slot, matching the original's own real
  * {@code onCraftMatrixChanged} behavior exactly. Real, kept cut: a real {@link ItemHandMirror} itself can
  * never be placed into the send slot (matches the original's own real {@code slotClick}/
- * {@code transferStackInSlot} guard against feeding a mirror into itself).
+ * {@code transferStackInSlot} guard against feeding a mirror into itself) - as there, a slot holding a Hand Mirror
+ * can't be clicked at all, and the number keys can't swap items while the mirror is open.
  */
 public class HandMirrorMenu extends AbstractContainerMenu {
 
@@ -107,6 +108,13 @@ public class HandMirrorMenu extends AbstractContainerMenu {
 				player.drop(remaining, false);
 			}
 		}
+	}
+
+	@Override
+	public void clicked(int slotId, int button, net.minecraft.world.inventory.ClickType clickType, Player player) {
+		if (clickType == net.minecraft.world.inventory.ClickType.SWAP) return;
+		if (slotId >= 0 && slotId < slots.size() && slots.get(slotId).getItem().getItem() instanceof ItemHandMirror) return;
+		super.clicked(slotId, button, clickType, player);
 	}
 
 	@Override
