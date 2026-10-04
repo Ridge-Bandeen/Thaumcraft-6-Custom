@@ -10296,6 +10296,8 @@ public class ThaumcraftGameTests {
 			if (t.getPos().equals(cropAbs) && !t.isSuspended() && t != cropTask) replant = t;
 		}
 		helper.assertTrue(replant != null, "harvesting with replant on should have queued a replant task");
+		// the farmland dried back to dirt meanwhile: the golem tills it again (with a hoe's till action) before planting
+		helper.setBlock(dirtPos, net.minecraft.world.level.block.Blocks.DIRT);
 		helper.assertTrue(!seal.canGolemPerformTask(golem, replant), "a golem without seeds can't replant");
 		golem.holdItem(new ItemStack(net.minecraft.world.item.Items.WHEAT_SEEDS, 3));
 		helper.assertTrue(seal.canGolemPerformTask(golem, replant), "a golem carrying seeds can");
@@ -10304,6 +10306,7 @@ public class ThaumcraftGameTests {
 				? helper.getLevel().getBlockState(cropAbs).getValue(net.minecraft.world.level.block.CropBlock.AGE) : -1;
 		helper.assertTrue(age == 0, "the replant task should have planted fresh wheat, found " + helper.getLevel().getBlockState(cropAbs));
 		helper.assertTrue(golem.isCarrying(new ItemStack(net.minecraft.world.item.Items.WHEAT_SEEDS)), "it used one of its seeds");
+		helper.assertTrue(helper.getBlockState(dirtPos).is(net.minecraft.world.level.block.Blocks.FARMLAND), "the dirt should have been tilled back into farmland, found " + helper.getBlockState(dirtPos));
 
 		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos); // real per-test cleanup - see sealProvideDeliversStockedItemsFromOneContainerToAnother's own doc comment for why a leftover ticking seal is a genuine cross-test contamination risk
 		helper.succeed();
@@ -14829,7 +14832,8 @@ public class ThaumcraftGameTests {
 		ServerPlayer player = helper.makeMockServerPlayerInLevel();
 		for (thaumcraft.api.research.IScanThing thing : things) {
 			if (thing instanceof thaumcraft.api.research.ScanEntity || thing instanceof thaumcraft.api.research.ScanBlock
-					|| thing instanceof thaumcraft.api.research.ScanItem || thing instanceof thaumcraft.api.research.ScanOreDictionary) {
+					|| thing instanceof thaumcraft.api.research.ScanItem || thing instanceof thaumcraft.api.research.ScanOreDictionary
+					|| thing instanceof thaumcraft.api.research.ScanTag) {
 				String key = thing.getResearchKey(player, null);
 				if (key != null) grantable.add(key);
 			}
@@ -18112,5 +18116,90 @@ public class ThaumcraftGameTests {
 		helper.setBlock(pos, BlocksTC.nitor.get(net.minecraft.world.item.DyeColor.ORANGE).get());
 		BlockPos abs = helper.absolutePos(pos);
 		helper.succeedWhen(() -> helper.assertTrue(NITOR_TICKED.contains(abs), "the hook should have ticked the placed Nitor"));
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Addon hooks, batch 2 (COMPAT_HOOKS.md #5, #17, #8, #9, #10).
+	// --------------------------------------------------------------------------------------------------
+
+	/** The smelting-bonus data map holds the original's table: an iron ore gives iron nuggets (a third of the time) and
+	 * rare earth (1%). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void smeltingBonusDataMapHoldsTheOriginalTable(GameTestHelper helper) {
+		var bonuses = Items.IRON_ORE.builtInRegistryHolder().getData(thaumcraft.common.registry.ThaumcraftDataMaps.SMELTING_BONUS);
+		helper.assertTrue(bonuses != null && bonuses.size() == 2, "iron ore should have two bonuses, got " + bonuses);
+		helper.assertTrue(bonuses.stream().anyMatch(b -> b.result().is(Items.IRON_NUGGET) && b.chance() == 0.33f)
+				&& bonuses.stream().anyMatch(b -> b.result().is(ItemsTC.nuggetRareearth.get()) && b.chance() == 0.01f), "got " + bonuses);
+		var beef = Items.BEEF.builtInRegistryHolder().getData(thaumcraft.common.registry.ThaumcraftDataMaps.SMELTING_BONUS);
+		helper.assertTrue(beef != null && beef.get(0).result().is(ItemsTC.chunkBeef.get()), "raw beef should give a beef chunk bonus, got " + beef);
+		helper.succeed();
+	}
+
+	private static boolean barrierProcessorRegistered;
+
+	/** A registered processor takes items no recipe would (they'd be burnt up otherwise), and its outputs come out. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infernalFurnaceProcessorHandlesItsItems(GameTestHelper helper) {
+		if (!barrierProcessorRegistered) {
+			barrierProcessorRegistered = true;
+			thaumcraft.api.crafting.InfernalFurnaceProcessors.register(new thaumcraft.api.crafting.InfernalFurnaceProcessors.Processor() {
+				@Override
+				public boolean accepts(ServerLevel level, ItemStack input) {
+					return input.is(Items.BARRIER);
+				}
+
+				@Override
+				public List<ItemStack> process(ServerLevel level, BlockPos pos, ItemStack input) {
+					return input.is(Items.BARRIER) ? List.of(new ItemStack(Items.DIAMOND, 2)) : null;
+				}
+			});
+		}
+		ServerLevel level = helper.getLevel();
+		BlockPos pos = new BlockPos(2, 2, 2);
+		helper.setBlock(pos, BlocksTC.infernalFurnace.get());
+		thaumcraft.common.tiles.devices.TileInfernalFurnace tile = helper.getBlockEntity(pos);
+		ItemStack left = tile.addItemsToInventory(new ItemStack(Items.BARRIER));
+		helper.assertTrue(left.isEmpty() && !tile.getItemHandler().getStackInSlot(0).isEmpty(), "the furnace should take the barrier in, not burn it");
+		BlockPos abs = helper.absolutePos(pos);
+		var state = level.getBlockState(abs);
+		for (int i = 0; i < 200 && level.getEntitiesOfClass(ItemEntity.class, new AABB(abs).inflate(2)).isEmpty(); i++) {
+			thaumcraft.common.tiles.devices.TileInfernalFurnace.tick(level, abs, state, tile);
+		}
+		List<ItemEntity> dropped = level.getEntitiesOfClass(ItemEntity.class, new AABB(abs).inflate(2));
+		helper.assertTrue(dropped.stream().anyMatch(e -> e.getItem().is(Items.DIAMOND) && e.getItem().getCount() == 2),
+				"the processor's 2 diamonds should have come out, found " + dropped.stream().map(e -> e.getItem().toString()).toList());
+		helper.succeed();
+	}
+
+	/** Spawn rules read thaumcraft:spawns/* biome tags, whose defaults are the original's biomes. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void spawnRuleBiomeTagsHoldTheOriginalBiomes(GameTestHelper helper) {
+		var biomes = helper.getLevel().registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.BIOME);
+		java.util.function.BiFunction<net.minecraft.resources.ResourceKey<net.minecraft.world.level.biome.Biome>, String, Boolean> in = (biome, rule) ->
+				biomes.getHolderOrThrow(biome).is(net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.BIOME,
+						net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "spawns/" + rule)));
+		helper.assertTrue(in.apply(net.minecraft.world.level.biome.Biomes.PLAINS, "brainy_zombie"), "plains should be in spawns/brainy_zombie");
+		helper.assertTrue(in.apply(net.minecraft.world.level.biome.Biomes.NETHER_WASTES, "fire_bat"), "the nether should be in spawns/fire_bat");
+		helper.assertTrue(in.apply(thaumcraft.common.world.WorldConfigHooks.MAGICAL_FOREST, "wisp_forest"), "the Magical Forest should be in spawns/wisp_forest");
+		helper.assertTrue(in.apply(thaumcraft.common.world.WorldConfigHooks.EERIE, "eldritch_guardian"), "Eerie should be in spawns/eldritch_guardian");
+		helper.assertFalse(in.apply(net.minecraft.world.level.biome.Biomes.PLAINS, "fire_bat"), "plains should not be in spawns/fire_bat");
+		helper.succeed();
+	}
+
+	/** The tag-backed scans: an ender pearl still unlocks f_TELEPORT, clay f_MATCLAY, an iron ingot f_MATIRON, a ghast
+	 * f_FLY. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void tagBackedScansUnlockTheirFlagsAsBefore(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		IPlayerKnowledge knowledge = ThaumcraftCapabilities.getKnowledge(player);
+		thaumcraft.api.research.ScanningManager.scanTheThing(player, new ItemStack(Items.ENDER_PEARL));
+		thaumcraft.api.research.ScanningManager.scanTheThing(player, new ItemStack(Items.CLAY_BALL));
+		thaumcraft.api.research.ScanningManager.scanTheThing(player, new ItemStack(Items.IRON_INGOT));
+		thaumcraft.api.research.ScanningManager.scanTheThing(player, EntityType.GHAST.create(helper.getLevel()));
+		helper.assertTrue(knowledge.isResearchKnown("f_TELEPORT"), "an ender pearl should unlock f_TELEPORT");
+		helper.assertTrue(knowledge.isResearchKnown("f_MATCLAY"), "clay should unlock f_MATCLAY");
+		helper.assertTrue(knowledge.isResearchKnown("f_MATIRON"), "an iron ingot should unlock f_MATIRON");
+		helper.assertTrue(knowledge.isResearchKnown("f_FLY"), "a ghast should unlock f_FLY");
+		helper.succeed();
 	}
 }

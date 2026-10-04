@@ -110,6 +110,27 @@ public class SealHarvest implements ISeal, ISealGui, ISealConfigArea, ISealConfi
 		}
 	}
 
+	/** Farmland the crop grew on (so it gets tilled again before replanting): {@code #thaumcraft:farmland}, or any
+	 * vanilla-style farmland block. */
+	private static final net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block> FARMLAND = net.minecraft.tags.BlockTags.create(
+			net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "farmland"));
+
+	private static boolean isFarmland(BlockState state) {
+		return state.is(FARMLAND) || state.getBlock() instanceof net.minecraft.world.level.block.FarmBlock;
+	}
+
+	/** What a hoe would till {@code soil} into, if that is farmland; null otherwise. */
+	@javax.annotation.Nullable
+	private static BlockState tillResult(net.neoforged.neoforge.common.util.FakePlayer fp, BlockPos soilPos, BlockState soil) {
+		net.minecraft.world.item.ItemStack held = fp.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND);
+		fp.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_HOE));
+		var hit = new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(soilPos).add(0, 0.5, 0), Direction.UP, soilPos, false);
+		BlockState tilled = soil.getToolModifiedState(new net.minecraft.world.item.context.UseOnContext(fp, net.minecraft.world.InteractionHand.MAIN_HAND, hit),
+				net.neoforged.neoforge.common.ItemAbilities.HOE_TILL, true);
+		fp.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, held);
+		return tilled != null && isFarmland(tilled) ? tilled : null;
+	}
+
 	@Override
 	public boolean onTaskCompletion(Level world, IGolemAPI golem, Task task) {
 		BlockPos pos = task.getPos();
@@ -139,7 +160,7 @@ public class SealHarvest implements ISeal, ISealGui, ISealConfigArea, ISealConfi
 						replant.setPriority(task.getPriority());
 						replant.setLifespan((short) 300);
 						replantTasks.put(pos.asLong(), new ReplantInfo(pos, face, replant.getId(), seed.copyWithCount(1),
-								below.getBlock() instanceof net.minecraft.world.level.block.FarmBlock));
+								isFarmland(below)));
 						TaskHandler.addTask(world.dimension(), replant);
 					}
 				}
@@ -149,9 +170,10 @@ public class SealHarvest implements ISeal, ISealGui, ISealConfigArea, ISealConfi
 			if (info != null && info.taskId == task.getId() && world.isEmptyBlock(pos) && golem.isCarrying(info.stack)) {
 				net.neoforged.neoforge.common.util.FakePlayer fp = thaumcraft.common.golems.GolemInteractionHelper.fakePlayer(serverLevel, golem);
 				BlockState below = world.getBlockState(pos.below());
-				if (info.farmland && (below.is(net.minecraft.world.level.block.Blocks.DIRT) || below.is(net.minecraft.world.level.block.Blocks.GRASS_BLOCK))) {
-					// as the original: till it again first
-					world.setBlockAndUpdate(pos.below(), net.minecraft.world.level.block.Blocks.FARMLAND.defaultBlockState());
+				if (info.farmland && below.is(net.minecraft.tags.BlockTags.DIRT)) {
+					// as the original: till it again first - with a hoe's own till action, so any soil's own farmland comes back
+					BlockState tilled = tillResult(fp, pos.below(), below);
+					if (tilled != null) world.setBlockAndUpdate(pos.below(), tilled);
 				}
 				net.minecraft.world.item.ItemStack seed = info.stack.copyWithCount(1);
 				fp.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, seed.copy());

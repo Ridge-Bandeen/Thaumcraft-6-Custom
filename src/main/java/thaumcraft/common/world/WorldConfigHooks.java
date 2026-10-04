@@ -236,37 +236,50 @@ public final class WorldConfigHooks {
 	public static final class ConfigSpawns implements BiomeModifier {
 		static final ConfigSpawns INSTANCE = new ConfigSpawns();
 
+		/** Each spawn rule's biomes, as a {@code thaumcraft:spawns/<rule>} biome tag - the defaults are the original's
+		 * biomes (packs and addons add theirs). The original's other conditions (the config switches, "the biome
+		 * already has monsters", Halloween) still apply on top. */
+		private static TagKey<Biome> rule(String name) {
+			return TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "spawns/" + name));
+		}
+
+		private static final TagKey<Biome> BRAINY_ZOMBIE = rule("brainy_zombie");
+		private static final TagKey<Biome> BRAINY_ZOMBIE_EERIE = rule("brainy_zombie_eerie");
+		private static final TagKey<Biome> GIANT_BRAINY_ZOMBIE = rule("giant_brainy_zombie");
+		private static final TagKey<Biome> PECH = rule("pech");
+		private static final TagKey<Biome> PECH_FOREST = rule("pech_forest");
+		private static final TagKey<Biome> FIRE_BAT = rule("fire_bat");
+		private static final TagKey<Biome> FIRE_BAT_HALLOWEEN = rule("fire_bat_halloween");
+		private static final TagKey<Biome> WISP = rule("wisp");
+		private static final TagKey<Biome> WISP_FOREST = rule("wisp_forest");
+		private static final TagKey<Biome> WISP_EERIE = rule("wisp_eerie");
+		private static final TagKey<Biome> ELDRITCH_GUARDIAN = rule("eldritch_guardian");
+
 		@Override
 		public void modify(Holder<Biome> biome, Phase phase, ModifiableBiomeInfo.BiomeInfo.Builder builder) {
 			if (phase != Phase.ADD) return;
 			var spawns = builder.getMobSpawnSettings();
-			boolean magicalForest = biome.is(MAGICAL_FOREST);
-			boolean eerie = biome.is(EERIE);
-			boolean overworld = biome.is(BiomeTags.IS_OVERWORLD) || magicalForest;
-			boolean nether = biome.is(BiomeTags.IS_NETHER);
 			boolean hasMonsters = !spawns.getSpawner(MobCategory.MONSTER).isEmpty();
 
 			if (ThaumcraftConfig.ALLOW_SPAWN_ANGRY_ZOMBIE.get()) {
-				if (overworld && hasMonsters) add(spawns, ThaumcraftEntities.BRAINY_ZOMBIE.get(), 10, 1, 1);
-				if (eerie) {
-					add(spawns, ThaumcraftEntities.BRAINY_ZOMBIE.get(), 32, 1, 1);
-					add(spawns, ThaumcraftEntities.GIANT_BRAINY_ZOMBIE.get(), 8, 1, 1);
-				}
+				if (biome.is(BRAINY_ZOMBIE) && hasMonsters) add(spawns, ThaumcraftEntities.BRAINY_ZOMBIE.get(), 10, 1, 1);
+				if (biome.is(BRAINY_ZOMBIE_EERIE)) add(spawns, ThaumcraftEntities.BRAINY_ZOMBIE.get(), 32, 1, 1);
+				if (biome.is(GIANT_BRAINY_ZOMBIE)) add(spawns, ThaumcraftEntities.GIANT_BRAINY_ZOMBIE.get(), 8, 1, 1);
 			}
 			if (ThaumcraftConfig.ALLOW_SPAWN_PECH.get()) {
-				if (biome.is(MAGICAL) && hasMonsters) add(spawns, ThaumcraftEntities.PECH.get(), 10, 1, 1);
-				if (magicalForest) add(spawns, ThaumcraftEntities.PECH.get(), 20, 1, 2);
+				if (biome.is(PECH) && hasMonsters) add(spawns, ThaumcraftEntities.PECH.get(), 10, 1, 1);
+				if (biome.is(PECH_FOREST)) add(spawns, ThaumcraftEntities.PECH.get(), 20, 1, 2);
 			}
 			if (ThaumcraftConfig.ALLOW_SPAWN_FIRE_BAT.get()) {
-				if (nether) add(spawns, ThaumcraftEntities.FIRE_BAT.get(), 10, 1, 2);
-				if (overworld && ThaumcraftConfig.isHalloween()) add(spawns, ThaumcraftEntities.FIRE_BAT.get(), 5, 1, 2);
+				if (biome.is(FIRE_BAT)) add(spawns, ThaumcraftEntities.FIRE_BAT.get(), 10, 1, 2);
+				if (biome.is(FIRE_BAT_HALLOWEEN) && ThaumcraftConfig.isHalloween()) add(spawns, ThaumcraftEntities.FIRE_BAT.get(), 5, 1, 2);
 			}
 			if (ThaumcraftConfig.ALLOW_SPAWN_WISP.get()) {
-				if (nether) add(spawns, ThaumcraftEntities.WISP.get(), 5, 1, 1);
-				if (magicalForest) add(spawns, ThaumcraftEntities.WISP.get(), 20, 1, 2);
-				if (eerie) add(spawns, ThaumcraftEntities.WISP.get(), 3, 1, 1);
+				if (biome.is(WISP)) add(spawns, ThaumcraftEntities.WISP.get(), 5, 1, 1);
+				if (biome.is(WISP_FOREST)) add(spawns, ThaumcraftEntities.WISP.get(), 20, 1, 2);
+				if (biome.is(WISP_EERIE)) add(spawns, ThaumcraftEntities.WISP.get(), 3, 1, 1);
 			}
-			if (ThaumcraftConfig.ALLOW_SPAWN_ELDER.get() && eerie) {
+			if (ThaumcraftConfig.ALLOW_SPAWN_ELDER.get() && biome.is(ELDRITCH_GUARDIAN)) {
 				add(spawns, ThaumcraftEntities.ELDRITCH_GUARDIAN.get(), 1, 1, 1);
 			}
 		}

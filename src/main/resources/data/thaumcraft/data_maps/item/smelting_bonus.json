@@ -1,0 +1,158 @@
+{
+  "values": {
+    "minecraft:iron_ore": [
+      {
+        "result": {
+          "id": "minecraft:iron_nugget"
+        },
+        "chance": 0.33
+      },
+      {
+        "result": {
+          "id": "thaumcraft:nugget_rareearth"
+        },
+        "chance": 0.01
+      }
+    ],
+    "minecraft:deepslate_iron_ore": [
+      {
+        "result": {
+          "id": "minecraft:iron_nugget"
+        },
+        "chance": 0.33
+      },
+      {
+        "result": {
+          "id": "thaumcraft:nugget_rareearth"
+        },
+        "chance": 0.01
+      }
+    ],
+    "minecraft:gold_ore": [
+      {
+        "result": {
+          "id": "minecraft:gold_nugget"
+        },
+        "chance": 0.33
+      },
+      {
+        "result": {
+          "id": "thaumcraft:nugget_rareearth"
+        },
+        "chance": 0.02
+      }
+    ],
+    "minecraft:deepslate_gold_ore": [
+      {
+        "result": {
+          "id": "minecraft:gold_nugget"
+        },
+        "chance": 0.33
+      },
+      {
+        "result": {
+          "id": "thaumcraft:nugget_rareearth"
+        },
+        "chance": 0.02
+      }
+    ],
+    "minecraft:copper_ore": [
+      {
+        "result": {
+          "id": "thaumcraft:nugget_copper"
+        },
+        "chance": 0.33
+      },
+      {
+        "result": {
+          "id": "thaumcraft:nugget_rareearth"
+        },
+        "chance": 0.01
+      }
+    ],
+    "minecraft:deepslate_copper_ore": [
+      {
+        "result": {
+          "id": "thaumcraft:nugget_copper"
+        },
+        "chance": 0.33
+      },
+      {
+        "result": {
+          "id": "thaumcraft:nugget_rareearth"
+        },
+        "chance": 0.01
+      }
+    ],
+    "thaumcraft:ore_cinnabar": [
+      {
+        "result": {
+          "id": "thaumcraft:nugget_quicksilver"
+        },
+        "chance": 0.33
+      },
+      {
+        "result": {
+          "id": "thaumcraft:nugget_rareearth"
+        },
+        "chance": 0.025
+      }
+    ],
+    "minecraft:beef": [
+      {
+        "result": {
+          "id": "thaumcraft:chunk_beef"
+        },
+        "chance": 0.33
+      }
+    ],
+    "minecraft:chicken": [
+      {
+        "result": {
+          "id": "thaumcraft:chunk_chicken"
+        },
+        "chance": 0.33
+      }
+    ],
+    "minecraft:porkchop": [
+      {
+        "result": {
+          "id": "thaumcraft:chunk_pork"
+        },
+        "chance": 0.33
+      }
+    ],
+    "minecraft:cod": [
+      {
+        "result": {
+          "id": "thaumcraft:chunk_fish"
+        },
+        "chance": 0.33
+      }
+    ],
+    "minecraft:salmon": [
+      {
+        "result": {
+          "id": "thaumcraft:chunk_fish"
+        },
+        "chance": 0.33
+      }
+    ],
+    "minecraft:rabbit": [
+      {
+        "result": {
+          "id": "thaumcraft:chunk_rabbit"
+        },
+        "chance": 0.33
+      }
+    ],
+    "minecraft:mutton": [
+      {
+        "result": {
+          "id": "thaumcraft:chunk_mutton"
+        },
+        "chance": 0.33
+      }
+    ]
+  }
+}

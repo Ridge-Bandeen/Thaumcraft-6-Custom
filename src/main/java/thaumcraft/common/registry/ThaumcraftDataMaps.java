@@ -28,10 +28,25 @@ public final class ThaumcraftDataMaps {
 	public static final DataMapType<Item, Refining> REFINING = DataMapType.builder(
 			ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "refining"), Registries.ITEM, Refining.CODEC).build();
 
+	/** One Infernal Furnace smelting bonus: a chance (the original's default 0.33) of an extra {@code result}. */
+	public record SmeltingBonus(ItemStack result, float chance) {
+		public static final Codec<SmeltingBonus> CODEC = RecordCodecBuilder.create(i -> i.group(
+				ItemStack.CODEC.fieldOf("result").forGetter(SmeltingBonus::result),
+				Codec.FLOAT.optionalFieldOf("chance", 0.33f).forGetter(SmeltingBonus::chance)).apply(i, SmeltingBonus::new));
+	}
+
+	/**
+	 * The Infernal Furnace's smelting bonuses, keyed by the item being smelted (an item or {@code #tag} key) - the
+	 * original's {@code ThaumcraftApi.addSmeltingBonus} table. Each bonus is rolled once per bellows plus one.
+	 */
+	public static final DataMapType<Item, java.util.List<SmeltingBonus>> SMELTING_BONUS = DataMapType.builder(
+			ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "smelting_bonus"), Registries.ITEM, SmeltingBonus.CODEC.listOf()).build();
+
 	private ThaumcraftDataMaps() {
 	}
 
 	public static void register(RegisterDataMapTypesEvent event) {
 		event.register(REFINING);
+		event.register(SMELTING_BONUS);
 	}
 }

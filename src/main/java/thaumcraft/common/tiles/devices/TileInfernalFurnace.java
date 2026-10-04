@@ -1,5 +1,9 @@
 package thaumcraft.common.tiles.devices;
 
+import thaumcraft.api.crafting.ThaumcraftRecipeTypes;
+import thaumcraft.api.crafting.InfernalFurnaceProcessors;
+import net.minecraft.world.item.crafting.AbstractCookingRecipe;
+import net.minecraft.server.level.ServerLevel;
 import java.util.Optional;
 
 import net.minecraft.core.BlockPos;
@@ -43,10 +47,10 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * face into a real adjacent inventory if one's placed there, otherwise drops as a real item entity, with real
  * partial-chance XP matching the smelted recipe's own real experience value.
  *
- * <p><b>Correction:</b> the smelting-bonus-nugget system (extra items on a real chance roll) was previously
- * cut here with the doc-comment claim that it needed "a whole family of modern nugget items this port hasn't
- * built yet" - restored now that those nuggets are real (see {@link #SMELTING_BONUSES}'s own doc comment for
- * the full, carefully-checked scope of what's actually reachable).
+ * <p>What it makes of an item: first any addon {@link InfernalFurnaceProcessors processor}, then a
+ * {@code thaumcraft:infernal_smelting} recipe, then the vanilla furnace recipe. Bonus outputs come from the
+ * {@code thaumcraft:smelting_bonus} item data map (the original's {@code addSmeltingBonus} table, keyed on the item
+ * being smelted, rolled once per bellows plus one).
  */
 public class TileInfernalFurnace extends BlockEntity {
 
@@ -81,15 +85,34 @@ public class TileInfernalFurnace extends BlockEntity {
 		}
 
 		if (tile.cookTime <= 0 && wasCooking) {
+			ServerLevel serverLevel = (ServerLevel) level;
 			for (int i = 0; i < tile.inventory.getSlots(); i++) {
 				ItemStack stack = tile.inventory.getStackInSlot(i);
 				if (stack.isEmpty()) continue;
-				Optional<RecipeHolder<SmeltingRecipe>> match = level.getRecipeManager()
-						.getRecipeFor(RecipeType.SMELTING, new SingleRecipeInput(stack), level);
-				ItemStack result = match.map(r -> r.value().getResultItem(level.registryAccess())).orElse(ItemStack.EMPTY);
-				if (!result.isEmpty()) {
+				java.util.List<ItemStack> outputs = null;
+				float experience = 0.0f;
+				for (InfernalFurnaceProcessors.Processor processor : InfernalFurnaceProcessors.all()) {
+					outputs = processor.process(serverLevel, pos, stack.copyWithCount(1));
+					if (outputs != null) break;
+				}
+				if (outputs == null) {
+					AbstractCookingRecipe recipe = recipeFor(level, stack);
+					if (recipe != null) {
+						ItemStack result = recipe.getResultItem(level.registryAccess());
+						if (!result.isEmpty()) {
+							outputs = java.util.List.of(result);
+							experience = recipe.getExperience();
+						}
+					}
+				}
+				if (outputs != null) {
 					if (tile.speedyTime > 0) tile.speedyTime--;
-					tile.ejectItem(level, pos, state, result.copy(), match.get().value().getExperience());
+					boolean first = true;
+					for (ItemStack out : outputs) {
+						if (out.isEmpty()) continue;
+						tile.ejectItem(level, pos, state, out.copy(), first ? experience : 0.0f);
+						first = false;
+					}
 					for (ItemStack bonus : rollSmeltingBonuses(stack, countBellows(level, pos) + 1, level.getRandom())) {
 						tile.ejectItem(level, pos, state, bonus, 0.0f);
 					}
@@ -110,8 +133,11 @@ public class TileInfernalFurnace extends BlockEntity {
 
 		if (tile.cookTime == 0 && !wasCooking) {
 			for (int i = 0; i < tile.inventory.getSlots(); i++) {
-				if (tile.canSmelt(level, tile.inventory.getStackInSlot(i))) {
+				ItemStack stack = tile.inventory.getStackInSlot(i);
+				if (tile.canSmelt(level, stack)) {
 					tile.maxCookTime = tile.calcCookTime(level, pos);
+					InfernalFurnaceProcessors.Processor processor = InfernalFurnaceProcessors.accepting((ServerLevel) level, stack);
+					if (processor != null) tile.maxCookTime = Math.max(1, processor.cookTime((ServerLevel) level, stack, tile.maxCookTime));
 					tile.cookTime = tile.maxCookTime;
 					break;
 				}
@@ -136,7 +162,17 @@ public class TileInfernalFurnace extends BlockEntity {
 
 	private boolean canSmelt(Level level, ItemStack stack) {
 		if (level == null || stack.isEmpty()) return false;
-		return level.getRecipeManager().getRecipeFor(RecipeType.SMELTING, new SingleRecipeInput(stack), level).isPresent();
+		if (level instanceof ServerLevel serverLevel && InfernalFurnaceProcessors.accepting(serverLevel, stack) != null) return true;
+		return recipeFor(level, stack) != null;
+	}
+
+	/** The {@code thaumcraft:infernal_smelting} recipe for this item, else the vanilla furnace one. */
+	@javax.annotation.Nullable
+	private static AbstractCookingRecipe recipeFor(Level level, ItemStack stack) {
+		SingleRecipeInput input = new SingleRecipeInput(stack);
+		var infernal = level.getRecipeManager().getRecipeFor(ThaumcraftRecipeTypes.INFERNAL_SMELTING_TYPE.get(), input, level);
+		if (infernal.isPresent()) return infernal.get().value();
+		return level.getRecipeManager().getRecipeFor(RecipeType.SMELTING, input, level).map(h -> (AbstractCookingRecipe) h.value()).orElse(null);
 	}
 
 	/** Real bellows-boosted cook time - up to 4 real enabled {@link TileBellows} at distance 2 on the 4
@@ -162,86 +198,17 @@ public class TileInfernalFurnace extends BlockEntity {
 		return Math.min(4, bellows);
 	}
 
-	/**
-	 * Real smelting-bonus outputs - see this class's own doc comment for the fuller context (found and
-	 * restored after the user asked for a wiki check on what turned out to be a real, previously-missed
-	 * {@code nuggetRareearth} source). Keyed on the ORE ITEM actually sitting in this furnace's inventory (not
-	 * its smelted result) - real per-{@code (bellows + 1)} independent rolls, same real formula as the true
-	 * original's own {@code getSmeltingBonus}/{@code ejectItem} (more bellows means more separate rolls, not
-	 * just a faster bake).
-	 *
-	 * <p>The true original also registered bonus entries for diamond/redstone/lapis/emerald/nether-quartz ore
-	 * - checked directly against the true source and confirmed those were <b>never actually reachable even in
-	 * the original</b>: none of those blocks have (or ever had) a real vanilla smelting recipe at all (you
-	 * mine them directly for their gem, you don't smelt the ore), so {@code canSmelt} would always reject them
-	 * before the bonus roll is ever reached - a genuine registered-but-dead branch in the original's own
-	 * table, not a porting gap. The ore-BREAK bonus ({@link ToolEvents#RAREEARTH_ORE_CHANCE}) is those blocks'
-	 * real, actually-reachable rareearth source.
-	 *
-	 * <p>Tin/silver/lead ore blocks were never ported (no real acquisition path exists for them at all yet -
-	 * a genuine forced block, not a deviation), so their own bonus entries are left out here rather than
-	 * registered against a nonexistent item.
-	 *
-	 * <p>Also includes the true original's own real raw-meat-to-chunk bonuses (7 entries -
-	 * {@code Items.COD}/{@code SALMON} both feed the same {@code chunkFish}, matching the true original's own
-	 * single wildcard-metadata "any raw fish" entry now that fish is split into two separate vanilla items).
-	 * Confirmed via exhaustive grep of the true original that {@code CommonInternals.smeltingBonus} - the
-	 * shared list these entries were registered into there - has exactly ONE real consumer anywhere in the
-	 * whole codebase: this exact device. There's no vanilla-furnace hook for this in the true original either
-	 * (an earlier scoping note in this port's own TODO.md assumed one existed from the recipe's own dispenser/
-	 * hopper-adjacent thematic framing before this was actually checked) - the true original's own real scope
-	 * for meat bonuses was always "smelt it in the Infernal Furnace specifically," so this closes the gap
-	 * completely, not partially.
-	 */
-	private record SmeltBonus(Item input, java.util.function.Supplier<ItemStack> output, float chance) {
-	}
-
-	private static final java.util.List<SmeltBonus> SMELTING_BONUSES = new java.util.ArrayList<>();
-
-	public static void initSmeltingBonuses() {
-		SMELTING_BONUSES.clear();
-		addBonus(Items.IRON_ORE, ItemsTC.nuggetRareearth, 0.01f);
-		addBonus(Blocks.DEEPSLATE_IRON_ORE.asItem(), ItemsTC.nuggetRareearth, 0.01f);
-		addBonus(Items.GOLD_ORE, ItemsTC.nuggetRareearth, 0.02f);
-		addBonus(Blocks.DEEPSLATE_GOLD_ORE.asItem(), ItemsTC.nuggetRareearth, 0.02f);
-		addBonus(Items.COPPER_ORE, ItemsTC.nuggetRareearth, 0.01f);
-		addBonus(Blocks.DEEPSLATE_COPPER_ORE.asItem(), ItemsTC.nuggetRareearth, 0.01f);
-		addBonus(BlocksTC.oreCinnabar.get().asItem(), ItemsTC.nuggetRareearth, 0.025f);
-
-		SMELTING_BONUSES.add(new SmeltBonus(Items.IRON_ORE, () -> new ItemStack(Items.IRON_NUGGET), 0.33f));
-		SMELTING_BONUSES.add(new SmeltBonus(Blocks.DEEPSLATE_IRON_ORE.asItem(), () -> new ItemStack(Items.IRON_NUGGET), 0.33f));
-		SMELTING_BONUSES.add(new SmeltBonus(Items.GOLD_ORE, () -> new ItemStack(Items.GOLD_NUGGET), 0.33f));
-		SMELTING_BONUSES.add(new SmeltBonus(Blocks.DEEPSLATE_GOLD_ORE.asItem(), () -> new ItemStack(Items.GOLD_NUGGET), 0.33f));
-		SMELTING_BONUSES.add(new SmeltBonus(Items.COPPER_ORE, () -> new ItemStack(ItemsTC.nuggetCopper.get()), 0.33f));
-		SMELTING_BONUSES.add(new SmeltBonus(Blocks.DEEPSLATE_COPPER_ORE.asItem(), () -> new ItemStack(ItemsTC.nuggetCopper.get()), 0.33f));
-		SMELTING_BONUSES.add(new SmeltBonus(BlocksTC.oreCinnabar.get().asItem(), () -> new ItemStack(ItemsTC.nuggetQuicksilver.get()), 0.33f));
-
-		// Real chunk bonuses (raw meat -> a chance of the matching chunk) - the true original's own real
-		// smelting-bonus entries for ItemsTC.chunks, confirmed via exhaustive grep of the true original to be
-		// consumed ONLY by this exact device (TileInfernalFurnace) - there's no vanilla-furnace hook for this
-		// anywhere in the original either, so this closes the gap completely, not partially.
-		addBonus(Items.BEEF, ItemsTC.chunkBeef, 0.33f);
-		addBonus(Items.CHICKEN, ItemsTC.chunkChicken, 0.33f);
-		addBonus(Items.PORKCHOP, ItemsTC.chunkPork, 0.33f);
-		addBonus(Items.COD, ItemsTC.chunkFish, 0.33f);
-		addBonus(Items.SALMON, ItemsTC.chunkFish, 0.33f);
-		addBonus(Items.RABBIT, ItemsTC.chunkRabbit, 0.33f);
-		addBonus(Items.MUTTON, ItemsTC.chunkMutton, 0.33f);
-	}
-
-	private static void addBonus(Item input, DeferredItem<Item> output, float chance) {
-		SMELTING_BONUSES.add(new SmeltBonus(input, () -> new ItemStack(output.get()), chance));
-	}
-
-	/** Rolls {@link #SMELTING_BONUSES} against {@code smeltedInput} - {@code rolls} independent attempts (real
-	 * {@code bellows + 1} formula, see this class's own doc comment), each bonus entry getting its own real
-	 * chance per attempt. */
+	/** Rolls the {@code thaumcraft:smelting_bonus} entries for {@code smeltedInput} - {@code rolls} independent attempts
+	 * (bellows + 1, as the original), each bonus getting its own chance per attempt. */
 	private static java.util.List<ItemStack> rollSmeltingBonuses(ItemStack smeltedInput, int rolls, net.minecraft.util.RandomSource random) {
 		java.util.List<ItemStack> bonuses = new java.util.ArrayList<>();
+		java.util.List<thaumcraft.common.registry.ThaumcraftDataMaps.SmeltingBonus> entries =
+				smeltedInput.getItemHolder().getData(thaumcraft.common.registry.ThaumcraftDataMaps.SMELTING_BONUS);
+		if (entries == null) return bonuses;
 		for (int a = 0; a < rolls; a++) {
-			for (SmeltBonus bonus : SMELTING_BONUSES) {
-				if (smeltedInput.is(bonus.input()) && random.nextFloat() <= bonus.chance()) {
-					bonuses.add(bonus.output().get());
+			for (thaumcraft.common.registry.ThaumcraftDataMaps.SmeltingBonus bonus : entries) {
+				if (random.nextFloat() <= bonus.chance()) {
+					bonuses.add(bonus.result().copy());
 				}
 			}
 		}

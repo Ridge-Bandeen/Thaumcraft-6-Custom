@@ -144,6 +144,7 @@ sourceSets {
 
             include 'thaumcraft/api/research/IScanThing.java'
             include 'thaumcraft/api/research/ScanningManager.java'
+            include 'thaumcraft/api/research/ScanTag.java'
             include 'thaumcraft/api/research/ScanItem.java'
             include 'thaumcraft/api/research/ScanBlock.java'
             include 'thaumcraft/api/research/ScanAspect.java'
@@ -471,6 +472,8 @@ sourceSets {
             include 'thaumcraft/api/ThaumcraftSetupEvent.java'
             include 'thaumcraft/api/NitorHooks.java'
             include 'thaumcraft/common/registry/ThaumcraftDataMaps.java'
+            include 'thaumcraft/common/lib/crafting/InfernalSmeltingRecipe.java'
+            include 'thaumcraft/api/crafting/InfernalFurnaceProcessors.java'
             include 'thaumcraft/api/internal/IInternalMethodHandler.java'
             include 'thaumcraft/api/internal/DummyInternalMethodHandler.java'
             include 'thaumcraft/common/ThaumcraftInternalMethodHandler.java'

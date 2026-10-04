@@ -1,5 +1,12 @@
 # Thaumcraft 1.21.1 Port — TODO archive
 
+## Closed 2026-10-03 (addon hooks, batch 2 - see COMPAT_HOOKS.md)
+
+- Infernal Furnace: `thaumcraft:infernal_smelting` recipe type, `thaumcraft:smelting_bonus` data map (the original's
+  addSmeltingBonus table), `InfernalFurnaceProcessors`. Spawn rules on `#thaumcraft:spawns/*` biome tags. Scan flags
+  ORE, f_TELEPORT, f_MATCLAY, f_MATIRON, f_SPIDER, f_BAT and f_FLY on `thaumcraft:scan/*` tags (`ScanTag`). Harvest
+  seal re-tills with the hoe's till action and knows farmland by `#thaumcraft:farmland`. Defaults unchanged.
+
 ## Closed 2026-10-03 (addon hooks, batch 1 - see COMPAT_HOOKS.md)
 
 - `ThaumcraftSetupEvent` (the original's `AspectRegistryEvent` successor, posted last in common setup); crucible heat

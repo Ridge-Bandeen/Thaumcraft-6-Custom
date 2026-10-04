@@ -830,7 +830,7 @@ public final class ItemsTC {
 							.build())));
 
 	/** Real Infernal Furnace smelting-bonus outputs (raw meat -> a chance of the matching chunk, 33% - see
-	 * {@code TileInfernalFurnace#SMELTING_BONUSES}'s own doc comment) - the true original's own single
+	 * the {@code thaumcraft:smelting_bonus} data map) - the true original's own single
 	 * metadata-variant {@code ItemsTC.chunks} field, split into this port's own established per-variant
 	 * fields, same convention {@code nuggetBrass}/etc. already set. 1 nutrition / 0.3 raw saturation
 	 * (modifier {@code 0.3/(1*2)}), not always edible, matching the true original's own real

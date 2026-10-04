@@ -1,5 +1,6 @@
 package thaumcraft.common.lib.research;
 
+import thaumcraft.api.research.ScanTag;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.effect.MobEffect;
@@ -62,6 +63,10 @@ import thaumcraft.common.golems.EntityThaumcraftGolem;
  * used it) is a plain scan of the clay block.</li>
  * <li>Ore-dictionary names became item tags ({@code c:} for the vanilla metals) or Thaumcraft's own items directly.</li>
  * </ul>
+ *
+ * <p>The flags most tied to vanilla things (ORE, f_TELEPORT, f_MATCLAY, f_MATIRON, f_SPIDER, f_BAT, f_FLY) read
+ * {@code thaumcraft:scan/<flag>} block, item and entity-type tags (see {@link ScanTag}), whose defaults are what the
+ * original scanned, so packs can change them with data.
  */
 public final class ThaumcraftScans {
 
@@ -101,16 +106,9 @@ public final class ThaumcraftScans {
 		add(new ScanEntity("f_golem", AbstractGolem.class, true));
 		add(new ScanEntity("f_golem", EntityOwnedConstruct.class, true));
 		add(new ScanEntity("f_golem", EntityThaumcraftGolem.class, true));
-		add(new ScanEntity("f_SPIDER", Spider.class, true));
-		add(new ScanEntity("f_BAT", Bat.class, true));
-		add(new ScanEntity("f_BAT", EntityFireBat.class, true));
-		add(new ScanEntity("f_FLY", Bat.class, true));
-		add(new ScanEntity("f_FLY", Parrot.class, true));
-		add(new ScanEntity("f_FLY", EntityFireBat.class, true));
-		add(new ScanEntity("f_FLY", EntityTaintSwarm.class, true));
-		add(new ScanEntity("f_FLY", EntityWisp.class, true));
-		add(new ScanEntity("f_FLY", Ghast.class, true));
-		add(new ScanEntity("f_FLY", Blaze.class, true));
+		add(ScanTag.of("f_SPIDER", "f_spider", false, false, true));
+		add(ScanTag.of("f_BAT", "f_bat", false, false, true));
+		add(ScanTag.of("f_FLY", "f_fly", false, false, true));
 		add(new ScanEntity("!ORMOB", IEldritchMob.class, true));
 		add(new ScanEntity("!ORBOSS", EntityThaumcraftBoss.class, true));
 
@@ -119,11 +117,7 @@ public final class ThaumcraftScans {
 		add(new ScanBlock("!ORBLOCK3", b(BlocksTC.stoneAncientGlyphed)));
 
 		Block[] crystals = BlocksTC.crystals.values().stream().map(net.neoforged.neoforge.registries.DeferredBlock::get).toArray(Block[]::new);
-		Block[] ores = new Block[crystals.length + 2];
-		ores[0] = b(BlocksTC.oreAmber);
-		ores[1] = b(BlocksTC.oreCinnabar);
-		System.arraycopy(crystals, 0, ores, 2, crystals.length);
-		add(new ScanBlock("ORE", ores));
+		add(ScanTag.of("ORE", "ore", true, true, false));
 		add(new ScanBlock("!OREAMBER", b(BlocksTC.oreAmber)));
 		add(new ScanBlock("!ORECINNABAR", b(BlocksTC.oreCinnabar)));
 		add(new ScanBlock("!ORECRYSTAL", crystals));
@@ -141,20 +135,13 @@ public final class ThaumcraftScans {
 		add(new ScanItem("PRIMPEARL", new ItemStack(ItemsTC.primordialPearl.get())));
 		add(new ScanItem("!DRAGONBREATH", new ItemStack(Items.DRAGON_BREATH)));
 		add(new ScanItem("!TOTEMUNDYING", new ItemStack(Items.TOTEM_OF_UNDYING)));
-		add(new ScanBlock("f_TELEPORT", Blocks.NETHER_PORTAL, Blocks.END_PORTAL, Blocks.END_PORTAL_FRAME));
-		add(new ScanItem("f_TELEPORT", new ItemStack(Items.ENDER_PEARL)));
-		add(new ScanEntity("f_TELEPORT", EnderMan.class, true));
+		add(ScanTag.of("f_TELEPORT", "f_teleport", true, true, true));
 		add(new ScanEntity("f_BRAIN", EntityBrainyZombie.class, true));
 		add(new ScanItem("f_BRAIN", new ItemStack(ItemsTC.brain.get())));
 		add(new ScanBlock("f_DISPENSER", Blocks.DISPENSER));
 		add(new ScanItem("f_DISPENSER", new ItemStack(Blocks.DISPENSER)));
-		add(new ScanItem("f_MATCLAY", new ItemStack(Items.CLAY_BALL)));
-		add(new ScanBlock("f_MATCLAY", Blocks.TERRACOTTA, Blocks.WHITE_TERRACOTTA, Blocks.ORANGE_TERRACOTTA, Blocks.MAGENTA_TERRACOTTA,
-				Blocks.LIGHT_BLUE_TERRACOTTA, Blocks.YELLOW_TERRACOTTA, Blocks.LIME_TERRACOTTA, Blocks.PINK_TERRACOTTA, Blocks.GRAY_TERRACOTTA,
-				Blocks.LIGHT_GRAY_TERRACOTTA, Blocks.CYAN_TERRACOTTA, Blocks.PURPLE_TERRACOTTA, Blocks.BLUE_TERRACOTTA, Blocks.BROWN_TERRACOTTA,
-				Blocks.GREEN_TERRACOTTA, Blocks.RED_TERRACOTTA, Blocks.BLACK_TERRACOTTA));
-		add(new ScanBlock("f_MATCLAY", Blocks.CLAY));
-		add(new ScanOreDictionary("f_MATIRON", Tags.Items.ORES_IRON, Tags.Items.INGOTS_IRON, Tags.Items.STORAGE_BLOCKS_IRON, ItemsTC.plateIron.get()));
+		add(ScanTag.of("f_MATCLAY", "f_matclay", false, true, false));
+		add(ScanTag.of("f_MATIRON", "f_matiron", false, true, false));
 		add(new ScanOreDictionary("f_MATBRASS", ItemsTC.ingotBrass.get(), ItemsTC.metalBlockBrass.get(), ItemsTC.plateBrass.get()));
 		add(new ScanOreDictionary("f_MATTHAUMIUM", ItemsTC.ingotThaumium.get(), ItemsTC.metalBlockThaumium.get(), ItemsTC.plateThaumium.get()));
 		add(new ScanOreDictionary("f_MATVOID", ItemsTC.ingotVoid.get(), ItemsTC.metalBlockVoid.get(), ItemsTC.plateVoid.get()));

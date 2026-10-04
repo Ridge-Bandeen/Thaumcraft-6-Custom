@@ -86,6 +86,13 @@ public final class ThaumcraftRecipeTypes {
 	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.TagSmeltingRecipe>> TAG_SMELTING_SERIALIZER =
 			RECIPE_SERIALIZERS.register("tag_smelting", thaumcraft.common.lib.crafting.TagSmeltingRecipe.Serializer::new);
 
+	/** What the Infernal Furnace makes of an item, ahead of the vanilla furnace recipes - see
+	 * {@link thaumcraft.common.lib.crafting.InfernalSmeltingRecipe}. */
+	public static final Supplier<RecipeType<thaumcraft.common.lib.crafting.InfernalSmeltingRecipe>> INFERNAL_SMELTING_TYPE = registerType("infernal_smelting");
+	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.InfernalSmeltingRecipe>> INFERNAL_SMELTING_SERIALIZER =
+			RECIPE_SERIALIZERS.register("infernal_smelting",
+					() -> new net.minecraft.world.item.crafting.SimpleCookingSerializer<>(thaumcraft.common.lib.crafting.InfernalSmeltingRecipe::new, 200));
+
 	/** Book-only shapeless recipes - see {@link thaumcraft.common.lib.crafting.DisplayShapelessRecipe}. */
 	public static final Supplier<RecipeSerializer<thaumcraft.common.lib.crafting.DisplayShapelessRecipe>> DISPLAY_SHAPELESS_SERIALIZER =
 			RECIPE_SERIALIZERS.register("display_shapeless", thaumcraft.common.lib.crafting.DisplayShapelessRecipe.Serializer::new);
