@@ -26,15 +26,9 @@ import thaumcraft.common.registry.ThaumcraftMobEffects;
  * {@link MobEffectFluxTaint} - already ported, real, and functioning, just never registered or applied by
  * anything until now (see that class's own doc comment: "~16 not-yet-ported call sites").
  *
- * Simplified from the original:
- * <ul>
- * <li>No Flux Goo terrain placement on impact - {@code BlocksTC.fluxGoo} is a custom finite fluid
- * ({@code BlockFluidFinite}), the same hard boundary that already made {@code BlockStabilizer} drop its
- * Flux-Rift-pacifying mechanic this session. The debuff itself (this projectile's actual combat purpose)
- * stands on its own without it.</li>
- * <li>"Is this an undead mob" now checks {@code EntityTypeTags.UNDEAD} - the original's
- * {@code EntityLivingBase#isEntityUndead()}/{@code CreatureAttribute} system doesn't exist anymore.</li>
- * </ul>
+ * As the original it gives Flux Taint to living things within 5 blocks (not tainted or undead ones -
+ * {@code EntityTypeTags.UNDEAD} now) and splashes Flux Goo around: ten tries at spots up to 3 blocks off, half of them
+ * placing goo on a free spot over a solid block (or one lower).
  *
  * <p>Real shatter FX restored 2026-09-17 (was dropped under this port's old blanket "no client FX" rule) - a
  * real vanilla entity-event trigger (id 3, matching the true original's own real
@@ -64,6 +58,12 @@ public class EntityBottleTaint extends ThrowableItemProjectile {
 
 	private static final byte BREAK_EVENT = 3;
 
+	/** The original's goo rule: a replaceable spot over a full solid block. */
+	private boolean gooFits(net.minecraft.core.BlockPos p) {
+		net.minecraft.core.BlockPos below = p.below();
+		return level().getBlockState(below).isCollisionShapeFullBlock(level(), below) && level().getBlockState(p).canBeReplaced();
+	}
+
 	@Override
 	protected void onHit(HitResult result) {
 		super.onHit(result);
@@ -73,6 +73,14 @@ public class EntityBottleTaint extends ThrowableItemProjectile {
 				if (!(target instanceof ITaintedMob) && !target.getType().is(EntityTypeTags.UNDEAD)) {
 					target.addEffect(new MobEffectInstance(ThaumcraftMobEffects.FLUX_TAINT, 100, 0, false, true));
 				}
+			}
+			for (int a = 0; a < 10; a++) {
+				int xx = (int) ((random.nextFloat() - random.nextFloat()) * 4.0f);
+				int zz = (int) ((random.nextFloat() - random.nextFloat()) * 4.0f);
+				net.minecraft.core.BlockPos p = blockPosition().offset(xx, 0, zz);
+				if (!level().random.nextBoolean()) continue;
+				if (!gooFits(p)) p = p.below();
+				if (gooFits(p)) level().setBlockAndUpdate(p, thaumcraft.api.blocks.BlocksTC.fluxGoo.get().defaultBlockState());
 			}
 			level().broadcastEntityEvent(this, BREAK_EVENT);
 			discard();

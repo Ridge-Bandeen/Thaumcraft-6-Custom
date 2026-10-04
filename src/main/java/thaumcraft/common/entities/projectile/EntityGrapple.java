@@ -30,9 +30,8 @@ import thaumcraft.common.registry.ThaumcraftEntities;
  * component flag needed on the item itself, since "is there a live grapple for this player" is already real,
  * live, queryable state.
  *
- * Dropped: the original's manual reset of the player connection's "floating tick count" (an anti-cheat
- * counter preventing a fly-kick during a long pull) - a real, minor simplification; a very long pull could in
- * theory trip vanilla's own airborne-too-long check, not addressed this pass.
+ * As the original, a pull also resets the server's "airborne too long" counter for the player, so a long pull never
+ * gets them kicked for flying.
  */
 public class EntityGrapple extends ThrowableProjectile {
 
@@ -120,6 +119,7 @@ public class EntityGrapple extends ThrowableProjectile {
 		owner.setDeltaMovement(motion);
 		owner.resetFallDistance();
 		owner.hurtMarked = true;
+		if (owner instanceof net.minecraft.server.level.ServerPlayer sp) sp.connection.aboveGroundTickCount = 0;
 	}
 
 	@Override

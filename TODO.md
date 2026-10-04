@@ -7,8 +7,7 @@ in a client are tracked in the `thaumcraft-ui-visual-parity-checklist` memory, n
 ## Code work
 
 - Parity sweep of the "simplified"/"stand-in"/"cut" doc notes (list: `grep -iE "simplif|stand-in|cut|not ported"`
-  over compiled classes): devices, mobs, drops, golems and foci done (see archive). Left: projectile entities
-  (alumentum, bottle of taint, eldritch/golem orbs, grapple), items (caster vis draw, armour, phial/alembic, resonator, void tools), research/scans, worldgen, GUIs
+  over compiled classes): devices, mobs, drops, golems and foci done (see archive). Left: items (caster vis draw, armour, phial/alembic, resonator, void tools), research/scans, worldgen, GUIs
   (Focal Manipulator, focus pouch, hand mirror, seal config), client FX classes.
 - ThaumCompat hooks: all of `COMPAT_HOOKS.md` (#1-#17) done 2026-10-04; watch that file for new requests.
 - Golem renderer fidelity: per-part model classes (wheel spin from `GolemLegWheels.ani`, claws, breakers, darts,

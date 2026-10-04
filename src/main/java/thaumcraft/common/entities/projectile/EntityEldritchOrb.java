@@ -30,7 +30,8 @@ import thaumcraft.common.registry.ThaumcraftEntities;
  * matches the original's own {@code onImpact} exactly (it scanned around the orb itself, not just whatever
  * it directly hit - a real splash attack, not a single-target one). Real self-expiry at 100 ticks.
  *
- * Real, documented cut: no impact/travel particle trail effects (tied to the unported {@code FXDispatcher}).
+ * (The original had no travel or impact particles either - only its spiked model and a lava hiss.) An orb whose thrower
+ * is gone passes harmlessly, as the original.
  * Real visible model restored 2026-09-16 - see {@link thaumcraft.client.fx.particles.FXEldritchOrbSpikes}'s
  * own doc comment (this entity's own registered {@code EntityRenderer} stays the invisible {@code
  * RenderFocusProjectile} placeholder, matching {@code WISP}/{@code GOLEM_ORB} - the real visual is entirely 2
@@ -82,18 +83,19 @@ public class EntityEldritchOrb extends ThrowableProjectile {
 
 	private void burst() {
 		if (level().isClientSide || isRemoved()) return;
-		if (getOwner() instanceof LivingEntity thrower) {
+		if (!(getOwner() instanceof LivingEntity thrower)) return;
+		{
 			var atk = thrower.getAttribute(Attributes.ATTACK_DAMAGE);
 			float damage = atk != null ? (float) atk.getValue() * 0.666f : 4.0f;
 			AABB area = getBoundingBox().inflate(2.0);
 			for (LivingEntity victim : level().getEntitiesOfClass(LivingEntity.class, area, e -> e != thrower && e.isAlive())) {
 				if (!victim.getType().is(EntityTypeTags.UNDEAD)) {
-					victim.hurt(level().damageSources().indirectMagic(this, thrower), damage);
+					victim.hurt(level().damageSources().indirectMagic(thrower, this), damage);
 					victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 160, 0));
 				}
 			}
 		}
-		playSound(SoundEvents.FIRE_EXTINGUISH, 0.5f, 2.6f + (random.nextFloat() - random.nextFloat()) * 0.8f);
+		playSound(SoundEvents.LAVA_EXTINGUISH, 0.5f, 2.6f + (random.nextFloat() - random.nextFloat()) * 0.8f);
 		discard();
 	}
 }

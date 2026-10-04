@@ -17,10 +17,7 @@ import thaumcraft.common.registry.ThaumcraftEntities;
  * {@link net.minecraft.world.entity.projectile.ThrowableProjectile} this port's other projectiles use,
  * since Alumentum (unlike a wand focus) is a real, visible held item being thrown.
  *
- * Simplified from the original: the explosion uses {@code Level.ExplosionInteraction.MOB} (damages
- * entities and sets fire, doesn't destroy blocks) instead of the original's block-destroying explosion -
- * consistent with this project's general preference for damage-only magic effects over terrain griefing,
- * and it keeps the GameTest coverage predictable (no block-state cleanup to account for).
+ * As the original it bursts in a small fiery explosion (strength 1.1) that breaks blocks.
  *
  * <p>Real fire-mote flight trail restored 2026-09-17 (was dropped under this port's old blanket "no client
  * FX" rule) - real, faithful port of the true original's own exact per-tick spawn (colour/scale/jitter all
@@ -57,7 +54,7 @@ public class EntityAlumentum extends ThrowableItemProjectile {
 	protected void onHit(HitResult result) {
 		super.onHit(result);
 		if (!level().isClientSide) {
-			level().explode(this, getX(), getY(), getZ(), 1.1f, true, Level.ExplosionInteraction.MOB);
+			level().explode(this, getX(), getY(), getZ(), 1.1f, true, Level.ExplosionInteraction.TNT);
 			discard();
 		}
 	}

@@ -29,13 +29,11 @@ import thaumcraft.common.registry.ThaumcraftEntities;
  * matching the original exactly). Real "reflect it back" mechanic via {@link #hurt} - a player who hits the
  * orb redirects it along their own look vector, exactly like the original.
  *
- * Real, documented cut vs the original: no client spawn-data sync for {@code target} (the homing math itself
- * is server-only, so the client never needs to know it) and no impact/travel particle trail effects (tied to
- * the unported {@code FXDispatcher}). {@code red} (which picks the real orb colour variant) IS now synced -
- * restored 2026-09-16 alongside the real {@link thaumcraft.client.fx.particles.FXGolemOrb} visual, since the
- * client genuinely needs it to pick the right real UV region on the shared particle sheet.
+ * As the original, the target and colour travel to the client with the orb (so it homes there too), the pull
+ * weakens with the square of the distance (the original divided by the distance squared), it bursts in a puff with
+ * the shock sound, and a hit reflects it with a zap.
  */
-public class EntityGolemOrb extends ThrowableProjectile {
+public class EntityGolemOrb extends ThrowableProjectile implements net.neoforged.neoforge.entity.IEntityWithComplexSpawn {
 
 	private static final net.minecraft.network.syncher.EntityDataAccessor<Boolean> DATA_RED =
 			SynchedEntityData.defineId(EntityGolemOrb.class, net.minecraft.network.syncher.EntityDataSerializers.BOOLEAN);
@@ -89,13 +87,13 @@ public class EntityGolemOrb extends ThrowableProjectile {
 			double dx = target.getX() - pos.x;
 			double dy = target.getBoundingBox().minY + target.getBbHeight() * 0.6 - pos.y;
 			double dz = target.getZ() - pos.z;
-			double distSq = Math.max(dx * dx + dy * dy + dz * dz, 1.0e-4);
-			double dist = Math.sqrt(distSq);
+			// as the original: divided by the distance squared
+			double distSq = Math.max(distanceToSqr(target), 1.0e-4);
 			double pull = 0.2;
 			Vec3 motion = getDeltaMovement();
-			double mx = clamp(motion.x + (dx / dist) * pull, -0.25, 0.25);
-			double my = clamp(motion.y + (dy / dist) * pull, -0.25, 0.25);
-			double mz = clamp(motion.z + (dz / dist) * pull, -0.25, 0.25);
+			double mx = clamp(motion.x + (dx / distSq) * pull, -0.25, 0.25);
+			double my = clamp(motion.y + (dy / distSq) * pull, -0.25, 0.25);
+			double mz = clamp(motion.z + (dz / distSq) * pull, -0.25, 0.25);
 			setDeltaMovement(mx, my, mz);
 		}
 	}
@@ -110,17 +108,34 @@ public class EntityGolemOrb extends ThrowableProjectile {
 		if (!level().isClientSide && getOwner() != null) {
 			var attackDamage = getOwner() instanceof LivingEntity owner ? owner.getAttribute(Attributes.ATTACK_DAMAGE) : null;
 			float damage = attackDamage != null ? (float) attackDamage.getValue() * (red ? 1.0f : 0.6f) : (red ? 4.0f : 2.4f);
-			result.getEntity().hurt(level().damageSources().indirectMagic(this, getOwner()), damage);
+			result.getEntity().hurt(level().damageSources().indirectMagic(getOwner(), this), damage);
 		}
-		playSound(SoundEvents.LIGHTNING_BOLT_IMPACT, 1.0f, 1.0f + (random.nextFloat() - random.nextFloat()) * 0.2f);
-		discard();
+		impact();
 	}
 
 	@Override
 	protected void onHitBlock(BlockHitResult result) {
 		super.onHitBlock(result);
-		playSound(SoundEvents.LIGHTNING_BOLT_IMPACT, 1.0f, 1.0f + (random.nextFloat() - random.nextFloat()) * 0.2f);
+		impact();
+	}
+
+	private void impact() {
+		playSound(thaumcraft.common.registry.ThaumcraftSounds.SHOCK.get(), 1.0f, 1.0f + (random.nextFloat() - random.nextFloat()) * 0.2f);
+		if (level().isClientSide) thaumcraft.client.fx.ClientFxHandlers.burst(level(), getX(), getY(), getZ(), 1.0f);
 		discard();
+	}
+
+	@Override
+	public void writeSpawnData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
+		buffer.writeInt(target != null ? target.getId() : -1);
+		buffer.writeBoolean(red);
+	}
+
+	@Override
+	public void readSpawnData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
+		int id = buffer.readInt();
+		if (id >= 0 && level().getEntity(id) instanceof LivingEntity living) target = living;
+		red = buffer.readBoolean();
 	}
 
 	@Override
@@ -128,11 +143,11 @@ public class EntityGolemOrb extends ThrowableProjectile {
 		if (isInvulnerableTo(source)) {
 			return false;
 		}
-		Entity direct = source.getDirectEntity();
-		if (direct != null) {
-			Vec3 look = direct.getLookAngle();
+		Entity attacker = source.getEntity();
+		if (attacker != null) {
+			Vec3 look = attacker.getLookAngle();
 			setDeltaMovement(look.scale(0.9));
-			playSound(SoundEvents.LIGHTNING_BOLT_THUNDER, 1.0f, 1.0f + (random.nextFloat() - random.nextFloat()) * 0.2f);
+			playSound(thaumcraft.common.registry.ThaumcraftSounds.ZAP.get(), 1.0f, 1.0f + (random.nextFloat() - random.nextFloat()) * 0.2f);
 			return true;
 		}
 		return false;

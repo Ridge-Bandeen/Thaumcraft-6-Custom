@@ -1,5 +1,11 @@
 # Thaumcraft 1.21.1 Port — TODO archive
 
+## Closed 2026-10-04 (projectiles)
+
+- Alumentum's explosion breaks blocks again; Bottled Taint splashes Flux Goo; Eldritch orb: no burst without its
+  thrower, lava hiss, damage attributed to the thrower; Golem orb: target synced, pull over distance squared, shock
+  burst + zap reflect sounds; Grapple resets the airborne-kick counter while pulling.
+
 ## Closed 2026-10-04 (foci)
 
 - Focus projectile as the original: bouncy / seeking hostile / seeking friendly options, original gravity, 1-minute
