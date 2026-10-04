@@ -288,6 +288,23 @@ public final class ClientFxHandlers {
 		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXFireMote(clientLevel, x, y, z, mx, my, mz, r, g, b, scale));
 	}
 
+	/** The original's {@code FXDispatcher#drawFocusCloudParticle}: a large, slow, fading puff in a focus effect's colour. */
+	public static void spawnFocusCloud(net.minecraft.world.level.Level level, double x, double y, double z, double mx, double my, double mz, int color) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, mx, my, mz);
+		fb.setMaxAge(20 + level.random.nextInt(10));
+		fb.setRBGColorF(((color >> 16) & 255) / 255.0f, ((color >> 8) & 255) / 255.0f, (color & 255) / 255.0f);
+		fb.setAlphaF(0.0f, 0.66f, 0.0f);
+		fb.setGridSize(16);
+		fb.setParticles(56 + level.random.nextInt(4), 1, 1);
+		fb.setScale(5.0f + level.random.nextFloat(), 10.0f + level.random.nextFloat());
+		fb.setLayer(0);
+		fb.setSlowDown(0.99);
+		fb.setWind(0.001);
+		fb.setRotationSpeed(level.random.nextFloat(), level.random.nextBoolean() ? -0.25f : 0.25f);
+		addDelayed(fb, 0);
+	}
+
 	/** The original's {@code FXDispatcher#drawGolemFlyParticles}: a faint, growing, spinning mote under a flying golem. */
 	public static void spawnGolemFly(net.minecraft.world.level.Level level, double x, double y, double z, double mx, double my, double mz) {
 		if (!(level instanceof ClientLevel clientLevel)) return;
@@ -1228,6 +1245,12 @@ public final class ClientFxHandlers {
 		if (level == null) return;
 		Entity source = level.getEntity(payload.source());
 		if (source != null) thaumcraft.client.render.ShieldRunesFx.forEntity(source, payload.target());
+	}
+
+	/** {@link #drawBamf} callable from common code (a plain {@code Level}; does nothing off the client). */
+	public static void spawnBamf(net.minecraft.world.level.Level level, double x, double y, double z, int color, boolean sound, boolean flair,
+			@Nullable net.minecraft.core.Direction side) {
+		if (level instanceof ClientLevel clientLevel) drawBamf(clientLevel, x, y, z, color, sound, flair, side);
 	}
 
 	public static void drawBamf(ClientLevel level, double x, double y, double z, int color, boolean sound, boolean flair, @Nullable net.minecraft.core.Direction side) {

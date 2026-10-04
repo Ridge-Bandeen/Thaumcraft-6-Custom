@@ -57,13 +57,13 @@ public class FocusEffectAir extends FocusEffect {
 
 		level.playSound(null, target.getLocation().x, target.getLocation().y, target.getLocation().z, SoundEvents.ENDER_DRAGON_FLAP, SoundSource.PLAYERS, 0.5f, 0.66f);
 
-		if (!(target instanceof EntityHitResult entityHit) || !(entityHit.getEntity() instanceof LivingEntity living)) {
-			return false;
-		}
+		if (!(target instanceof EntityHitResult entityHit)) return false;
 
+		// as the original: thrown damage to anything hit, knocked back if it lives
 		float damage = getDamageForDisplay(finalPower);
 		Entity caster = getPackage().getCaster();
-		living.hurt(level.damageSources().thrown(caster, caster), damage);
+		entityHit.getEntity().hurt(level.damageSources().thrown(caster, entityHit.getEntity()), damage);
+		if (!(entityHit.getEntity() instanceof LivingEntity living)) return true;
 
 		if (trajectory != null) {
 			living.knockback(damage * 0.25, -trajectory.direction.x, -trajectory.direction.z);

@@ -66,17 +66,17 @@ public class FocusEffectFire extends FocusEffect {
 			return false;
 		}
 
-		if (!(target instanceof EntityHitResult entityHit) || !(entityHit.getEntity() instanceof LivingEntity living)) {
-			return false;
-		}
-		if (living.fireImmune()) return false;
+		if (!(target instanceof EntityHitResult entityHit)) return false;
+		Entity hit = entityHit.getEntity();
+		if (hit.fireImmune()) return false;
 
-		int fireTicks = 1 + getSettingValue("duration") * getSettingValue("duration");
+		// as the original: fireball damage (fire), its direct source the target itself, set alight (1 + duration²) x power seconds
+		float fire = (1 + getSettingValue("duration") * getSettingValue("duration")) * finalPower;
 		float damage = getDamageForDisplay(finalPower);
 		Entity caster = getPackage().getCaster();
-		living.hurt(level.damageSources().indirectMagic(caster, caster), damage);
-		if (fireTicks > 0) {
-			living.igniteForSeconds(fireTicks * finalPower);
+		hit.hurt(level.damageSources().source(net.minecraft.world.damagesource.DamageTypes.FIREBALL, caster, hit), damage);
+		if (fire > 0.0f) {
+			hit.igniteForSeconds(Math.round(fire));
 		}
 		return true;
 	}

@@ -85,6 +85,25 @@ public final class ThaumcraftDataComponents {
 	 * alongside {@code FocusEffectExchange}/{@code FocusMediumPlan}. Wrapped the same way {@link #WAND_FOCUS}
 	 * is, for the same real reason - see that field's own doc comment.
 	 */
+	/** A caster's Plan area - the original's {@code areax/areay/areaz} (each 0-3, 3 if unset) and {@code aread}
+	 * (0 all axes, 1 x, 2 z, 3 y) tags, set with the misc caster key (see {@code ItemCaster#toggleMisc}). */
+	public record CasterArea(int x, int y, int z, int dim) {
+		public static final CasterArea DEFAULT = new CasterArea(3, 3, 3, 0);
+		public static final Codec<CasterArea> CODEC = RecordCodecBuilder.create(i -> i.group(
+				Codec.INT.fieldOf("x").forGetter(CasterArea::x), Codec.INT.fieldOf("y").forGetter(CasterArea::y),
+				Codec.INT.fieldOf("z").forGetter(CasterArea::z), Codec.INT.fieldOf("dim").forGetter(CasterArea::dim)).apply(i, CasterArea::new));
+		public static final StreamCodec<io.netty.buffer.ByteBuf, CasterArea> STREAM_CODEC = StreamCodec.composite(
+				ByteBufCodecs.VAR_INT, CasterArea::x, ByteBufCodecs.VAR_INT, CasterArea::y, ByteBufCodecs.VAR_INT, CasterArea::z,
+				ByteBufCodecs.VAR_INT, CasterArea::dim, CasterArea::new);
+	}
+
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<CasterArea>> CASTER_AREA = DATA_COMPONENTS.register("caster_area",
+			() -> DataComponentType.<CasterArea>builder().persistent(CasterArea.CODEC).networkSynchronized(CasterArea.STREAM_CODEC).build());
+
+	/** The Elemental Shovel's placement orientation, 0-2 - the original's {@code "or"} tag (see {@code ItemElementalShovel}). */
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> SHOVEL_ORIENTATION = DATA_COMPONENTS.register("shovel_orientation",
+			() -> DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build());
+
 	public static final DeferredHolder<DataComponentType<?>, DataComponentType<WandFocus>> WAND_PICKED_BLOCK = DATA_COMPONENTS.register("wand_picked_block",
 			() -> DataComponentType.<WandFocus>builder()
 					.persistent(WandFocus.CODEC)

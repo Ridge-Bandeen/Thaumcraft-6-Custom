@@ -2,79 +2,139 @@ package thaumcraft.common.items.casters;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
+import net.minecraft.core.NonNullList;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import thaumcraft.api.casters.FocusPackage;
 import thaumcraft.api.casters.ICaster;
 import thaumcraft.common.lib.network.ServerboundChangeCasterFocusPacket;
 
 /**
- * Common-side logic shared by the real focus-radial HUD (client: {@code FocusRadialOverlay}, enumerates and
- * renders the same real list this class computes) and its real server-side handler - replaces the relevant
- * parts of the old (1.12.2) {@code CasterManager}.
- *
- * {@link #findCarriedFoci} still drops the original's Focus Pouch scan - {@link ItemFocusPouch} is real and
- * ported now, but reaching into one from the radial quick-switch would need its own addressing scheme (a
- * pouch slot isn't a plain inventory slot, so {@link #changeFocus}'s real {@code slot} parameter couldn't
- * address it) - a real, separate, larger follow-up. Opening the pouch's own real GUI is the way to move foci
- * in and out of it directly for now. Sorted by real display name (a stable, real ordering) rather
- * than the original's own {@code getSortingHelper} string key, which this port's {@code ItemFocus} never
- * carried over - display name serves the same real "consistent radial ordering" purpose.
+ * The original's {@code CasterManager#changeFocus}, shared by the focus radial (client) and its server handler. As the
+ * original, the foci on offer are those in the main inventory and inside any Focus Pouch carried there; each has a code
+ * - its inventory slot, or {@code 1000 x pouch number + pouch slot} - and they are ordered by name and spell. Taking a
+ * focus out (or swapping one) puts the old focus into a carried pouch with room first, else the inventory; if neither
+ * has room nothing changes.
  */
 public final class CasterFocusHelper {
+
+	private static final int MAIN_SLOTS = 36;
+
+	/** A carried focus and its code (see the class comment). */
+	public record Carried(ItemStack stack, int code) {
+	}
 
 	private CasterFocusHelper() {
 	}
 
-	/** Every real {@link ItemFocus} the player is carrying (main inventory, hotbar, and offhand), sorted by
-	 * real display name. */
-	public static List<ItemStack> findCarriedFoci(Player player) {
-		List<ItemStack> foci = new ArrayList<>();
+	/** Inventory slots of the carried pouches, by pouch number (1, 2, ...). */
+	private static Map<Integer, Integer> pouches(Player player) {
+		Map<Integer, Integer> out = new LinkedHashMap<>();
 		Inventory inv = player.getInventory();
-		for (int i = 0; i < inv.getContainerSize(); i++) {
-			ItemStack stack = inv.getItem(i);
-			if (stack.getItem() instanceof ItemFocus) {
-				foci.add(stack);
+		int n = 0;
+		for (int a = 0; a < MAIN_SLOTS; a++) {
+			if (inv.getItem(a).getItem() instanceof ItemFocusPouch) out.put(++n, a);
+		}
+		return out;
+	}
+
+	private static String sortKey(ItemStack stack) {
+		FocusPackage p = stack.getItem() instanceof ItemFocus f ? f.getPackage(stack) : null;
+		return stack.getHoverName().getString() + (p != null ? p.getSortingHelper() : 0);
+	}
+
+	/** Every focus carried in the main inventory or a pouch there, in the original's order. */
+	public static List<Carried> findCarried(Player player) {
+		List<Carried> out = new ArrayList<>();
+		Inventory inv = player.getInventory();
+		Map<Integer, Integer> pouches = pouches(player);
+		for (int a = 0; a < MAIN_SLOTS; a++) {
+			ItemStack item = inv.getItem(a);
+			if (item.getItem() instanceof ItemFocus) out.add(new Carried(item, a));
+		}
+		for (var e : pouches.entrySet()) {
+			NonNullList<ItemStack> contents = ItemFocusPouch.getContents(inv.getItem(e.getValue()));
+			for (int q = 0; q < contents.size(); q++) {
+				if (contents.get(q).getItem() instanceof ItemFocus) out.add(new Carried(contents.get(q), q + e.getKey() * 1000));
 			}
 		}
-		foci.sort(Comparator.comparing(s -> s.getHoverName().getString()));
-		return foci;
+		out.sort(Comparator.comparing(c -> sortKey(c.stack())));
+		return out;
 	}
 
-	/** Real swap: binds the real focus at the player's real inventory {@code slot} to {@code casterStack},
-	 * returning whatever was previously bound back to the player's inventory (dropped at their feet if it's
-	 * full) - matches the original's own {@code CasterManager#changeFocus} "give the old one back" behavior.
-	 * {@code slot < 0} unbinds without binding a replacement (the original's own "REMOVE" case). A stale or
-	 * no-longer-valid slot (out of range, no longer a real {@link ItemFocus}) is simply a no-op - the server
-	 * never trusts the client's claimed slot beyond that real check. */
-	public static void changeFocus(ItemStack casterStack, Player player, int slot) {
+	public static List<ItemStack> findCarriedFoci(Player player) {
+		return findCarried(player).stream().map(Carried::stack).toList();
+	}
+
+	/** The original's addFocusToPouch: into the first carried pouch with an empty slot. */
+	private static boolean addToPouch(Player player, ItemStack focus, Map<Integer, Integer> pouches) {
+		for (int slot : pouches.values()) {
+			ItemStack pouch = player.getInventory().getItem(slot);
+			NonNullList<ItemStack> contents = ItemFocusPouch.getContents(pouch);
+			for (int q = 0; q < contents.size(); q++) {
+				if (contents.get(q).isEmpty()) {
+					contents.set(q, focus.copy());
+					ItemFocusPouch.setContents(pouch, contents);
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	private static boolean stash(Player player, ItemStack focus, Map<Integer, Integer> pouches) {
+		return addToPouch(player, focus, pouches) || player.getInventory().add(focus.copy());
+	}
+
+	/** Binds the focus with this code to {@code casterStack}; a negative code (or nothing carried) takes the focus out. */
+	public static void changeFocus(ItemStack casterStack, Player player, int code) {
 		if (!(casterStack.getItem() instanceof ICaster caster)) return;
-
-		ItemStack picked = ItemStack.EMPTY;
-		if (slot >= 0) {
-			Inventory inv = player.getInventory();
-			if (slot >= inv.getContainerSize()) return;
-			ItemStack candidate = inv.getItem(slot);
-			if (!(candidate.getItem() instanceof ItemFocus)) return;
-			picked = candidate;
+		Map<Integer, Integer> pouches = pouches(player);
+		List<Carried> carried = findCarried(player);
+		if (code < 0 || carried.isEmpty()) {
+			if (caster.getFocus(casterStack) != null && stash(player, caster.getFocusStack(casterStack), pouches)) {
+				caster.setFocus(casterStack, null);
+				player.level().playSound(null, player.blockPosition(), thaumcraft.common.registry.ThaumcraftSounds.TICKS.get(), SoundSource.PLAYERS, 0.3f, 0.9f);
+			}
+			return;
 		}
-
-		ItemStack old = caster.getFocusStack(casterStack);
-		caster.setFocus(casterStack, picked.isEmpty() ? null : picked);
-		if (!picked.isEmpty() && !player.getAbilities().instabuild) {
-			picked.shrink(1);
+		if (carried.stream().noneMatch(c -> c.code() == code)) return; // stale or forged
+		ItemStack item;
+		if (code < 1000) {
+			if (code >= MAIN_SLOTS) return;
+			item = player.getInventory().getItem(code).copy();
+			player.getInventory().setItem(code, ItemStack.EMPTY);
+		} else {
+			Integer pouchSlot = pouches.get(code / 1000);
+			if (pouchSlot == null) return;
+			ItemStack pouch = player.getInventory().getItem(pouchSlot);
+			NonNullList<ItemStack> contents = ItemFocusPouch.getContents(pouch);
+			int q = code % 1000;
+			if (q >= contents.size() || !(contents.get(q).getItem() instanceof ItemFocus)) return;
+			item = contents.get(q).copy();
+			contents.set(q, ItemStack.EMPTY);
+			ItemFocusPouch.setContents(pouch, contents);
 		}
-		if (!old.isEmpty() && !player.getInventory().add(old)) {
-			player.drop(old, false);
+		if (item.isEmpty()) return;
+		player.level().playSound(null, player.blockPosition(), thaumcraft.common.registry.ThaumcraftSounds.TICKS.get(), SoundSource.PLAYERS, 0.3f, 1.0f);
+		if (caster.getFocus(casterStack) != null && stash(player, caster.getFocusStack(casterStack), pouches)) {
+			caster.setFocus(casterStack, null);
+		}
+		if (caster.getFocus(casterStack) == null) {
+			caster.setFocus(casterStack, item);
+		} else {
+			stash(player, item, pouches);
 		}
 	}
 
-	/** Real server-side handler for {@link ServerboundChangeCasterFocusPacket} - applies the swap to
-	 * whichever hand the player is really holding a real {@link ICaster} in (main hand checked first,
-	 * matching the original's own {@code PacketFocusChangeToServer} priority). */
+	/** Server-side handler for {@link ServerboundChangeCasterFocusPacket}: the caster in the main hand, else the off hand. */
 	public static void handleChangeFocus(ServerboundChangeCasterFocusPacket payload, ServerPlayer player) {
 		ItemStack main = player.getMainHandItem();
 		if (main.getItem() instanceof ICaster) {

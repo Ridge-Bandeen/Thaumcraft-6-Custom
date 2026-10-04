@@ -25,7 +25,6 @@ public final class ThaumcraftEntities {
 					.sized(0.15f, 0.15f)
 					.clientTrackingRange(64)
 					.updateInterval(10)
-					.noSave()
 					.build("focus_projectile"));
 
 	public static final DeferredHolder<EntityType<?>, EntityType<EntityFocusMine>> FOCUS_MINE = ENTITY_TYPES.register("focus_mine",
@@ -33,7 +32,6 @@ public final class ThaumcraftEntities {
 					.sized(0.15f, 0.15f)
 					.clientTrackingRange(64)
 					.updateInterval(10)
-					.noSave()
 					.build("focus_mine"));
 
 	public static final DeferredHolder<EntityType<?>, EntityType<EntityFocusCloud>> FOCUS_CLOUD = ENTITY_TYPES.register("focus_cloud",
@@ -41,7 +39,6 @@ public final class ThaumcraftEntities {
 					.sized(1.0f, 0.5f)
 					.clientTrackingRange(64)
 					.updateInterval(10)
-					.noSave()
 					.build("focus_cloud"));
 
 	/** A real, visible thrown item (unlike the invisible focus-carrier entities above) - allowed to save/

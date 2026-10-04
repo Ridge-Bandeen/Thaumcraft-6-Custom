@@ -1,5 +1,20 @@
 # Thaumcraft 1.21.1 Port — TODO archive
 
+## Closed 2026-10-04 (foci)
+
+- Focus projectile as the original: bouncy / seeking hostile / seeking friendly options, original gravity, 1-minute
+  life, coloured trail from its spell (synced), saved with the world, the spell run next tick. Mine: placed (speed 0),
+  sinks, arms on landing, 2 s delay, foes or friends (the original isFriendly, now `EntityChecks`), saved. Cloud:
+  blocks along random rays, shared 2 s cooldown per target, clouds drawn together, coloured puffs, saved.
+- Focus effects' damage types as the original (thrown / fireball / magic with the target as direct source; Curse
+  potency truncated); Frost freezes still water into frosted ice.
+- Plan medium: the caster's own area (`CASTER_AREA`, the original areax/y/z/aread) set by the restored misc caster
+  key G (Ctrl = axis), outlines and axis arrows (`ArchitectOverlay`); the invented "size" setting removed. ItemCaster
+  is an IArchitect again. Elemental Shovel's 3x3 placement with G-rotated pattern and sneak preview restored.
+  Shift+F takes the focus out.
+- Focus switching reaches into carried Focus Pouches (codes as the original), the old focus goes into a pouch first;
+  no creative special case; tick sounds.
+
 ## Closed 2026-10-04 (addon hooks, batch 3 - see COMPAT_HOOKS.md)
 
 - Taint surface tags + `TaintHooks` decay result; `LampGrowthEvent`, `LampBreedEvent`, `GolemButcherTargetEvent`.

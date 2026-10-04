@@ -412,6 +412,9 @@ public class Thaumcraft {
         registrar.playToServer(thaumcraft.common.lib.network.ServerboundGolemBuilderPacket.TYPE,
                 thaumcraft.common.lib.network.ServerboundGolemBuilderPacket.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> payload.handle((net.minecraft.server.level.ServerPlayer) context.player())));
+        registrar.playToServer(thaumcraft.common.lib.network.ServerboundItemKeyPacket.TYPE,
+                thaumcraft.common.lib.network.ServerboundItemKeyPacket.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> payload.handle((net.minecraft.server.level.ServerPlayer) context.player())));
         registrar.playToServer(thaumcraft.common.lib.network.ServerboundChangeCasterFocusPacket.TYPE,
                 thaumcraft.common.lib.network.ServerboundChangeCasterFocusPacket.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> thaumcraft.common.items.casters.CasterFocusHelper

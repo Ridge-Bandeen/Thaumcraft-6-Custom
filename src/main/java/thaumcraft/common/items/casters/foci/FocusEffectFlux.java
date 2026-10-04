@@ -59,7 +59,7 @@ public class FocusEffectFlux extends FocusEffect {
 
 		float damage = getDamageForDisplay(finalPower);
 		Entity caster = getPackage().getCaster();
-		entityHit.getEntity().hurt(level.damageSources().indirectMagic(caster, caster), damage);
+		entityHit.getEntity().hurt(level.damageSources().indirectMagic(caster, entityHit.getEntity()), damage);
 		return true;
 	}
 

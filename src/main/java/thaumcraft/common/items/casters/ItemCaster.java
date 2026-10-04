@@ -30,16 +30,15 @@ import thaumcraft.common.world.aura.AuraHandler;
  * pool" version from the previous pass is gone (the {@code WAND_VIS} data component is unused now, kept
  * registered rather than ripped out mid-port).
  *
- * The original constructor took an "area" (0/1/2: local chunk, a horizontal cross of chunks, or a 3x3
- * block of chunks to draw vis from). Simplified here to always draw from the wand's own chunk only -
- * restore the wider search radii if/when it matters.
+ * The original's constructor took an "area" (which chunks to draw vis from); its one caster used 0, its own chunk, as
+ * here.
  *
- * Also dropped for this pass: architect/block-highlighting (IArchitect), dust triggers - both real features,
- * just not part of the minimal "does casting work" slice. The caster-trigger-on-right-clicked-block system
+ * As the original it is an {@link IArchitect}: with a Plan focus it outlines the blocks the spell will work on, and the
+ * misc caster key (G; Ctrl+G picks the axis) sets the area ({@link #toggleMisc}). The caster-trigger-on-right-clicked-block system
  * (the original's {@code onItemUseFirst}) IS real now, via {@link #onItemUseFirst} below - see that method's
  * own doc comment, which also covers the real block-picker foci support restored 2026-09-15.
  */
-public class ItemCaster extends Item implements ICaster {
+public class ItemCaster extends Item implements ICaster, thaumcraft.api.items.IArchitect {
 
 	public ItemCaster(Properties properties) {
 		super(properties.stacksTo(1));
@@ -249,5 +248,79 @@ public class ItemCaster extends Item implements ICaster {
 		FocusEngine.castFocusPackage(player, core, true);
 		player.swing(hand);
 		return InteractionResultHolder.success(wand);
+	}
+
+	// ---- the Plan area (the original's CasterManager area methods) and IArchitect ----------------------------------
+
+	private static final int AREA_SIZE = 3;
+
+	public static ThaumcraftDataComponents.CasterArea getArea(ItemStack stack) {
+		ThaumcraftDataComponents.CasterArea area = stack.get(ThaumcraftDataComponents.CASTER_AREA.get());
+		if (area == null) return ThaumcraftDataComponents.CasterArea.DEFAULT;
+		return new ThaumcraftDataComponents.CasterArea(Math.min(area.x(), AREA_SIZE), Math.min(area.y(), AREA_SIZE), Math.min(area.z(), AREA_SIZE), area.dim());
+	}
+
+	/** The original's toggleMisc, on the misc caster key with a Plan focus: {@code mod} 0 grows the area along the chosen
+	 * axis (or all three), wrapping past 3 to 0; {@code mod} 1 (Ctrl) moves to the next axis choice. */
+	public static void toggleMisc(ItemStack stack, int mod) {
+		if (!(stack.getItem() instanceof ItemCaster caster)) return;
+		ItemStack focusStack = caster.getFocusStack(stack);
+		if (!(focusStack.getItem() instanceof ItemFocus focus)) return;
+		FocusPackage fp = focus.getPackage(focusStack);
+		if (fp == null || !FocusEngine.doesPackageContainElement(fp, "thaumcraft.PLAN")) return;
+		ThaumcraftDataComponents.CasterArea a = getArea(stack);
+		int x = a.x(), y = a.y(), z = a.z(), dim = a.dim();
+		if (mod == 0) {
+			switch (dim) {
+				case 0 -> { x++; y++; z++; }
+				case 1 -> x++;
+				case 2 -> z++;
+				case 3 -> y++;
+				default -> {
+				}
+			}
+			if (x > AREA_SIZE) x = 0;
+			if (y > AREA_SIZE) y = 0;
+			if (z > AREA_SIZE) z = 0;
+		} else if (mod == 1) {
+			if (++dim > 3) dim = 0;
+		}
+		stack.set(ThaumcraftDataComponents.CASTER_AREA.get(), new ThaumcraftDataComponents.CasterArea(x, y, z, dim));
+	}
+
+	@javax.annotation.Nullable
+	private thaumcraft.api.items.IArchitect planNode(ItemStack stack) {
+		ItemStack focusStack = getFocusStack(stack);
+		if (!(focusStack.getItem() instanceof ItemFocus focus)) return null;
+		FocusPackage fp = focus.getPackage(focusStack);
+		if (fp == null) return null;
+		for (IFocusElement node : fp.nodes) {
+			if (node instanceof thaumcraft.api.items.IArchitect architect) return architect;
+		}
+		return null;
+	}
+
+	@Override
+	public net.minecraft.world.phys.HitResult getArchitectMOP(ItemStack stack, Level level, net.minecraft.world.entity.LivingEntity player) {
+		thaumcraft.api.items.IArchitect plan = planNode(stack);
+		return plan != null ? plan.getArchitectMOP(stack, level, player) : null;
+	}
+
+	@Override
+	public boolean useBlockHighlight(ItemStack stack) {
+		return false;
+	}
+
+	@Override
+	public java.util.ArrayList<net.minecraft.core.BlockPos> getArchitectBlocks(ItemStack stack, Level level, net.minecraft.core.BlockPos pos,
+			net.minecraft.core.Direction side, Player player) {
+		thaumcraft.api.items.IArchitect plan = planNode(stack);
+		return plan != null ? plan.getArchitectBlocks(stack, level, pos, side, player) : new java.util.ArrayList<>();
+	}
+
+	@Override
+	public boolean showAxis(ItemStack stack, Level level, Player player, net.minecraft.core.Direction side, EnumAxis axis) {
+		thaumcraft.api.items.IArchitect plan = planNode(stack);
+		return plan != null && plan.showAxis(stack, level, player, side, axis);
 	}
 }

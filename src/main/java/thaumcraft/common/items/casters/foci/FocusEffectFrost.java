@@ -15,10 +15,8 @@ import thaumcraft.api.casters.NodeSetting;
 import thaumcraft.api.casters.Trajectory;
 
 /**
- * Replaces the old (1.12.2) {@code FocusEffectFrost}. Simplified versus the original for this pass: the
- * water-to-frosted-ice terrain effect is dropped (needs real fluid-state iteration/scheduled-tick placement
- * that wasn't worth building for a secondary part of this effect) - only the entity slow+damage part is
- * ported. Same FX/network-packet drop as FocusEffectFire/FocusMediumTouch.
+ * Replaces the old (1.12.2) {@code FocusEffectFrost}, as the original: thrown damage and Slowness to what it hits, and
+ * on a block it freezes still water within {@code 2 x power} (at most 16) into frosted ice that melts again.
  */
 public class FocusEffectFrost extends FocusEffect {
 
@@ -53,16 +51,37 @@ public class FocusEffectFrost extends FocusEffect {
 		if (level != null) {
 			FocusFxHelper.sendPartImpact(level, target.getLocation(), getKey());
 		}
-		if (!(target instanceof EntityHitResult entityHit) || !(entityHit.getEntity() instanceof LivingEntity living)) {
+		if (target instanceof net.minecraft.world.phys.BlockHitResult blockHit) {
+			freezeWater(level, blockHit, finalPower);
 			return false;
 		}
+		if (!(target instanceof EntityHitResult entityHit)) return false;
 		Entity caster = getPackage().getCaster();
 		float damage = getDamageForDisplay(finalPower);
 		int duration = 20 * getSettingValue("duration");
 		int potency = (int) (1.0f + getSettingValue("power") * finalPower / 3.0f);
-		living.hurt(level.damageSources().indirectMagic(caster, caster), damage);
-		living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, duration, potency));
-		return true;
+		entityHit.getEntity().hurt(level.damageSources().thrown(caster, entityHit.getEntity()), damage);
+		if (entityHit.getEntity() instanceof LivingEntity living) {
+			living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, duration, potency));
+		}
+		return false;
+	}
+
+	/** The original's frost on a block: still water within the radius becomes frosted ice, melting in 3-6 seconds. */
+	private void freezeWater(Level level, net.minecraft.world.phys.BlockHitResult hit, float finalPower) {
+		float f = Math.min(16.0f, 2 * getSettingValue("power") * finalPower);
+		int r = (int) f;
+		net.minecraft.core.BlockPos center = hit.getBlockPos();
+		net.minecraft.world.phys.Vec3 at = hit.getLocation();
+		net.minecraft.world.level.block.state.BlockState ice = net.minecraft.world.level.block.Blocks.FROSTED_ICE.defaultBlockState();
+		for (net.minecraft.core.BlockPos p : net.minecraft.core.BlockPos.betweenClosed(center.offset(-r, -r, -r), center.offset(r, r, r))) {
+			if (net.minecraft.world.phys.Vec3.atCenterOf(p).distanceToSqr(at) > f * f) continue;
+			net.minecraft.world.level.block.state.BlockState state = level.getBlockState(p);
+			if (!state.is(net.minecraft.world.level.block.Blocks.WATER) || !state.getFluidState().isSource()
+					|| !level.isUnobstructed(ice, p, net.minecraft.world.phys.shapes.CollisionContext.empty())) continue;
+			level.setBlockAndUpdate(p, ice);
+			level.scheduleTick(p.immutable(), net.minecraft.world.level.block.Blocks.FROSTED_ICE, net.minecraft.util.Mth.nextInt(level.random, 60, 120));
+		}
 	}
 
 	@Override

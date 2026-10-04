@@ -9,9 +9,8 @@ import thaumcraft.api.casters.Trajectory;
 import thaumcraft.common.entities.projectile.EntityFocusCloud;
 
 /**
- * Replaces the old (1.12.2) {@code FocusMediumCloud} - the last of the five mediums, backed by
- * {@link EntityFocusCloud}. See that class's doc comment for what's simplified about the periodic-retrigger
- * behavior this pass.
+ * Replaces the old (1.12.2) {@code FocusMediumCloud}: leaves an {@link EntityFocusCloud} holding the rest of the spell,
+ * with a radius (1-3) and a duration (5-30 seconds), as the original.
  */
 public class FocusMediumCloud extends FocusMedium {
 

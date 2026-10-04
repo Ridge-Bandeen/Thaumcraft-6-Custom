@@ -54,6 +54,7 @@ public class ThaumcraftClient {
     @SubscribeEvent
     static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(thaumcraft.client.gui.KeyBindings.CHANGE_CASTER_FOCUS);
+        event.register(thaumcraft.client.gui.KeyBindings.MISC_CASTER_TOGGLE);
     }
 
     @SubscribeEvent

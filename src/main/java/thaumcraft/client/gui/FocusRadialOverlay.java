@@ -63,7 +63,8 @@ public class FocusRadialOverlay {
 	@SubscribeEvent
 	static void onClientTick(ClientTickEvent.Post event) {
 		Minecraft mc = Minecraft.getInstance();
-		boolean wantOpen = mc.screen == null && KeyBindings.CHANGE_CASTER_FOCUS.isDown() && heldCaster(mc.player) != null;
+		// (with Shift, F takes the focus out instead - see KeyBindings)
+		boolean wantOpen = mc.screen == null && KeyBindings.CHANGE_CASTER_FOCUS.isDown() && heldCaster(mc.player) != null && !mc.player.isShiftKeyDown();
 
 		if (wantOpen) {
 			scale = Math.min(1.0f, scale + FADE_PER_TICK);
@@ -92,7 +93,8 @@ public class FocusRadialOverlay {
 		ItemStack casterStack = heldCaster(mc.player);
 		if (casterStack == null) return;
 
-		List<ItemStack> foci = CasterFocusHelper.findCarriedFoci(mc.player);
+		List<CasterFocusHelper.Carried> carried = CasterFocusHelper.findCarried(mc.player);
+		List<ItemStack> foci = carried.stream().map(CasterFocusHelper.Carried::stack).toList();
 		if (foci.isEmpty()) return;
 		if (iconScale.length != foci.size()) {
 			iconScale = new float[foci.size()];
@@ -159,8 +161,7 @@ public class FocusRadialOverlay {
 		}
 		if (hoveredIndex >= 0 && !firedThisHold && hoverTicks >= HOVER_SELECT_TICKS) {
 			firedThisHold = true;
-			int slot = mc.player.getInventory().findSlotMatchingItem(foci.get(hoveredIndex));
-			PacketDistributor.sendToServer(new ServerboundChangeCasterFocusPacket(slot));
+			PacketDistributor.sendToServer(new ServerboundChangeCasterFocusPacket(carried.get(hoveredIndex).code()));
 		}
 	}
 

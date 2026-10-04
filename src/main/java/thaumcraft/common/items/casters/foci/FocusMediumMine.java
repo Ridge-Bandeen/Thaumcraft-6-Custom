@@ -9,10 +9,8 @@ import thaumcraft.api.casters.Trajectory;
 import thaumcraft.common.entities.projectile.EntityFocusMine;
 
 /**
- * Replaces the old (1.12.2) {@code FocusMediumMine} - a "trap" sibling to
- * {@link FocusMediumProjectile}, backed by {@link EntityFocusMine} instead of
- * {@link thaumcraft.common.entities.projectile.EntityFocusProjectile}. See that class's doc comment for
- * what's simplified about the arming/triggering behavior this pass.
+ * Replaces the old (1.12.2) {@code FocusMediumMine}: sets down an {@link EntityFocusMine} holding the rest of the
+ * spell, aimed at foes or at friends, as the original.
  */
 public class FocusMediumMine extends FocusMedium {
 

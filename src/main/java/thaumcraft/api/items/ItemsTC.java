@@ -1205,13 +1205,9 @@ public final class ItemsTC {
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemElementalSword> elementalSword = ITEMS.registerItem("elemental_sword",
 			props -> new thaumcraft.common.items.tools.ItemElementalSword(TIER_ELEMENTAL, props.attributes(SwordItem.createAttributes(TIER_ELEMENTAL, 3, -2.4F)).rarity(net.minecraft.world.item.Rarity.RARE)));
 
-	/** A plain upgrade over {@link #thaumiumShovel} - the original's own {@code ItemElementalShovel} real
-	 * special ability (right-click to duplicate the clicked block into the surrounding 3x3 area from your
-	 * own inventory, {@code IArchitect}-driven) is a real, deliberate cut, same reasoning {@link
-	 * thaumcraft.common.items.casters.ItemCaster}'s own doc comment already gives for {@code IArchitect}/
-	 * block-highlighting: a real, separate, not-yet-built subsystem, not part of this pass's minimal slice. */
-	public static final DeferredItem<Item> elementalShovel = ITEMS.registerItem("elemental_shovel",
-			props -> new ShovelItem(TIER_ELEMENTAL, props.attributes(ShovelItem.createAttributes(TIER_ELEMENTAL, 1.5F, -3.0F)).rarity(net.minecraft.world.item.Rarity.RARE)));
+	/** See {@link thaumcraft.common.items.tools.ItemElementalShovel}'s own doc comment. */
+	public static final DeferredItem<thaumcraft.common.items.tools.ItemElementalShovel> elementalShovel = ITEMS.registerItem("elemental_shovel",
+			props -> new thaumcraft.common.items.tools.ItemElementalShovel(TIER_ELEMENTAL, props.attributes(ShovelItem.createAttributes(TIER_ELEMENTAL, 1.5F, -3.0F)).rarity(net.minecraft.world.item.Rarity.RARE)));
 
 	/** See {@link thaumcraft.common.items.tools.ItemElementalHoe}'s own doc comment. */
 	public static final DeferredItem<thaumcraft.common.items.tools.ItemElementalHoe> elementalHoe = ITEMS.registerItem("elemental_hoe",

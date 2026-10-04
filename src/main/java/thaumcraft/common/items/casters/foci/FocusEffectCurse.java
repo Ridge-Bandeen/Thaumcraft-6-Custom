@@ -83,16 +83,16 @@ public class FocusEffectCurse extends FocusEffect {
 			return placedAny;
 		}
 
-		if (!(target instanceof EntityHitResult entityHit) || !(entityHit.getEntity() instanceof LivingEntity living)) {
-			return false;
-		}
+		if (!(target instanceof EntityHitResult entityHit)) return false;
 
+		// as the original: magic damage to anything hit (the potency truncated, not rounded); the curses only take on the living
 		float damage = getDamageForDisplay(finalPower);
 		int duration = 20 * getSettingValue("duration");
-		int amplifier = Math.max(0, Math.round(getSettingValue("power") * finalPower / 2.0f));
+		int amplifier = Math.max(0, (int) (getSettingValue("power") * finalPower / 2.0f));
 
 		Entity caster = getPackage().getCaster();
-		living.hurt(level.damageSources().indirectMagic(caster, caster), damage);
+		entityHit.getEntity().hurt(level.damageSources().indirectMagic(caster, entityHit.getEntity()), damage);
+		if (!(entityHit.getEntity() instanceof LivingEntity living)) return true;
 
 		living.addEffect(new MobEffectInstance(MobEffects.POISON, duration, amplifier));
 		float chance = 0.85f;

@@ -70,7 +70,7 @@ public class FocusEffectEarth extends FocusEffect {
 		if (target instanceof EntityHitResult entityHit) {
 			float damage = getDamageForDisplay(finalPower);
 			Entity caster = getPackage().getCaster();
-			entityHit.getEntity().hurt(level.damageSources().thrown(caster, caster), damage);
+			entityHit.getEntity().hurt(level.damageSources().thrown(caster, entityHit.getEntity()), damage);
 			return true;
 		}
 

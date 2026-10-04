@@ -26,11 +26,8 @@ import thaumcraft.common.container.FocusPouchMenu;
  * carries its own sub-inventory" - replacing the original's own {@code NBTTagCompound}/{@code
  * ItemStackHelper} round-trip. {@link FocusPouchMenu} reads/writes it.
  *
- * Real, documented cut: {@link CasterFocusHelper#findCarriedFoci}'s own real quick-switch radial scan still
- * doesn't look inside a carried pouch (its own doc comment already flags this) - opening the pouch's own real
- * GUI is the way to move foci in and out of it. Extending the radial quick-switch to reach into a pouch too
- * would need its own addressing scheme (a pouch slot isn't a plain inventory slot) - a real, separate,
- * larger follow-up, not bundled into this chunk.
+ * As the original, the focus radial offers the foci inside carried pouches too, and a focus swapped out of a
+ * caster goes into a pouch with room first (see {@link CasterFocusHelper}).
  */
 public class ItemFocusPouch extends Item {
 

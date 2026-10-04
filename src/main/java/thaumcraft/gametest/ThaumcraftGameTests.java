@@ -2132,32 +2132,24 @@ public class ThaumcraftGameTests {
 	}
 
 	/**
-	 * Focus: Trap - places a real EntityFocusMine (see its own doc comment) that arms on landing and
-	 * curses the next matching entity that wanders within range. Aims point-blank at a placed block so the
-	 * mine arms almost immediately, with the target already waiting right next to the landing spot -
-	 * avoids needing to simulate anything actually wandering into range. Uses {@code succeedWhen} rather
-	 * than a fixed delay, same reasoning as the Fireball test (the mine's own trigger check only runs
-	 * every 5 ticks).
+	 * Mine + Curse: as the original, the mine is set down where the spell starts (the caster's eyes), sinks slowly onto
+	 * the ground, arms, and two seconds later curses a foe within a block of it - here a zombie standing at the caster's
+	 * feet. (The caster themself is friendly, so it is spared.)
 	 */
-	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty", timeoutTicks = 300)
 	public static void castTrapFocusArmsAndCursesAnEnemyThatWandersNear(GameTestHelper helper) {
-		BlockPos relPos = new BlockPos(0, 1, 2);
-		helper.setBlock(relPos, Blocks.STONE);
-		BlockPos absolute = helper.absolutePos(relPos);
-
-		BlockPos origin = helper.absolutePos(BlockPos.ZERO);
+		BlockPos origin = helper.absolutePos(new BlockPos(2, 1, 2));
 		ServerPlayer caster = spawnCasterAt(helper, origin);
-		caster.lookAt(EntityAnchorArgument.Anchor.EYES, Vec3.atCenterOf(absolute));
-
 		Zombie zombie = EntityType.ZOMBIE.create(helper.getLevel());
-		zombie.moveTo(absolute.getX() + 0.5, absolute.getY() + 1.0, absolute.getZ() + 0.5, 0, 0);
+		zombie.moveTo(caster.getX() + 0.6, caster.getY(), caster.getZ(), 0, 0);
+		zombie.setNoAi(true);
 		helper.getLevel().addFreshEntity(zombie);
 		float startingHealth = zombie.getHealth();
 
 		cast(caster, new thaumcraft.common.items.casters.foci.FocusMediumMine(), new thaumcraft.common.items.casters.foci.FocusEffectCurse());
 
 		helper.succeedWhen(() -> helper.assertTrue(zombie.getHealth() < startingHealth,
-				"the trap should have armed on the block and cursed the zombie waiting next to it, health=" + zombie.getHealth()));
+				"the trap should have landed, armed and cursed the zombie beside it, health=" + zombie.getHealth()));
 	}
 
 	/**
@@ -16818,12 +16810,9 @@ public class ThaumcraftGameTests {
 
 		helper.assertTrue(caster.getFocus(casterStack) == thaumcraft.api.items.ItemsTC.focus2.get(),
 				"the caster should really now have the real newly-selected focus bound");
-		// makeMockServerPlayerInLevel's player is unavoidably creative (see the port-tracking memory) - real
-		// creative players don't lose the consumed item, matching changeFocus's own real instabuild check.
-		int expectedCount = player.getAbilities().instabuild ? 2 : 1;
-		helper.assertTrue(player.getInventory().getItem(5).getCount() == expectedCount,
-				"selecting a real focus should really consume exactly 1 from its real stack outside creative, found "
-						+ player.getInventory().getItem(5).getCount() + " (expected " + expectedCount + ")");
+		// as the original, the chosen focus's slot is emptied (creative or not)
+		helper.assertTrue(!player.getInventory().getItem(5).is(thaumcraft.api.items.ItemsTC.focus2.get()),
+				"the chosen focus should have left its slot, found " + player.getInventory().getItem(5));
 		boolean gotOldFocusBack = false;
 		for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
 			if (player.getInventory().getItem(i).is(thaumcraft.api.items.ItemsTC.focus1.get())) gotOldFocusBack = true;
@@ -16864,6 +16853,8 @@ public class ThaumcraftGameTests {
 		caster.setFocus(casterStack, new ItemStack(thaumcraft.api.items.ItemsTC.focus1.get()));
 
 		player.getInventory().setItem(5, new ItemStack(Items.STICK));
+		// (a focus is carried elsewhere: with none at all, the original treats any choice as taking the focus out)
+		player.getInventory().setItem(7, new ItemStack(thaumcraft.api.items.ItemsTC.focus2.get()));
 		thaumcraft.common.items.casters.CasterFocusHelper.changeFocus(casterStack, player, 5);
 
 		helper.assertTrue(caster.getFocus(casterStack) == thaumcraft.api.items.ItemsTC.focus1.get(),
@@ -18369,6 +18360,119 @@ public class ThaumcraftGameTests {
 		} finally {
 			thaumcraft.api.world.WorldFlavour.set(thaumcraft.api.world.WorldFlavour.BIOMES);
 		}
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Foci parity: the Plan area (misc caster key), the Elemental Shovel, carrier entities.
+	// --------------------------------------------------------------------------------------------------
+
+	private static ItemStack casterWithPlanFocus(int method) {
+		ItemStack casterStack = new ItemStack(ItemsTC.casterBasic.get());
+		thaumcraft.common.items.casters.ItemCaster casterItem = (thaumcraft.common.items.casters.ItemCaster) casterStack.getItem();
+		FocusPackage pack = new FocusPackage();
+		pack.addNode(new thaumcraft.api.casters.FocusMediumRoot());
+		pack.addNode(new thaumcraft.common.items.casters.foci.FocusMediumTouch());
+		thaumcraft.common.items.casters.foci.FocusMediumPlan plan = new thaumcraft.common.items.casters.foci.FocusMediumPlan();
+		plan.getSetting("method").setValue(method);
+		pack.addNode(plan);
+		pack.addNode(new thaumcraft.common.items.casters.foci.FocusEffectBreak());
+		ItemStack focus = new ItemStack(ItemsTC.focus1.get());
+		focus.set(thaumcraft.api.items.ThaumcraftDataComponents.ASSEMBLED_FOCUS.get(), new thaumcraft.api.items.ThaumcraftDataComponents.AssembledFocus(pack));
+		casterItem.setFocus(casterStack, focus);
+		return casterStack;
+	}
+
+	/** The misc caster key with a Plan focus: grows the area (all axes, wrapping 3 -> 0), Ctrl picks the next axis. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void miscCasterKeyChangesThePlanArea(GameTestHelper helper) {
+		ItemStack caster = casterWithPlanFocus(0);
+		var area = thaumcraft.common.items.casters.ItemCaster.getArea(caster);
+		helper.assertTrue(area.x() == 3 && area.y() == 3 && area.z() == 3 && area.dim() == 0, "a fresh caster's area is 3 each way, all axes, got " + area);
+		thaumcraft.common.items.casters.ItemCaster.toggleMisc(caster, 0);
+		area = thaumcraft.common.items.casters.ItemCaster.getArea(caster);
+		helper.assertTrue(area.x() == 0 && area.y() == 0 && area.z() == 0, "growing past 3 wraps to 0, got " + area);
+		thaumcraft.common.items.casters.ItemCaster.toggleMisc(caster, 1);
+		thaumcraft.common.items.casters.ItemCaster.toggleMisc(caster, 0);
+		area = thaumcraft.common.items.casters.ItemCaster.getArea(caster);
+		helper.assertTrue(area.dim() == 1 && area.x() == 1 && area.y() == 0 && area.z() == 0, "with the X axis picked only X grows, got " + area);
+		ItemStack plain = new ItemStack(ItemsTC.casterBasic.get());
+		thaumcraft.common.items.casters.ItemCaster.toggleMisc(plain, 0);
+		helper.assertTrue(!plain.has(thaumcraft.api.items.ThaumcraftDataComponents.CASTER_AREA.get()), "without a Plan focus the key does nothing");
+		helper.succeed();
+	}
+
+	/** The Plan area follows the caster's own size: area 1 on a flat 5x5 stone floor, "surface" method, is the 3x3 around the hit. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void planAreaUsesTheCastersSize(GameTestHelper helper) {
+		for (int x = 0; x < 5; x++) for (int z = 0; z < 5; z++) helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE);
+		ItemStack caster = casterWithPlanFocus(1);
+		caster.set(thaumcraft.api.items.ThaumcraftDataComponents.CASTER_AREA.get(), new thaumcraft.api.items.ThaumcraftDataComponents.CasterArea(1, 1, 1, 0));
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(2, 3, 2)));
+		var blocks = ((thaumcraft.common.items.casters.ItemCaster) caster.getItem()).getArchitectBlocks(caster, helper.getLevel(),
+				helper.absolutePos(new BlockPos(2, 1, 2)), net.minecraft.core.Direction.UP, player);
+		helper.assertTrue(blocks.size() == 9, "area 1 on the surface should be the 3x3 around the clicked block, got " + blocks.size());
+		helper.succeed();
+	}
+
+	/** The Elemental Shovel builds a 3x3 of the clicked block on its face from blocks in the inventory, as the original. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void elementalShovelBuildsAThreeByThreeFromTheInventory(GameTestHelper helper) {
+		for (int x = 0; x < 5; x++) for (int z = 0; z < 5; z++) helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE);
+		BlockPos clicked = new BlockPos(2, 1, 2);
+		helper.setBlock(clicked, Blocks.COBBLESTONE);
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(0, 2, 0)));
+		player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+		ItemStack shovel = new ItemStack(ItemsTC.elementalShovel.get());
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, shovel);
+		player.getInventory().setItem(5, new ItemStack(Blocks.COBBLESTONE, 20));
+		BlockPos abs = helper.absolutePos(clicked);
+		var hit = new net.minecraft.world.phys.BlockHitResult(Vec3.atCenterOf(abs).add(0, 0.5, 0), net.minecraft.core.Direction.UP, abs, false);
+		shovel.useOn(new net.minecraft.world.item.context.UseOnContext(player, net.minecraft.world.InteractionHand.MAIN_HAND, hit));
+		int placed = 0;
+		for (int x = 1; x <= 3; x++) for (int z = 1; z <= 3; z++) if (helper.getBlockState(new BlockPos(x, 2, z)).is(Blocks.COBBLESTONE)) placed++;
+		helper.assertTrue(placed == 9, "a flat 3x3 of cobblestone should sit on top, got " + placed);
+		helper.assertTrue(player.getInventory().getItem(5).getCount() == 11, "nine cobblestone should have been used, left " + player.getInventory().getItem(5).getCount());
+		helper.succeed();
+	}
+
+	/** Focus carrier entities keep their spell and options through a save, as the original's did. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focusProjectileKeepsItsSpellAndOptionThroughASave(GameTestHelper helper) {
+		ServerPlayer caster = spawnCasterAt(helper, helper.absolutePos(new BlockPos(1, 2, 1)));
+		FocusPackage pack = spell(new thaumcraft.common.items.casters.foci.FocusEffectFire());
+		thaumcraft.common.entities.projectile.EntityFocusProjectile shot = new thaumcraft.common.entities.projectile.EntityFocusProjectile(
+				caster, pack, caster.getEyePosition(), new Vec3(1, 0, 0), 0.5f, 2);
+		net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+		shot.saveWithoutId(tag);
+		thaumcraft.common.entities.projectile.EntityFocusProjectile loaded = thaumcraft.common.registry.ThaumcraftEntities.FOCUS_PROJECTILE.get().create(helper.getLevel());
+		loaded.load(tag);
+		helper.assertTrue(loaded.getSpecial() == 2, "the seeking option should survive the save, got " + loaded.getSpecial());
+		helper.assertTrue(tag.contains("pack"), "the spell should be saved with it");
+		helper.succeed();
+	}
+
+	/** As the original, the focus radial reaches into a carried Focus Pouch, and the replaced focus goes into the pouch. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focusSwitchingUsesACarriedPouch(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(BlockPos.ZERO));
+		player.getInventory().clearContent();
+		ItemStack pouch = new ItemStack(thaumcraft.api.items.ItemsTC.focusPouch.get());
+		net.minecraft.core.NonNullList<ItemStack> contents = net.minecraft.core.NonNullList.withSize(18, ItemStack.EMPTY);
+		contents.set(4, new ItemStack(thaumcraft.api.items.ItemsTC.focus3.get()));
+		thaumcraft.common.items.casters.ItemFocusPouch.setContents(pouch, contents);
+		player.getInventory().setItem(9, pouch);
+		ItemStack casterStack = new ItemStack(thaumcraft.api.items.ItemsTC.casterBasic.get());
+		thaumcraft.api.casters.ICaster caster = (thaumcraft.api.casters.ICaster) casterStack.getItem();
+		caster.setFocus(casterStack, new ItemStack(thaumcraft.api.items.ItemsTC.focus1.get()));
+
+		var carried = thaumcraft.common.items.casters.CasterFocusHelper.findCarried(player);
+		helper.assertTrue(carried.size() == 1 && carried.get(0).code() == 1004, "the pouch's focus should be offered as pouch 1 slot 4, got " + carried);
+		thaumcraft.common.items.casters.CasterFocusHelper.changeFocus(casterStack, player, 1004);
+		helper.assertTrue(caster.getFocus(casterStack) == thaumcraft.api.items.ItemsTC.focus3.get(), "the pouch's focus should now be bound");
+		var after = thaumcraft.common.items.casters.ItemFocusPouch.getContents(player.getInventory().getItem(9));
+		helper.assertTrue(after.stream().anyMatch(st -> st.is(thaumcraft.api.items.ItemsTC.focus1.get())) && after.stream().noneMatch(st -> st.is(thaumcraft.api.items.ItemsTC.focus3.get())),
+				"the old focus should have gone into the pouch in place of the new one, pouch: " + after);
 		helper.succeed();
 	}
 }
