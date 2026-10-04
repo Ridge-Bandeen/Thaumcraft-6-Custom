@@ -56,7 +56,7 @@ public class SealButcher implements ISeal, ISealGui, ISealConfigArea {
 		AABB area = GolemHelper.getBoundsForArea(seal);
 		List<LivingEntity> list = world.getEntitiesOfClass(LivingEntity.class, area);
 		for (LivingEntity target : list) {
-			if (!isValidTarget(target)) continue;
+			if (!isValidTarget(target) || spared(seal, null, target)) continue;
 			int count = 0;
 			for (LivingEntity other : list) {
 				if (other.getClass() == target.getClass() && isValidTarget(other)) {
@@ -75,6 +75,11 @@ public class SealButcher implements ISeal, ISealGui, ISealConfigArea {
 		}
 	}
 
+	/** Whether an addon spares this animal (see {@link thaumcraft.api.events.GolemButcherTargetEvent}). */
+	private static boolean spared(ISealEntity seal, IGolemAPI golem, LivingEntity target) {
+		return seal != null && net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new thaumcraft.api.events.GolemButcherTargetEvent(seal, golem, target)).isCanceled();
+	}
+
 	private static boolean isValidTarget(LivingEntity target) {
 		if (!(target instanceof Animal animal) || target instanceof Enemy) return false;
 		if (target instanceof TamableAnimal tameable && tameable.isTame()) return false;
@@ -83,7 +88,8 @@ public class SealButcher implements ISeal, ISealGui, ISealConfigArea {
 
 	@Override
 	public void onTaskStarted(Level world, IGolemAPI golem, Task task) {
-		if (task.getEntity() instanceof LivingEntity target && isValidTarget(target) && golem.getGolemEntity() instanceof Mob mob) {
+		if (task.getEntity() instanceof LivingEntity target && isValidTarget(target) && golem.getGolemEntity() instanceof Mob mob
+				&& !spared(SealHandler.getSealEntity(world.dimension(), task.getSealPos()), golem, target)) {
 			mob.setTarget(target);
 			golem.addRankXp(1);
 		}

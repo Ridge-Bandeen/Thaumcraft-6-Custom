@@ -247,24 +247,28 @@ public class TaintHelper {
 	 * {@code CACTUS}/{@code CORAL}/{@code SPONGE} classification (mushroom blocks plus a few thematically
 	 * similar organic surfaces) - see {@link #spreadFibres}'s own doc comment on this whole branch. */
 	private static boolean isCrustSurface(BlockState bs) {
-		return bs.is(Blocks.RED_MUSHROOM_BLOCK) || bs.is(Blocks.BROWN_MUSHROOM_BLOCK)
-				|| bs.is(Blocks.PUMPKIN) || bs.is(Blocks.CARVED_PUMPKIN) || bs.is(Blocks.JACK_O_LANTERN) || bs.is(Blocks.MELON)
-				|| bs.is(Blocks.CACTUS) || bs.is(BlockTags.CORAL_BLOCKS) || bs.is(BlockTags.CORALS)
-				|| bs.is(Blocks.SPONGE) || bs.is(Blocks.WET_SPONGE) || bs.is(BlockTags.PLANKS);
+		return bs.is(CRUST_SURFACE);
+	}
+
+	/** What taint eats, by kind - {@code #thaumcraft:taint/crust_surface}, {@code soil_surface}, {@code rock_surface}. */
+	private static final net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block> CRUST_SURFACE = taintTag("crust_surface");
+	private static final net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block> SOIL_SURFACE = taintTag("soil_surface");
+	private static final net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block> ROCK_SURFACE = taintTag("rock_surface");
+
+	private static net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block> taintTag(String name) {
+		return BlockTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "taint/" + name));
 	}
 
 	/** Real, approximate modern stand-in for the original's own {@code Material.SAND}/{@code GROUND}/
 	 * {@code GRASS}/{@code CLAY} classification (loose granular/dirt-like ground surfaces). */
 	private static boolean isSoilSurface(BlockState bs) {
-		return bs.is(Blocks.SAND) || bs.is(Blocks.RED_SAND) || bs.is(Blocks.GRAVEL) || bs.is(Blocks.CLAY)
-				|| bs.is(Blocks.GRASS_BLOCK) || bs.is(Blocks.FARMLAND) || bs.is(Blocks.DIRT_PATH)
-				|| bs.is(Blocks.SOUL_SAND) || bs.is(Blocks.SOUL_SOIL) || bs.is(BlockTags.DIRT);
+		return bs.is(SOIL_SURFACE);
 	}
 
 	/** Real, approximate modern stand-in for the original's own {@code Material.ROCK} classification - the
 	 * true original's own final catch-all case in this same real branch. */
 	private static boolean isRockSurface(BlockState bs) {
-		return bs.is(BlockTags.MINEABLE_WITH_PICKAXE);
+		return bs.is(ROCK_SURFACE);
 	}
 
 	/** Real, portable version of the original's own {@code BlockUtils#isAdjacentToSolidBlock} - the one

@@ -1,0 +1,16 @@
+{
+  "values": [
+    "minecraft:red_mushroom_block",
+    "minecraft:brown_mushroom_block",
+    "minecraft:pumpkin",
+    "minecraft:carved_pumpkin",
+    "minecraft:jack_o_lantern",
+    "minecraft:melon",
+    "minecraft:cactus",
+    "#minecraft:coral_blocks",
+    "#minecraft:corals",
+    "minecraft:sponge",
+    "minecraft:wet_sponge",
+    "#minecraft:planks"
+  ]
+}

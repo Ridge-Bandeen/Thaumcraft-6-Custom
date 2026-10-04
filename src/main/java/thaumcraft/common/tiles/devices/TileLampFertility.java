@@ -82,9 +82,13 @@ public class TileLampFertility extends BlockEntity implements IEssentiaTransport
 			for (Animal other : sameSpecies) {
 				if (other.getAge() != 0 || other.isInLove()) continue;
 				if (partner != null) {
-					charges -= 5;
-					other.setInLove(null);
-					partner.setInLove(null);
+					// addons may breed them their own way, or pass them over (thaumcraft.api.events.LampBreedEvent)
+					var event = net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new thaumcraft.api.events.LampBreedEvent((net.minecraft.server.level.ServerLevel) level, pos, partner, other));
+					charges -= event.getCost();
+					if (!event.isCanceled()) {
+						other.setInLove(null);
+						partner.setInLove(null);
+					}
 					setChanged();
 					return;
 				}

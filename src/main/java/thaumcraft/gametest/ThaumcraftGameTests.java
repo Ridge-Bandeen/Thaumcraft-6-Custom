@@ -18202,4 +18202,81 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(knowledge.isResearchKnown("f_FLY"), "a ghast should unlock f_FLY");
 		helper.succeed();
 	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Addon hooks, batch 3 (COMPAT_HOOKS.md #11, #12).
+	// --------------------------------------------------------------------------------------------------
+
+	/** Taint eats what the taint/* tags list - defaults as before (sand is soil, planks crust, stone rock). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void taintSurfaceTagsHoldTheOldLists(GameTestHelper helper) {
+		java.util.function.BiFunction<net.minecraft.world.level.block.Block, String, Boolean> in = (block, name) -> block.defaultBlockState()
+				.is(net.minecraft.tags.BlockTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "taint/" + name)));
+		helper.assertTrue(in.apply(Blocks.SAND, "soil_surface") && in.apply(Blocks.GRASS_BLOCK, "soil_surface") && in.apply(Blocks.GRAVEL, "soil_surface"), "sand, grass and gravel are soil");
+		helper.assertTrue(in.apply(Blocks.OAK_PLANKS, "crust_surface") && in.apply(Blocks.MELON, "crust_surface"), "planks and melons crust over");
+		helper.assertTrue(in.apply(Blocks.STONE, "rock_surface"), "stone is rock");
+		helper.assertFalse(in.apply(Blocks.STONE, "soil_surface"), "stone is not soil");
+		helper.succeed();
+	}
+
+	/** Dying taint uses an addon's decay result when one is set, and the original's otherwise. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void taintDecayHookPicksWhatTaintLeavesBehind(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(1, 1, 1);
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.taintSoil.get());
+		thaumcraft.common.blocks.world.taint.BlockTaint soil = (thaumcraft.common.blocks.world.taint.BlockTaint) BlocksTC.taintSoil.get();
+		soil.die(helper.getLevel(), abs, helper.getBlockState(pos));
+		helper.assertTrue(helper.getBlockState(pos).is(Blocks.DIRT), "tainted soil decays into dirt by default, found " + helper.getBlockState(pos));
+		helper.setBlock(pos, BlocksTC.taintSoil.get());
+		thaumcraft.api.TaintHooks.setDecayResult((level, p, variant) -> p.equals(abs) && variant == thaumcraft.common.blocks.world.taint.BlockTaint.Variant.SOIL
+				? Blocks.COARSE_DIRT.defaultBlockState() : null);
+		try {
+			soil.die(helper.getLevel(), abs, helper.getBlockState(pos));
+		} finally {
+			thaumcraft.api.TaintHooks.setDecayResult((level, p, variant) -> null);
+		}
+		helper.assertTrue(helper.getBlockState(pos).is(Blocks.COARSE_DIRT), "with a decay hook set it should leave the hook's block, found " + helper.getBlockState(pos));
+		helper.succeed();
+	}
+
+	private static final java.util.Set<BlockPos> SPARED_BY_TEST = java.util.concurrent.ConcurrentHashMap.newKeySet();
+	private static boolean lampGrowthListenerAdded;
+
+	/** A Lamp of Growth posts LampGrowthEvent before growing a plant; cancelling it skips the random tick (same setup as
+	 * growthLampDrawsChargeAndAdvancesARealCropNearby, where the cane ages). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "tall")
+	public static void lampGrowthEventIsPostedAndCanStopTheGrowth(GameTestHelper helper) {
+		if (!lampGrowthListenerAdded) {
+			lampGrowthListenerAdded = true;
+			net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((thaumcraft.api.events.LampGrowthEvent e) -> {
+				if (SPARED_BY_TEST.contains(e.getPlantPos())) {
+					e.setCanceled(true);
+					e.setCost(0);
+				}
+			});
+		}
+		BlockPos lampPos = new BlockPos(4, 1, 4);
+		BlockPos sourcePos = lampPos.above();
+		BlockPos sandPos = lampPos.offset(0, 2, 0);
+		BlockPos cropPos = lampPos.offset(0, 3, 0);
+		helper.setBlock(sourcePos, TEST_ESSENTIA_SOURCE_BLOCK.get());
+		helper.setBlock(lampPos, BlocksTC.lampGrowth.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.UP));
+		helper.setBlock(sandPos, Blocks.SAND);
+		helper.setBlock(sandPos.east(), Blocks.WATER);
+		helper.setBlock(cropPos, Blocks.SUGAR_CANE.defaultBlockState());
+		SPARED_BY_TEST.add(helper.absolutePos(cropPos));
+		BlockPos lampAbs = helper.absolutePos(lampPos);
+		thaumcraft.common.tiles.devices.TileLampGrowth lamp = helper.getBlockEntity(lampPos);
+		TestEssentiaSourceBlockEntity source = helper.getBlockEntity(sourcePos);
+		source.aspect = Aspect.PLANT;
+		source.amount = 999;
+		for (int i = 0; i < 500; i++) {
+			thaumcraft.common.tiles.devices.TileLampGrowth.tick(helper.getLevel(), lampAbs, helper.getBlockState(lampPos), lamp);
+		}
+		int age = helper.getBlockState(cropPos).getValue(net.minecraft.world.level.block.SugarCaneBlock.AGE);
+		helper.assertTrue(age == 0, "a cancelled growth event must leave the cane as it was, age " + age);
+		helper.succeed();
+	}
 }

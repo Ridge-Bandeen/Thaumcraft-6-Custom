@@ -79,6 +79,11 @@ public class BlockTaint extends Block implements ITaintBlock, Fallable {
 
 	@Override
 	public void die(Level level, BlockPos pos, BlockState state) {
+		BlockState custom = thaumcraft.api.TaintHooks.decay(level, pos, variant);
+		if (custom != null) {
+			level.setBlockAndUpdate(pos, custom);
+			return;
+		}
 		switch (variant) {
 			case ROCK -> level.setBlockAndUpdate(pos, BlocksTC.stonePorous.get().defaultBlockState());
 			case SOIL -> level.setBlockAndUpdate(pos, Blocks.DIRT.defaultBlockState());

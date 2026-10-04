@@ -1,0 +1,14 @@
+{
+  "values": [
+    "minecraft:sand",
+    "minecraft:red_sand",
+    "minecraft:gravel",
+    "minecraft:clay",
+    "minecraft:grass_block",
+    "minecraft:farmland",
+    "minecraft:dirt_path",
+    "minecraft:soul_sand",
+    "minecraft:soul_soil",
+    "#minecraft:dirt"
+  ]
+}

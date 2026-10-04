@@ -115,10 +115,12 @@ public class TileLampGrowth extends BlockEntity implements IEssentiaTransport {
 			BlockState target = level.getBlockState(bp);
 			if (target.isAir() || !isPlant(target) || bp.distSqr(pos) >= radiusSq
 					|| thaumcraft.common.lib.utils.CropUtils.isGrownCrop(level, bp) || !thaumcraft.common.lib.utils.CropUtils.doesLampGrow(level, bp)) continue;
-			charges--;
+			// addons may grow it their own way, or pass it over (thaumcraft.api.events.LampGrowthEvent)
+			var event = net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new thaumcraft.api.events.LampGrowthEvent((ServerLevel) level, pos, bp.immutable(), target));
+			charges -= event.getCost();
 			lastPlant = bp.immutable();
 			lastState = target;
-			target.randomTick((ServerLevel) level, bp, level.random);
+			if (!event.isCanceled()) target.randomTick((ServerLevel) level, bp, level.random);
 			setChanged();
 			return;
 		}
