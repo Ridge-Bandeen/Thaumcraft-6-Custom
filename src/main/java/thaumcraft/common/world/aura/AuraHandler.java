@@ -80,11 +80,8 @@ public class AuraHandler
 
     /** The original's generateAura: the chunk's own biome and its four neighbours', averaged - see the class doc. */
     private static AuraChunk generateAuraChunk(Level level, ChunkPos pos) {
-        float life = BiomeHandler.getAuraModifier(level.getBiome(new BlockPos(pos.x * 16 + 8, 50, pos.z * 16 + 8)));
-        for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.Plane.HORIZONTAL) {
-            life += BiomeHandler.getAuraModifier(level.getBiome(new BlockPos((pos.x + dir.getStepX()) * 16 + 8, 50, (pos.z + dir.getStepZ()) * 16 + 8)));
-        }
-        life /= 5.0f;
+        // the biome's richness, averaged with its neighbours' - or whatever an addon's WorldFlavour says
+        float life = thaumcraft.api.world.WorldFlavour.get().auraModifier(level, pos);
         float noise = (float) (1.0 + rand.nextGaussian() * 0.1);
         short base = (short) Math.max(0, Math.min(AURA_CEILING, (int) (life * AURA_CEILING * noise)));
         return new AuraChunk(pos, base, base, 0.0f);

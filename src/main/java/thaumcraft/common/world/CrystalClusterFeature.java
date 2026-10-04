@@ -52,7 +52,7 @@ public class CrystalClusterFeature extends Feature<NoneFeatureConfiguration> {
 		RandomSource random = context.random();
 		BlockPos origin = context.origin();
 
-		Aspect aspect = random.nextInt(3) == 0 ? BiomeHandler.getRandomAspect(level.getBiome(origin), random) : null;
+		Aspect aspect = random.nextInt(3) == 0 ? thaumcraft.api.world.WorldFlavour.get().randomAspect(level, origin, random) : null;
 		if (aspect == null) aspect = PRIMAL_ASPECTS[random.nextInt(PRIMAL_ASPECTS.length)];
 
 		var crystalBlock = thaumcraft.api.blocks.BlocksTC.crystals.get(aspect);

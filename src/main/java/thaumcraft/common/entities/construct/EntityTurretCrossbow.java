@@ -269,21 +269,17 @@ public class EntityTurretCrossbow extends EntityOwnedConstruct implements Ranged
 		}
 	}
 
+	/** Its parts when destroyed: the {@code thaumcraft:entities/dismantle/turret_crossbow} loot table (the original's chances; Looting
+	 * adds 0.15 to each a level). */
+	@Override
+	protected net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable> getDefaultLootTable() {
+		return net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.LOOT_TABLE,
+				net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "entities/dismantle/turret_crossbow"));
+	}
+
+	/** (Nothing extra: its held tool and parts drop on their own, never the equipment roll.) */
 	@Override
 	protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
-		float b = thaumcraft.common.lib.utils.LootingHelper.level(source) * 0.15f;
-		if (random.nextFloat() < 0.2f + b) {
-			spawnAtLocation(new ItemStack(ItemsTC.mindClockwork.get()));
-		}
-		if (random.nextFloat() < 0.5f + b) {
-			spawnAtLocation(new ItemStack(ItemsTC.mechanismSimple.get()));
-		}
-		if (random.nextFloat() < 0.5f + b) {
-			spawnAtLocation(new ItemStack(BlocksTC.plankGreatwood.get()));
-		}
-		if (random.nextFloat() < 0.5f + b) {
-			spawnAtLocation(new ItemStack(BlocksTC.plankGreatwood.get()));
-		}
 	}
 
 	/** Real port of the original's own custom {@code EntityAIWatchTarget} - no real modern vanilla goal does

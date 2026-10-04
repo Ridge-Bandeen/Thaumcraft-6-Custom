@@ -1957,5 +1957,6 @@
   "thaumcraft.configuration.shieldRecharge": "Shield Recharge (ms)",
   "thaumcraft.configuration.shieldWait": "Shield Wait (ms)",
   "thaumcraft.configuration.shieldCost": "Shield Cost",
-  "tc.dust.notempty": "It has to be empty before the Salis Mundus can work on it."
+  "tc.dust.notempty": "It has to be empty before the Salis Mundus can work on it.",
+  "tc.blueprint.anyof": "or anything in %s"
 }

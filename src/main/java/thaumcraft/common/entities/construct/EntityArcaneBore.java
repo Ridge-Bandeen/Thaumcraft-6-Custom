@@ -524,31 +524,17 @@ public class EntityArcaneBore extends EntityOwnedConstruct {
 		return super.mobInteract(player, hand);
 	}
 
+	/** Its parts when destroyed: the {@code thaumcraft:entities/dismantle/arcane_bore} loot table (the original's chances; Looting
+	 * adds 0.15 to each a level). */
+	@Override
+	protected net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable> getDefaultLootTable() {
+		return net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.LOOT_TABLE,
+				net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "entities/dismantle/arcane_bore"));
+	}
+
+	/** (Nothing extra: its held tool and parts drop on their own, never the equipment roll.) */
 	@Override
 	protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
-		// the original's table; Looting raises every chance by 0.15 a level
-		float b = thaumcraft.common.lib.utils.LootingHelper.level(source) * 0.15f;
-		if (random.nextFloat() < 0.2f + b) {
-			spawnAtLocation(new ItemStack(ItemsTC.mindClockwork.get()));
-		}
-		if (random.nextFloat() < 0.2f + b) {
-			spawnAtLocation(new ItemStack(ItemsTC.morphicResonator.get()));
-		}
-		if (random.nextFloat() < 0.2f + b) {
-			spawnAtLocation(new ItemStack(BlocksTC.crystals.get(thaumcraft.api.aspects.Aspect.AIR).get()));
-		}
-		if (random.nextFloat() < 0.2f + b) {
-			spawnAtLocation(new ItemStack(BlocksTC.crystals.get(thaumcraft.api.aspects.Aspect.EARTH).get()));
-		}
-		if (random.nextFloat() < 0.5f + b) {
-			spawnAtLocation(new ItemStack(ItemsTC.mechanismSimple.get()));
-		}
-		if (random.nextFloat() < 0.5f + b) {
-			spawnAtLocation(new ItemStack(ItemsTC.plateBrass.get()));
-		}
-		if (random.nextFloat() < 0.5f + b) {
-			spawnAtLocation(new ItemStack(BlocksTC.plankGreatwood.get()));
-		}
 	}
 
 	@Override

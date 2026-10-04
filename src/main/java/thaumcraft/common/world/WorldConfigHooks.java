@@ -317,9 +317,9 @@ public final class WorldConfigHooks {
 	 * magical biome - in the {@code overworldDim}, or else only the Magical Forest or Eerie biome. */
 	public static boolean checkPechSpawn(EntityType<? extends Monster> type, ServerLevelAccessor level, MobSpawnType reason, BlockPos pos, RandomSource random) {
 		if (!Monster.checkMonsterSpawnRules(type, level, reason, pos, random)) return false;
-		Holder<Biome> biome = level.getBiome(pos);
-		if (!biome.is(MAGICAL)) return false;
-		if (!isOverworldDim(level.getLevel()) && !biome.is(MAGICAL_FOREST) && !biome.is(EERIE)) return false;
+		var flavour = thaumcraft.api.world.WorldFlavour.get();
+		if (!flavour.isMagicalArea(level, pos)) return false;
+		if (!isOverworldDim(level.getLevel()) && !flavour.isMagicalForest(level, pos) && !flavour.isEerieArea(level, pos)) return false;
 		return level.getEntitiesOfClass(thaumcraft.common.entities.monster.EntityPech.class, new AABB(pos).inflate(16.0)).size() < 4;
 	}
 

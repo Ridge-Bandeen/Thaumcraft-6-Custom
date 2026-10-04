@@ -69,6 +69,7 @@ final class BlueprintRenderer {
 
 	/** The original's convert/convertTarget: a block, a state, an item's block; a "convert to air" target keeps the source. */
 	private static BlockState state(Object o, Part fallbackSource) {
+		if (o instanceof Part.TagSource t) return t.shown().defaultBlockState();
 		if (o instanceof BlockState s) return s;
 		if (o instanceof Block b) return b.defaultBlockState();
 		if (o instanceof ItemStack stack && stack.getItem() instanceof BlockItem bi) return bi.getBlock().defaultBlockState();

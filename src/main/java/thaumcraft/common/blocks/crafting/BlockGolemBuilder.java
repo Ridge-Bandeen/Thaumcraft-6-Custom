@@ -77,6 +77,23 @@ public class BlockGolemBuilder extends Block implements EntityBlock {
 		if (ignore || level.isClientSide) return;
 		ignore = true;
 		try {
+			if (level.getBlockEntity(press) instanceof thaumcraft.common.tiles.crafting.TileGolemBuilder tile && !tile.origins().isEmpty()) {
+				// put back exactly what it was built from
+				var originals = java.util.Map.copyOf(tile.origins().all());
+				for (var e : originals.entrySet()) {
+					BlockPos p = e.getKey();
+					if (p.equals(press)) continue;
+					if (p.equals(from)) {
+						thaumcraft.common.lib.crafting.MultiblockOrigins.dropAs(level, p, e.getValue());
+						continue;
+					}
+					if (level.getBlockState(p).getBlock() instanceof thaumcraft.common.blocks.misc.BlockPlaceholder) {
+						level.setBlock(p, e.getValue(), Block.UPDATE_ALL);
+					}
+				}
+				if (!press.equals(from) && originals.get(press) != null) level.setBlock(press, originals.get(press), Block.UPDATE_ALL);
+				return;
+			}
 			for (BlockPos p : BlockPos.betweenClosed(press.offset(-1, 0, -1), press.offset(1, 1, 1))) {
 				if (p.equals(from)) continue;
 				BlockState state = level.getBlockState(p);

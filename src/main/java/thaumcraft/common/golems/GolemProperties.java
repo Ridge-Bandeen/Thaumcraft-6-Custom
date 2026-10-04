@@ -176,6 +176,20 @@ public class GolemProperties implements IGolemProperties {
 		return comps.toArray(new ItemStack[0]);
 	}
 
+	/** The tag that may stand in for a golem component: {@code #thaumcraft:golem/<item>} for Thaumcraft's own items
+	 * ({@code golem/plate_iron}), {@code #thaumcraft:golem/<namespace>/<item>} for others. Thaumcraft ships the four
+	 * plates' tags (each holding just its plate); packs can add any. */
+	public static net.minecraft.tags.TagKey<net.minecraft.world.item.Item> componentTag(ItemStack component) {
+		net.minecraft.resources.ResourceLocation id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(component.getItem());
+		String path = id.getNamespace().equals("thaumcraft") ? id.getPath() : id.getNamespace() + "/" + id.getPath();
+		return net.minecraft.tags.ItemTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "golem/" + path));
+	}
+
+	/** Whether {@code candidate} can be used as the component {@code wanted}: the same item, or anything in its tag. */
+	public static boolean componentMatches(ItemStack wanted, ItemStack candidate) {
+		return !candidate.isEmpty() && (ItemStack.isSameItem(wanted, candidate) || candidate.is(componentTag(wanted)));
+	}
+
 	private static void addToListFromComps(ArrayList<ItemStack> comps, Object[] objs, GolemMaterial mat) {
 		for (Object o : objs) {
 			if (o instanceof ItemStack stack) {

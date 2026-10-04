@@ -8,7 +8,11 @@ package thaumcraft.api.crafting;
  *
  */
 public class Part {
-	private Object source; // can be a block, itemstack or material
+	/** A source cell any block in {@code tag} fills; {@code shown} is what the research page draws. */
+	public record TagSource(net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block> tag, net.minecraft.world.level.block.Block shown) {
+	}
+
+	private Object source; // can be a block, a block state or a TagSource
 	private Object target; // anything other than an itemstack will cause an air block to be placed
 	private boolean opp;
 	private int priority;

@@ -84,6 +84,24 @@ public class BlockInfernalFurnace extends Block implements EntityBlock {
 		if (ignore || level.isClientSide) return;
 		ignore = true;
 		try {
+			if (level.getBlockEntity(pos) instanceof thaumcraft.common.tiles.devices.TileInfernalFurnace tile && !tile.origins().isEmpty()) {
+				// put back exactly what it was built from: parts still in place, the emptied grate, and the core
+				for (var e : java.util.Map.copyOf(tile.origins().all()).entrySet()) {
+					BlockPos p = e.getKey();
+					if (p.equals(pos)) continue;
+					if (p.equals(from)) {
+						thaumcraft.common.lib.crafting.MultiblockOrigins.dropAs(level, p, e.getValue());
+						continue;
+					}
+					BlockState now = level.getBlockState(p);
+					if (now.getBlock() instanceof thaumcraft.common.blocks.misc.BlockPlaceholder || now.isAir()) {
+						level.setBlock(p, e.getValue(), Block.UPDATE_ALL);
+					}
+				}
+				BlockState core = tile.origins().at(pos);
+				level.setBlock(pos, core != null ? core : net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState(), Block.UPDATE_ALL);
+				return;
+			}
 			for (BlockPos p : BlockPos.betweenClosed(pos.offset(-1, -1, -1), pos.offset(1, 1, 1))) {
 				if (p.equals(from)) continue;
 				BlockState s = level.getBlockState(p);

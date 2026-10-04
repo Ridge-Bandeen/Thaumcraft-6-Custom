@@ -95,6 +95,34 @@ public class BlockPlaceholder extends Block {
 		}
 	}
 
+	/** A part drops the block it was built from (a tagged-in modded block, say), not just the default one. */
+	@Override
+	protected java.util.List<net.minecraft.world.item.ItemStack> getDrops(BlockState state, net.minecraft.world.level.storage.loot.LootParams.Builder params) {
+		net.minecraft.world.phys.Vec3 origin = params.getOptionalParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ORIGIN);
+		if (origin != null) {
+			Level level = params.getLevel();
+			BlockPos pos = BlockPos.containing(origin);
+			BlockState original = thaumcraft.common.lib.crafting.MultiblockOrigins.takeDrop(level, pos);
+			if (original == null) original = liveOriginal(level, pos);
+			if (original != null && !original.isAir() && !(original.getBlock() instanceof BlockPlaceholder)) {
+				return original.getDrops(params);
+			}
+		}
+		return super.getDrops(state, params);
+	}
+
+	/** While the device still stands (an explosion's drops come first): what it says this part was. */
+	@javax.annotation.Nullable
+	private static BlockState liveOriginal(Level level, BlockPos pos) {
+		for (BlockPos p : BlockPos.betweenClosed(pos.offset(-1, -1, -1), pos.offset(1, 1, 1))) {
+			if (level.getBlockEntity(p) instanceof thaumcraft.common.lib.crafting.MultiblockOrigins.Holder holder) {
+				BlockState s = holder.origins().at(pos);
+				if (s != null) return s;
+			}
+		}
+		return null;
+	}
+
 	private static BlockPos findPress(Level level, BlockPos pos) {
 		for (BlockPos p : BlockPos.betweenClosed(pos.offset(-1, -1, -1), pos.offset(1, 1, 1))) {
 			if (level.getBlockState(p).is(BlocksTC.golemBuilder.get())) return p.immutable();

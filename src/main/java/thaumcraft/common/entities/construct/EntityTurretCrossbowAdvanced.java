@@ -279,30 +279,16 @@ public class EntityTurretCrossbowAdvanced extends EntityTurretCrossbow implement
 		entityData.set(DATA_FLAGS, tag.getByte("targets"));
 	}
 
+	/** Its parts when destroyed: the {@code thaumcraft:entities/dismantle/turret_crossbow_advanced} loot table (the original's chances; Looting
+	 * adds 0.15 to each a level). */
+	@Override
+	protected net.minecraft.resources.ResourceKey<net.minecraft.world.level.storage.loot.LootTable> getDefaultLootTable() {
+		return net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.LOOT_TABLE,
+				net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "entities/dismantle/turret_crossbow_advanced"));
+	}
+
+	/** (Nothing extra: its held tool and parts drop on their own, never the equipment roll.) */
 	@Override
 	protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
-		float b = thaumcraft.common.lib.utils.LootingHelper.level(source) * 0.15f;
-		// the original's own table, replacing the base turret's; Looting raises every chance by 0.15 a level
-		if (random.nextFloat() < 0.2f + b) {
-			spawnAtLocation(new ItemStack(ItemsTC.mindBiothaumic.get()));
-		}
-		if (random.nextFloat() < 0.5f + b) {
-			spawnAtLocation(new ItemStack(ItemsTC.mechanismSimple.get()));
-		}
-		if (random.nextFloat() < 0.5f + b) {
-			spawnAtLocation(new ItemStack(BlocksTC.plankGreatwood.get()));
-		}
-		if (random.nextFloat() < 0.5f + b) {
-			spawnAtLocation(new ItemStack(BlocksTC.plankGreatwood.get()));
-		}
-		if (random.nextFloat() < 0.3f + b) {
-			spawnAtLocation(new ItemStack(ItemsTC.plateBrass.get()));
-		}
-		if (random.nextFloat() < 0.4f + b) {
-			spawnAtLocation(new ItemStack(ItemsTC.plateIron.get()));
-		}
-		if (random.nextFloat() < 0.4f + b) {
-			spawnAtLocation(new ItemStack(ItemsTC.plateIron.get()));
-		}
 	}
 }

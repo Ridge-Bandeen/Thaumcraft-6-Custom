@@ -33,13 +33,35 @@ public final class ThaumcraftDustTriggers {
 	public record Blueprint(String research, Part[][][] parts, ItemStack display, List<ItemStack> ingredients) {
 	}
 
+	/** Blueprint cells any block in a {@code thaumcraft:multiblock/*} tag fills - defaults are the original's blocks. */
+	private static Part.TagSource multiblockTag(String name, Block shown) {
+		return new Part.TagSource(net.minecraft.tags.BlockTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "multiblock/" + name)), shown);
+	}
+
+	private static final Part.TagSource INFERNAL_BRICKS = multiblockTag("infernal_furnace_bricks", Blocks.NETHER_BRICKS);
+	private static final Part.TagSource INFERNAL_OBSIDIAN = multiblockTag("infernal_furnace_obsidian", Blocks.OBSIDIAN);
+	private static final Part.TagSource INFERNAL_GRATE = multiblockTag("infernal_furnace_grate", Blocks.IRON_BARS);
+	private static final Part.TagSource INFERNAL_CORE = multiblockTag("infernal_furnace_core", Blocks.LAVA);
+	private static final Part.TagSource PRESS_BARS = multiblockTag("golem_press_bars", Blocks.IRON_BARS);
+	private static final Part.TagSource PRESS_CAULDRON = multiblockTag("golem_press_cauldron", Blocks.CAULDRON);
+	private static final Part.TagSource PRESS_ANVIL = multiblockTag("golem_press_anvil", Blocks.ANVIL);
+
+	/** A blueprint's material stack for a tag cell: the default block, its tooltip naming the tag. */
+	private static ItemStack material(net.minecraft.world.item.Item item, int count, Part.TagSource source) {
+		ItemStack stack = new ItemStack(item, count);
+		stack.set(net.minecraft.core.component.DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(List.of(
+				net.minecraft.network.chat.Component.translatable("tc.blueprint.anyof", "#" + source.tag().location()))));
+		return stack;
+	}
+
 	/** The original's multiblock catalog, by its (lower-cased) research recipe key. */
 	public static final Map<String, Blueprint> BLUEPRINTS = new LinkedHashMap<>();
 
 	public static void register() {
 		BLUEPRINTS.clear();
 		BLUEPRINTS.put("thaumcraft:infernalfurnace", new Blueprint("INFERNALFURNACE", infernalFurnaceBlueprint(), null,
-				List.of(new ItemStack(Blocks.NETHER_BRICKS, 12), new ItemStack(Blocks.OBSIDIAN, 12), new ItemStack(Blocks.IRON_BARS), new ItemStack(net.minecraft.world.item.Items.LAVA_BUCKET))));
+				List.of(material(Blocks.NETHER_BRICKS.asItem(), 12, INFERNAL_BRICKS), material(Blocks.OBSIDIAN.asItem(), 12, INFERNAL_OBSIDIAN),
+						material(Blocks.IRON_BARS.asItem(), 1, INFERNAL_GRATE), material(net.minecraft.world.item.Items.LAVA_BUCKET, 1, INFERNAL_CORE))));
 		BLUEPRINTS.put("thaumcraft:infusionaltar", new Blueprint("INFUSION", infusionAltarBlueprint(), null,
 				List.of(new ItemStack(BlocksTC.stoneArcane.get(), 8), new ItemStack(BlocksTC.pedestal.get()), new ItemStack(BlocksTC.infusionMatrix.get()))));
 		BLUEPRINTS.put("thaumcraft:infusionaltarancient", new Blueprint("INFUSIONANCIENT", infusionAltarAncientBlueprint(), null,
@@ -49,7 +71,8 @@ public final class ThaumcraftDustTriggers {
 		BLUEPRINTS.put("thaumcraft:thaumatorium", new Blueprint("THAUMATORIUM", thaumatoriumBlueprint(), null,
 				List.of(new ItemStack(BlocksTC.metalAlchemical.get(), 2), new ItemStack(BlocksTC.crucible.get()))));
 		BLUEPRINTS.put("thaumcraft:golempress", new Blueprint("MINDCLOCKWORK", golemPressBlueprint(), new ItemStack(BlocksTC.golemBuilder.get()),
-				List.of(new ItemStack(Blocks.IRON_BARS), new ItemStack(Blocks.CAULDRON), new ItemStack(Blocks.PISTON), new ItemStack(Blocks.ANVIL), new ItemStack(BlocksTC.tableStone.get()))));
+				List.of(material(Blocks.IRON_BARS.asItem(), 1, PRESS_BARS), material(Blocks.CAULDRON.asItem(), 1, PRESS_CAULDRON), new ItemStack(Blocks.PISTON),
+						material(Blocks.ANVIL.asItem(), 1, PRESS_ANVIL), new ItemStack(BlocksTC.tableStone.get()))));
 
 		IDustTrigger.registerDustTrigger(new DustTriggerSimple("!gotdream", Blocks.BOOKSHELF, new ItemStack(thaumcraft.api.items.ItemsTC.thaumonomicon.get())));
 		IDustTrigger.registerDustTrigger(new DustTriggerSimple("!gotdream", net.minecraft.tags.BlockTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("c", "bookshelves")),
@@ -78,10 +101,10 @@ public final class ThaumcraftDustTriggers {
 	 * exact blueprint (the iron-bars slot silently never converted with a {@code null} target instead).
 	 */
 	private static Part[][][] infernalFurnaceBlueprint() {
-		Part nb = new Part(Blocks.NETHER_BRICKS, new ItemStack(BlocksTC.placeholderNetherbrick.get()));
-		Part ob = new Part(Blocks.OBSIDIAN, new ItemStack(BlocksTC.placeholderObsidian.get()));
-		Part ib = new Part(Blocks.IRON_BARS, "AIR");
-		Part la = new Part((Block) Blocks.LAVA, BlocksTC.infernalFurnace.get(), true);
+		Part nb = new Part(INFERNAL_BRICKS, new ItemStack(BlocksTC.placeholderNetherbrick.get()));
+		Part ob = new Part(INFERNAL_OBSIDIAN, new ItemStack(BlocksTC.placeholderObsidian.get()));
+		Part ib = new Part(INFERNAL_GRATE, "AIR");
+		Part la = new Part(INFERNAL_CORE, BlocksTC.infernalFurnace.get(), true);
 		return new Part[][][] {
 				{ { nb, ob, nb }, { ob, null, ob }, { nb, ob, nb } },
 				{ { nb, ob, nb }, { ob, la, ob }, { nb, ib, nb } },
@@ -213,12 +236,12 @@ public final class ThaumcraftDustTriggers {
 	 * forwarding machinery is needed.
 	 */
 	private static Part[][][] golemPressBlueprint() {
-		Part bars = new Part(Blocks.IRON_BARS, new ItemStack(BlocksTC.placeholderBars.get()));
-		Part cauldron = new Part(Blocks.CAULDRON, new ItemStack(BlocksTC.placeholderCauldron.get()));
+		Part bars = new Part(PRESS_BARS, new ItemStack(BlocksTC.placeholderBars.get()));
+		Part cauldron = new Part(PRESS_CAULDRON, new ItemStack(BlocksTC.placeholderCauldron.get()));
 		Part piston = new Part(
 				Blocks.PISTON.defaultBlockState().setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.UP),
 				BlocksTC.golemBuilder.get());
-		Part anvil = new Part(Blocks.ANVIL, new ItemStack(BlocksTC.placeholderAnvil.get()));
+		Part anvil = new Part(PRESS_ANVIL, new ItemStack(BlocksTC.placeholderAnvil.get()));
 		Part table = new Part(BlocksTC.tableStone.get(), new ItemStack(BlocksTC.placeholderTable.get()));
 		return new Part[][][] {
 				{ { null, null }, { bars, null } },

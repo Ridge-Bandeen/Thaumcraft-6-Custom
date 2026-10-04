@@ -1,5 +1,13 @@
 # Thaumcraft 1.21.1 Port — TODO archive
 
+## Closed 2026-10-04 (addon hooks, batch 3 - see COMPAT_HOOKS.md)
+
+- Taint surface tags + `TaintHooks` decay result; `LampGrowthEvent`, `LampBreedEvent`, `GolemButcherTargetEvent`.
+- Multiblock blueprint tag cells (`Part.TagSource`, `#thaumcraft:multiblock/*`); formed Infernal Furnace / Golem Press
+  record their original blocks (`MultiblockOrigins`) and restore them on teardown; broken parts drop their originals.
+- Golem components accept `#thaumcraft:golem/*` tags; turret/bore dismantle drops are loot tables.
+- `WorldFlavour` (aura, crystal aspects, magical / Magical Forest / Eerie checks), default = biomes.
+
 ## Closed 2026-10-03 (addon hooks, batch 2 - see COMPAT_HOOKS.md)
 
 - Infernal Furnace: `thaumcraft:infernal_smelting` recipe type, `thaumcraft:smelting_bonus` data map (the original's

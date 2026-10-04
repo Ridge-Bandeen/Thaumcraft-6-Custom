@@ -10,10 +10,7 @@ in a client are tracked in the `thaumcraft-ui-visual-parity-checklist` memory, n
   over compiled classes): devices, mobs, drops and golems done 2026-10-03 (see archive). Left: foci and their
   entities, items (caster vis draw, armour, phial/alembic, resonator, void tools), research/scans, worldgen, GUIs
   (Focal Manipulator, focus pouch, hand mirror, seal config), client FX classes.
-- **Next up - ThaumCompat hooks** (see `COMPAT_HOOKS.md`): batches 1 and 2 done 2026-10-03. Batch 3 = #4 + #14 (block
-  tags in multiblock blueprints with stored teardown states, golem components as tagged ingredients, construct
-  dismantle loot tables; GUIs/research show the default and name the tag on hover), #7 world-flavour provider,
-  #11 taint tags + decay hook, #12 lamp/butcher events.
+- ThaumCompat hooks: all of `COMPAT_HOOKS.md` (#1-#17) done 2026-10-04; watch that file for new requests.
 - Golem renderer fidelity: per-part model classes (wheel spin from `GolemLegWheels.ani`, claws, breakers, darts,
   hauler), head look, idle sway, arm pose when carrying, the base model's stub arms, per-group textures.
 - Void Siphon's void streaks (the original's FXVoidStream, an ender-shader stream from each rift).

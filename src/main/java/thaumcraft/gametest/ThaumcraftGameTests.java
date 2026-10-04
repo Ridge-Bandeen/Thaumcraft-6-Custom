@@ -10534,9 +10534,11 @@ public class ThaumcraftGameTests {
 		// first structurally-matching task found is ours (a real cross-test-interference bug caught here).
 		boolean foundFetch = false;
 		thaumcraft.api.golems.tasks.Task fetchTask = null;
-		for (int i = 0; i < 30 && !foundFetch; i++) {
-			// re-posted every tick, as a Stock seal re-posts its own every 20: the Provider (as the original) drops
-			// unanswered requests every 100 ticks, which can land just before it first looks
+		// 60 ticks: the Provider looks every 20 ticks, and on every 100th it first drops unanswered requests (as the
+		// original) - 30 could hold a single look that was also a pruning tick (a 1-in-10 flake); 60 always holds an
+		// unpruned look.
+		for (int i = 0; i < 60 && !foundFetch; i++) {
+			// re-posted every tick, as a Stock seal re-posts its own every 20
 			thaumcraft.api.golems.GolemHelper.requestProvisioning(helper.getLevel(), destChestAbs, net.minecraft.core.Direction.UP,
 					new ItemStack(net.minecraft.world.item.Items.NETHERITE_INGOT, 4));
 			sealEntity.tickSealEntity(helper.getLevel());
@@ -18277,6 +18279,96 @@ public class ThaumcraftGameTests {
 		}
 		int age = helper.getBlockState(cropPos).getValue(net.minecraft.world.level.block.SugarCaneBlock.AGE);
 		helper.assertTrue(age == 0, "a cancelled growth event must leave the cane as it was, age " + age);
+		helper.succeed();
+	}
+
+	// --------------------------------------------------------------------------------------------------
+	// Addon hooks, batch 3 (COMPAT_HOOKS.md #4, #14).
+	// --------------------------------------------------------------------------------------------------
+
+	/** A formed Infernal Furnace remembers what it was built from and puts exactly that back - here a shell block the
+	 * record says was red nether brick (as a tagged-in block would be) comes back as red nether brick. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void infernalFurnaceTeardownRestoresWhatItWasBuiltFrom(GameTestHelper helper) {
+		BlockPos base = new BlockPos(2, 1, 2);
+		for (int y = 0; y < 3; y++) {
+			for (int x = 0; x < 3; x++) {
+				for (int z = 0; z < 3; z++) {
+					boolean corner = (x == 0 || x == 2) && (z == 0 || z == 2);
+					net.minecraft.world.level.block.Block block = corner ? Blocks.NETHER_BRICKS : Blocks.OBSIDIAN;
+					if (x == 1 && z == 1 && y == 1) block = Blocks.LAVA;
+					if (x == 1 && z == 1 && y == 2) block = null;
+					if (x == 2 && z == 1 && y == 1) block = Blocks.IRON_BARS;
+					if (block != null) helper.setBlock(base.offset(x, y, z), block.defaultBlockState());
+				}
+			}
+		}
+		BlockPos lavaPos = base.offset(1, 1, 1);
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		forceResearch(player, "INFERNALFURNACE");
+		useSalisMundusOn(helper, player, lavaPos);
+		tickSchedulerPastDustTriggerDelay(helper);
+		helper.assertBlockPresent(BlocksTC.infernalFurnace.get(), lavaPos);
+		thaumcraft.common.tiles.devices.TileInfernalFurnace tile = helper.getBlockEntity(lavaPos);
+		BlockPos recorded = helper.absolutePos(base.offset(0, 1, 0));
+		helper.assertTrue(tile.origins().at(recorded) != null && tile.origins().at(recorded).is(Blocks.NETHER_BRICKS),
+				"the furnace should have recorded the nether bricks it was built from, found " + tile.origins().at(recorded));
+		tile.origins().all().put(recorded, Blocks.RED_NETHER_BRICKS.defaultBlockState());
+		player.gameMode.destroyBlock(helper.absolutePos(base.offset(2, 2, 2)));
+		helper.assertBlockPresent(Blocks.RED_NETHER_BRICKS, base.offset(0, 1, 0));
+		helper.assertBlockPresent(Blocks.OBSIDIAN, base.offset(0, 1, 1));
+		helper.assertBlockPresent(Blocks.IRON_BARS, base.offset(2, 1, 1));
+		helper.assertBlockPresent(Blocks.LAVA, lavaPos);
+		helper.succeed();
+	}
+
+	/** Golem components: the four plates have #thaumcraft:golem/plate_* tags, and anything in a component's tag will do. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void golemComponentTagsStandInForTheirComponent(GameTestHelper helper) {
+		ItemStack plate = new ItemStack(ItemsTC.plateIron.get());
+		helper.assertTrue(thaumcraft.common.golems.GolemProperties.componentTag(plate).location().toString().equals("thaumcraft:golem/plate_iron"),
+				"the iron plate's component tag should be thaumcraft:golem/plate_iron");
+		helper.assertTrue(plate.is(thaumcraft.common.golems.GolemProperties.componentTag(plate)), "the plate should be in its own tag by default");
+		helper.assertTrue(thaumcraft.common.golems.GolemProperties.componentMatches(plate, plate.copy()), "the plate itself matches");
+		helper.assertFalse(thaumcraft.common.golems.GolemProperties.componentMatches(plate, new ItemStack(ItemsTC.plateBrass.get())), "another plate doesn't");
+		helper.succeed();
+	}
+
+	/** The constructs' dismantle drops are loot tables now - check they exist. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void constructDismantleLootTablesExist(GameTestHelper helper) {
+		for (String name : new String[] { "turret_crossbow", "turret_crossbow_advanced", "arcane_bore" }) {
+			var key = net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.LOOT_TABLE,
+					net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "entities/dismantle/" + name));
+			var table = helper.getLevel().getServer().reloadableRegistries().getLootTable(key);
+			helper.assertTrue(table != net.minecraft.world.level.storage.loot.LootTable.EMPTY, "thaumcraft:entities/dismantle/" + name + " should exist");
+		}
+		helper.succeed();
+	}
+
+	/** World flavour: the default reads biomes (the test world is plains: some aura, not Eerie), and an addon's flavour
+	 * replaces it. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void worldFlavourDefaultsToBiomesAndCanBeReplaced(GameTestHelper helper) {
+		BlockPos abs = helper.absolutePos(BlockPos.ZERO);
+		thaumcraft.api.world.WorldFlavour flavour = thaumcraft.api.world.WorldFlavour.get();
+		helper.assertTrue(flavour == thaumcraft.api.world.WorldFlavour.BIOMES, "the default flavour should be the biome one");
+		float aura = flavour.auraModifier(helper.getLevel(), new net.minecraft.world.level.ChunkPos(abs));
+		helper.assertTrue(aura > 0.0f && aura <= 1.0f, "a plains chunk should have some aura, got " + aura);
+		helper.assertFalse(flavour.isEerieArea(helper.getLevel(), abs), "plains is not Eerie");
+		thaumcraft.api.world.WorldFlavour custom = new thaumcraft.api.world.WorldFlavour() {
+			public float auraModifier(net.minecraft.world.level.Level level, net.minecraft.world.level.ChunkPos chunk) { return 0.25f; }
+			public Aspect randomAspect(net.minecraft.world.level.LevelAccessor level, BlockPos pos, net.minecraft.util.RandomSource random) { return Aspect.ORDER; }
+			public boolean isMagicalArea(net.minecraft.world.level.LevelAccessor level, BlockPos pos) { return true; }
+			public boolean isMagicalForest(net.minecraft.world.level.LevelAccessor level, BlockPos pos) { return false; }
+			public boolean isEerieArea(net.minecraft.world.level.LevelAccessor level, BlockPos pos) { return true; }
+		};
+		thaumcraft.api.world.WorldFlavour.set(custom);
+		try {
+			helper.assertTrue(thaumcraft.api.world.WorldFlavour.get().isEerieArea(helper.getLevel(), abs), "the addon's flavour should answer now");
+		} finally {
+			thaumcraft.api.world.WorldFlavour.set(thaumcraft.api.world.WorldFlavour.BIOMES);
+		}
 		helper.succeed();
 	}
 }

@@ -141,6 +141,7 @@ public class DustTriggerMultiblock implements IDustTrigger {
 	}
 
 	private static boolean sourceMatches(Object source, BlockState real) {
+		if (source instanceof Part.TagSource tagSource) return real.is(tagSource.tag());
 		if (source instanceof Block block) return real.is(block);
 		if (source instanceof BlockState state) return real.equals(state);
 		return false;
@@ -188,6 +189,10 @@ public class DustTriggerMultiblock implements IDustTrigger {
 					new net.minecraft.world.SimpleContainer(1));
 		}
 		BlockPos anchor = pos.offset(placement.xOffset, placement.yOffset, placement.zOffset);
+		// what each converted cell was, so taking the device apart puts exactly that back (see MultiblockOrigins)
+		java.util.Map<BlockPos, BlockState> originals = new java.util.HashMap<>();
+		for (BlockPos p : convertedCells(pos, placement)) originals.put(p.immutable(), level.getBlockState(p));
+		MultiblockOrigins.record(level, originals);
 		for (int y = 0; y < ySize; y++) {
 			Matrix matrix = new Matrix(blueprint[y]);
 			matrix.Rotate90DegRight(3 - placement.facing.get2DDataValue());
@@ -241,7 +246,8 @@ public class DustTriggerMultiblock implements IDustTrigger {
 		// verifying this exact blueprint: a neighboring cell's own conversion earlier in the same delayed
 		// batch could reshape iron bars' connection state before its own swap ran, silently failing an
 		// exact-state match against a now-stale snapshot.
-		Object source = cell.getSource();
+		// (a tag cell matches by the block actually standing there, which the trigger already checked is in the tag)
+		Object source = cell.getSource() instanceof Part.TagSource ? level.getBlockState(p3).getBlock() : cell.getSource();
 		ToolEvents.addBlockedBlock(level, p3);
 		ItemStack finalTargetItem = targetItem;
 		BlockState finalTargetState = targetState;

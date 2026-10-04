@@ -56,7 +56,21 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * getUpdateTag}/{@code getUpdatePacket}), matching the same "new sync infra before new renderer" shape
  * several other tile-renderer restorations this session already needed.
  */
-public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEssentiaTransport, thaumcraft.api.casters.IInteractWithCaster {
+public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEssentiaTransport, thaumcraft.api.casters.IInteractWithCaster,
+		thaumcraft.common.lib.crafting.MultiblockOrigins.Holder {
+
+	/** The blocks the press was built from (see MultiblockOrigins). */
+	private final thaumcraft.common.lib.crafting.MultiblockOrigins.Store origins = new thaumcraft.common.lib.crafting.MultiblockOrigins.Store();
+	private boolean originsClaimed;
+
+	@Override
+	public thaumcraft.common.lib.crafting.MultiblockOrigins.Store origins() {
+		if (!originsClaimed && level != null && !level.isClientSide) {
+			originsClaimed = true;
+			origins.claim(level, worldPosition);
+		}
+		return origins;
+	}
 
 	private final ItemStackHandler items = new ItemStackHandler(1) {
 		@Override
@@ -149,7 +163,7 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 	}
 
 	private static boolean matches(ItemStack wanted, ItemStack candidate) {
-		return !candidate.isEmpty() && ItemStack.isSameItem(wanted, candidate);
+		return GolemProperties.componentMatches(wanted, candidate);
 	}
 
 	/** Every side but the top, as the original. */
@@ -212,6 +226,7 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 			tile.tickPress(level, pos);
 			return;
 		}
+		tile.origins();
 		tile.ticks++;
 		if (tile.ticks % 5 != 0) {
 			return;
@@ -373,6 +388,7 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 		tag.putInt("Cost", cost);
 		tag.putInt("MaxCost", maxCost);
 		tag.put("Items", items.serializeNBT(registries));
+		origins.save(tag, getBlockPos());
 	}
 
 	@Override
@@ -384,6 +400,7 @@ public class TileGolemBuilder extends BlockEntity implements MenuProvider, IEsse
 		if (tag.contains("Items")) {
 			items.deserializeNBT(registries, tag.getCompound("Items"));
 		}
+		origins.load(tag, getBlockPos(), registries);
 	}
 
 	/** Real block-entity sync wiring, added alongside the real press-ram animation restoration - {@link

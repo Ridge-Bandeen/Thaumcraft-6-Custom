@@ -52,7 +52,20 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  * {@code thaumcraft:smelting_bonus} item data map (the original's {@code addSmeltingBonus} table, keyed on the item
  * being smelted, rolled once per bellows plus one).
  */
-public class TileInfernalFurnace extends BlockEntity {
+public class TileInfernalFurnace extends BlockEntity implements thaumcraft.common.lib.crafting.MultiblockOrigins.Holder {
+
+	/** The blocks the furnace was built from (see MultiblockOrigins). */
+	private final thaumcraft.common.lib.crafting.MultiblockOrigins.Store origins = new thaumcraft.common.lib.crafting.MultiblockOrigins.Store();
+	private boolean originsClaimed;
+
+	@Override
+	public thaumcraft.common.lib.crafting.MultiblockOrigins.Store origins() {
+		if (!originsClaimed && level != null && !level.isClientSide) {
+			originsClaimed = true;
+			origins.claim(level, worldPosition);
+		}
+		return origins;
+	}
 
 	private final ItemStackHandler inventory = new ItemStackHandler(32) {
 		@Override
@@ -71,6 +84,7 @@ public class TileInfernalFurnace extends BlockEntity {
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TileInfernalFurnace tile) {
 		if (level.isClientSide) return;
+		tile.origins();
 
 		boolean wasCooking = false;
 		if (tile.cookTime > 0) {
@@ -243,6 +257,7 @@ public class TileInfernalFurnace extends BlockEntity {
 		tag.put("inventory", inventory.serializeNBT(registries));
 		tag.putShort("CookTime", (short) cookTime);
 		tag.putShort("SpeedyTime", (short) speedyTime);
+		origins.save(tag, getBlockPos());
 	}
 
 	@Override
@@ -251,6 +266,7 @@ public class TileInfernalFurnace extends BlockEntity {
 		if (tag.contains("inventory")) inventory.deserializeNBT(registries, tag.getCompound("inventory"));
 		cookTime = tag.getShort("CookTime");
 		speedyTime = tag.getShort("SpeedyTime");
+		origins.load(tag, getBlockPos(), registries);
 	}
 
 	public ItemStackHandler getItemHandler() {

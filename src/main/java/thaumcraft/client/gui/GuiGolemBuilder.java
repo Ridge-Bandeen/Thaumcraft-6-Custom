@@ -194,7 +194,11 @@ public class GuiGolemBuilder extends AbstractContainerScreen<GolemBuilderMenu> {
 			int i = 1;
 			int q = 0;
 			for (ItemStack stack : components) {
-				compWidgets.add(addRenderableWidget(new HoverButton(leftPos + 152 + q * 16, topPos + 24 + 16 * i, stack.getHoverName(), null, stack, 0xFFFFFF)));
+				// a component a tag can stand in for says so (see GolemProperties#componentTag)
+				var tag = thaumcraft.common.golems.GolemProperties.componentTag(stack);
+				boolean tagged = net.minecraft.core.registries.BuiltInRegistries.ITEM.getTag(tag).map(set -> set.size() > 0).orElse(false);
+				compWidgets.add(addRenderableWidget(new HoverButton(leftPos + 152 + q * 16, topPos + 24 + 16 * i, stack.getHoverName(),
+						tagged ? Component.translatable("tc.blueprint.anyof", "#" + tag.location()) : null, stack, 0xFFFFFF)));
 				if (++i > 3) {
 					i = 0;
 					++q;
@@ -210,7 +214,7 @@ public class GuiGolemBuilder extends AbstractContainerScreen<GolemBuilderMenu> {
 	private boolean carrying(ItemStack wanted) {
 		int count = 0;
 		for (ItemStack s : minecraft.player.getInventory().items) {
-			if (!s.isEmpty() && ItemStack.isSameItem(wanted, s)) count += s.getCount();
+			if (thaumcraft.common.golems.GolemProperties.componentMatches(wanted, s)) count += s.getCount();
 		}
 		return count >= wanted.getCount();
 	}
