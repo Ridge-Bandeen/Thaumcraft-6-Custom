@@ -26,8 +26,8 @@ import thaumcraft.common.tiles.crafting.TileFocalManipulator;
  * vanilla's plain {@link Slot} (which wants a {@code Container}, not an {@code IItemHandler}) - first real
  * use of that NeoForge helper in this port.
  *
- * Drops the original's secondary duplicate-hotbar display panel (a pure UI convenience, not core
- * functionality). The "craft" button is real ({@link #clickMenuButton}, button id 0) - reuses vanilla's
+ * As the original the player inventory sits in a side panel left of the screen: the main inventory as three columns
+ * of nine, the hotbar as a 3x3 block above it. The "craft" button is real ({@link #clickMenuButton}, button id 0) - reuses vanilla's
  * own generic container-button-click packet (the same mechanism an enchanting table's buttons use)
  * rather than a bespoke payload, since it only ever needs to carry one int. The node-graph itself still
  * has no UI (needs the canvas screen and its own client->server packet, a later commit in this same
@@ -44,12 +44,19 @@ public class FocalManipulatorMenu extends AbstractContainerMenu {
 	private final TileFocalManipulator tile;
 	private final ContainerLevelAccess access;
 
-	/** Client-side placeholder constructor - {@code IMenuTypeExtension} always needs one of these (the
-	 * client never has the real {@link TileFocalManipulator}; slot contents arrive via vanilla's own
-	 * menu-sync afterward), same precedent {@code ArcaneWorkbenchMenu}'s own no-arg-tile overload already
-	 * established. */
-	public FocalManipulatorMenu(int containerId, Inventory playerInventory) {
-		this(containerId, playerInventory, new ItemStackHandler(1), ContainerLevelAccess.NULL, null);
+	/** Client side: the block's position comes with the open-menu packet, so the screen can read the client copy of the
+	 * tile (its synced node tree, name and vis) as the original's screen read its table. */
+	public FocalManipulatorMenu(int containerId, Inventory playerInventory, net.minecraft.core.BlockPos pos) {
+		this(containerId, playerInventory, handlerOf(clientTile(playerInventory, pos)), ContainerLevelAccess.NULL, clientTile(playerInventory, pos));
+	}
+
+	private static IItemHandler handlerOf(@javax.annotation.Nullable TileFocalManipulator tile) {
+		return tile != null ? tile.getItemHandler() : new ItemStackHandler(1);
+	}
+
+	@javax.annotation.Nullable
+	private static TileFocalManipulator clientTile(Inventory playerInventory, net.minecraft.core.BlockPos pos) {
+		return playerInventory.player.level().getBlockEntity(pos) instanceof TileFocalManipulator t ? t : null;
 	}
 
 	public FocalManipulatorMenu(int containerId, Inventory playerInventory, TileFocalManipulator tile) {
@@ -63,13 +70,15 @@ public class FocalManipulatorMenu extends AbstractContainerMenu {
 
 		addSlot(new SlotItemHandler(focusSlotHandler, 0, 31, 191));
 
-		for (int row = 0; row < 3; row++) {
-			for (int col = 0; col < 9; col++) {
-				addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 9; j++) {
+				addSlot(new Slot(playerInventory, j + i * 9 + 9, i * 18 - 62, 64 + j * 18));
 			}
 		}
-		for (int col = 0; col < 9; col++) {
-			addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 3; j++) {
+				addSlot(new Slot(playerInventory, i + j * 3, i * 18 - 62, j * 18 + 7));
+			}
 		}
 	}
 
@@ -90,7 +99,7 @@ public class FocalManipulatorMenu extends AbstractContainerMenu {
 	 * mid-charge abort case. */
 	@Override
 	public boolean clickMenuButton(Player player, int id) {
-		if (id == 0 && tile != null) {
+		if (id == 0 && tile != null && !player.level().isClientSide) {
 			boolean started = tile.startCraft(player);
 			if (!started) {
 				Level level = tile.getLevel();

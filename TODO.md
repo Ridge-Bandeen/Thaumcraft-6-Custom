@@ -8,8 +8,7 @@ in a client are tracked in the `thaumcraft-ui-visual-parity-checklist` memory, n
 
 - Parity sweep of the "simplified"/"stand-in"/"cut" doc notes (list: `grep -iE "simplif|stand-in|cut|not ported"`
   over compiled classes): devices, mobs, drops, golems, foci, items/tools and events done (see archive). Left:
-  the Focal Manipulator screen (the original's 2D node graph: drag-scroll canvas, split branches, per-node setting
-  spinners, right-click remove, crystal/xp/vis cost panel), seal config screen, client FX classes.
+  seal config screen, client FX classes.
 - ThaumCompat hooks: all of `COMPAT_HOOKS.md` (#1-#17) done 2026-10-04; watch that file for new requests.
 - Golem renderer fidelity: per-part model classes (wheel spin from `GolemLegWheels.ani`, claws, breakers, darts,
   hauler), head look, idle sway, arm pose when carrying, the base model's stub arms, per-group textures.

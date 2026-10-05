@@ -1,5 +1,22 @@
 # Thaumcraft 1.21.1 Port — TODO archive
 
+## Closed 2026-10-04 (Focal Manipulator screen)
+
+- The original screen rebuilt: a node tree on a drag-scrolled canvas (root on top, sockets showing what their parent
+  feeds), parts palette of what the selected socket can take (researched, exclusivity rules, sorted media / effects /
+  modifiers) with wheel and bar scrolling, Split branches with the original layout, right-click clears a part and its
+  subtree, setting spinners for the selected part, part tooltips (complexity with the repeat multiplier, effect
+  multiplier, damage / healing), cost panel (complexity vs. limit, XP, vis or vis remaining, vis per cast, crystals with
+  tooltips), Start Crafting lit only when valid, name field, clack / rollover sounds. Every change is sent to the
+  server at once (as the original). Player inventory in the original's side panel (menu slots moved); the screen reads
+  the client tile through the block position sent with the menu.
+- Found by its test: the manipulator's crystal check counted the inventory twice (Inventory#clearOrCountMatchingItems's
+  third argument is the crafting grid), so a build started with half the crystals it needs. Fixed.
+- Seal screen: tab switches reach the server again (the filter's ghost slots only live on the filter tab, as the
+  original built them), plain seals get the priority + tags tabs, colour name on hovering the swatch, "You own this
+  seal", the original label colour. Golem colours number as the original (1 = white ... 16 = black); the port had them
+  reversed, and its seal screen swatch disagreed with the in-world seal tint.
+
 ## Closed 2026-10-04 (items and tools)
 
 - Boots of the Traveller: one charge per minute of running ("energy"), whole-block step-up until you sneak, ground

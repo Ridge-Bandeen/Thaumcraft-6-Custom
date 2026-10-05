@@ -508,7 +508,7 @@ public class EntityThaumcraftGolem extends TamableAnimal implements IGolemAPI, R
 			return InteractionResult.SUCCESS;
 		}
 		if (held.getItem() instanceof DyeItem dye) {
-			setGolemColor((byte) (16 - dye.getDyeColor().getId()));
+			setGolemColor((byte) (1 + dye.getDyeColor().getId())); // as the original: 1 = white ... 16 = black
 			held.shrink(1);
 			playSound(thaumcraft.common.registry.ThaumcraftSounds.ZAP.get(), 1.0f, 1.0f);
 			player.swing(hand, true);

@@ -11,7 +11,8 @@ import net.minecraft.resources.ResourceLocation;
 import thaumcraft.Thaumcraft;
 
 /**
- * The first client-bound-the-other-way (client->server) packet this port has needed - every packet shipped
+ * Sent on every change at the Focal Manipulator screen, as the original's PacketFocusNodesToServer and
+ * PacketFocusNameToServer were. The first client-bound-the-other-way (client->server) packet this port has needed - every packet shipped
  * so far ({@code PacketFXSlash}/{@code PacketFXScanSource}/{@code PacketFXBlockBamf}) only ever flows
  * server->client. Saves a player's assembled node graph (built at a
  * {@link thaumcraft.common.tiles.crafting.TileFocalManipulator}'s future canvas screen - see that class's

@@ -18673,4 +18673,65 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(player.getInventory().getItem(2) == pouch, "number-key swaps should do nothing while the pouch is open");
 		helper.succeed();
 	}
+
+	/** The Focal Manipulator's inventory is the original's side panel: main inventory in three columns, the hotbar as a 3x3. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focalManipulatorInventoryIsTheSidePanel(GameTestHelper helper) {
+		BlockPos pos = new BlockPos(1, 2, 1);
+		helper.setBlock(pos, thaumcraft.api.blocks.BlocksTC.focalManipulator.get());
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(1, 2, 2)));
+		var tile = (thaumcraft.common.tiles.crafting.TileFocalManipulator) helper.getBlockEntity(pos);
+		var menu = new thaumcraft.common.container.FocalManipulatorMenu(0, player.getInventory(), tile);
+		var first = menu.getSlot(1);
+		helper.assertTrue(first.getContainerSlot() == 9 && first.x == -62 && first.y == 64, "slot 1 should be inventory 9 at (-62, 64), was " + first.getContainerSlot() + " at " + first.x + "," + first.y);
+		var hot = menu.getSlot(29);
+		helper.assertTrue(hot.getContainerSlot() == 3 && hot.x == -62 && hot.y == 25, "slot 29 should be hotbar 3 at (-62, 25), was " + hot.getContainerSlot() + " at " + hot.x + "," + hot.y);
+		helper.assertTrue(menu.slots.size() == 37, "1 focus slot + 36 inventory slots");
+		helper.succeed();
+	}
+
+	/** The screen's crystal check counts single-aspect crystals the player carries. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void focalManipulatorCrystalCheck(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(1, 2, 1)));
+		player.getInventory().clearContent();
+		player.getInventory().add(thaumcraft.common.tiles.crafting.TileFocalManipulator.makeCrystal(thaumcraft.api.aspects.Aspect.FIRE, 2));
+		helper.assertTrue(thaumcraft.common.tiles.crafting.TileFocalManipulator.hasCrystal(player, thaumcraft.api.aspects.Aspect.FIRE, 2), "two Ignis crystals carried");
+		helper.assertTrue(!thaumcraft.common.tiles.crafting.TileFocalManipulator.hasCrystal(player, thaumcraft.api.aspects.Aspect.FIRE, 3), "not three");
+		helper.assertTrue(!thaumcraft.common.tiles.crafting.TileFocalManipulator.hasCrystal(player, thaumcraft.api.aspects.Aspect.WATER, 1), "no Aqua");
+		helper.succeed();
+	}
+
+	/** The seal screen's tabs reach the server, as the original's did: the filter's ghost slots only work on the filter tab. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void sealFilterSlotsOnlyLiveOnTheFilterTab(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(1, 2, 1)));
+		var seal = new thaumcraft.common.golems.seals.SealEntity(new thaumcraft.api.golems.seals.SealPos(helper.absolutePos(new BlockPos(1, 1, 1)),
+				net.minecraft.core.Direction.UP), new thaumcraft.common.golems.seals.SealPickup());
+		seal.setOwner(player.getStringUUID());
+		var menu = new thaumcraft.common.container.SealConfigMenu(0, player.getInventory(), seal);
+		helper.assertTrue(menu.getCategory() == thaumcraft.api.golems.seals.ISealGui.CAT_AREA && !menu.getSlot(0).isActive(),
+				"the Pickup seal opens on its first tab (area) with the ghost slots off");
+		menu.clickMenuButton(player, 1);
+		helper.assertTrue(menu.getCategory() == thaumcraft.api.golems.seals.ISealGui.CAT_FILTER && menu.getSlot(0).isActive(),
+				"tab index 1 is the filter tab, where the ghost slots work");
+		helper.succeed();
+	}
+
+	/** Golem colours number as the original's: white dye 1, black dye 16. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void golemDyeColoursNumberAsTheOriginal(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(1, 2, 1)));
+		var golem = thaumcraft.common.registry.ThaumcraftEntities.GOLEM.get().create(helper.getLevel());
+		golem.moveTo(helper.absoluteVec(new net.minecraft.world.phys.Vec3(2.5, 2, 1.5)));
+		helper.getLevel().addFreshEntity(golem);
+		golem.setOwnerUUID(player.getUUID());
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(Items.WHITE_DYE));
+		golem.mobInteract(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(golem.getGolemColor() == 1, "white dye should make colour 1, was " + golem.getGolemColor());
+		player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(Items.BLACK_DYE));
+		golem.mobInteract(player, net.minecraft.world.InteractionHand.MAIN_HAND);
+		helper.assertTrue(golem.getGolemColor() == 16, "black dye should make colour 16, was " + golem.getGolemColor());
+		helper.succeed();
+	}
 }

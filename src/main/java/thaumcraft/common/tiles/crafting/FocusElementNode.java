@@ -27,7 +27,7 @@ public class FocusElementNode {
 	public float complexityMultiplier = 1.0f;
 	public FocusNode node;
 
-	public float getPower(HashMap<Integer, FocusElementNode> data) {
+	public float getPower(java.util.Map<Integer, FocusElementNode> data) {
 		if (node == null) {
 			return 1.0f;
 		}

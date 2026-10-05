@@ -21,9 +21,8 @@ import thaumcraft.common.container.SealConfigMenu;
  * radial category wheel, all against real synced {@link SealConfigMenu} state - no client-only cache class
  * needed, same "the menu already IS the synced copy" shape {@link GuiGolemBuilder} already established.
  *
- * <p>{@code category} is real but purely client-local (no server round trip - see {@link SealConfigMenu}'s
- * own doc comment for why): switching tabs just clears and rebuilds this screen's own widgets against
- * whichever section's data the menu already has synced. The original's half-dozen single-purpose button
+ * <p>Switching tabs tells the server (as the original did), since the filter's ghost slots only exist on the filter
+ * tab. The priority tab names the golem colour on hover and says when you own the seal. The original's half-dozen single-purpose button
  * classes ({@code GuiGolemCategoryButton}/{@code GuiGolemRedstoneButton}/{@code GuiGolemLockButton}/
  * {@code GuiGolemBWListButton}/{@code GuiGolemPropButton}) are consolidated into one real, parameterized
  * {@link IconButton} (same {@code gui_base.png} icon regions, same on/off/hover behavior) plus one
@@ -51,7 +50,7 @@ public class SealConfigScreen extends AbstractContainerScreen<SealConfigMenu> {
 	protected void init() {
 		super.init();
 		if (category < 0 || !isRealCategory(category)) {
-			category = menu.getCategories()[0];
+			category = menu.getCategory();
 		}
 		rebuild();
 	}
@@ -62,6 +61,13 @@ public class SealConfigScreen extends AbstractContainerScreen<SealConfigMenu> {
 	}
 
 	private void switchTo(int cat) {
+		int[] cats = menu.getCategories();
+		for (int i = 0; i < cats.length; i++) {
+			if (cats[i] == cat && cat != category) {
+				menu.setCategory(cat);
+				click(i);
+			}
+		}
 		category = cat;
 		rebuild();
 	}
@@ -196,7 +202,7 @@ public class SealConfigScreen extends AbstractContainerScreen<SealConfigMenu> {
 			graphics.blit(TEXTURE, leftPos + middleX + 17, topPos + middleY + 3, 2, 18, 12, 12);
 			int color = menu.getColor();
 			if (color >= 1 && color <= 16) {
-				net.minecraft.world.item.DyeColor dye = net.minecraft.world.item.DyeColor.byId(16 - color);
+				net.minecraft.world.item.DyeColor dye = net.minecraft.world.item.DyeColor.byId(color - 1);
 				int rgb = dye.getTextureDiffuseColor();
 				float r = ((rgb >> 16) & 0xFF) / 255.0f;
 				float g = ((rgb >> 8) & 0xFF) / 255.0f;
@@ -225,8 +231,21 @@ public class SealConfigScreen extends AbstractContainerScreen<SealConfigMenu> {
 
 		switch (category) {
 			case ISealGui.CAT_PRIORITY -> {
-				graphics.drawCenteredString(font, Component.translatable("golem.prop.priority"), leftPos + middleX, topPos + middleY - 28, 0xBBBBFF);
+				int mx = mouseX - leftPos;
+				int my = mouseY - topPos;
+				if (mx >= middleX + 5 && mx <= middleX + 41 && my >= middleY + 3 && my <= middleY + 15) {
+					int color = menu.getColor();
+					Component text = color >= 1 && color <= 16
+							? Component.literal(Component.translatable("golem.prop.color").getString().replace("%s",
+									Component.translatable("color." + colorName(net.minecraft.world.item.DyeColor.byId(color - 1))).getString()))
+							: Component.translatable("golem.prop.colorall");
+					graphics.drawCenteredString(font, text, leftPos + middleX + 23, topPos + middleY + 17, 0xFFFFFF);
+				}
+				graphics.drawCenteredString(font, Component.translatable("golem.prop.priority"), leftPos + middleX, topPos + middleY - 28, 12299007);
 				graphics.drawCenteredString(font, String.valueOf(menu.getPriority()), leftPos + middleX, topPos + middleY - 16, 0xFFFFFF);
+				if (minecraft != null && minecraft.player != null && menu.getOwner().equals(minecraft.player.getStringUUID())) {
+					graphics.drawCenteredString(font, Component.translatable("golem.prop.owner"), leftPos + middleX, topPos + middleY + 32, 12299007);
+				}
 			}
 			case ISealGui.CAT_AREA -> {
 				graphics.drawCenteredString(font, Component.translatable("button.caption.y"), leftPos + middleX, topPos + middleY - 33, 0xDDDDDD);
@@ -261,6 +280,11 @@ public class SealConfigScreen extends AbstractContainerScreen<SealConfigMenu> {
 		}
 	}
 
+
+	/** The original's 1.12 colour names ("silver" for light grey). */
+	private static String colorName(net.minecraft.world.item.DyeColor dye) {
+		return dye == net.minecraft.world.item.DyeColor.LIGHT_GRAY ? "silver" : dye.getName();
+	}
 
 	private static class PlusMinusButton extends AbstractWidget {
 		private final boolean minus;

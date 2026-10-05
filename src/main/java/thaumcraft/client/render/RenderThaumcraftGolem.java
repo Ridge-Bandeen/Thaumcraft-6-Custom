@@ -131,9 +131,8 @@ public class RenderThaumcraftGolem extends EntityRenderer<EntityThaumcraftGolem>
 		if (entity.getGolemColor() > 0) {
 			BakedModel flagModel = modelManager.getModel(flagModelLocation(material));
 			if (flagModel != modelManager.getMissingModel()) {
-				// Inverts EntityThaumcraftGolem#mobInteract's own "16 - dye.getDyeColor().getId()" storage
-				// mapping back into a real DyeColor.
-				DyeColor dye = DyeColor.byId(16 - entity.getGolemColor());
+				// golem colours run 1 = white ... 16 = black, as the original (colour - 1 = dye id)
+				DyeColor dye = DyeColor.byId(entity.getGolemColor() - 1);
 				int packedColor = dye.getTextureDiffuseColor();
 				float r = ((packedColor >> 16) & 0xFF) / 255.0f;
 				float g = ((packedColor >> 8) & 0xFF) / 255.0f;

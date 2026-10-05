@@ -294,10 +294,22 @@ public class TileFocalManipulator extends BlockEntity implements MenuProvider {
 		return true;
 	}
 
+	/** Whether the player carries {@code amount} crystals of {@code aspect} (the screen's crystal check). */
+	public static boolean hasCrystal(Player player, Aspect aspect, int amount) {
+		return countCrystals(player, aspect) >= amount;
+	}
+
+	/** {@code amount} crystals of {@code aspect}, for showing what a build needs. */
+	public static ItemStack makeCrystal(Aspect aspect, int amount) {
+		ItemStack stack = new ItemStack(ItemsTC.crystalEssence.get(), amount);
+		((ItemGenericEssentiaContainer) stack.getItem()).setAspects(stack, new AspectList().add(aspect, 1));
+		return stack;
+	}
+
 	private boolean hasCrystals(Player player, AspectList cost) {
 		for (Aspect aspect : cost.getAspects()) {
 			int needed = cost.getAmount(aspect);
-			int have = player.getInventory().clearOrCountMatchingItems(crystalPredicate(aspect), 0, player.getInventory());
+			int have = countCrystals(player, aspect);
 			if (have < needed) {
 				return false;
 			}
@@ -305,9 +317,21 @@ public class TileFocalManipulator extends BlockEntity implements MenuProvider {
 		return true;
 	}
 
+	/** The crystals of one aspect in the player's inventory (Inventory#clearOrCountMatchingItems's third argument is the
+	 * crafting grid - handing it the inventory again counted everything twice). */
+	private static int countCrystals(Player player, Aspect aspect) {
+		var test = crystalPredicate(aspect);
+		int n = 0;
+		for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+			ItemStack stack = player.getInventory().getItem(i);
+			if (test.test(stack)) n += stack.getCount();
+		}
+		return n;
+	}
+
 	private void consumeCrystals(Player player, AspectList cost) {
 		for (Aspect aspect : cost.getAspects()) {
-			player.getInventory().clearOrCountMatchingItems(crystalPredicate(aspect), cost.getAmount(aspect), player.getInventory());
+			player.getInventory().clearOrCountMatchingItems(crystalPredicate(aspect), cost.getAmount(aspect), player.inventoryMenu.getCraftSlots());
 		}
 	}
 

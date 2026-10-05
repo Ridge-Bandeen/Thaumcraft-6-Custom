@@ -81,7 +81,7 @@ public class BlockFocalManipulator extends Block implements EntityBlock {
 			return InteractionResult.SUCCESS;
 		}
 		if (level.getBlockEntity(pos) instanceof TileFocalManipulator tile) {
-			player.openMenu(tile);
+			player.openMenu(tile, pos);
 		}
 		return InteractionResult.CONSUME;
 	}

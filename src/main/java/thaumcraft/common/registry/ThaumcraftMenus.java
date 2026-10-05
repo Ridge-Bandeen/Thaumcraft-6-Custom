@@ -18,7 +18,7 @@ public final class ThaumcraftMenus {
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new ArcaneWorkbenchMenu(windowId, inv)));
 
 	public static final Supplier<MenuType<FocalManipulatorMenu>> FOCAL_MANIPULATOR = MENUS.register("focal_manipulator",
-			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new FocalManipulatorMenu(windowId, inv)));
+			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new FocalManipulatorMenu(windowId, inv, buf.readBlockPos())));
 
 	public static final Supplier<MenuType<ResearchTableMenu>> RESEARCH_TABLE = MENUS.register("research_table",
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new ResearchTableMenu(windowId, inv)));

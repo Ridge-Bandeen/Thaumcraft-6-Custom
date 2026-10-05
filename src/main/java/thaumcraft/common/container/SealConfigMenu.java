@@ -99,6 +99,7 @@ public class SealConfigMenu extends AbstractContainerMenu implements IMenuProvid
 	private final int[] requiredTagOrdinals;
 	private final int[] forbiddenTagOrdinals;
 	private final String owner;
+	private int category;
 
 	/** Server-side: the menu can read every real field straight off the live seal. */
 	public SealConfigMenu(int containerId, Inventory playerInventory, ISealEntity sealEntity) {
@@ -110,7 +111,8 @@ public class SealConfigMenu extends AbstractContainerMenu implements IMenuProvid
 		this.hasArea = seal instanceof ISealConfigArea;
 		this.hasStacksizeLimiters = hasFilter && ((ISealConfigFilter) seal).hasStacksizeLimiters();
 		this.filterSize = hasFilter ? Math.min(((ISealConfigFilter) seal).getFilterSize(), MAX_FILTER_SIZE) : 0;
-		this.categories = seal instanceof ISealGui gui ? gui.getGuiCategories() : new int[] { ISealGui.CAT_PRIORITY };
+		this.categories = seal instanceof ISealGui gui ? gui.getGuiCategories() : new int[] { ISealGui.CAT_PRIORITY, ISealGui.CAT_TAGS };
+		this.category = categories[0];
 		this.owner = sealEntity.getOwner();
 
 		if (seal instanceof ISealConfigToggles toggles) {
@@ -151,6 +153,7 @@ public class SealConfigMenu extends AbstractContainerMenu implements IMenuProvid
 		this.hasStacksizeLimiters = buf.readBoolean();
 		this.hasArea = buf.readBoolean();
 		this.categories = buf.readVarIntArray();
+		this.category = categories[0];
 		this.owner = buf.readUtf();
 		int toggleCount = buf.readVarInt();
 		toggleKeys = new String[toggleCount];
@@ -185,7 +188,12 @@ public class SealConfigMenu extends AbstractContainerMenu implements IMenuProvid
 		for (int a = 0; a < filterSize; a++) {
 			int x = a % 3;
 			int y = a / 3;
-			addSlot(new GhostSlot(ghostInventory, a, middleX + x * 24 - sx + 8, middleY + y * 24 - sy + 8));
+			addSlot(new GhostSlot(ghostInventory, a, middleX + x * 24 - sx + 8, middleY + y * 24 - sy + 8) {
+				@Override
+				public boolean isActive() {
+					return category == ISealGui.CAT_FILTER;
+				}
+			});
 		}
 	}
 
@@ -251,9 +259,11 @@ public class SealConfigMenu extends AbstractContainerMenu implements IMenuProvid
 	@Override
 	public boolean clickMenuButton(Player player, int id) {
 		if (sealEntity == null) return false;
-		// Category tab switching (button ids matching ISealGui.CAT_*) is purely client-local UI state - the
-		// Screen just changes which section it renders/binds locally, no server round trip needed since the
-		// server holds nothing tab-specific. Every id from here down is a real state mutation.
+		// as the original, a tab switch sends the tab's index (the filter's ghost slots only live on the filter tab)
+		if (id >= 0 && id < categories.length) {
+			category = categories[id];
+			return true;
+		}
 		if (isLockedForNonOwner(player) && id != BUTTON_LOCK) return false;
 		boolean changed = switch (id) {
 			case BUTTON_LOCK -> ownerOnly(player, () -> sealEntity.setLocked(!sealEntity.isLocked()));
@@ -322,8 +332,8 @@ public class SealConfigMenu extends AbstractContainerMenu implements IMenuProvid
 	 * {@link ISealConfigFilter}; a no-op on the client (no live seal to mutate there). */
 	@Override
 	public void clicked(int slotId, int button, ClickType clickType, Player player) {
-		if (sealEntity != null && hasFilter && slotId >= 0 && slotId < filterSize) {
-			handleGhostSlotClick(slotId, button, clickType);
+		if (hasFilter && slotId >= 0 && slotId < filterSize) {
+			if (sealEntity != null && category == ISealGui.CAT_FILTER) handleGhostSlotClick(slotId, button, clickType);
 			return;
 		}
 		super.clicked(slotId, button, clickType, player);
@@ -445,6 +455,15 @@ public class SealConfigMenu extends AbstractContainerMenu implements IMenuProvid
 
 	public int[] getCategories() {
 		return categories;
+	}
+
+	/** The open tab: as the original, the filter's ghost slots only exist on the filter tab. */
+	public int getCategory() {
+		return category;
+	}
+
+	public void setCategory(int category) {
+		this.category = category;
 	}
 
 	public String[] getToggleKeys() {
