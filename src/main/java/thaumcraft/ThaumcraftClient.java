@@ -62,6 +62,8 @@ public class ThaumcraftClient {
         // Recipe tracing for item aspects needs a level to read recipes from when no integrated server is running.
         thaumcraft.common.lib.crafting.ThaumcraftObjectTags.setClientLevelSupplier(() -> net.minecraft.client.Minecraft.getInstance().level);
         Thaumcraft.LOGGER.info("Thaumcraft {} client setup", Thaumcraft.VERSION);
+        // the original's animated golem parts (claws, breaker grinders, wheels, the hauler's load)
+        thaumcraft.client.render.GolemPartAnimations.register();
 
         // caster_basic.json's item model switches on this ("predicate": {"focus": 0|1}) - reused
         // unchanged from the original 1.12.2 asset.
@@ -320,57 +322,11 @@ public class ThaumcraftClient {
         }
     }
 
-    /** One real "additional" model per {@link GolemMaterial} (the trunk/limbs silhouette every golem has),
-     * plus one per assembled head/arm/leg/addon part variant - see {@link RenderThaumcraftGolem}'s own doc
-     * comment for why this is the modern replacement for the original's bespoke OBJ loader. Registered here
-     * (not tied to any block/item) so they bake through the standard model pipeline like any other model -
-     * real texture-atlas stitching included - and can be looked up later via {@code ModelManager#getModel}.
-     * {@code GolemMaterial}'s and the part registries' own arrays are populated in {@code commonSetup} (well
-     * before model baking starts), so they're real and non-empty by the time this fires. */
+    /** Golem parts are drawn from OBJ groups read at runtime ({@link thaumcraft.client.render.ObjModels}); a resource
+     * reload forgets the read models. */
     @SubscribeEvent
-    static void onRegisterAdditionalModels(ModelEvent.RegisterAdditional event) {
-        for (GolemMaterial material : GolemMaterial.getMaterials()) {
-            if (material == null) continue;
-            event.register(golemModelLocation("golem/base_" + material.key.toLowerCase()));
-            // The dye-color "flag" - a tiny separate model (golem_base_flag.obj) split out of the trunk
-            // so it can be tinted independently via RenderThaumcraftGolem's own (r,g,b) draw params; see
-            // that class's own doc comment.
-            event.register(golemModelLocation("golem/flag_" + material.key.toLowerCase()));
-        }
-        for (GolemHead head : GolemHead.getHeads()) {
-            registerGolemPart(event, "head", head == null ? null : head.key, head == null ? null : head.model);
-        }
-        for (GolemArm arm : GolemArm.getArms()) {
-            registerGolemPart(event, "arm", arm == null ? null : arm.key, arm == null ? null : arm.model);
-        }
-        for (GolemLeg leg : GolemLeg.getLegs()) {
-            registerGolemPart(event, "leg", leg == null ? null : leg.key, leg == null ? null : leg.model);
-        }
-        for (GolemAddon addon : GolemAddon.getAddons()) {
-            registerGolemPart(event, "addon", addon == null ? null : addon.key, addon == null ? null : addon.model);
-        }
-    }
-
-    /** {@code key}/{@code part} are null for the placeholder slot 0 of each part registry and for the
-     * NONE/FIGHTER addons (no real {@link PartModel}) - skipped, nothing to register. Mirrors the naming
-     * scheme the {@code part_*.json} model files were generated with, and that {@code RenderThaumcraftGolem}
-     * looks them back up with: one fixed model if the part has its own {@link PartModel#getTexture()}, one
-     * per {@link GolemMaterial} if it doesn't (painted with the golem's own material texture instead). */
-    private static void registerGolemPart(ModelEvent.RegisterAdditional event, String category, String key, PartModel part) {
-        if (key == null || part == null) return;
-        String base = "golem/part_" + category + "_" + key.toLowerCase();
-        if (part.getTexture() != null) {
-            event.register(golemModelLocation(base));
-        } else {
-            for (GolemMaterial material : GolemMaterial.getMaterials()) {
-                if (material == null) continue;
-                event.register(golemModelLocation(base + "_" + material.key.toLowerCase()));
-            }
-        }
-    }
-
-    private static ModelResourceLocation golemModelLocation(String path) {
-        return new ModelResourceLocation(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, path), "standalone");
+    static void onRegisterReloadListeners(net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener) rm -> thaumcraft.client.render.ObjModels.clear());
     }
 
     /** Thaumcraft's recipes never appear in the vanilla recipe book, but without a finder the client recipe book logs an

@@ -282,7 +282,7 @@ public class GolemProperties implements IGolemProperties {
 				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_arms_breakers.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_arms_breakers"), PartModel.EnumAttachPoint.ARMS),
 				new Object[] { new ItemStack(Items.DIAMOND, 2), "base", new ItemStack(Blocks.PISTON, 2) }, new EnumGolemTrait[] { EnumGolemTrait.BREAKER, EnumGolemTrait.CLUMSY, EnumGolemTrait.BRUTAL }));
 		GolemArm.register(new GolemArm("DARTS", new String[] { "GOLEMCOMBATADV" }, ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/misc/golem/arms_darts.png"),
-				new PartModel(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_arms_darter.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_arms_darter"), PartModel.EnumAttachPoint.ARMS),
+				new thaumcraft.common.golems.parts.PartModelDarts(ResourceLocation.fromNamespaceAndPath("thaumcraft", "models/obj/golem_arms_darter.obj"), ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/golems/golem_arms_darter"), PartModel.EnumAttachPoint.ARMS),
 				new Object[] { new ItemStack(ItemsTC.moduleAggression.get()), new ItemStack(Blocks.DISPENSER, 2), new ItemStack(Items.ARROW, 32), "mech" },
 				new thaumcraft.common.golems.parts.GolemArmDart(),
 				new EnumGolemTrait[] { EnumGolemTrait.FIGHTER, EnumGolemTrait.CLUMSY, EnumGolemTrait.RANGED, EnumGolemTrait.FRAGILE }));

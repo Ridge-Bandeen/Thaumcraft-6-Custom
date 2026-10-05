@@ -474,6 +474,10 @@ sourceSets {
             include 'thaumcraft/client/render/TileHoleRenderer.java'
             include 'thaumcraft/client/render/TileVoidSiphonRenderer.java'
             include 'thaumcraft/client/render/VoidStreamRenderer.java'
+            include 'thaumcraft/client/render/ObjModels.java'
+            include 'thaumcraft/client/render/GolemPartAnimations.java'
+            include 'thaumcraft/api/golems/parts/GolemPartAnimators.java'
+            include 'thaumcraft/common/golems/parts/PartModelDarts.java'
             include 'thaumcraft/client/render/RenderFluxRift.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'

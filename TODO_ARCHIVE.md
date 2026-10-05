@@ -2,6 +2,11 @@
 
 ## Closed 2026-10-05
 
+- Golem renderer rebuilt as the original: OBJ groups read at runtime (ObjModels, the original WavefrontObject's
+  rules), per-group textures (bm* = material), stub arms, flag, body yaw + death tilt, breathing roll, speed and
+  turn lean, head look, arm swing / wheeled sway / carry pose / attack wiggle, part arm re-aim (PartModelDarts),
+  animated parts via GolemPartAnimators (claws, breaker grinders, wheels from GolemLegWheels.ani, hauler load),
+  held item, translucent invisible ghost, see-through silhouette. Baked golem JSON models and the flag split removed.
 - Addon report: the Nitor crucible recipe (thaumcraft:nitor) had been lost under the yellow dye recipe's id - restored
   (every other original crucible/arcane/infusion id checked present). #21: book cycles skip #c:hidden_from_recipe_viewers;
   #22: vanilla-block research aids name #thaumcraft:research_aids/* block tags.

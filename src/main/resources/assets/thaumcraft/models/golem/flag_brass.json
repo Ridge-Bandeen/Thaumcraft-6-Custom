@@ -1,8 +1,0 @@
-{
-    "loader": "neoforge:obj",
-    "model": "thaumcraft:models/obj/golem_base_flag.obj",
-    "flip_v": true,
-    "textures": {
-        "Material__25": "thaumcraft:entity/golems/mat_brass"
-    }
-}

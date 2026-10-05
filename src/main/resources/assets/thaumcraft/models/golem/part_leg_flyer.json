@@ -1,8 +1,0 @@
-{
-    "loader": "neoforge:obj",
-    "model": "thaumcraft:models/obj/golem_legs_floater.obj",
-    "flip_v": true,
-    "textures": {
-        "Material__25": "thaumcraft:entity/golems/golem_legs_floater"
-    }
-}

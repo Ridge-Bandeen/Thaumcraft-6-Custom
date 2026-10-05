@@ -1,9 +1,0 @@
-{
-    "loader": "neoforge:obj",
-    "model": "thaumcraft:models/obj/golem_legs_climber.obj",
-    "flip_v": true,
-    "textures": {
-        "Material__2": "thaumcraft:blocks/base_metal",
-        "Material__3": "thaumcraft:blocks/base_metal"
-    }
-}
