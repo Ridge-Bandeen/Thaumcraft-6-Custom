@@ -100,6 +100,10 @@ public final class ThaumcraftDataComponents {
 	public static final DeferredHolder<DataComponentType<?>, DataComponentType<CasterArea>> CASTER_AREA = DATA_COMPONENTS.register("caster_area",
 			() -> DataComponentType.<CasterArea>builder().persistent(CasterArea.CODEC).networkSynchronized(CasterArea.STREAM_CODEC).build());
 
+	/** The Grapple Gun's "loaded" tag: set while its hook is out, for the item model's fired look. */
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<Boolean>> GRAPPLE_LOADED = DATA_COMPONENTS.register("grapple_loaded",
+			() -> DataComponentType.<Boolean>builder().persistent(Codec.BOOL).networkSynchronized(ByteBufCodecs.BOOL).build());
+
 	/** Boots of the Traveller's "energy": minutes of running paid for by the last charge spent (the original's {@code energy} tag). */
 	public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> TRAVELLER_ENERGY = DATA_COMPONENTS.register("traveller_energy",
 			() -> DataComponentType.<Integer>builder().persistent(Codec.INT).networkSynchronized(ByteBufCodecs.VAR_INT).build());

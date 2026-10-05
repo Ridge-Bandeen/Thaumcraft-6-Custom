@@ -86,12 +86,9 @@ public class ThaumcraftClient {
         event.enqueueWork(() -> ItemProperties.register(ItemsTC.label.get(), ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "filled"),
                 (stack, level, entity, seed) -> stack.has(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get()) ? 1.0f : 0.0f));
 
-        // grapple_gun.json's model switches on this ("predicate": {"type": 0|1}), reused unchanged from the
-        // original asset - no stored per-stack state needed, EntityGrapple.hasActive already tracks live
-        // whether this player currently has an active (fired) grapple, see that class's own doc comment.
+        // grapple_gun.json's model switches on this ("predicate": {"type": 0|1}): the gun's loaded mark, as the original
         event.enqueueWork(() -> ItemProperties.register(ItemsTC.grappleGun.get(), ResourceLocation.withDefaultNamespace("type"),
-                (stack, level, entity, seed) -> entity instanceof net.minecraft.world.entity.LivingEntity living
-                        && thaumcraft.common.entities.projectile.EntityGrapple.hasActive(living) ? 1.0f : 0.0f));
+                (stack, level, entity, seed) -> stack.getOrDefault(thaumcraft.api.items.ThaumcraftDataComponents.GRAPPLE_LOADED.get(), false) ? 1.0f : 0.0f));
 
         // primordial_pearl.json's model switches on the same "type" predicate, same technique as
         // grapple_gun's above - see ItemPrimordialPearl's own doc comment for the 0/1/2 tier meaning.

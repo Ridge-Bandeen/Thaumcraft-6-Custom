@@ -33,19 +33,48 @@ import thaumcraft.common.registry.ThaumcraftEntities;
  * As the original, a pull also resets the server's "airborne too long" counter for the player, so a long pull never
  * gets them kicked for flying.
  */
-public class EntityGrapple extends ThrowableProjectile {
+public class EntityGrapple extends ThrowableProjectile implements net.neoforged.neoforge.entity.IEntityWithComplexSpawn {
 
 	private static final Map<UUID, Integer> ACTIVE = new HashMap<>();
 
 	private boolean pulling;
 	private boolean boosted;
+	private boolean added;
+	/** Which hand fired it (the rope leaves that side of a first-person view). */
+	public net.minecraft.world.InteractionHand hand = net.minecraft.world.InteractionHand.MAIN_HAND;
+	/** Client only: the rope's slack, growing while the hook flies and drawn in once it pulls. */
+	public float ampl;
 
 	public EntityGrapple(EntityType<? extends EntityGrapple> type, Level level) {
 		super(type, level);
 	}
 
 	public EntityGrapple(LivingEntity thrower, Level level) {
+		this(thrower, level, net.minecraft.world.InteractionHand.MAIN_HAND);
+	}
+
+	public EntityGrapple(LivingEntity thrower, Level level, net.minecraft.world.InteractionHand hand) {
 		super(ThaumcraftEntities.GRAPPLE.get(), thrower, level);
+		this.hand = hand;
+	}
+
+	/** Records this as the thrower's one grapple (an older one dies) - on its first tick, as the original, or straight
+	 * away when the gun fires it so the gun's loaded mark holds from the start. */
+	public void claim(Entity owner) {
+		Integer old = ACTIVE.get(owner.getUUID());
+		if (old != null && old != getId() && level().getEntity(old) instanceof EntityGrapple other) other.discard();
+		ACTIVE.put(owner.getUUID(), getId());
+		added = true;
+	}
+
+	@Override
+	public void writeSpawnData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
+		buffer.writeBoolean(hand == net.minecraft.world.InteractionHand.MAIN_HAND);
+	}
+
+	@Override
+	public void readSpawnData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
+		hand = buffer.readBoolean() ? net.minecraft.world.InteractionHand.MAIN_HAND : net.minecraft.world.InteractionHand.OFF_HAND;
 	}
 
 	/** Discards any grapple this thrower already has active, so only one can ever be pulling them. */
@@ -78,6 +107,12 @@ public class EntityGrapple extends ThrowableProjectile {
 			discardSelf(owner);
 			return;
 		}
+		// as the original: the thrower's one grapple is recorded on its first tick, and an older one dies
+		if (!level().isClientSide && !added) claim(owner);
+		if (!level().isClientSide && ACTIVE.containsKey(owner.getUUID()) && ACTIVE.get(owner.getUUID()) != getId()) {
+			discard();
+			return;
+		}
 		if (!level().isClientSide && pulling) {
 			if (owner.isShiftKeyDown()) {
 				discardSelf(owner);
@@ -85,10 +120,14 @@ public class EntityGrapple extends ThrowableProjectile {
 			}
 			pull((LivingEntity) owner);
 		}
+		if (level().isClientSide) {
+			if (!pulling) ampl += 0.02f;
+			else ampl *= 0.66f;
+		}
 	}
 
 	private void discardSelf(Entity owner) {
-		if (owner != null) {
+		if (owner != null && ACTIVE.get(owner.getUUID()) != null && ACTIVE.get(owner.getUUID()) == getId()) {
 			ACTIVE.remove(owner.getUUID());
 		}
 		discard();
@@ -135,10 +174,10 @@ public class EntityGrapple extends ThrowableProjectile {
 	}
 
 	private void land(Vec3 pos) {
+		pulling = true; // on the client too, as the original: the rope draws in once the hook bites
 		if (level().isClientSide) {
 			return;
 		}
-		pulling = true;
 		setDeltaMovement(Vec3.ZERO);
 		setPos(pos.x, pos.y, pos.z);
 		Entity owner = getOwner();

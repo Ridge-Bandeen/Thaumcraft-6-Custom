@@ -32,18 +32,10 @@ import thaumcraft.Thaumcraft;
  * thaumcraft.common.entities.monster.EntityWisp}'s zap attack and {@link
  * thaumcraft.common.items.casters.foci.FocusMediumBolt}'s cast trail, both real, restored 2026-09-15.
  *
- * The true original drew this as real 3D cylinder geometry via a bundled third-party immediate-mode-GL "tube
- * extrusion" library ({@code com.sasmaster.glelwjgl}'s {@code glePolyCone}, a Java port of the old GLE
- * library) - no modern equivalent exists to translate. Rather than hand-write an original ring-extrusion
- * tube mesh (real per-segment tangent frames, N-sided rings, etc.), this reuses {@link FXArc}'s own real
- * cross-billboard quad-ribbon technique instead, layered twice (a full-width outer pass, then a real
- * 1/3-width inner pass, additively overlapping for a brighter core - matches the true original's own real
- * "two nested cones, one 1/3 the radius of the other" structure exactly, just built from flat ribbons
- * instead of true cylinders). This is a real, deliberate, precedented simplification, not a corner cut: a
- * modded-Minecraft lightning-bolt particle (Electroblob's Wizardry's own {@code ParticleLightning}, a
- * well-regarded reference for exactly this kind of spell VFX) uses the same real "layered flat strips, not a
- * true cylinder" technique for its own lightning arcs - at the thickness and additively-blended brightness a
- * bolt like this renders at, a true circular cross-section isn't actually distinguishable from a flat one.
+ * As the original it is a tube ({@link thaumcraft.client.fx.GleTube}): GLE's {@code glePolyCone} with five sides and mitred joins, run from the second point
+ * to the second-last (the end points only orient the end joins), each joint ring scaled by that point's width / 10,
+ * the texture wrapping once round the tube and once along each segment, drawn twice (the second at a third of the
+ * radius) additively with culling off - here both windings of each face, which draws the same far side.
  *
  * Unlike {@link FXArc} (whose point list is fixed at spawn), this real jittered point list is recomputed
  * every real render call with a real growing amplitude ({@code (age+partialTick)/10}), matching the true
@@ -144,36 +136,25 @@ public class FXBolt extends Particle {
 	@Override
 	public void render(VertexConsumer buffer, Camera camera, float partialTicks) {
 		calcSteps(partialTicks);
-
+		int n = points.size();
+		if (n <= 2) return;
 		Vec3 camPos = camera.getPosition();
 		float renderAlpha = Mth.clamp(1.0f - (age + partialTicks) / lifetime, 0.1f, 1.0f);
-		int light = LightTexture.FULL_BRIGHT;
-
-		for (int c = 0; c < points.size() - 1; c++) {
-			Vec3 a = points.get(c).subtract(camPos);
-			Vec3 b = points.get(c + 1).subtract(camPos);
-			float u0 = c / length;
-			float u1 = (c + 1) / length;
-			float w0 = pointsWidth.get(c) / 10.0f;
-			float w1 = pointsWidth.get(c + 1) / 10.0f;
-			// Outer pass (full width) + inner pass (1/3 width) additively overlapping for a brighter core -
-			// see the class doc comment for why this stands in for the true original's own 2-nested-cone
-			// tube. Each pass draws the same real 2-fixed-plane cross {@link FXArc} itself uses.
-			emitPlanePair(buffer, a, b, w0, w1, u0, u1, renderAlpha, light);
-			emitPlanePair(buffer, a, b, w0 / 3.0f, w1 / 3.0f, u0, u1, renderAlpha, light);
+		Vec3[] pp = new Vec3[n];
+		float[][] colours = new float[n][];
+		double[] radii = new double[n];
+		for (int a = 0; a < n; a++) {
+			pp[a] = points.get(a).subtract(camPos);
+			colours[a] = new float[] { rCol, gCol, bCol, renderAlpha };
+			radii[a] = pointsWidth.get(a) / 10.0f;
 		}
-	}
-
-	private void emitPlanePair(VertexConsumer buffer, Vec3 a, Vec3 b, float w0, float w1, float u0, float u1, float renderAlpha, int light) {
-		emitQuad(buffer, a, b, 0.0, w0, 0.0, 0.0, w1, 0.0, u0, u1, renderAlpha, light);
-		emitQuad(buffer, a, b, w0, 0.0, w0, w1, 0.0, w1, u0, u1, renderAlpha, light);
-	}
-
-	private void emitQuad(VertexConsumer buffer, Vec3 a, Vec3 b, double aox, double aoy, double aoz, double box, double boy, double boz, float u0, float u1, float renderAlpha, int light) {
-		buffer.addVertex((float) (a.x - aox), (float) (a.y - aoy), (float) (a.z - aoz)).setUv(u0, 1.0f).setColor(rCol, gCol, bCol, renderAlpha).setLight(light);
-		buffer.addVertex((float) (a.x + aox), (float) (a.y + aoy), (float) (a.z + aoz)).setUv(u0, 0.0f).setColor(rCol, gCol, bCol, renderAlpha).setLight(light);
-		buffer.addVertex((float) (b.x + box), (float) (b.y + boy), (float) (b.z + boz)).setUv(u1, 0.0f).setColor(rCol, gCol, bCol, renderAlpha).setLight(light);
-		buffer.addVertex((float) (b.x - box), (float) (b.y - boy), (float) (b.z - boz)).setUv(u1, 1.0f).setColor(rCol, gCol, bCol, renderAlpha).setLight(light);
+		int light = LightTexture.FULL_BRIGHT;
+		thaumcraft.client.fx.GleTube.Sink sink = (x, y, z, u, v, r, g, b, al) ->
+				buffer.addVertex((float) x, (float) y, (float) z).setUv(u, v).setColor(r, g, b, al).setLight(light);
+		// set_POLYCYL_TESS(5), join style 1042 (angle joins, caps), texture slice 1 from 0; then again at a third the radius
+		thaumcraft.client.fx.GleTube.polyCone(sink, pp, colours, radii, 5, 1.0f, 0.0f, true, true);
+		for (int a = 0; a < n; a++) radii[a] /= 3.0;
+		thaumcraft.client.fx.GleTube.polyCone(sink, pp, colours, radii, 5, 1.0f, 0.0f, true, true);
 	}
 
 	@Override

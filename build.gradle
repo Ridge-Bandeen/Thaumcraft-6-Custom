@@ -412,6 +412,7 @@ sourceSets {
             include 'thaumcraft/client/fx/beams/FXArc.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXBlockArc.java'
             include 'thaumcraft/client/fx/beams/FXBolt.java'
+            include 'thaumcraft/client/fx/GleTube.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXWispZap.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXZap.java'
             include 'thaumcraft/client/fx/particles/FXGeneric.java'
@@ -444,6 +445,7 @@ sourceSets {
             include 'thaumcraft/client/fx/particles/FXBlockRunes.java'
             include 'thaumcraft/client/fx/particles/FXBreakingFade.java'
             include 'thaumcraft/client/fx/particles/FXEssentiaStream.java'
+            include 'thaumcraft/client/fx/particles/FXVoidStream.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXEssentiaSource.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXInfusionSource.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXShield.java'
@@ -469,6 +471,7 @@ sourceSets {
             include 'thaumcraft/client/render/EnderShader.java'
             include 'thaumcraft/client/render/TileHoleRenderer.java'
             include 'thaumcraft/client/render/TileVoidSiphonRenderer.java'
+            include 'thaumcraft/client/render/VoidStreamRenderer.java'
             include 'thaumcraft/client/render/RenderFluxRift.java'
 
             include 'thaumcraft/api/ThaumcraftApi.java'

@@ -18755,4 +18755,52 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(!plant.canSurvive(helper.getLevel(), helper.absolutePos(pos)), "cinderpearl should not grow on grass");
 		helper.succeed();
 	}
+
+	/** GleTube reproduces glePolyCone: rings at points 1..n-2, sides x segments quads facing outward, end caps on request. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void gleTubeGeometry(GameTestHelper helper) {
+		net.minecraft.world.phys.Vec3[] pts = { new net.minecraft.world.phys.Vec3(0, 0, 0), new net.minecraft.world.phys.Vec3(1, 0, 0),
+				new net.minecraft.world.phys.Vec3(2, 0, 0), new net.minecraft.world.phys.Vec3(3, 0, 0), new net.minecraft.world.phys.Vec3(4, 0, 0) };
+		float[][] col = new float[5][];
+		double[] rad = new double[5];
+		for (int i = 0; i < 5; i++) {
+			col[i] = new float[] { 1, 1, 1, 1 };
+			rad[i] = 0.5;
+		}
+		java.util.List<net.minecraft.world.phys.Vec3> verts = new java.util.ArrayList<>();
+		thaumcraft.client.fx.GleTube.polyCone((x, y, z, u, v, r, g, b, a) -> verts.add(new net.minecraft.world.phys.Vec3(x, y, z)), pts, col, rad, 4, 1.0f, 0.0f, false, false);
+		// rings at points 1, 2, 3 -> two segments of four sides, one winding
+		helper.assertTrue(verts.size() == 2 * 4 * 4, "expected 32 vertices, got " + verts.size());
+		for (int q = 0; q < verts.size(); q += 4) {
+			var a0 = verts.get(q);
+			var n = verts.get(q + 1).subtract(a0).cross(verts.get(q + 3).subtract(a0));
+			var out = new net.minecraft.world.phys.Vec3(0, a0.y, a0.z);
+			helper.assertTrue(n.dot(out) > 0, "every face should face outward");
+			helper.assertTrue(a0.x >= 0.99 && a0.x <= 3.01, "the tube runs from the second point to the second-last, not " + a0.x);
+		}
+		verts.clear();
+		thaumcraft.client.fx.GleTube.polyCone((x, y, z, u, v, r, g, b, a) -> verts.add(new net.minecraft.world.phys.Vec3(x, y, z)), pts, col, rad, 4, 1.0f, 0.0f, true, true);
+		helper.assertTrue(verts.size() == 2 * (32 + 2 * 4 * 4), "both windings plus caps, got " + verts.size());
+		helper.succeed();
+	}
+
+	/** The Grapple Gun marks itself loaded while its hook is out, as the original's "loaded" tag. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void grappleGunLoadedMark(GameTestHelper helper) {
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(2, 2, 2)));
+		ItemStack gun = new ItemStack(ItemsTC.grappleGun.get());
+		thaumcraft.api.items.RechargeHelper.rechargeItemBlindly(gun, player, 10);
+		player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, gun);
+		gun.getItem().use(helper.getLevel(), player, net.minecraft.world.InteractionHand.OFF_HAND);
+		var key = thaumcraft.api.items.ThaumcraftDataComponents.GRAPPLE_LOADED.get();
+		helper.assertTrue(gun.getOrDefault(key, false), "firing should mark the gun loaded");
+		gun.getItem().inventoryTick(gun, helper.getLevel(), player, 40, false);
+		helper.assertTrue(gun.getOrDefault(key, false), "the mark holds while the hook is out");
+		var hooks = helper.getLevel().getEntitiesOfClass(thaumcraft.common.entities.projectile.EntityGrapple.class, player.getBoundingBox().inflate(4));
+		helper.assertTrue(!hooks.isEmpty() && hooks.get(0).hand == net.minecraft.world.InteractionHand.OFF_HAND, "the hook remembers the off hand");
+		thaumcraft.common.entities.projectile.EntityGrapple.discardActiveFor(player);
+		gun.getItem().inventoryTick(gun, helper.getLevel(), player, 40, false);
+		helper.assertTrue(!gun.getOrDefault(key, false), "the mark clears once the hook is gone");
+		helper.succeed();
+	}
 }

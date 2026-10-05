@@ -26,7 +26,8 @@ import thaumcraft.common.registry.ThaumcraftBlockEntities;
  *
  * As the original: its screen shows progress and holds the seeds, which hoppers can take out of any side (nothing
  * goes in). A rift counts only if nothing blocks the line from it to a point one block out from the siphon towards it.
- * Still missing: the original's void streaks from the rifts to the siphon ({@code FXVoidStream}).
+ * Every 40 ticks while a rift is being drained (the last one checked, as the original) block event 5 shows streaks of
+ * void ({@code FXVoidStream}) from each valid rift to the siphon on clients.
  */
 public class TileVoidSiphon extends BlockEntity {
 
@@ -74,6 +75,7 @@ public class TileVoidSiphon extends BlockEntity {
 		if (tile.counter % 20 != 0 || tile.progress >= PROGRESS_REQUIRED || !tile.canAcceptOutput()) return;
 
 		List<EntityFluxRift> rifts = tile.getValidRifts(level, pos);
+		boolean draining = false;
 		for (EntityFluxRift rift : rifts) {
 			double drain = Math.sqrt(rift.getRiftSize());
 			tile.progress += (int) drain;
@@ -81,6 +83,10 @@ public class TileVoidSiphon extends BlockEntity {
 			if (level.random.nextInt(33) == 0) {
 				rift.setRiftSize(rift.getRiftSize() - 1);
 			}
+			draining = drain >= 1.0;
+		}
+		if (draining && tile.counter % 40 == 0) {
+			level.blockEvent(pos, state.getBlock(), 5, tile.counter);
 		}
 
 		boolean produced = false;
@@ -97,6 +103,20 @@ public class TileVoidSiphon extends BlockEntity {
 		if (produced || !rifts.isEmpty()) {
 			tile.setChanged();
 		}
+	}
+
+	@Override
+	public boolean triggerEvent(int id, int param) {
+		if (id == 5) {
+			if (level != null && level.isClientSide) {
+				for (EntityFluxRift rift : getValidRifts(level, worldPosition)) {
+					thaumcraft.client.fx.ClientFxHandlers.spawnVoidStreak(level, rift.getX(), rift.getY(), rift.getZ(),
+							worldPosition.getX() + 0.5, worldPosition.getY() + 0.5625f, worldPosition.getZ() + 0.5, param, 0.04f);
+				}
+			}
+			return true;
+		}
+		return super.triggerEvent(id, param);
 	}
 
 	private List<EntityFluxRift> getValidRifts(Level level, BlockPos pos) {

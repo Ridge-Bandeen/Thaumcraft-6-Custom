@@ -748,14 +748,23 @@ public final class ClientFxHandlers {
 				from.getX() + 0.5, from.getY() + 0.66, from.getZ() + 0.5, to.getX() + 0.5, to.getY() + 0.5, to.getZ() + 0.5, count, 2650102, 0.1f, 0, 0.2));
 	}
 
+	/** The original's FXDispatcher#voidStreak: a streak of void from a flux rift to a Void Siphon. */
+	public static void spawnVoidStreak(net.minecraft.world.level.Level level, double x, double y, double z, double x2, double y2, double z2, int seed, float scale) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXVoidStream(clientLevel, x, y, z, x2, y2, z2, seed, scale));
+	}
+
 	public static void handleEssentiaSource(thaumcraft.common.lib.network.fx.PacketFXEssentiaSource payload) {
 		var level = Minecraft.getInstance().level;
 		if (level == null) return;
 		var source = payload.source();
 		var target = payload.target();
 		int tickSeed = (int) level.getGameTime();
+		// as the original (RenderEventHandler): scale 0.1, ending a block lower when the receiver is an infusion matrix
+		double ty = target.y();
+		if (level.getBlockEntity(BlockPos.containing(target.x(), target.y(), target.z())) instanceof thaumcraft.common.tiles.crafting.TileInfusionMatrix) ty -= 1.0;
 		var fx = new thaumcraft.client.fx.particles.FXEssentiaStream(level, source.x(), source.y(), source.z(),
-				target.x(), target.y(), target.z(), tickSeed, payload.color(), 1.0f, payload.ext(), 0.0);
+				target.x(), ty, target.z(), tickSeed, payload.color(), 0.1f, payload.ext(), 0.0);
 		Minecraft.getInstance().particleEngine.add(fx);
 	}
 

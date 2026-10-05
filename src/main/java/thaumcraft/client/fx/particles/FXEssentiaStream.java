@@ -22,43 +22,27 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
 import thaumcraft.Thaumcraft;
+import thaumcraft.client.fx.GleTube;
 
 /**
- * Real modern equivalent of the true original's own real {@code FXEssentiaStream} - a real, faithful (if
- * real-formula-simplified in a couple of documented spots) "flowing worm" trail between 2 real points: a
- * single real tracked head homes toward the target with real drag+attraction physics (same real shape
- * {@link FXVisSparkle} already established this session), leaving behind a real growing, then shrinking,
- * tapered tube of its own real position history.
- *
- * <p>Real, genuine architectural substitution, not a simplification of intent - same real reasoning as
- * {@code RenderFluxRift}'s own doc comment: the true original's own real tube geometry came from the same
- * real third-party {@code com.sasmaster.glelwjgl} tessellation library, no modern equivalent, not itself part
- * of this port. Reuses the exact same real ring-extrusion technique {@code RenderFluxRift} already proved
- * this session (a running, minimally-rotated orthonormal frame per point) applied to this particle's own real
- * dynamic point/radius history instead of a fixed point list.
- *
- * <p>Real, faithful de-duplication: real concurrent triggers for the exact same real source→target→colour
- * connection (the same real key the true original's own real static {@code pt} map used) extend an already-
- * active real stream's own length/lifetime instead of spawning a redundant new one - the same real behaviour
- * an actively-draining device (called every few real ticks) needs to read as one continuous real flow rather
- * than flickering restarts.
- *
- * <p>Real, disclosed simplifications: the true original's own real per-point radius taper used a real
- * ad-hoc index-based case table (first ~5/last ~10 points each individually formula'd) - replaced with a real
- * smoothstep taper at both real ends instead (same real visual goal: a tapered capsule shape, growing tip and
- * shrinking tail both narrowing to a point), and the true original's own real continuous per-FRAME wobble
- * recompute per point is baked in once per real TICK instead (same real tradeoff {@code FXSmokeSpiral}'s own
- * doc comment already made). The true original's own real per-point brightness pulse is dropped - a flat,
- * constant per-particle colour instead.
+ * Replaces the old (1.12.2) {@code FXEssentiaStream}, as the original: a head that homes on the target (drag, pull and
+ * a little gravity) leaves its positions behind as an eight-sided tube ({@link GleTube}) on the essentia texture.
+ * Every tick the tube's points wobble, its radii pulse (the first two points closed, the next three easing in, the
+ * last ten narrowing to the head) and its colour shimmers; once the head arrives the tube shrinks from its tail
+ * while the texture runs along it, with essentia drops at the target and along the stream. Drawn with normal
+ * blending (the original's particle layer 1). A stream from an essentia input or output starts just off its face.
+ * Repeated streams between the same two blocks in the same colour lengthen the live one instead of starting anew.
  */
 public class FXEssentiaStream extends Particle {
 
 	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/misc/essentia.png");
-	private static final int SIDES = 8;
 
 	private static final Map<String, FXEssentiaStream> ACTIVE = new HashMap<>();
 
@@ -69,7 +53,7 @@ public class FXEssentiaStream extends Particle {
 			RenderSystem.setShader(GameRenderer::getParticleShader);
 			RenderSystem.setShaderTexture(0, TEXTURE);
 			RenderSystem.enableBlend();
-			RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA, com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
+			RenderSystem.defaultBlendFunc();
 			RenderSystem.depthMask(false);
 			return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
 		}
@@ -86,54 +70,64 @@ public class FXEssentiaStream extends Particle {
 	private final double startX;
 	private final double startY;
 	private final double startZ;
-
-	private float baseScale;
+	private final int count;
+	private float particleScale;
 	private int length;
 	private String key = "";
 	private boolean expired;
+	private int growing = -1;
 
-	private final List<Vec3> trail = new ArrayList<>();
-	private final List<Float> trailRadii = new ArrayList<>();
+	/** The original's Quat list: scale and position relative to the start. */
+	private final List<double[]> vecs = new ArrayList<>();
+	private Vec3[] points;
+	private float[][] colours;
+	private double[] radii;
 
 	public FXEssentiaStream(ClientLevel level, double x, double y, double z, double tx, double ty, double tz,
-			int tickSeed, int color, float scale, int extend, double motionYBias) {
+			int count, int color, float scale, int extend, double my) {
 		super(level, x, y, z);
+		this.count = count;
+		this.particleScale = (float) (scale * (1.0 + random.nextGaussian() * 0.15));
+		this.length = Math.max(20, extend);
 		this.targetX = tx;
 		this.targetY = ty;
 		this.targetZ = tz;
-		this.baseScale = (float) (scale * (1.0 + random.nextGaussian() * 0.15));
-		this.length = Math.max(20, extend);
-
-		double dx = tx - x;
-		double dy = ty - y;
-		double dz = tz - z;
-		this.lifetime = Math.max(1, (int) (Math.sqrt(dx * dx + dy * dy + dz * dz) * 21.0f));
-
 		BlockPos bp1 = BlockPos.containing(x, y, z);
 		BlockPos bp2 = BlockPos.containing(tx, ty, tz);
-		String k = bp1.asLong() + ":" + bp2.asLong() + ":" + color;
+		BlockState bs = level.getBlockState(bp1);
+		if ((bs.getBlock() instanceof thaumcraft.common.blocks.essentia.BlockEssentiaInput
+				|| bs.getBlock() instanceof thaumcraft.common.blocks.essentia.BlockEssentiaOutput) && bs.hasProperty(BlockStateProperties.FACING)) {
+			Direction f = bs.getValue(BlockStateProperties.FACING);
+			setPos(this.x + f.getStepX() * 0.05f, this.y + f.getStepY() * 0.05f, this.z + f.getStepZ() * 0.05f);
+		}
+		double dx = tx - this.x;
+		double dy = ty - this.y;
+		double dz = tz - this.z;
+		int base = (int) (Mth.sqrt((float) (dx * dx + dy * dy + dz * dz)) * 21.0f);
+		this.lifetime = Math.max(1, base);
+		String k = bp1.asLong() + "" + bp2.asLong() + "" + color;
 		FXEssentiaStream existing = ACTIVE.get(k);
-		if (existing != null && !existing.expired && existing.trail.size() < existing.length) {
+		if (existing != null && !existing.expired && existing.vecs.size() < existing.length) {
 			existing.length += Math.max(extend, 5);
 			existing.lifetime += Math.max(extend, 5);
 			this.lifetime = 0;
-		} else {
+		}
+		if (this.lifetime > 0) {
 			ACTIVE.put(k, this);
 			this.key = k;
 		}
-
-		this.xd = Mth.sin(tickSeed / 4.0f) * 0.015f;
-		this.yd = motionYBias + Mth.sin(tickSeed / 3.0f) * 0.015f;
-		this.zd = Mth.sin(tickSeed / 2.0f) * 0.015f;
-
+		this.xd = Mth.sin(count / 4.0f) * 0.015f;
+		this.yd = my + Mth.sin(count / 3.0f) * 0.015f;
+		this.zd = Mth.sin(count / 2.0f) * 0.015f;
 		this.rCol = ((color >> 16) & 0xFF) / 255.0f;
 		this.gCol = ((color >> 8) & 0xFF) / 255.0f;
 		this.bCol = (color & 0xFF) / 255.0f;
 		this.gravity = 0.2f;
-
-		this.startX = x;
-		this.startY = y;
-		this.startZ = z;
+		vecs.add(new double[] { 0.001, 0, 0, 0 });
+		vecs.add(new double[] { 0.001, 0, 0, 0 });
+		this.startX = this.x;
+		this.startY = this.y;
+		this.startZ = this.z;
 	}
 
 	@Override
@@ -144,12 +138,9 @@ public class FXEssentiaStream extends Particle {
 		if (age++ >= lifetime || length < 1) {
 			expired = true;
 			remove();
-			if (ACTIVE.get(key) == this) {
-				ACTIVE.remove(key);
-			}
+			if (ACTIVE.get(key) == this) ACTIVE.remove(key);
 			return;
 		}
-
 		yd += 0.01 * gravity;
 		move(xd, yd, zd);
 		xd *= 0.985;
@@ -158,130 +149,85 @@ public class FXEssentiaStream extends Particle {
 		xd = Mth.clamp((float) xd, -0.05f, 0.05f);
 		yd = Mth.clamp((float) yd, -0.05f, 0.05f);
 		zd = Mth.clamp((float) zd, -0.05f, 0.05f);
-
 		double dx = targetX - x;
 		double dy = targetY - y;
 		double dz = targetZ - z;
-		double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-		if (dist > 1.0E-5) {
-			double pull = 0.01 / Math.min(1.0, dist);
-			xd += (dx / dist) * pull;
-			yd += (dy / dist) * pull;
-			zd += (dz / dist) * pull;
+		double d14 = Mth.sqrt((float) (dx * dx + dy * dy + dz * dz));
+		dx /= d14;
+		dy /= d14;
+		dz /= d14;
+		xd += dx * (0.01 / Math.min(1.0, d14));
+		yd += dy * (0.01 / Math.min(1.0, d14));
+		zd += dz * (0.01 / Math.min(1.0, d14));
+		float scale = particleScale * (0.75f + Mth.sin((count + age) / 2.0f) * 0.25f);
+		if (d14 < 1.0) {
+			float f = Mth.sin((float) (d14 * (Math.PI / 2.0)));
+			scale *= f;
+			particleScale *= f;
 		}
-
-		float pointScale = baseScale * (0.75f + Mth.sin((age) / 2.0f) * 0.25f);
-		if (dist < 1.0) {
-			float f = Mth.sin((float) (dist * (Math.PI / 2.0)));
-			pointScale *= f;
-			baseScale *= f;
-		}
-
-		if (baseScale > 0.001f) {
-			trail.add(new Vec3(x - startX, y - startY, z - startZ));
-			trailRadii.add(pointScale);
+		if (particleScale > 0.001) {
+			vecs.add(new double[] { scale, x - startX, y - startY, z - startZ });
 		} else {
-			length--;
+			if (growing < 0) growing = age;
+			--length;
 			thaumcraft.client.fx.ClientFxHandlers.spawnEssentiaDrop(level, targetX + random.nextGaussian() * 0.075, targetY + random.nextGaussian() * 0.075,
 					targetZ + random.nextGaussian() * 0.075, rCol, gCol, bCol, 0.5f);
 		}
-		while (trail.size() > length) {
-			trail.remove(0);
-			trailRadii.remove(0);
-		}
-
-		if (trail.size() > 2 && random.nextBoolean()) {
-			int q = random.nextInt(3);
-			if (random.nextBoolean()) {
-				q = trail.size() - 2;
+		if (vecs.size() > length) vecs.remove(0);
+		int n = vecs.size();
+		points = new Vec3[n];
+		colours = new float[n][4];
+		radii = new double[n];
+		int c = n;
+		for (double[] v : vecs) {
+			--c;
+			float variance = 1.0f + Mth.sin((c + age) / 3.0f) * 0.2f;
+			float xx = Mth.sin((c + age) / 6.0f) * 0.03f;
+			float yy = Mth.sin((c + age) / 7.0f) * 0.03f;
+			float zz = Mth.sin((c + age) / 8.0f) * 0.03f;
+			points[c] = new Vec3(v[1] + xx, v[2] + yy, v[3] + zz);
+			radii[c] = v[0] * variance;
+			if (c > n - 10) radii[c] *= Mth.cos((float) ((c - (n - 12)) / 10.0f * (Math.PI / 2.0)));
+			if (c == 0 || c == 1) {
+				radii[c] = 0.0;
+			} else if (c == 2) {
+				radii[c] = (particleScale * 0.5 + radii[c]) / 2.0;
+			} else if (c == 3) {
+				radii[c] = (particleScale + radii[c]) / 2.0;
+			} else if (c == 4) {
+				radii[c] = (particleScale + radii[c] * 2.0) / 3.0;
 			}
-			Vec3 p = trail.get(q);
-			thaumcraft.client.fx.ClientFxHandlers.spawnEssentiaDrop(level, p.x + startX, p.y + startY, p.z + startZ, rCol, gCol, bCol, 0.5f);
+			float v2 = 1.0f - Mth.sin((c + age) / 2.0f) * 0.1f;
+			colours[c][0] = rCol * v2;
+			colours[c][1] = gCol * v2;
+			colours[c][2] = bCol * v2;
+			colours[c][3] = 1.0f;
+		}
+		if (n > 2 && random.nextBoolean()) {
+			int q = random.nextInt(3);
+			if (random.nextBoolean()) q = n - 2;
+			double[] p = vecs.get(q);
+			thaumcraft.client.fx.ClientFxHandlers.spawnEssentiaDrop(level, p[1] + startX, p[2] + startY, p[3] + startZ, rCol, gCol, bCol, 0.5f);
 		}
 	}
 
 	@Override
 	public void render(VertexConsumer buffer, Camera camera, float partialTicks) {
-		int n = trail.size();
-		if (n < 3) return;
-
-		Vec3 camPos = camera.getPosition();
-		float baseX = (float) (startX - camPos.x);
-		float baseY = (float) (startY - camPos.y);
-		float baseZ = (float) (startZ - camPos.z);
-
-		Vec3[] points = new Vec3[n];
-		float[] radii = new float[n];
-		for (int i = 0; i < n; i++) {
-			points[i] = trail.get(i);
-			float taper = Math.min(smoothTaper(i, n), 1.0f);
-			radii[i] = trailRadii.get(i) * taper;
-		}
-
-		Vec3[] tangents = computeTangents(points);
-		Vec3[] rights = computeRights(tangents);
-
+		if (points == null || points.length <= 2) return;
+		Vec3 cam = camera.getPosition();
+		double ox = startX - cam.x;
+		double oy = startY - cam.y;
+		double oz = startZ - cam.z;
 		int light = LightTexture.FULL_BRIGHT;
-		for (int i = 0; i < n - 1; i++) {
-			emitRingSegment(buffer, baseX, baseY, baseZ, points[i], tangents[i], rights[i], radii[i],
-					points[i + 1], tangents[i + 1], rights[i + 1], radii[i + 1], light);
-		}
+		GleTube.Sink sink = (x, y, z, u, v, r, g, b, a) -> buffer.addVertex((float) (x + ox), (float) (y + oy), (float) (z + oz))
+				.setUv(u, v).setColor(r, g, b, a).setLight(light);
+		// set_POLYCYL_TESS(8), join style 1042, texture slice 0.075, running once the stream has arrived
+		GleTube.polyCone(sink, points, colours, radii, 8, 0.075f, growing < 0 ? 0.0f : 0.075f * (age - growing + partialTicks), true, false);
 	}
 
-	/** 0 at both ends of the trail, 1 in the middle - real replacement for the true original's own real
-	 * ad-hoc index-based radius case table, see this class's own doc comment for why. */
-	private static float smoothTaper(int index, int count) {
-		float edge = Math.min(4, count / 4);
-		if (edge <= 0) return 1.0f;
-		float fromHead = index / (float) edge;
-		float fromTail = (count - 1 - index) / (float) edge;
-		return Math.min(1.0f, Math.min(fromHead, fromTail));
-	}
-
-	private static Vec3[] computeTangents(Vec3[] points) {
-		Vec3[] tangents = new Vec3[points.length];
-		for (int i = 0; i < points.length; i++) {
-			Vec3 prev = points[Math.max(i - 1, 0)];
-			Vec3 next = points[Math.min(i + 1, points.length - 1)];
-			Vec3 dir = next.subtract(prev);
-			tangents[i] = dir.lengthSqr() > 1.0E-8 ? dir.normalize() : new Vec3(0.0, 1.0, 0.0);
-		}
-		return tangents;
-	}
-
-	private static Vec3[] computeRights(Vec3[] tangents) {
-		Vec3[] rights = new Vec3[tangents.length];
-		Vec3 worldUp = Math.abs(tangents[0].y) < 0.99 ? new Vec3(0.0, 1.0, 0.0) : new Vec3(1.0, 0.0, 0.0);
-		rights[0] = tangents[0].cross(worldUp).normalize();
-		for (int i = 1; i < tangents.length; i++) {
-			Vec3 projected = rights[i - 1].subtract(tangents[i].scale(rights[i - 1].dot(tangents[i])));
-			rights[i] = projected.lengthSqr() > 1.0E-8 ? projected.normalize() : tangents[i].cross(worldUp).normalize();
-		}
-		return rights;
-	}
-
-	private void emitRingSegment(VertexConsumer buffer, float baseX, float baseY, float baseZ,
-			Vec3 p0, Vec3 t0, Vec3 r0, float w0, Vec3 p1, Vec3 t1, Vec3 r1, float w1, int light) {
-		Vec3 u0 = t0.cross(r0);
-		Vec3 u1 = t1.cross(r1);
-		for (int side = 0; side < SIDES; side++) {
-			double a0 = side / (double) SIDES * (Math.PI * 2.0);
-			double a1 = (side + 1) / (double) SIDES * (Math.PI * 2.0);
-
-			addVertex(buffer, baseX, baseY, baseZ, ringVertex(p0, r0, u0, w0, a0), light);
-			addVertex(buffer, baseX, baseY, baseZ, ringVertex(p0, r0, u0, w0, a1), light);
-			addVertex(buffer, baseX, baseY, baseZ, ringVertex(p1, r1, u1, w1, a1), light);
-			addVertex(buffer, baseX, baseY, baseZ, ringVertex(p1, r1, u1, w1, a0), light);
-		}
-	}
-
-	private static Vec3 ringVertex(Vec3 center, Vec3 right, Vec3 up, float radius, double angle) {
-		return center.add(right.scale(Math.cos(angle) * radius)).add(up.scale(Math.sin(angle) * radius));
-	}
-
-	private void addVertex(VertexConsumer buffer, float baseX, float baseY, float baseZ, Vec3 v, int light) {
-		buffer.addVertex(baseX + (float) v.x, baseY + (float) v.y, baseZ + (float) v.z)
-				.setUv(0.5f, 0.5f).setColor(rCol, gCol, bCol, 1.0f).setLight(light);
+	@Override
+	public net.minecraft.world.phys.AABB getRenderBoundingBox(float partialTicks) {
+		return new net.minecraft.world.phys.AABB(startX, startY, startZ, x, y, z).inflate(1.0);
 	}
 
 	@Override
