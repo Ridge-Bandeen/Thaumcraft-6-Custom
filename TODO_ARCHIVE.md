@@ -11,6 +11,11 @@
   random 0.1-0.2 base); bore particles at the original's half size; spark flip; eldritch-orb spikes with the original's
   real colours (byte overflow: tips grey 192, alpha 1/255) and culling; smoke spiral positioned per frame with 1.12's
   random scale; Eldritch wisp glow at its real size (was 10x small) fading with camera distance.
+- Client FX compared class by class: Arcing's slash restored (FXPlane, was vanilla sweep particles); FXArc drawn
+  from both sides and straight when given no height gain (as the original's NaN path); fire motes at the original's
+  half alpha with drawFireMote's random normal-blend small variant and the Alumentum's normal blend; bore sparkles
+  and block runes additive (the original's layer 0). Dead in the original, not ported: FXBeamBore, FXBeamWand,
+  FXBlockWard, FXDigging, FXGenericP2E/P2P, FXSwarmRunes (no callers).
 - Addon batch: Thaumcraft zombies in #minecraft:zombies and the Eldritch Guardian in #minecraft:undead (parity:
   healing hurts them, Smite applies); #19 `#thaumcraft:mound_ground` + mound config (processors, chest blocks); #20
   `#thaumcraft:research/<ns>/<path>` alternatives for item requirements.

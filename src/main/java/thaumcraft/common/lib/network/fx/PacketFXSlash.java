@@ -11,10 +11,8 @@ import thaumcraft.Thaumcraft;
  * Replaces the old (1.12.2) {@code PacketFXSlash} - a client-bound "draw a slash effect between two
  * entities" notification, sent for {@link thaumcraft.common.lib.enchantment.EnumInfusionEnchantment#ARCING}'s
  * cleave hits. First real packet this port has needed - see {@code Thaumcraft#registerPayloads} for the
- * registration side and {@link thaumcraft.client.fx.ClientFxHandlers#handleSlash} for the actual client
- * visual, a plain vanilla particle burst replacing the original's custom textured line-trail renderer
- * ({@code FXDispatcher.drawSlash}) - same "no custom render layer, vanilla particles instead" boundary this
- * whole port has kept since Cinderpearl's own client FX.
+ * registration side and {@link thaumcraft.client.fx.ClientFxHandlers#handleSlash} for the client visual, the
+ * original's slash sprite ({@link thaumcraft.client.fx.particles.FXPlane}, {@code FXDispatcher.drawSlash}).
  *
  * Carries entity ids (not positions) like the original, resolved back to live entities client-side - the
  * source/target may have moved between the server tick that sent this and the client tick that receives it,

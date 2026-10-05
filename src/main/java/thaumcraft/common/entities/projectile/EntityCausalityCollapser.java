@@ -50,7 +50,7 @@ public class EntityCausalityCollapser extends ThrowableItemProjectile {
 	public void tick() {
 		super.tick();
 		if (level().isClientSide) {
-			thaumcraft.client.fx.ClientFxHandlers.spawnFireMote(level(), getX(), getY() + getBbHeight() / 2.0, getZ(),
+			thaumcraft.client.fx.ClientFxHandlers.spawnAlumentumMote(level(), getX(), getY() + getBbHeight() / 2.0, getZ(),
 					0.0125 * (random.nextFloat() - 0.5), 0.0125 * (random.nextFloat() - 0.5), 0.0125 * (random.nextFloat() - 0.5),
 					0.8f + random.nextFloat() * 0.2f, 0.3f + random.nextFloat() * 0.1f, random.nextFloat() * 0.1f, 4.0f);
 		}

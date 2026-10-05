@@ -49,7 +49,7 @@ public class FXBoreSparkle extends SingleQuadParticle {
 			RenderSystem.setShader(GameRenderer::getParticleShader);
 			RenderSystem.setShaderTexture(0, TEXTURE);
 			RenderSystem.enableBlend();
-			RenderSystem.defaultBlendFunc();
+			RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA, com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE); // the original's layer 0: additive
 			RenderSystem.depthMask(false);
 			return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
 		}

@@ -447,6 +447,7 @@ sourceSets {
             include 'thaumcraft/client/fx/particles/FXBreakingFade.java'
             include 'thaumcraft/client/fx/particles/FXEssentiaStream.java'
             include 'thaumcraft/client/fx/particles/FXVoidStream.java'
+            include 'thaumcraft/client/fx/particles/FXPlane.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXEssentiaSource.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXInfusionSource.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXShield.java'

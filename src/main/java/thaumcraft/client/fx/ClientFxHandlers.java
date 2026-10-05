@@ -279,13 +279,21 @@ public final class ClientFxHandlers {
 		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXVent2(clientLevel, x, y, z, mx, my, mz, color).setScale(scale));
 	}
 
-	/** Real {@link thaumcraft.client.fx.particles.FXFireMote} spawn - shared by the true original's own real
-	 * {@code drawFireMote}/{@code drawAlumentum} wrapper methods (same particle class, different default
-	 * colour/scale at each real call site). */
+	/** The original's {@code FXDispatcher#drawFireMote} (the focus projectile's trail): half the time an additive mote,
+	 * half the time a normal-blend one a third the size. */
 	public static void spawnFireMote(net.minecraft.world.level.Level level, double x, double y, double z,
 			double mx, double my, double mz, float r, float g, float b, float scale) {
 		if (!(level instanceof ClientLevel clientLevel)) return;
-		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXFireMote(clientLevel, x, y, z, mx, my, mz, r, g, b, scale));
+		boolean bb = level.random.nextBoolean();
+		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXFireMote(clientLevel, x, y, z, mx, my, mz, r, g, b,
+				bb ? scale / 3.0f : scale).setLayer(bb ? 1 : 0));
+	}
+
+	/** The original's {@code FXDispatcher#drawAlumentum}: a normal-blend fire mote (Alumentum, Causality Collapser). */
+	public static void spawnAlumentumMote(net.minecraft.world.level.Level level, double x, double y, double z,
+			double mx, double my, double mz, float r, float g, float b, float scale) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXFireMote(clientLevel, x, y, z, mx, my, mz, r, g, b, scale).setLayer(1));
 	}
 
 	/** The original's {@code FXDispatcher#drawFocusCloudParticle}: a large, slow, fading puff in a focus effect's colour. */
@@ -970,25 +978,21 @@ public final class ClientFxHandlers {
 		addDelayed(fb, cfg.delay);
 	}
 
-	/** {@link thaumcraft.common.lib.enchantment.EnumInfusionEnchantment#ARCING}'s cleave hit - the original drew a textured slash quad between
-	 * the two entities ({@code FXDispatcher.drawSlash}); this spawns a small burst of vanilla's own sweep-attack
-	 * particle at the target instead, the same particle a vanilla sword sweep itself uses. */
+	/** The original's PacketFXSlash / FXDispatcher#drawSlash: an {@link thaumcraft.client.fx.particles.FXPlane} slash
+	 * gliding over 8 ticks from the middle of one entity to the middle of the other (Arcing's cleave). */
 	public static void handleSlash(PacketFXSlash payload) {
 		Minecraft mc = Minecraft.getInstance();
 		ClientLevel level = mc.level;
 		if (level == null) {
 			return;
 		}
+		Entity source = resolveEntity(mc, level, payload.source());
 		Entity target = resolveEntity(mc, level, payload.target());
-		if (target == null) {
+		if (source == null || target == null) {
 			return;
 		}
-		double x = target.getX();
-		double y = target.getBoundingBox().minY + target.getBbHeight() / 2.0;
-		double z = target.getZ();
-		for (int i = 0; i < 4; i++) {
-			level.addParticle(ParticleTypes.SWEEP_ATTACK, x, y, z, 0.0, 0.0, 0.0);
-		}
+		mc.particleEngine.add(new thaumcraft.client.fx.particles.FXPlane(level, source.getX(), source.getBoundingBox().minY + source.getBbHeight() / 2.0f,
+				source.getZ(), target.getX(), target.getBoundingBox().minY + target.getBbHeight() / 2.0f, target.getZ(), 8));
 	}
 
 	private static Entity resolveEntity(Minecraft mc, ClientLevel level, int entityId) {

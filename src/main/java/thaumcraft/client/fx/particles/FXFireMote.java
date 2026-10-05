@@ -43,23 +43,44 @@ public class FXFireMote extends SingleQuadParticle {
 	private static final float CELL = 1.0f / GRID;
 	private static final int MAX_VISUAL_AGE = 16;
 
-	public static final ParticleRenderType RENDER_TYPE = new ParticleRenderType() {
-		@Nullable
-		@Override
-		public BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
-			RenderSystem.setShader(GameRenderer::getParticleShader);
-			RenderSystem.setShaderTexture(0, TEXTURE);
-			RenderSystem.enableBlend();
-			RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA, com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
-			RenderSystem.depthMask(false);
-			return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
-		}
+	/** The original's glow layer 0 (additive). */
+	public static final ParticleRenderType RENDER_TYPE = renderType(true);
+	/** Its layer 1 (normal blend) - the Alumentum's motes, and half of the focus projectile's. */
+	public static final ParticleRenderType RENDER_TYPE_NORMAL = renderType(false);
 
-		@Override
-		public String toString() {
-			return "thaumcraft:fire_mote";
-		}
-	};
+	private static ParticleRenderType renderType(boolean additive) {
+		return new ParticleRenderType() {
+			@Nullable
+			@Override
+			public BufferBuilder begin(Tesselator tesselator, TextureManager textureManager) {
+				RenderSystem.setShader(GameRenderer::getParticleShader);
+				RenderSystem.setShaderTexture(0, TEXTURE);
+				RenderSystem.enableBlend();
+				if (additive) {
+					RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA, com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
+				} else {
+					RenderSystem.defaultBlendFunc();
+				}
+				RenderSystem.depthMask(false);
+				return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+			}
+
+			@Override
+			public String toString() {
+				return additive ? "thaumcraft:fire_mote" : "thaumcraft:fire_mote_normal";
+			}
+		};
+	}
+
+	private int layer;
+	/** The original's setAlphaF: every caller passed 0.5. */
+	private float baseAlpha = 0.5f;
+
+	/** The original's glow layer: 0 additive, 1 normal blend. */
+	public FXFireMote setLayer(int layer) {
+		this.layer = layer;
+		return this;
+	}
 
 	private final float baseScale;
 	private int visualAge;
@@ -90,7 +111,7 @@ public class FXFireMote extends SingleQuadParticle {
 		}
 		float lifespan = visualAge / (float) MAX_VISUAL_AGE;
 		quadSize = baseScale - baseScale * lifespan;
-		alpha = 1.0f - lifespan;
+		alpha = baseAlpha * (1.0f - lifespan);
 	}
 
 	@Override
@@ -120,6 +141,6 @@ public class FXFireMote extends SingleQuadParticle {
 
 	@Override
 	public ParticleRenderType getRenderType() {
-		return RENDER_TYPE;
+		return layer == 1 ? RENDER_TYPE_NORMAL : RENDER_TYPE;
 	}
 }

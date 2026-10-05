@@ -93,7 +93,8 @@ public class FXArc extends Particle {
 
 		double gravity = 0.115;
 		double noise = 0.25;
-		Vec3 velocity = calculateVelocity(Vec3.ZERO, end, heightGain <= 0.0f ? 0.1f : heightGain, gravity);
+		// as the original: no height gain gives NaN velocities, so the loop below never runs and the arc is a straight line
+		Vec3 velocity = calculateVelocity(Vec3.ZERO, end, heightGain, gravity);
 		double stepLenSq = velocity.lengthSqr();
 
 		points.add(new Vec3(x, y, z));
@@ -184,6 +185,11 @@ public class FXArc extends Particle {
 		buffer.addVertex((float) (a.x + ox), (float) (a.y + oy), (float) (a.z + oz)).setUv(u0, 0.0f).setColor(rCol, gCol, bCol, renderAlpha).setLight(light);
 		buffer.addVertex((float) (b.x + ox), (float) (b.y + oy), (float) (b.z + oz)).setUv(u1, 0.0f).setColor(rCol, gCol, bCol, renderAlpha).setLight(light);
 		buffer.addVertex((float) (b.x - ox), (float) (b.y - oy), (float) (b.z - oz)).setUv(u1, 1.0f).setColor(rCol, gCol, bCol, renderAlpha).setLight(light);
+		// and the back face: the original drew with culling off
+		buffer.addVertex((float) (b.x - ox), (float) (b.y - oy), (float) (b.z - oz)).setUv(u1, 1.0f).setColor(rCol, gCol, bCol, renderAlpha).setLight(light);
+		buffer.addVertex((float) (b.x + ox), (float) (b.y + oy), (float) (b.z + oz)).setUv(u1, 0.0f).setColor(rCol, gCol, bCol, renderAlpha).setLight(light);
+		buffer.addVertex((float) (a.x + ox), (float) (a.y + oy), (float) (a.z + oz)).setUv(u0, 0.0f).setColor(rCol, gCol, bCol, renderAlpha).setLight(light);
+		buffer.addVertex((float) (a.x - ox), (float) (a.y - oy), (float) (a.z - oz)).setUv(u0, 1.0f).setColor(rCol, gCol, bCol, renderAlpha).setLight(light);
 	}
 
 	@Override
