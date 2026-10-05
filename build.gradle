@@ -413,6 +413,7 @@ sourceSets {
             include 'thaumcraft/common/lib/network/fx/PacketFXBlockArc.java'
             include 'thaumcraft/client/fx/beams/FXBolt.java'
             include 'thaumcraft/client/fx/GleTube.java'
+            include 'thaumcraft/client/fx/ParticleDepthRestore.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXWispZap.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXZap.java'
             include 'thaumcraft/client/fx/particles/FXGeneric.java'

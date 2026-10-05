@@ -21,7 +21,7 @@ public final class ThaumcraftFeatures {
 			() -> new CultistPortalSpawnFeature(NoneFeatureConfiguration.CODEC));
 
 	public static final DeferredHolder<Feature<?>, MoundFeature> MOUND = FEATURES.register("mound",
-			() -> new MoundFeature(NoneFeatureConfiguration.CODEC));
+			() -> new MoundFeature(MoundFeature.Config.CODEC));
 
 	public static final DeferredHolder<Feature<?>, thaumcraft.common.world.GreatwoodTreeFeature> GREATWOOD_TREE = FEATURES.register("greatwood_tree",
 			() -> new thaumcraft.common.world.GreatwoodTreeFeature(thaumcraft.common.world.GreatwoodTreeFeature.Config.CODEC));

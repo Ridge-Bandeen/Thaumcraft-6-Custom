@@ -255,11 +255,34 @@ public class ResearchRequirements {
 		return item;
 	}
 
+	/**
+	 * The alternatives data may add to a plain item requirement: {@code #thaumcraft:research/<namespace>/<path>} of the
+	 * item's id (empty by default). Anything in it counts as that item - to carry, to spend and, for a craft
+	 * requirement, to craft - and the book's requirement row cycles through the item and then the tag's members.
+	 */
+	public static TagKey<Item> alternativesTag(Item item) {
+		ResourceLocation id = BuiltInRegistries.ITEM.getKey(item);
+		return TagKey.create(BuiltInRegistries.ITEM.key(), ResourceLocation.fromNamespaceAndPath("thaumcraft", "research/" + id.getNamespace() + "/" + id.getPath()));
+	}
+
+	private static Predicate<ItemStack> itemOrAlternative(Item item) {
+		TagKey<Item> alternatives = alternativesTag(item);
+		return stack -> stack.is(item) || stack.is(alternatives);
+	}
+
 	/** One stack standing for a resolved requirement target, for the Thaumonomicon's requirement row: the item itself,
 	 * the {@code index}-th... cycling member of a tag (the original's {@code InventoryUtils#cycleItemStack}, one step a
 	 * second), the tagged crystal/phial, or an Enchanted Placeholder carrying the wanted enchantments. */
 	public static ItemStack displayStack(Object target, int index, net.minecraft.core.HolderLookup.Provider registries) {
-		if (target instanceof Item item) return new ItemStack(item);
+		if (target instanceof Item item) {
+			List<Holder<Item>> alts = new ArrayList<>();
+			for (Holder<Item> h : BuiltInRegistries.ITEM.getTagOrEmpty(alternativesTag(item))) {
+				if (h.value() != item) alts.add(h);
+			}
+			if (alts.isEmpty()) return new ItemStack(item);
+			int i = (int) ((System.currentTimeMillis() / 1000L + index) % (alts.size() + 1));
+			return i == 0 ? new ItemStack(item) : new ItemStack(alts.get(i - 1));
+		}
 		if (target instanceof TagKey<?> tag) {
 			@SuppressWarnings("unchecked")
 			List<Holder<Item>> items = new ArrayList<>();
@@ -304,7 +327,7 @@ public class ResearchRequirements {
 	public static int registerCraftReference(Object target) {
 		int code = codeFor(target);
 		if (target instanceof Item item) {
-			CRAFT_REFERENCES.add(new Reference(stack -> stack.is(item), code));
+			CRAFT_REFERENCES.add(new Reference(itemOrAlternative(item), code));
 		} else if (target instanceof TagKey<?> tag) {
 			CRAFT_REFERENCES.add(new Reference(stack -> stack.is((TagKey<Item>) tag), code));
 		}
@@ -398,7 +421,7 @@ public class ResearchRequirements {
 	public static boolean isCarrying(Player player, Object target) {
 		if (target instanceof EnchantSpec spec) return findEnchanted(player, spec) != null;
 		Predicate<ItemStack> matches;
-		if (target instanceof Item item) matches = stack -> stack.is(item);
+		if (target instanceof Item item) matches = itemOrAlternative(item);
 		else if (target instanceof TagKey<?> tag) matches = stack -> stack.is((TagKey<Item>) tag);
 		else if (target instanceof AspectItemSpec spec) matches = stack -> matchesAspects(stack, spec);
 		else return false;
@@ -415,7 +438,7 @@ public class ResearchRequirements {
 			return;
 		}
 		Predicate<ItemStack> matches;
-		if (target instanceof Item item) matches = stack -> stack.is(item);
+		if (target instanceof Item item) matches = itemOrAlternative(item);
 		else if (target instanceof TagKey<?> tag) matches = stack -> stack.is((TagKey<Item>) tag);
 		else if (target instanceof AspectItemSpec spec) matches = stack -> matchesAspects(stack, spec);
 		else return;

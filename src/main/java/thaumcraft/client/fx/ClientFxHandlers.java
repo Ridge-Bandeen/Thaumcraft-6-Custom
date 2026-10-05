@@ -453,7 +453,7 @@ public final class ClientFxHandlers {
 
 	/** Real port of the true original's own {@code FXDispatcher#spark}: a short-lived (5-9 tick) glowing spark from
 	 * the 16-grid particle sheet - a random row of the 8-frame animation starting at column 8. Used by the
-	 * Warden's sapping fields ({@code BlockEffectSap}). The original's random horizontal mirroring is dropped. */
+	 * Warden's sapping fields ({@code BlockEffectSap}); mirrored at random, as the original. */
 	public static void spawnSpark(net.minecraft.world.level.Level level, double x, double y, double z, float size, float r, float g, float b, float a) {
 		if (!(level instanceof ClientLevel clientLevel)) return;
 		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, 0.0, 0.0, 0.0);
@@ -463,6 +463,7 @@ public final class ClientFxHandlers {
 		fb.setGridSize(16);
 		fb.setParticles(8 + level.random.nextInt(3) * 16, 8, 1);
 		fb.setScale(size);
+		fb.setFlipped(level.random.nextBoolean());
 		addDelayed(fb, 0);
 	}
 
@@ -1450,9 +1451,9 @@ public final class ClientFxHandlers {
 	/** Real {@link thaumcraft.client.fx.particles.FXGeneric} marker, restored 2026-09-15 (see that class's
 	 * own doc comment) - was a plain vanilla dust particle burst before. Matches the true original's own
 	 * real config exactly: a 44-tick, 15-frame looping glow sprite (frames 240-254 on the shared particle
-	 * sheet) fading in then out ({@code 0 -> 1 -> 0.8 -> 0} over its life), scaled 9x, additively blended,
-	 * revealed {@code distance * 3} real ticks after the scan origin via {@link #addDelayed} - the real
-	 * "sonar ping" timing, restored alongside the marker itself. */
+	 * sheet) fading in then out ({@code 0 -> 1 -> 0.8 -> 0} over its life), scaled 9x, seen through the rock (layer 2,
+	 * additive - or layer 3, normal blend, for dark ores whose colour averages under 0.25), revealed
+	 * {@code distance * 3} ticks after the scan origin via {@link #addDelayed} - the original's "sonar ping". */
 	private static void markGroup(ClientLevel level, Set<BlockPos> group, Block block, BlockPos origin) {
 		double x = 0;
 		double y = 0;
@@ -1477,7 +1478,9 @@ public final class ClientFxHandlers {
 		fx.setGridSize(16);
 		fx.setLoop(true);
 		fx.setScale(9.0f);
-		fx.setLayer(1);
+		float q = (color.x() + color.y() + color.z()) / 3.0f;
+		fx.setLayer(q < 0.25f ? 3 : 2);
+		fx.setRotationSpeed(0.0f);
 		addDelayed(fx, (int) (distance * 3.0));
 	}
 

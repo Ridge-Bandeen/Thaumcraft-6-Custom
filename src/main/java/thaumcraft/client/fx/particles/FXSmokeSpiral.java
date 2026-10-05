@@ -24,14 +24,9 @@ import thaumcraft.Thaumcraft;
  * {@link thaumcraft.common.entities.monster.boss.EntityEldritchWarden}'s own real teleport cue and {@link
  * thaumcraft.common.items.tools.ItemElementalSword}'s own real special-attack cue.
  *
- * <p>Real, checked-not-assumed detail: the true original's own real {@code onUpdate} never calls
- * {@code super.onUpdate()} at all and never actually moves the particle's own real tracked position - the
- * whole spiral motion is computed fresh every real FRAME inside {@code renderParticle} itself (a pure
- * render-time offset, not a real physics simulation) off {@code (particleAge + partialTick)}. This port bakes
- * the same real formula into the particle's own real {@code x}/{@code y}/{@code z} once per TICK instead (not
- * per frame) - a real, disclosed simplification: standard particle interpolation smooths between each tick's
- * own spiral position for free, which reads the same for a slow, few-tick-lived effect like this one without
- * needing a real custom {@code render()} override.
+ * <p>As the original the particle itself never moves: each frame it is drawn on the spiral at (age + partial tick) -
+ * two turns round, from the top of a sphere of the given radius to its bottom, never below {@code minY} + 0.1 - in
+ * the frame for its age, fading out, at 1 to 2 times its size (1.12's random particle scale).
  */
 public class FXSmokeSpiral extends SingleQuadParticle {
 
@@ -76,30 +71,31 @@ public class FXSmokeSpiral extends SingleQuadParticle {
 		this.gCol = ((color >> 8) & 0xFF) / 255.0f;
 		this.bCol = (color & 0xFF) / 255.0f;
 		this.lifetime = 20 + random.nextInt(10);
-		this.quadSize = 1.0f;
+		this.quadSize = (random.nextFloat() * 0.5f + 0.5f) * 2.0f; // 1.12 Particle's own random scale
 		this.alpha = 0.66f;
 	}
 
 	@Override
 	public void tick() {
-		xo = x;
-		yo = y;
-		zo = z;
-
-		float r1 = start + 720.0f * (age / (float) lifetime);
-		float r2 = 90.0f - 180.0f * (age / (float) lifetime);
-		float mx = -Mth.sin(r1 / 180.0f * Mth.PI) * Mth.cos(r2 / 180.0f * Mth.PI);
-		float mz = Mth.cos(r1 / 180.0f * Mth.PI) * Mth.cos(r2 / 180.0f * Mth.PI);
-		float my = -Mth.sin(r2 / 180.0f * Mth.PI);
-		x = originX + mx * radius;
-		y = Math.max(originY + my * radius, minY + 0.1);
-		z = originZ + mz * radius;
-
 		alpha = 0.66f * (lifetime - age) / (float) lifetime;
 
 		if (age++ >= lifetime) {
 			remove();
 		}
+	}
+
+	/** The original's renderParticle: the spiral position for this frame. */
+	@Override
+	public void render(com.mojang.blaze3d.vertex.VertexConsumer buffer, net.minecraft.client.Camera camera, float partialTicks) {
+		float t = (age + partialTicks) / lifetime;
+		float r1 = start + 720.0f * t;
+		float r2 = 90.0f - 180.0f * t;
+		float mx = -Mth.sin(r1 / 180.0f * Mth.PI) * Mth.cos(r2 / 180.0f * Mth.PI) * radius;
+		float mz = Mth.cos(r1 / 180.0f * Mth.PI) * Mth.cos(r2 / 180.0f * Mth.PI) * radius;
+		float my = -Mth.sin(r2 / 180.0f * Mth.PI) * radius;
+		var cam = camera.getPosition();
+		renderRotatedQuad(buffer, camera.rotation(), (float) (originX + mx - cam.x), (float) (Math.max(originY + my, minY + 0.1f) - cam.y),
+				(float) (originZ + mz - cam.z), partialTicks);
 	}
 
 	@Override

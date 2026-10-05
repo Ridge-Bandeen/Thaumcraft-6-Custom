@@ -2,6 +2,19 @@
 
 ## Closed 2026-10-05
 
+- GLE tubes (`GleTube`, the original's bundled glePolyCone): Wisp/bolt zap, essentia streams (rebuilt as the original;
+  essentia-source streams were 10x thick, now 0.1 scale, matrix offset, transport-face start), flux rift (radius pulse,
+  culling), grapple rope + glow sprite + slack, Void Siphon void streaks (FXVoidStream, block event 5). Not ported, dead
+  in the original: FXBoreStream (boreTrailFx had no callers) and RenderRiftBlast (EntityRiftBlast never spawned).
+- Particles: FXGeneric's see-through layers 2/3 (the Sounding ore marks show through rock again, layer 2/3 by
+  colour), original layer order 3,2,1,0, depth restored after particles; FXGeneric size exactly 0.1 x scale (was a
+  random 0.1-0.2 base); bore particles at the original's half size; spark flip; eldritch-orb spikes with the original's
+  real colours (byte overflow: tips grey 192, alpha 1/255) and culling; smoke spiral positioned per frame with 1.12's
+  random scale; Eldritch wisp glow at its real size (was 10x small) fading with camera distance.
+- Addon batch: Thaumcraft zombies in #minecraft:zombies and the Eldritch Guardian in #minecraft:undead (parity:
+  healing hurts them, Smite applies); #19 `#thaumcraft:mound_ground` + mound config (processors, chest blocks); #20
+  `#thaumcraft:research/<ns>/<path>` alternatives for item requirements.
+
 - User-approved bug fix: the Focal Manipulator screen shows the XP levels a build really costs (the original's screen
   used Math.min and always read 0 or 1).
 

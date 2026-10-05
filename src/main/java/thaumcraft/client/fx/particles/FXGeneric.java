@@ -37,11 +37,9 @@ import thaumcraft.Thaumcraft;
  * "assets ready, only Java missing" shape {@code Sounds}/the beam textures had) - the true original's own
  * {@code ParticleEngine.particleTexture} field, bound once per frame before every real {@code FXGeneric}
  * instance in that frame, all addressing their own sub-region of the one shared sheet via {@link
- * #gridSize}/frame index. Two real blend modes are supported via {@link #setLayer} (a real, simplified stand-in
- * for the true original's own real dual particle-bucket-array mechanism, itself half GUI-overlay-specific
- * plumbing not relevant to a real world-space particle): even layers (0, the default) = additive/glowing,
- * odd layers = normal alpha blend - matches the two real blend functions the true original's own {@code ParticleEngine}
- * used ({@code [770,1]} additive, {@code [770,771]} normal), not the literal bucket-array mechanism itself.
+ * #gridSize}/frame index. {@link #setLayer} picks the original ParticleEngine's world layers: 0 (the default) additive,
+ * 1 normal blend, 2 additive and 3 normal with the depth test off (seen through blocks - the Sounding ore marks),
+ * drawn in the original's order 3, 2, 1, 0.
  *
  * <p>The original's "angled" mode ({@link #setAngles}): a fixed yaw/pitch orientation instead of facing the camera
  * (curly wisps, Pech curses, ground-decal particles) - see {@link #render}. {@link #setFinalFrames} (an explicit end-of-life frame-index override sequence) is kept
@@ -51,24 +49,27 @@ public class FXGeneric extends SingleQuadParticle {
 
 	private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/misc/particles.png");
 
-	private static final ParticleRenderType RENDER_TYPE_NORMAL;
-	private static final ParticleRenderType RENDER_TYPE_ADDITIVE;
+	/** Indexed by layer 0-3. */
+	private static final ParticleRenderType[] RENDER_TYPES = new ParticleRenderType[4];
 
 	static {
 		// NeoForge draws custom particle render types in System.identityHashCode order (ClientHooks#makeParticleRenderTypeComparator),
 		// i.e. randomly per run. The original always drew its normal-blend layers before its additive ones (layers 3, 2, 1, 0), so
 		// a Nitor's white core sat BEHIND its glow; with a random order it was in front about half the time (playtest 2026-09-25).
-		// Re-create the normal type until its hash sorts first - cheap, and deterministic in effect.
-		ParticleRenderType normal = renderType(false);
-		ParticleRenderType additive = renderType(true);
-		for (int tries = 0; tries < 1000 && System.identityHashCode(normal) >= System.identityHashCode(additive); tries++) {
-			normal = renderType(false);
+		// Re-create each type until the hashes run 3 < 2 < 1 < 0 - cheap, and deterministic in effect.
+		RENDER_TYPES[3] = renderType(3);
+		for (int layer = 2; layer >= 0; layer--) {
+			ParticleRenderType t = renderType(layer);
+			for (int tries = 0; tries < 100000 && System.identityHashCode(t) <= System.identityHashCode(RENDER_TYPES[layer + 1]); tries++) {
+				t = renderType(layer);
+			}
+			RENDER_TYPES[layer] = t;
 		}
-		RENDER_TYPE_NORMAL = normal;
-		RENDER_TYPE_ADDITIVE = additive;
 	}
 
-	private static ParticleRenderType renderType(boolean additive) {
+	private static ParticleRenderType renderType(int layer) {
+		boolean additive = (layer & 1) == 0;
+		boolean noDepth = layer >= 2;
 		return new ParticleRenderType() {
 			@Nullable
 			@Override
@@ -82,12 +83,17 @@ public class FXGeneric extends SingleQuadParticle {
 					RenderSystem.defaultBlendFunc();
 				}
 				RenderSystem.depthMask(false);
+				if (noDepth) {
+					RenderSystem.disableDepthTest();
+				} else {
+					RenderSystem.enableDepthTest();
+				}
 				return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
 			}
 
 			@Override
 			public String toString() {
-				return additive ? "thaumcraft:generic_additive" : "thaumcraft:generic";
+				return "thaumcraft:generic_layer_" + layer;
 			}
 		};
 	}
@@ -98,8 +104,8 @@ public class FXGeneric extends SingleQuadParticle {
 	private int particleInc = 1;
 	private boolean loop;
 	private int[] finalFrames;
-	/** Original default layer 0 = additive - see {@link #setLayer}. */
-	private boolean additive = true;
+	/** The original ParticleEngine layer, 0-3 - see {@link #setLayer}. */
+	private int layer;
 
 	private float[] alphaKeys = { 1.0f };
 	private float[] scaleKeys = { 1.0f };
@@ -126,7 +132,8 @@ public class FXGeneric extends SingleQuadParticle {
 		this.xd = xd;
 		this.yd = yd;
 		this.zd = zd;
-		this.baseQuadSize = this.quadSize;
+		// the original drew at exactly 0.1 * its scale keys - not 1.21's random 0.1-0.2 default quad size
+		this.baseQuadSize = 0.1f;
 		// 1.12's Particle never set particleGravity (vanilla's falling particles set their own), so the original's
 		// FXGeneric hovered unless setGravity was called - e.g. Nitor's motes. The port had defaulted this to 1.0,
 		// making every effect without its own setGravity fall (fixed 2026-10-02).
@@ -221,14 +228,24 @@ public class FXGeneric extends SingleQuadParticle {
 		frameY = i / gridSize;
 	}
 
+	private boolean flipped;
+
+	/** The original's setFlipped: mirror the frame left to right. */
+	public FXGeneric setFlipped(boolean flipped) {
+		this.flipped = flipped;
+		return this;
+	}
+
 	@Override
 	protected float getU0() {
-		return frameX / (float) gridSize;
+		float left = frameX / (float) gridSize;
+		return flipped ? left + 1.0f / gridSize : left;
 	}
 
 	@Override
 	protected float getU1() {
-		return getU0() + 1.0f / gridSize;
+		float left = frameX / (float) gridSize;
+		return flipped ? left : left + 1.0f / gridSize;
 	}
 
 	@Override
@@ -243,7 +260,7 @@ public class FXGeneric extends SingleQuadParticle {
 
 	@Override
 	public ParticleRenderType getRenderType() {
-		return additive ? RENDER_TYPE_ADDITIVE : RENDER_TYPE_NORMAL;
+		return RENDER_TYPES[layer];
 	}
 
 	// --- Real ported setters, matching the true original's own real fluent-setter API shape ---
@@ -377,14 +394,10 @@ public class FXGeneric extends SingleQuadParticle {
 		return this;
 	}
 
-	/** Real simplified stand-in for the true original's own real dual particle-bucket-array mechanism - see
-	 * the class doc comment. Even layers = additive/glowing (0 is the default), odd = normal alpha blend. */
+	/** The original ParticleEngine's layer: 0 additive, 1 normal, 2 additive and 3 normal through blocks. The GUI
+	 * layers 4 and 5 fall back to their blend in the world (4 additive, 5 normal). */
 	public FXGeneric setLayer(int layer) {
-		// The true original's ParticleEngine: layer 0 = blendFunc(770,1) ADDITIVE, 1 = (770,771) normal, 2 = additive
-		// with depth test off, 3 = normal with depth test off. So even layers glow, odd layers are plain alpha.
-		// (Depth-off layers 2/3 are not distinguished here.) An earlier version had this inverted - layer 0, the
-		// default, drew as dim normal blend - found 2026-09-25 when the Sapping Field sparks looked very faint.
-		this.additive = (layer & 1) == 0;
+		this.layer = layer >= 4 ? layer - 4 : Math.max(0, Math.min(3, layer));
 		return this;
 	}
 

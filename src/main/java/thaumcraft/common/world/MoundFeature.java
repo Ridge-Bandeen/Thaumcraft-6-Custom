@@ -51,17 +51,35 @@ import thaumcraft.api.blocks.BlocksTC;
  * modern placed-feature chance rolls don't share state across features, a minor frequency increase for the
  * portal spawn specifically that isn't worth the complexity of suppressing.
  */
-public class MoundFeature extends Feature<NoneFeatureConfiguration> {
+public class MoundFeature extends Feature<MoundFeature.Config> {
 
 	private static final ResourceLocation TEMPLATE = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "mound");
-	private static final Set<Block> VALID_SPAWN_BLOCKS = Set.of(Blocks.STONE, Blocks.GRASS_BLOCK, Blocks.DIRT);
+	/** The ground a mound may sit on ({@code #thaumcraft:mound_ground}; the original's stone, grass and dirt). */
+	public static final net.minecraft.tags.TagKey<Block> GROUND = net.minecraft.tags.BlockTags.create(
+			net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "mound_ground"));
 
-	public MoundFeature(Codec<NoneFeatureConfiguration> codec) {
+	/**
+	 * The configured feature's options, all optional ({@code "config": {}} is the original mound): a processor list
+	 * run over the template as it is placed ({@code "processors"}), and the blocks used for the loot chest and its
+	 * trapped variant ({@code "chest"}, {@code "trapped_chest"} - block states, vanilla's by default; any block whose
+	 * block entity takes a loot table works).
+	 */
+	public record Config(java.util.Optional<net.minecraft.core.Holder<net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorList>> processors,
+			net.minecraft.world.level.block.state.BlockState chest, net.minecraft.world.level.block.state.BlockState trappedChest)
+			implements net.minecraft.world.level.levelgen.feature.configurations.FeatureConfiguration {
+		public static final Codec<Config> CODEC = com.mojang.serialization.codecs.RecordCodecBuilder.create(i -> i.group(
+				net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorType.LIST_CODEC.optionalFieldOf("processors").forGetter(Config::processors),
+				net.minecraft.world.level.block.state.BlockState.CODEC.optionalFieldOf("chest", Blocks.CHEST.defaultBlockState()).forGetter(Config::chest),
+				net.minecraft.world.level.block.state.BlockState.CODEC.optionalFieldOf("trapped_chest", Blocks.TRAPPED_CHEST.defaultBlockState()).forGetter(Config::trappedChest))
+				.apply(i, Config::new));
+	}
+
+	public MoundFeature(Codec<Config> codec) {
 		super(codec);
 	}
 
 	@Override
-	public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
+	public boolean place(FeaturePlaceContext<Config> context) {
 		WorldGenLevel level = context.level();
 		RandomSource random = context.random();
 		// The true original computed its own base position as `precipitationHeight.down(9)` before calling
@@ -78,11 +96,13 @@ public class MoundFeature extends Feature<NoneFeatureConfiguration> {
 
 		StructureTemplateManager templates = level.getLevel().getStructureManager();
 		StructureTemplate template = templates.getOrCreate(TEMPLATE);
-		template.placeInWorld(level, pos, pos, new StructurePlaceSettings(), random, 2);
+		StructurePlaceSettings settings = new StructurePlaceSettings();
+		context.config().processors().ifPresent(list -> list.value().list().forEach(settings::addProcessor));
+		template.placeInWorld(level, pos, pos, settings, random, 2);
 
 		placeLootTier(level, random, pos.offset(9, 1, 7));
 		placeLootTier(level, random, pos.offset(9, 1, 11));
-		placeChest(level, random, pos.offset(10, 1, 9));
+		placeChest(level, random, pos.offset(10, 1, 9), context.config());
 		placeSpawner(level, random, pos.offset(4, 5, 4), EntityType.SKELETON);
 		placeSpawner(level, random, pos.offset(4, 5, 14), EntityType.ZOMBIE);
 		return true;
@@ -98,9 +118,9 @@ public class MoundFeature extends Feature<NoneFeatureConfiguration> {
 		BlockPos surfacePos = pos.above(distanceToAir - 1);
 		Block surfaceBlock = level.getBlockState(surfacePos).getBlock();
 		Block belowBlock = level.getBlockState(surfacePos.below()).getBlock();
-		if (VALID_SPAWN_BLOCKS.contains(surfaceBlock)) return true;
+		if (level.getBlockState(surfacePos).is(GROUND)) return true;
 		return (surfaceBlock == Blocks.SNOW || surfaceBlock == Blocks.SHORT_GRASS || surfaceBlock == Blocks.FERN)
-				&& VALID_SPAWN_BLOCKS.contains(belowBlock);
+				&& level.getBlockState(surfacePos.below()).is(GROUND);
 	}
 
 	/** Real weighted tier roll, verbatim from the original: 10% rare / 23% uncommon / 67% common, each tier
@@ -120,16 +140,19 @@ public class MoundFeature extends Feature<NoneFeatureConfiguration> {
 
 	/** Real 1-in-3 trapped chest (with buried TNT 2 blocks below) vs. plain chest, both using the real vanilla
 	 *  {@code minecraft:chests/simple_dungeon} loot table. */
-	private void placeChest(WorldGenLevel level, RandomSource random, BlockPos pos) {
+	private void placeChest(WorldGenLevel level, RandomSource random, BlockPos pos, Config config) {
 		boolean trapped = random.nextInt(3) == 0;
-		Block chestBlock = trapped ? Blocks.TRAPPED_CHEST : Blocks.CHEST;
-		level.setBlock(pos, chestBlock.defaultBlockState().setValue(ChestBlock.FACING, Direction.WEST), 2);
+		net.minecraft.world.level.block.state.BlockState chestState = trapped ? config.trappedChest() : config.chest();
+		if (chestState.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING)) {
+			chestState = chestState.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, Direction.WEST);
+		}
+		level.setBlock(pos, chestState, 2);
 		if (trapped) {
 			level.setBlock(pos.below(2), Blocks.TNT.defaultBlockState(), 2);
 		}
 
 		BlockEntity be = level.getBlockEntity(pos);
-		if (be instanceof ChestBlockEntity chest) {
+		if (be instanceof net.minecraft.world.RandomizableContainer chest) {
 			chest.setLootTable(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.LOOT_TABLE, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "chests/mound")));
 			chest.setLootTableSeed(random.nextLong());
 		}

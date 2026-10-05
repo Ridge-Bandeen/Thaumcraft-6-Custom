@@ -26,11 +26,9 @@ import thaumcraft.Thaumcraft;
  *
  * <p>Real, faithful port of the true original's own exact motion/colour formula: a real small downward drift
  * plus gaussian horizontal jitter, real very-dark per-instance colour (each channel independently
- * {@code 0-0.05}), a real 13-frame cycling animation. Real, disclosed simplification: the true original's own
- * real vertex alpha also fades with the viewer's own camera distance (a real "less visible far away" touch) -
- * dropped here, fading with age alone, since replicating the distance term would need a real custom
- * {@code render()} override (see {@code FXSmokeSpiral}'s own doc comment for the same tradeoff) for a minor,
- * easy-to-miss polish detail on an already very faint, already-fading particle.
+ * {@code 0-0.05}), a 13-frame cycling animation, full bright. As the original it fades with age and with the square of
+ * the camera's distance (gone at 32 blocks), and is drawn at half of 1.12's own random scale (the original's quads had
+ * no vanilla 0.1 factor).
  */
 public class FXWispEG extends SingleQuadParticle {
 
@@ -66,7 +64,7 @@ public class FXWispEG extends SingleQuadParticle {
 		this.xd = random.nextGaussian() * 0.03;
 		this.yd = -0.05;
 		this.zd = random.nextGaussian() * 0.03;
-		this.quadSize *= 0.4f;
+		this.quadSize = (random.nextFloat() * 0.5f + 0.5f) * 2.0f * 0.4f; // 1.12's particleScale, then * 0.4
 		this.lifetime = (int) (40.0 / (Math.random() * 0.3 + 0.7));
 		this.rCol = random.nextFloat() * 0.05f;
 		this.gCol = random.nextFloat() * 0.05f;
@@ -81,7 +79,22 @@ public class FXWispEG extends SingleQuadParticle {
 			x += target.getDeltaMovement().x;
 			z += target.getDeltaMovement().z;
 		}
-		alpha = 0.2f * (1.0f - age / (float) lifetime);
+	}
+
+	/** The original's alpha: 0.2 * (1 - age / max) * (1 - min(1024, camera distance squared) / 1024). */
+	@Override
+	public void render(com.mojang.blaze3d.vertex.VertexConsumer buffer, net.minecraft.client.Camera camera, float partialTicks) {
+		var e = net.minecraft.client.Minecraft.getInstance().getCameraEntity();
+		if (e == null) return;
+		double dist = e.position().distanceToSqr(x, y, z);
+		float base = (float) (1.0 - Math.min(1024.0, dist) / 1024.0);
+		alpha = 0.2f * (1.0f - age / (float) lifetime) * base;
+		super.render(buffer, camera, partialTicks);
+	}
+
+	@Override
+	protected int getLightColor(float partialTick) {
+		return 240;
 	}
 
 	@Override

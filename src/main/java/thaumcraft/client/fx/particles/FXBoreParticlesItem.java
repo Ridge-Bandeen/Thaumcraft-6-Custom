@@ -43,7 +43,7 @@ public class FXBoreParticlesItem extends TextureSheetParticle {
 		this.rCol = 0.6f;
 		this.gCol = 0.6f;
 		this.bCol = 0.6f;
-		this.quadSize = 0.2f * (random.nextFloat() * 0.3f + 0.4f);
+		this.quadSize = 0.1f * (random.nextFloat() * 0.3f + 0.4f); // the original's half-width, 0.1 * its 0.4-0.7 scale
 		this.hasPhysics = false;
 
 		this.targetX = tx;

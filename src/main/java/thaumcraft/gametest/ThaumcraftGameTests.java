@@ -906,7 +906,7 @@ public class ThaumcraftGameTests {
 
 		var context = new net.minecraft.world.level.levelgen.feature.FeaturePlaceContext<>(
 				java.util.Optional.empty(), level, level.getChunkSource().getGenerator(), level.getRandom(), surfaceAbs,
-				net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration.INSTANCE);
+				new thaumcraft.common.world.MoundFeature.Config(java.util.Optional.empty(), Blocks.CHEST.defaultBlockState(), Blocks.TRAPPED_CHEST.defaultBlockState()));
 		boolean placed = thaumcraft.common.registry.ThaumcraftFeatures.MOUND.get().place(context);
 		helper.assertTrue(placed, "placing the feature over a real clear, real solid-bottomed 19x16x19 footprint should really succeed");
 
@@ -18801,6 +18801,45 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.entities.projectile.EntityGrapple.discardActiveFor(player);
 		gun.getItem().inventoryTick(gun, helper.getLevel(), player, 40, false);
 		helper.assertTrue(!gun.getOrDefault(key, false), "the mark clears once the hook is gone");
+		helper.succeed();
+	}
+
+	/** Thaumcraft's zombies and the Eldritch Guardian are undead, as the original's (healing hurts them, Smite applies). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void thaumcraftUndeadAreTagged(GameTestHelper helper) {
+		for (EntityType<?> type : new EntityType<?>[] { thaumcraft.common.registry.ThaumcraftEntities.BRAINY_ZOMBIE.get(),
+				thaumcraft.common.registry.ThaumcraftEntities.GIANT_BRAINY_ZOMBIE.get(), thaumcraft.common.registry.ThaumcraftEntities.INHABITED_ZOMBIE.get(),
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_GUARDIAN.get() }) {
+			helper.assertTrue(type.is(net.minecraft.tags.EntityTypeTags.UNDEAD) && type.is(net.minecraft.tags.EntityTypeTags.INVERTED_HEALING_AND_HARM)
+					&& type.is(net.minecraft.tags.EntityTypeTags.SENSITIVE_TO_SMITE), type + " should be undead");
+		}
+		helper.succeed();
+	}
+
+	/** Research item requirements accept #thaumcraft:research/<ns>/<path> as alternatives (empty by default). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void researchItemAlternativesTag(GameTestHelper helper) {
+		var tag = thaumcraft.common.lib.research.ResearchRequirements.alternativesTag(Items.STONE);
+		helper.assertTrue(tag.location().toString().equals("thaumcraft:research/minecraft/stone"), "alternatives tag id, got " + tag.location());
+		ServerPlayer player = spawnCasterAt(helper, helper.absolutePos(new BlockPos(1, 2, 1)));
+		player.getInventory().clearContent();
+		helper.assertTrue(!thaumcraft.common.lib.research.ResearchRequirements.isCarrying(player, Items.STONE), "nothing carried yet");
+		player.getInventory().add(new ItemStack(Items.STONE));
+		helper.assertTrue(thaumcraft.common.lib.research.ResearchRequirements.isCarrying(player, Items.STONE), "the item itself still counts");
+		helper.succeed();
+	}
+
+	/** The mound feature's config: {} is the original mound; chest, trapped chest and processors can be set. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void moundConfigDecodes(GameTestHelper helper) {
+		var ops = com.mojang.serialization.JsonOps.INSTANCE;
+		var empty = thaumcraft.common.world.MoundFeature.Config.CODEC.parse(ops, new com.google.gson.JsonObject()).getOrThrow();
+		helper.assertTrue(empty.chest().is(Blocks.CHEST) && empty.trappedChest().is(Blocks.TRAPPED_CHEST) && empty.processors().isEmpty(), "defaults");
+		var json = com.google.gson.JsonParser.parseString("{\"chest\": {\"Name\": \"minecraft:barrel\"}}");
+		var barrel = thaumcraft.common.world.MoundFeature.Config.CODEC.parse(ops, json).getOrThrow();
+		helper.assertTrue(barrel.chest().is(Blocks.BARREL), "a chest block from data");
+		helper.assertTrue(Blocks.GRASS_BLOCK.defaultBlockState().is(thaumcraft.common.world.MoundFeature.GROUND)
+				&& !Blocks.SAND.defaultBlockState().is(thaumcraft.common.world.MoundFeature.GROUND), "#thaumcraft:mound_ground holds the original's ground");
 		helper.succeed();
 	}
 }

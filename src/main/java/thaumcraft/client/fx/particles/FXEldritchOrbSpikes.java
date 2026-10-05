@@ -50,15 +50,10 @@ import net.minecraft.world.phys.Vec3;
  * The real, per-frame animated part is a shared spin term (matching the true original's own real {@code
  * ticksExisted/80 * 360} degrees) added into every spike's own final rotation.
  *
- * <p>Real, documented simplifications, both because the true original's own exact behaviour here is genuinely
- * unverifiable in this environment (no way to run the real 1.12.2 client to check): (1) the true original's
- * own real outer-spike vertex colour call passes raw {@code 64.0f}/{@code 255.0f} values into a
- * {@code [0,1]}-range colour call - almost certainly a real {@code /255} normalisation bug in the true
- * original itself, not an intentional value - treated here as the obviously-intended {@code 64/255} grey
- * rather than guessed-at overflow behaviour; (2) face culling is left off entirely (the true original enables
- * it, which depends on getting each triangle's winding order exactly right to avoid rendering inside-out from
- * some angles - a purely cosmetic risk not worth chasing blind) rather than risk invisible geometry from an
- * unverifiable winding mismatch.
+ * <p>The colours are what the original actually drew: its tip vertices passed 64.0 and 255.0 to the float colour call,
+ * which multiplied by 255 and kept the low byte, so the tips came out light grey (192) with an alpha of 1/255 - each
+ * spike a white glow at the centre fading to nothing at its tip. Culling is on, as the original (the fan's winding
+ * faces outward).
  */
 public class FXEldritchOrbSpikes extends Particle {
 
@@ -85,7 +80,7 @@ public class FXEldritchOrbSpikes extends Particle {
 			RenderSystem.setShader(GameRenderer::getPositionColorShader);
 			RenderSystem.enableBlend();
 			RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA, com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
-			RenderSystem.disableCull();
+			RenderSystem.enableCull();
 			RenderSystem.depthMask(false);
 			return tesselator.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
 		}
@@ -155,8 +150,8 @@ public class FXEldritchOrbSpikes extends Particle {
 
 	private static void emitTri(VertexConsumer buffer, float cx, float cy, float cz, Vector3f apex, Vector3f a, Vector3f b) {
 		buffer.addVertex(cx + apex.x(), cy + apex.y(), cz + apex.z()).setColor(1.0f, 1.0f, 1.0f, 1.0f);
-		buffer.addVertex(cx + a.x(), cy + a.y(), cz + a.z()).setColor(64.0f / 255.0f, 64.0f / 255.0f, 64.0f / 255.0f, 1.0f);
-		buffer.addVertex(cx + b.x(), cy + b.y(), cz + b.z()).setColor(64.0f / 255.0f, 64.0f / 255.0f, 64.0f / 255.0f, 1.0f);
+		buffer.addVertex(cx + a.x(), cy + a.y(), cz + a.z()).setColor(192, 192, 192, 1);
+		buffer.addVertex(cx + b.x(), cy + b.y(), cz + b.z()).setColor(192, 192, 192, 1);
 	}
 
 	@Override

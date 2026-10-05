@@ -8,12 +8,11 @@ in a client are tracked in the `thaumcraft-ui-visual-parity-checklist` memory, n
 
 - Parity sweep of the "simplified"/"stand-in"/"cut" doc notes (list: `grep -iE "simplif|stand-in|cut|not ported"`
   over compiled classes): devices, mobs, drops, golems, foci, items/tools and events done (see archive). Left:
-  seal config screen, client FX classes.
-- ThaumCompat hooks: all of `COMPAT_HOOKS.md` (#1-#18, plus the setup-event delivery fix) done 2026-10-04; watch that
+  remaining client FX classes (FXArc, FXBlockRunes, cultist portal, swarm, vents, ... not yet compared one by one).
+- ThaumCompat hooks: all of `COMPAT_HOOKS.md` (#1-#20, the setup-event delivery fix, undead tags) done 2026-10-04; watch that
   file for new requests.
 - Golem renderer fidelity: per-part model classes (wheel spin from `GolemLegWheels.ani`, claws, breakers, darts,
   hauler), head look, idle sway, arm pose when carrying, the base model's stub arms, per-group textures.
-- Void Siphon's void streaks (the original's FXVoidStream, an ender-shader stream from each rift).
 - Renderer fidelity: no full sweep yet of already-registered renderers for simplified detail/animation (the mob
   sweep only covered entities that had been invisible placeholders).
 - Aspect table: entries for content the port hasn't built are skipped (ambient grass, the Pure bucket); the
