@@ -14,7 +14,7 @@ public class AidBookshelf implements ITheorycraftAid {
 
 	@Override
 	public Object getAidObject() {
-		return Blocks.BOOKSHELF;
+		return net.minecraft.tags.BlockTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "research_aids/bookshelf")); // #thaumcraft:research_aids/bookshelf, the vanilla bookshelf by default
 	}
 
 	@SuppressWarnings("unchecked")

@@ -144,6 +144,11 @@ public class TileResearchTable extends BlockEntity implements MenuProvider {
 						if (mu.getAidObject() instanceof Block block) {
 							if (state.getBlock() != block) continue;
 							mutators.put(muk, mu);
+						} else if (mu.getAidObject() instanceof net.minecraft.tags.TagKey<?> tag && tag.isFor(net.minecraft.core.registries.Registries.BLOCK)) {
+							@SuppressWarnings("unchecked")
+							net.minecraft.tags.TagKey<Block> blockTag = (net.minecraft.tags.TagKey<Block>) tag;
+							if (!state.is(blockTag)) continue;
+							mutators.put(muk, mu);
 						} else if (mu.getAidObject() instanceof ItemStack aidStack) {
 							ItemStack dropped = state.getBlock().asItem().getDefaultInstance();
 							if (dropped.isEmpty() || !ItemStack.isSameItem(dropped, aidStack)) continue;

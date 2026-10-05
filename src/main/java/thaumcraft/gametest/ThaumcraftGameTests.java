@@ -18842,4 +18842,31 @@ public class ThaumcraftGameTests {
 				&& !Blocks.SAND.defaultBlockState().is(thaumcraft.common.world.MoundFeature.GROUND), "#thaumcraft:mound_ground holds the original's ground");
 		helper.succeed();
 	}
+
+	/** The original's crucible recipe makes Nitor from glowstone (it had been lost under the yellow dye recipe's id). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void nitorCrucibleRecipe(GameTestHelper helper) {
+		var holder = helper.getLevel().getRecipeManager().byKey(ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "nitor"));
+		helper.assertTrue(holder.isPresent() && holder.get().value() instanceof thaumcraft.api.crafting.CrucibleRecipe cr
+				&& cr.getRecipeOutput().is(thaumcraft.api.blocks.BlocksTC.nitor.get(net.minecraft.world.item.DyeColor.YELLOW).asItem())
+				&& cr.getResearch().equals("UNLOCKALCHEMY@3"), "thaumcraft:nitor should be the original crucible recipe, got " + holder);
+		helper.succeed();
+	}
+
+	/** Book slots skip #c:hidden_from_recipe_viewers members unless that leaves nothing. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void bookSkipsHiddenFromRecipeViewers(GameTestHelper helper) {
+		var stacks = java.util.List.of(new ItemStack(Items.WHEAT), new ItemStack(Items.CARROT));
+		helper.assertTrue(thaumcraft.common.lib.research.ResearchRequirements.visibleCandidates(stacks).size() == 2, "nothing hidden by default");
+		helper.succeed();
+	}
+
+	/** Research aids that named a vanilla block now name #thaumcraft:research_aids/<name>, holding that block by default. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void researchAidTags(GameTestHelper helper) {
+		Object o = new thaumcraft.common.lib.research.theorycraft.AidBeacon().getAidObject();
+		helper.assertTrue(o instanceof net.minecraft.tags.TagKey<?> tag && Blocks.BEACON.defaultBlockState().is((net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block>) tag),
+				"the beacon aid should be a tag holding the beacon, got " + o);
+		helper.succeed();
+	}
 }

@@ -541,7 +541,9 @@ final class ResearchPageView {
 		if (ingredient == null) return ItemStack.EMPTY;
 		ItemStack[] items = ingredient.getItems();
 		if (items.length == 0) return ItemStack.EMPTY;
-		return items[(int) ((System.currentTimeMillis() / 1000L + index) % items.length)];
+		// skipping what recipe viewers hide (#c:hidden_from_recipe_viewers), unless that is everything
+		List<ItemStack> shown = ResearchRequirements.visibleCandidates(java.util.Arrays.asList(items));
+		return shown.get((int) ((System.currentTimeMillis() / 1000L + index) % shown.size()));
 	}
 
 	// ------------------------------------------------------------------------------------------------------------

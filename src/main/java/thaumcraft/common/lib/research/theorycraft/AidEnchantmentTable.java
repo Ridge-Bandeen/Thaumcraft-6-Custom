@@ -10,7 +10,7 @@ public class AidEnchantmentTable implements ITheorycraftAid {
 
 	@Override
 	public Object getAidObject() {
-		return new ItemStack(Blocks.ENCHANTING_TABLE);
+		return net.minecraft.tags.BlockTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "research_aids/enchanting_table"));
 	}
 
 	@SuppressWarnings("unchecked")

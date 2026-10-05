@@ -2,6 +2,10 @@
 
 ## Closed 2026-10-05
 
+- Addon report: the Nitor crucible recipe (thaumcraft:nitor) had been lost under the yellow dye recipe's id - restored
+  (every other original crucible/arcane/infusion id checked present). #21: book cycles skip #c:hidden_from_recipe_viewers;
+  #22: vanilla-block research aids name #thaumcraft:research_aids/* block tags.
+
 - GLE tubes (`GleTube`, the original's bundled glePolyCone): Wisp/bolt zap, essentia streams (rebuilt as the original;
   essentia-source streams were 10x thick, now 0.1 scale, matrix offset, transport-face start), flux rift (radius pulse,
   culling), grapple rope + glow sprite + slack, Void Siphon void streaks (FXVoidStream, block event 5). Not ported, dead

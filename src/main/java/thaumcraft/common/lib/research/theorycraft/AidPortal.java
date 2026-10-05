@@ -30,13 +30,13 @@ public abstract class AidPortal implements ITheorycraftAid {
 
 	public static class AidPortalEnd extends AidPortal {
 		public AidPortalEnd() {
-			super(Blocks.END_PORTAL);
+			super(net.minecraft.tags.BlockTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "research_aids/end_portal")));
 		}
 	}
 
 	public static class AidPortalNether extends AidPortal {
 		public AidPortalNether() {
-			super(Blocks.NETHER_PORTAL);
+			super(net.minecraft.tags.BlockTags.create(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "research_aids/nether_portal")));
 		}
 	}
 

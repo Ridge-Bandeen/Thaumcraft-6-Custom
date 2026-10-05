@@ -323,8 +323,7 @@ public class GuiResearchTable extends AbstractContainerScreen<ResearchTableMenu>
 					int x = xx + 128 + 20 * c - side * 10;
 					int y = yy + 85 + 35 * r;
 					if (selectedAids.contains(key)) graphics.blit(TX_BASE, x, y, 0, 96, 16, 16);
-					ItemStack s = aid.getAidObject() instanceof ItemStack st ? st
-							: aid.getAidObject() instanceof Block b ? new ItemStack(b) : ItemStack.EMPTY;
+					ItemStack s = aidIcon(aid);
 					if (!s.isEmpty()) graphics.renderItem(s, x, y);
 					if (mx >= x && my >= y && mx < x + 16 && my < y + 16) {
 						hoverTip.add(aidName(aid, s));
@@ -411,8 +410,29 @@ public class GuiResearchTable extends AbstractContainerScreen<ResearchTableMenu>
 		}
 	}
 
+	/** The aid's icon: its item, its block's item, or for a block tag the first member that has an item. */
+	@SuppressWarnings("unchecked")
+	private static ItemStack aidIcon(ITheorycraftAid aid) {
+		Object o = aid.getAidObject();
+		if (o instanceof ItemStack st) return st;
+		if (o instanceof Block b) return new ItemStack(b);
+		if (o instanceof net.minecraft.tags.TagKey<?> tag && tag.isFor(net.minecraft.core.registries.Registries.BLOCK)) {
+			for (var h : net.minecraft.core.registries.BuiltInRegistries.BLOCK.getTagOrEmpty((net.minecraft.tags.TagKey<Block>) tag)) {
+				ItemStack s = new ItemStack(h.value());
+				if (!s.isEmpty()) return s;
+			}
+		}
+		return ItemStack.EMPTY;
+	}
+
+	@SuppressWarnings("unchecked")
 	private static Component aidName(ITheorycraftAid aid, ItemStack stack) {
 		if (!stack.isEmpty()) return stack.getHoverName();
+		if (aid.getAidObject() instanceof net.minecraft.tags.TagKey<?> tag && tag.isFor(net.minecraft.core.registries.Registries.BLOCK)) {
+			for (var h : net.minecraft.core.registries.BuiltInRegistries.BLOCK.getTagOrEmpty((net.minecraft.tags.TagKey<Block>) tag)) {
+				return h.value().getName();
+			}
+		}
 		if (aid.getAidObject() instanceof Class<?> c) {
 			return Component.literal(c.getSimpleName().replaceFirst("^Entity", ""));
 		}

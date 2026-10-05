@@ -50,7 +50,7 @@ final class LegacyRecipeKeys {
 		String[] crystals = new String[aspects.length];
 		for (int i = 0; i < aspects.length; i++) crystals[i] = "crystal_essence_" + aspects[i];
 		put("viscrystalgroup", crystals);
-		put("nitor", "nitor_yellow");
+		put("nitor", "nitor");
 		put("nitorgroup", colours("nitor_"));
 		put("alumentum", "alumentum");
 		put("brassingot", "brassingot");

@@ -270,26 +270,36 @@ public class ResearchRequirements {
 		return stack -> stack.is(item) || stack.is(alternatives);
 	}
 
+	/** The stacks a book slot cycles through: those not in {@code #c:hidden_from_recipe_viewers} (what recipe viewers
+	 * hide), unless that leaves none, in which case all of them. */
+	public static List<ItemStack> visibleCandidates(List<ItemStack> stacks) {
+		List<ItemStack> shown = new ArrayList<>();
+		for (ItemStack s : stacks) {
+			if (!s.is(net.neoforged.neoforge.common.Tags.Items.HIDDEN_FROM_RECIPE_VIEWERS)) shown.add(s);
+		}
+		return shown.isEmpty() ? stacks : shown;
+	}
+
 	/** One stack standing for a resolved requirement target, for the Thaumonomicon's requirement row: the item itself,
 	 * the {@code index}-th... cycling member of a tag (the original's {@code InventoryUtils#cycleItemStack}, one step a
 	 * second), the tagged crystal/phial, or an Enchanted Placeholder carrying the wanted enchantments. */
 	public static ItemStack displayStack(Object target, int index, net.minecraft.core.HolderLookup.Provider registries) {
 		if (target instanceof Item item) {
-			List<Holder<Item>> alts = new ArrayList<>();
+			List<ItemStack> all = new ArrayList<>();
+			all.add(new ItemStack(item));
 			for (Holder<Item> h : BuiltInRegistries.ITEM.getTagOrEmpty(alternativesTag(item))) {
-				if (h.value() != item) alts.add(h);
+				if (h.value() != item) all.add(new ItemStack(h));
 			}
-			if (alts.isEmpty()) return new ItemStack(item);
-			int i = (int) ((System.currentTimeMillis() / 1000L + index) % (alts.size() + 1));
-			return i == 0 ? new ItemStack(item) : new ItemStack(alts.get(i - 1));
+			List<ItemStack> shown = visibleCandidates(all);
+			return shown.get((int) ((System.currentTimeMillis() / 1000L + index) % shown.size()));
 		}
 		if (target instanceof TagKey<?> tag) {
 			@SuppressWarnings("unchecked")
-			List<Holder<Item>> items = new ArrayList<>();
-			for (Holder<Item> h : BuiltInRegistries.ITEM.getTagOrEmpty((TagKey<Item>) tag)) items.add(h);
+			List<ItemStack> items = new ArrayList<>();
+			for (Holder<Item> h : BuiltInRegistries.ITEM.getTagOrEmpty((TagKey<Item>) tag)) items.add(new ItemStack(h));
 			if (items.isEmpty()) return ItemStack.EMPTY;
-			int i = (int) ((System.currentTimeMillis() / 1000L + index) % items.size());
-			return new ItemStack(items.get(i));
+			List<ItemStack> shown = visibleCandidates(items);
+			return shown.get((int) ((System.currentTimeMillis() / 1000L + index) % shown.size()));
 		}
 		if (target instanceof AspectItemSpec spec) {
 			ItemStack stack = new ItemStack(spec.item());

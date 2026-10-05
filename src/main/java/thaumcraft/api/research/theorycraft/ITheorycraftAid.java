@@ -15,6 +15,8 @@ public interface ITheorycraftAid {
 	 * This method should return an entity class, block or itemstack - itemstack is based on items block will drop when broken.
 	 * @return
 	 */
+	/** What counts as this aid near a research table: a {@code Block}, an {@code ItemStack} (a block whose item matches),
+	 * a block {@code TagKey} (any block in it), or an entity {@code Class}. */
 	public Object getAidObject();
 		
 	/**
