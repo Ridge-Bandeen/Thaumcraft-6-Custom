@@ -18734,4 +18734,25 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(golem.getGolemColor() == 16, "black dye should make colour 16, was " + golem.getGolemColor());
 		helper.succeed();
 	}
+
+	/** ThaumcraftSetupEvent really reaches mod-bus listeners (Thaumcraft's own records the delivery). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void setupEventReachesListeners(GameTestHelper helper) {
+		helper.assertTrue(Thaumcraft.setupEventDelivered, "ThaumcraftSetupEvent was posted but no listener received it");
+		helper.succeed();
+	}
+
+	/** Cinderpearl grows on red sand and coarse dirt as the original allowed, not on grass. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void cinderpearlSoil(GameTestHelper helper) {
+		var plant = thaumcraft.api.blocks.BlocksTC.cinderpearl.get().defaultBlockState();
+		BlockPos pos = new BlockPos(1, 3, 1);
+		for (var soil : new net.minecraft.world.level.block.Block[] { Blocks.RED_SAND, Blocks.SAND, Blocks.COARSE_DIRT, Blocks.TERRACOTTA }) {
+			helper.setBlock(pos.below(), soil);
+			helper.assertTrue(plant.canSurvive(helper.getLevel(), helper.absolutePos(pos)), "cinderpearl should grow on " + soil);
+		}
+		helper.setBlock(pos.below(), Blocks.GRASS_BLOCK);
+		helper.assertTrue(!plant.canSurvive(helper.getLevel(), helper.absolutePos(pos)), "cinderpearl should not grow on grass");
+		helper.succeed();
+	}
 }

@@ -9,7 +9,8 @@ import thaumcraft.common.lib.crafting.ThaumcraftEntityTags;
 import thaumcraft.common.lib.crafting.ThaumcraftObjectTags;
 
 /**
- * Posted once on {@code NeoForge.EVENT_BUS} when Thaumcraft has finished its own setup registrations - the successor of
+ * Posted once on the mod event bus (listen with {@code modEventBus.addListener(ThaumcraftSetupEvent.class, ...)}) when
+ * Thaumcraft has finished its own setup registrations - the successor of
  * the original's {@code AspectRegistryEvent}, which it posted right after registering its own aspects. It runs on the
  * main thread (from {@code enqueueWork} at the end of common setup), after every mod's parallel common setup, on both
  * the client and a dedicated server.
@@ -19,8 +20,11 @@ import thaumcraft.common.lib.crafting.ThaumcraftObjectTags;
  * ({@code IDustTrigger.registerDustTrigger}), seals and golem parts. Registering earlier, from an addon's own common
  * setup, races Thaumcraft's setup, which clears and refills these tables. A later registration of the same item or
  * entity replaces Thaumcraft's own.
+ *
+ * <p>It is a mod-bus event: {@code NeoForge.EVENT_BUS} is not running yet during common setup, so a post there
+ * reached no one.
  */
-public class ThaumcraftSetupEvent extends Event {
+public class ThaumcraftSetupEvent extends Event implements net.neoforged.fml.event.IModBusEvent {
 
 	/** Fixed aspects for one item. */
 	public void registerObjectTag(Item item, AspectList aspects) {

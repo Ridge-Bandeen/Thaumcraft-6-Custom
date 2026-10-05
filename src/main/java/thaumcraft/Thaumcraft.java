@@ -71,8 +71,13 @@ public class Thaumcraft {
 
     public static final Logger LOGGER = LogUtils.getLogger();
 
+    /** Set by Thaumcraft's own listener when {@link thaumcraft.api.ThaumcraftSetupEvent} is delivered - checked by a
+     * GameTest, since a post that reaches no listener fails silently. */
+    public static volatile boolean setupEventDelivered;
+
     public Thaumcraft(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener(thaumcraft.api.ThaumcraftSetupEvent.class, e -> setupEventDelivered = true);
         modEventBus.addListener(thaumcraft.common.registry.ThaumcraftDataMaps::register);
         modEventBus.addListener(this::onRegisterGameTests);
         modEventBus.addListener(this::registerCapabilities);
@@ -258,7 +263,8 @@ public class Thaumcraft {
         // Last: addons register aspects, scans, dust triggers, seals and golem parts here, after all of the above (see
         // ThaumcraftSetupEvent). On the main thread, so after every mod's own parallel common setup.
         event.enqueueWork(() -> {
-            NeoForge.EVENT_BUS.post(new thaumcraft.api.ThaumcraftSetupEvent());
+            // a mod-bus event: the game bus only starts once mod loading is done, so a post there reached no listener
+            net.neoforged.fml.ModLoader.postEvent(new thaumcraft.api.ThaumcraftSetupEvent());
             thaumcraft.common.lib.crafting.ThaumcraftObjectTags.clearDerived();
         });
     }

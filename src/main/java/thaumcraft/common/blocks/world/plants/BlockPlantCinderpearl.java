@@ -59,11 +59,14 @@ public class BlockPlantCinderpearl extends BushBlock {
 		return SHAPE.move(offset.x, offset.y, offset.z);
 	}
 
+	/** {@code #thaumcraft:cinderpearl_soil}: by default the original's sand (any colour), dirt, coarse dirt, podzol and
+	 * terracotta. */
+	public static final net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block> SOIL = BlockTags.create(
+			net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "cinderpearl_soil"));
+
 	@Override
 	protected boolean mayPlaceOn(BlockState state, BlockGetter level, BlockPos pos) {
-		return state.is(net.minecraft.world.level.block.Blocks.SAND)
-				|| state.is(BlockTags.DIRT)
-				|| state.is(BlockTags.TERRACOTTA);
+		return state.is(SOIL);
 	}
 
 	@Override

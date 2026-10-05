@@ -1,5 +1,12 @@
 # Thaumcraft 1.21.1 Port — TODO archive
 
+## Closed 2026-10-04 (addon report + #18)
+
+- `ThaumcraftSetupEvent` was posted on the game bus during common setup, before that bus starts, so it reached no
+  listener: now a mod-bus event posted with `ModLoader.postEvent`; a port listener + GameTest guard delivery.
+- `#thaumcraft:cinderpearl_soil` (sand tag, dirt / coarse dirt / podzol, terracotta) - red sand allowed as the
+  original, grass no longer (1.12 `Blocks.DIRT` was dirt, coarse dirt and podzol).
+
 ## Closed 2026-10-04 (Focal Manipulator screen)
 
 - The original screen rebuilt: a node tree on a drag-scrolled canvas (root on top, sockets showing what their parent
