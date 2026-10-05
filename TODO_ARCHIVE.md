@@ -1,5 +1,10 @@
 # Thaumcraft 1.21.1 Port — TODO archive
 
+## Closed 2026-10-05
+
+- User-approved bug fix: the Focal Manipulator screen shows the XP levels a build really costs (the original's screen
+  used Math.min and always read 0 or 1).
+
 ## Closed 2026-10-04 (addon report + #18)
 
 - `ThaumcraftSetupEvent` was posted on the game bus during common setup, before that bus starts, so it reached no

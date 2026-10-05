@@ -902,8 +902,9 @@ public class GuiFocalManipulator extends AbstractContainerScreen<FocalManipulato
 		}
 		costCast = totalComplexity / 5.0f;
 		costVis = totalComplexity * 10 + maxComplexity / 5;
-		// as the original's screen (Math.min, so it reads 0 or 1; the levels actually taken are max(1, sqrt))
-		costXp = (int) Math.min(1L, Math.round(Math.sqrt(totalComplexity)));
+		// the levels startCraft actually takes (the original's screen had Math.min here and so always read 0 or 1 -
+		// fixed at the user's request 2026-10-05)
+		costXp = (int) Math.max(1L, Math.round(Math.sqrt(totalComplexity)));
 		boolean validCrystals = false;
 		if (crystals.getAspects().length > 0) {
 			validCrystals = true;
