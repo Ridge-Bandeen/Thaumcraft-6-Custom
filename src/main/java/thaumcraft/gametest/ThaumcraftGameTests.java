@@ -18116,6 +18116,35 @@ public class ThaumcraftGameTests {
 		helper.succeedWhen(() -> helper.assertTrue(NITOR_TICKED.contains(abs), "the hook should have ticked the placed Nitor"));
 	}
 
+	private static final java.util.List<String> BELLOWS_PULSES = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+	/** An enabled bellows calls the pulse hooks every 2 ticks with its position and facing (COMPAT_HOOKS.md #23); a
+	 * disabled one doesn't. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void bellowsPulseHookRunsEverySecondTick(GameTestHelper helper) {
+		if (!thaumcraft.api.BellowsHooks.hasPulseListeners()) {
+			thaumcraft.api.BellowsHooks.addPulseListener((level, pos, facing) -> BELLOWS_PULSES.add(pos.immutable() + "/" + facing));
+		}
+		BlockPos bellowsPos = new BlockPos(3, 2, 3);
+		helper.setBlock(bellowsPos, thaumcraft.api.blocks.BlocksTC.bellows.get().defaultBlockState()
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING, net.minecraft.core.Direction.EAST)
+				.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED, true));
+		ServerLevel level = helper.getLevel();
+		BlockPos abs = helper.absolutePos(bellowsPos);
+		String key = abs + "/" + net.minecraft.core.Direction.EAST;
+		thaumcraft.common.tiles.devices.TileBellows tile = helper.getBlockEntity(bellowsPos);
+		net.minecraft.world.level.block.state.BlockState on = helper.getBlockState(bellowsPos);
+		BELLOWS_PULSES.removeIf(key::equals);
+		for (int i = 0; i < 4; i++) thaumcraft.common.tiles.devices.TileBellows.tick(level, abs, on, tile);
+		long pulses = BELLOWS_PULSES.stream().filter(key::equals).count();
+		helper.assertTrue(pulses == 2, "four ticks of an enabled bellows should pulse twice, got " + pulses);
+		BELLOWS_PULSES.removeIf(key::equals);
+		net.minecraft.world.level.block.state.BlockState off = on.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED, false);
+		for (int i = 0; i < 4; i++) thaumcraft.common.tiles.devices.TileBellows.tick(level, abs, off, tile);
+		helper.assertTrue(BELLOWS_PULSES.stream().noneMatch(key::equals), "a disabled bellows shouldn't pulse");
+		helper.succeed();
+	}
+
 	// --------------------------------------------------------------------------------------------------
 	// Addon hooks, batch 2 (COMPAT_HOOKS.md #5, #17, #8, #9, #10).
 	// --------------------------------------------------------------------------------------------------

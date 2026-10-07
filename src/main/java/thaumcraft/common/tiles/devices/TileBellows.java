@@ -76,6 +76,10 @@ public class TileBellows extends BlockEntity {
 				furnace.setChanged();
 			}
 		}
+		// addon hooks (another mod's devices that take air from bellows)
+		if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+			thaumcraft.api.BellowsHooks.pulse(serverLevel, pos, facing);
+		}
 	}
 
 	private void tickInflation(Level level, BlockPos pos, BlockState state) {
