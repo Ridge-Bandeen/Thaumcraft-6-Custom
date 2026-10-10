@@ -60,7 +60,8 @@ public class BlockPatternCrafter extends Block implements EntityBlock {
 
 	@Override
 	public BlockState getStateForPlacement(BlockPlaceContext context) {
-		return defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, context.getHorizontalDirection().getOpposite());
+		// as the original: the way the placer faces (not the opposite, as most devices)
+		return defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, context.getHorizontalDirection());
 	}
 
 	@Override
