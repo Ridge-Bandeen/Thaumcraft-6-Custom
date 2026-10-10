@@ -67,6 +67,11 @@ public class ThaumcraftClient {
                 net.minecraft.client.renderer.RenderType.translucent());
         net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(thaumcraft.common.registry.ThaumcraftFluids.PURIFYING_FLUID_FLOWING.get(),
                 net.minecraft.client.renderer.RenderType.translucent());
+        // and so is Liquid Death (its tint has alpha too)
+        net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(thaumcraft.common.registry.ThaumcraftFluids.LIQUID_DEATH.get(),
+                net.minecraft.client.renderer.RenderType.translucent());
+        net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(thaumcraft.common.registry.ThaumcraftFluids.LIQUID_DEATH_FLOWING.get(),
+                net.minecraft.client.renderer.RenderType.translucent());
         // the original's animated golem parts (claws, breaker grinders, wheels, the hauler's load)
         thaumcraft.client.render.GolemPartAnimations.register();
 
@@ -110,8 +115,7 @@ public class ThaumcraftClient {
 
     @SubscribeEvent
     static void onRegisterClientExtensions(net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent event) {
-        // Real still/flowing texture for liquid_death - the true original's own real Fluid definition used
-        // the same real animatedglow texture for both (see ThaumcraftFluids' own doc comment), no tint.
+        // liquid_death: animatedglow for both, tinted as the original FluidDeath#getColor (0xF0440099)
         event.registerFluidType(new net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions() {
             private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "blocks/animatedglow");
 
@@ -123,6 +127,11 @@ public class ThaumcraftClient {
             @Override
             public ResourceLocation getFlowingTexture() {
                 return TEXTURE;
+            }
+
+            @Override
+            public int getTintColor() {
+                return 0xF0440099;
             }
         }, thaumcraft.common.registry.ThaumcraftFluids.LIQUID_DEATH_TYPE);
 

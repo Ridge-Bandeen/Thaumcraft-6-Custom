@@ -135,7 +135,8 @@ public final class ItemsTC {
 					props.craftRemainder(Items.BUCKET).stacksTo(1).rarity(net.minecraft.world.item.Rarity.RARE)));
 
 	public static final DeferredItem<BucketItem> bucketDeath = ITEMS.registerItem("bucket_death",
-			props -> new BucketItem(thaumcraft.common.registry.ThaumcraftFluids.LIQUID_DEATH.get(), props.craftRemainder(Items.BUCKET).stacksTo(1)));
+			props -> new BucketItem(thaumcraft.common.registry.ThaumcraftFluids.LIQUID_DEATH.get(),
+					props.craftRemainder(Items.BUCKET).stacksTo(1).rarity(net.minecraft.world.item.Rarity.RARE)));
 
 	/** The real 18-slot portable focus container - see {@code ItemFocusPouch}'s own doc comment. */
 	public static final DeferredItem<thaumcraft.common.items.casters.ItemFocusPouch> focusPouch =

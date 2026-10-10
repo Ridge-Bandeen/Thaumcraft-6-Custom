@@ -24,13 +24,9 @@ import thaumcraft.api.items.ItemsTC;
  * infinite-source-block convenience wrapper, the direct ancestor of modern vanilla's own real
  * {@link net.minecraft.world.level.material.FlowingFluid} model - so this one gets the real modern API.
  *
- * <p>Property choices, real and deliberate: no natural light (the original never emitted any, unlike lava);
- * {@code canSwim(false)}/{@code canDrown(false)}/{@code pathType(LAVA)} match the original's own real "thick,
- * slows you down" feel (matching lava's own real defaults) rather than water's swimmable one; density/
- * viscosity/temperature are moderate (a thick purple ooze, not molten rock) since the original never exposed
- * real numeric equivalents to carry over exactly. Reuses the original's own real {@code animatedglow} texture
- * for both still and flowing (the original's own real {@code FluidDeath} definition used the exact same
- * texture for both too), no tint (the original's Forge {@code Fluid} definition never set one either).
+ * <p>As the original {@code FluidDeath}: no light, rare, viscosity 1500 (so a 7-tick flow, Forge 1.12's viscosity / 200)
+ * with Forge's default density and temperature; {@code canSwim(false)}/{@code canDrown(false)} as its material was not
+ * water. Drawn with {@code animatedglow} for both still and flowing, tinted {@code 0xF0440099} (its {@code getColor}).
  */
 public final class ThaumcraftFluids {
 
@@ -40,9 +36,10 @@ public final class ThaumcraftFluids {
 	public static final DeferredHolder<FluidType, FluidType> LIQUID_DEATH_TYPE = FLUID_TYPES.register("liquid_death",
 			() -> new FluidType(FluidType.Properties.create()
 					.lightLevel(0)
-					.density(1500)
-					.viscosity(2000)
-					.temperature(300)
+					.rarity(net.minecraft.world.item.Rarity.RARE)
+					.density(1000)
+					.viscosity(1500)
+					.temperature(295)
 					.canSwim(false)
 					.canDrown(false)
 					.canExtinguish(false)
@@ -89,6 +86,7 @@ public final class ThaumcraftFluids {
 		return new BaseFlowingFluid.Properties(LIQUID_DEATH_TYPE, LIQUID_DEATH, LIQUID_DEATH_FLOWING)
 				.slopeFindDistance(2)
 				.levelDecreasePerBlock(2)
+				.tickRate(7)
 				.explosionResistance(100f)
 				.block(BlocksTC.liquidDeath)
 				.bucket(ItemsTC.bucketDeath);
