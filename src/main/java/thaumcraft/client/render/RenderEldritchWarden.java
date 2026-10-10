@@ -34,7 +34,11 @@ public class RenderEldritchWarden extends MobRenderer<EntityEldritchWarden, Mode
 
 	@Override
 	public void render(EntityEldritchWarden entity, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
+		// as the original: risen out of the ground over the spawn timer
+		poseStack.pushPose();
+		poseStack.translate(0.0, -entity.getBbHeight() * (entity.getSpawnTimer() / 150.0f), 0.0);
 		super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+		poseStack.popPose();
 		EldritchSonicFx.render(entity, entity.getSonicStartTick(), entity.getSonicDuration(), entity.getSonicYaw(), entity.getSonicPitch(),
 				partialTick, poseStack, bufferSource, packedLight);
 	}

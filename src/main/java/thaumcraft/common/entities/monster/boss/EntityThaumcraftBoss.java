@@ -144,7 +144,7 @@ public class EntityThaumcraftBoss extends Monster {
 		return spawnTimer;
 	}
 
-	protected void setSpawnTimer(int ticks) {
+	public void setSpawnTimer(int ticks) {
 		spawnTimer = ticks;
 	}
 
@@ -156,6 +156,13 @@ public class EntityThaumcraftBoss extends Monster {
 	@Override
 	public boolean isInvulnerableTo(DamageSource source) {
 		return super.isInvulnerableTo(source) || spawnTimer > 0;
+	}
+
+	/** As the original's updateAITasks: no AI while the spawn timer runs (rising, or the golem losing its head). Being
+	 * "immobile" skips the AI step and zeroes the movement input; gravity still applies. */
+	@Override
+	protected boolean isImmobile() {
+		return super.isImmobile() || spawnTimer > 0;
 	}
 
 	@Override

@@ -111,6 +111,8 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 	private static final byte ORB_LEFT_EVENT = 15;
 	private static final byte ORB_RIGHT_EVENT = 16;
 	private static final byte SONIC_EVENT = 17;
+	/** The original's event 18: the client starts its own spawn timer (the Warden rising out of the ground). */
+	private static final byte RISE_EVENT = 18;
 
 	/** Client-only "sonic scream" trigger state - see {@link
 	 * thaumcraft.common.entities.monster.EntityEldritchGuardian}'s own identical fields for the real shape. */
@@ -178,6 +180,7 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 		setCustomName(Component.translatable("entity.thaumcraft.eldritch_warden.name", getTitle()));
 		setAbsorptionAmount(SHIELD_AMOUNT);
 		restrictTo(blockPosition(), 32);
+		setSpawnTimer(150); // as the original: 7.5 s rising out of the ground, invulnerable and still
 		return super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData);
 	}
 
@@ -209,6 +212,14 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 	}
 
 	@Override
+	public void tick() {
+		if (!level().isClientSide && getSpawnTimer() == 150) {
+			level().broadcastEntityEvent(this, RISE_EVENT);
+		}
+		super.tick();
+	}
+
+	@Override
 	public void aiStep() {
 		super.aiStep();
 		seedSapUnderfoot();
@@ -236,12 +247,10 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 			float z = (float) (getZ() + (random.nextFloat() - random.nextFloat()) * 0.2f);
 			thaumcraft.client.fx.ClientFxHandlers.spawnWispEG(level(), x, getY() + 0.25 * getBbHeight(), z, this);
 
-			// Real "materializing" spawn burst, restored alongside it - the true original's own real
-			// spawnTimer countdown (150 -> 0) isn't a field this port carries, but tickCount already climbs
-			// 0 -> 150 in exact lockstep on a freshly-spawned entity on both sides independently, giving the
-			// same real elapsed fraction for free without needing a new synced field.
-			if (tickCount < 150) {
-				float growHeight = Math.max(1.0f, getBbHeight() * (tickCount / 150.0f));
+			// the materialising smoke while the spawn timer runs (the client's started by the rise event, as the
+			// original - not the client's own age, which restarts whenever the Warden comes back into view)
+			if (getSpawnTimer() > 0) {
+				float growHeight = Math.max(1.0f, getBbHeight() * ((150 - getSpawnTimer()) / 150.0f));
 				for (int a = 0; a < 33; a++) {
 					thaumcraft.client.fx.ClientFxHandlers.spawnSmokeSpiral(level(), getX(), getBoundingBox().minY + growHeight / 2.0, getZ(),
 							growHeight, random.nextInt(360), Mth.floor(getBoundingBox().minY) - 1, 2232623);
@@ -355,6 +364,8 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 			armLiftL = 0.5f;
 		} else if (id == ORB_RIGHT_EVENT) {
 			armLiftR = 0.5f;
+		} else if (id == RISE_EVENT) {
+			setSpawnTimer(150);
 		} else {
 			super.handleEntityEvent(id);
 		}

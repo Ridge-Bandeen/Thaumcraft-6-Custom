@@ -44,6 +44,9 @@ import thaumcraft.common.entities.monster.boss.EntityEldritchWarden;
  */
 public class ModelEldritchGuardian<T extends Mob> extends EntityModel<T> {
 
+	/** Set by the renderer each frame: the Guardian's ghostly fade (1 for the Warden). */
+	public float alpha = 1.0f;
+
 	private final ModelPart beltR;
 	private final ModelPart mbelt;
 	private final ModelPart mbeltL;
@@ -103,7 +106,7 @@ public class ModelEldritchGuardian<T extends Mob> extends EntityModel<T> {
 	private int hoodEyeLight;
 
 	public ModelEldritchGuardian() {
-		super(RenderType::entityCutout);
+		super(RenderType::entityTranslucent);
 		MeshDefinition mesh = new MeshDefinition();
 		PartDefinition root = mesh.getRoot();
 
@@ -370,6 +373,9 @@ public class ModelEldritchGuardian<T extends Mob> extends EntityModel<T> {
 
 	@Override
 	public void renderToBuffer(PoseStack poseStack, VertexConsumer buffer, int packedLight, int packedOverlay, int color) {
+		if (alpha < 1.0f) {
+			color = net.minecraft.util.FastColor.ARGB32.color((int) (net.minecraft.util.FastColor.ARGB32.alpha(color) * alpha), color);
+		}
 		beltR.render(poseStack, buffer, packedLight, packedOverlay, color);
 		mbelt.render(poseStack, buffer, packedLight, packedOverlay, color);
 		mbeltL.render(poseStack, buffer, packedLight, packedOverlay, color);

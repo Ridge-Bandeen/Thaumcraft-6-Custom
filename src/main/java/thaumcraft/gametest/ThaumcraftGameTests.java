@@ -15925,6 +15925,10 @@ public class ThaumcraftGameTests {
 		warden.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 0.5, 0.0f, 0.0f);
 		level.addFreshEntity(warden);
 		warden.finalizeSpawn(level, level.getCurrentDifficultyAt(abs), net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+		// as the original: a fresh Warden rises for 150 ticks, invulnerable and still; past that for the checks below
+		helper.assertTrue(warden.getSpawnTimer() == 150 && warden.isInvulnerableTo(level.damageSources().generic()),
+				"a fresh warden should be rising (spawn timer 150, invulnerable), got " + warden.getSpawnTimer());
+		warden.setSpawnTimer(0);
 
 		helper.assertTrue(warden.getMaxHealth() == 400.0f, "a real eldritch warden should really have 400 max health");
 		helper.assertTrue(!warden.getDisplayName().getString().isEmpty(), "a real eldritch warden should really have a real generated title name");
@@ -16036,6 +16040,10 @@ public class ThaumcraftGameTests {
 		warden.moveTo(standAbs.getX() + 0.5, standAbs.getY(), standAbs.getZ() + 0.5, 0.0f, 0.0f);
 		level.addFreshEntity(warden);
 		warden.finalizeSpawn(level, level.getCurrentDifficultyAt(standAbs), net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+		// as the original: a fresh Warden rises for 150 ticks, invulnerable and still; past that for the checks below
+		helper.assertTrue(warden.getSpawnTimer() == 150 && warden.isInvulnerableTo(level.damageSources().generic()),
+				"a fresh warden should be rising (spawn timer 150, invulnerable), got " + warden.getSpawnTimer());
+		warden.setSpawnTimer(0);
 
 		helper.assertTrue(warden.getAbsorptionAmount() > 250.0f, "a freshly spawned warden should really start with its real ~264 absorption shield, got " + warden.getAbsorptionAmount());
 		helper.assertFalse(warden.isInFieldFrenzy(), "a fresh warden shouldn't already be in field frenzy");

@@ -32,8 +32,28 @@ public class RenderEldritchGuardian extends MobRenderer<EntityEldritchGuardian, 
 
 	@Override
 	public void render(EntityEldritchGuardian entity, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
+		getModel().alpha = fade(entity);
 		super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
 		EldritchSonicFx.render(entity, entity.getSonicStartTick(), entity.getSonicDuration(), entity.getSonicYaw(), entity.getSonicPitch(),
 				partialTick, poseStack, bufferSource, packedLight);
+	}
+
+	/** The original's ghostly Guardian: 0.6 alpha within 16 blocks of the viewer, fading to nothing by 32 (24 on hard),
+	 * except in the Outer Lands, where it is solid. */
+	private static float fade(EntityEldritchGuardian entity) {
+		var viewer = net.minecraft.client.Minecraft.getInstance().getCameraEntity();
+		if (viewer == null) return 0.6f;
+		try {
+			if (entity.level().dimension().location().toString().equals(thaumcraft.common.config.ThaumcraftConfig.DIMENSION_OUTER_ID.get())) {
+				return 1.0f;
+			}
+		} catch (IllegalStateException e) {
+			// config not loaded yet
+		}
+		float far = entity.level().getDifficulty() == net.minecraft.world.Difficulty.HARD ? 576.0f : 1024.0f;
+		float near = 256.0f;
+		double d = entity.distanceToSqr(viewer);
+		if (d < near) return 0.6f;
+		return (float) (1.0 - Math.min(far - near, d - near) / (far - near)) * 0.6f;
 	}
 }

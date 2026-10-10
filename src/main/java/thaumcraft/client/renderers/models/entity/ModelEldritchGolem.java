@@ -28,18 +28,9 @@ import thaumcraft.common.entities.monster.boss.EntityEldritchGolem;
  * rather than "fixed", matching this whole port's own established precedent of faithfully reproducing real
  * true-original behavior rather than silently improving it.
  *
- * <p>Real, disclosed simplification: the true original's own real "look straight ahead and nod based on
- * {@code getSpawnTimer()}" head override (active for a few real ticks right after the golem first spawns, and
- * again right after it goes headless) is dropped - that field is real but currently server-only in this port's
- * own {@link thaumcraft.common.entities.monster.boss.EntityThaumcraftBoss} (no {@code SynchedEntityData}
- * accessor), so the client would always read it as 0 anyway; adding real new sync plumbing to a shared boss
- * superclass is a separate, bigger decision than this one model's own geometry port. {@code head}/{@code
- * head2} both just always use the real normal head-look rotation instead - same real visual language (a head
- * that tracks the player), missing only a few real ticks of a "look straight ahead" cosmetic override with
- * genuinely low visibility (the affected head isn't even the one being rendered during the headless-transition
- * case, since {@code head2} - the stump - is what {@link #renderToBuffer} actually draws once headless, and
- * the true original's own real spawn-timer override only ever touched {@code head}, not {@code head2}).
- *
+ * <p>Not reproduced, being dead in the original: the head "nod" while {@code getSpawnTimer()} runs. The original's
+ * client only learned the timer from event 18, sent when the server's timer read 150, but the golem's server timer is
+ * only ever set to 100, so its client always read 0.
  * <p>Real, previously-unwired gap found and restored alongside this mesh: the true original's own real 10-tick
  * attack-swing arm animation needs a real client-mirrored countdown, which needs the true original's own real
  * {@code handleStatusUpdate} case 4 entity-event broadcast - this port's own {@code EntityEldritchGolem} had
