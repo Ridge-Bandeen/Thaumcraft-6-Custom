@@ -48,7 +48,7 @@ import thaumcraft.common.tiles.crafting.TileGolemBuilder;
  * state, restored alongside this renderer). {@code table}/{@code anvil}/{@code box} render with no transform
  * at all (matches the true original's own real {@code renderAllExcept("press")} call exactly). A real static
  * decorative "molten glow" quad is also drawn using vanilla's own real lava particle sprite, as the original's
- * {@code renderQuadFromIcon} (same corners and UVs, lit as its brightness 200: sky light only, so it dims at night).
+ * {@code renderQuadFromIcon} (same corners and UVs, lit as its brightness 200: block light 200).
  * The texture is not V-flipped: the original's loader flipped V, but this renderer flipped the texture matrix back.
  * The press's steam is spawned by {@link TileGolemBuilder#tickPress}.
  */
@@ -94,7 +94,7 @@ public class TileGolemBuilderRenderer implements BlockEntityRenderer<TileGolemBu
 
 		TextureAtlasSprite icon = Minecraft.getInstance().getBlockRenderer().getBlockModelShaper().getParticleIcon(Blocks.LAVA.defaultBlockState());
 		VertexConsumer consumer = bufferSource.getBuffer(RenderType.translucent());
-		int light = 200 << 16; // the original's brightness 200: sky 200, block 0
+		int light = 200; // the original's brightness 200 (block light 200, sky 0: the same packing as 1.21)
 		PoseStack.Pose pose = poseStack.last();
 		addVertex(consumer, pose, 0.0f, 0.0f, icon.getU1(), icon.getV1(), light);
 		addVertex(consumer, pose, 1.0f, 0.0f, icon.getU0(), icon.getV1(), light);

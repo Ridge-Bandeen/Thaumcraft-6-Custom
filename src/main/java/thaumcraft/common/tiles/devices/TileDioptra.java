@@ -48,9 +48,8 @@ public class TileDioptra extends BlockEntity {
 	}
 
 	public static void tick(Level level, BlockPos pos, BlockState state, TileDioptra tile) {
-		if (level.isClientSide) return;
-		tile.counter++;
-		if (tile.counter % 20 != 0) return;
+		tile.counter++; // on both sides, as the original: the client's drives the hologram's light pulse
+		if (level.isClientSide || tile.counter % 20 != 0) return;
 
 		boolean visMode = state.getValue(BlockStateProperties.ENABLED);
 		Arrays.fill(tile.gridAmount, (byte) 0);
