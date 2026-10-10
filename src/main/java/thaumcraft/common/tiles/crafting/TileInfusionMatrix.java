@@ -120,6 +120,9 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 	/** Client only: the original's craftCount (infuser sound loop) and sourceFX (streams into the matrix), keyed by
 	 * "x:y:z:color" as the original's packet did. */
 	private int craftCount;
+	/** Client only: the original's startUp, easing up to 1 while active (by a tenth of itself, at least 0.001 a tick)
+	 * and back down by a tenth a tick once not - the renderer's spin, tilt and glow. */
+	public float startUp;
 	public final java.util.Map<String, SourceFX> sourceFX = new java.util.HashMap<>();
 
 	/** A stream feeding the matrix: from a pedestal's item (60 ticks), or from the entity {@code color} names when
@@ -194,6 +197,14 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 					0.5f + rand.nextFloat() * 0.2f, 0.1f, 0.7f + rand.nextFloat() * 0.3f, 25, -0.03f);
 		} else if (craftCount > 0) {
 			craftCount = Math.min(50, Math.max(0, craftCount - 2));
+		}
+		if (active && startUp != 1.0f) {
+			if (startUp < 1.0f) startUp += Math.max(startUp / 10.0f, 0.001f);
+			if (startUp > 0.999f) startUp = 1.0f;
+		}
+		if (!active && startUp > 0.0f) {
+			startUp -= startUp / 10.0f;
+			if (startUp < 0.001f) startUp = 0.0f;
 		}
 		for (String key : sourceFX.keySet().toArray(new String[0])) {
 			SourceFX fx = sourceFX.get(key);
@@ -760,6 +771,11 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 
 	/** Real ticks since {@link #active} last became true (0 while inactive) - see this field's own doc
 	 * comment on why it's derived locally instead of synced. */
+	/** Client only: the original's craftCount, which times the renderer's halo. */
+	public int getClientCraftCount() {
+		return craftCount;
+	}
+
 	public int getActivatedTick() {
 		return activatedTick;
 	}

@@ -50,6 +50,12 @@ public class BlockInfusionMatrix extends Block implements EntityBlock {
 	}
 
 	@Override
+	protected net.minecraft.world.level.block.RenderShape getRenderShape(BlockState state) {
+		// as the original: the renderer draws the cubes (they spin and jitter while active); the model is for the item
+		return net.minecraft.world.level.block.RenderShape.INVISIBLE;
+	}
+
+	@Override
 	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
 		return SHAPE;
 	}
