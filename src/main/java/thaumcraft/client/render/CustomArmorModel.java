@@ -37,8 +37,8 @@ import thaumcraft.common.items.armor.ItemFortressArmor;
  * are worn) and the helm's mask / goggles upgrades.</li>
  * </ul>
  *
- * <p>Not reproduced: the originals' 1.01x head scale (a z-fighting nudge - {@code copyFrom} overwrites part
- * scale every frame) and the "child" branch (vanilla's own young-model handling covers it).
+ * <p>As the originals, the head is drawn 1.01x larger about the model origin, so the helm sits just outside the
+ * wearer's own head layers. The "child" branch is vanilla's own young-model handling.
  */
 public final class CustomArmorModel extends HumanoidModel<LivingEntity> {
 
@@ -109,6 +109,20 @@ public final class CustomArmorModel extends HumanoidModel<LivingEntity> {
 				}
 			}
 		}
+	}
+
+	@Override
+	public void renderToBuffer(com.mojang.blaze3d.vertex.PoseStack poseStack, com.mojang.blaze3d.vertex.VertexConsumer buffer,
+			int packedLight, int packedOverlay, int color) {
+		if (young) {
+			super.renderToBuffer(poseStack, buffer, packedLight, packedOverlay, color);
+			return;
+		}
+		poseStack.pushPose();
+		poseStack.scale(1.01f, 1.01f, 1.01f);
+		headParts().forEach(part -> part.render(poseStack, buffer, packedLight, packedOverlay, color));
+		poseStack.popPose();
+		bodyParts().forEach(part -> part.render(poseStack, buffer, packedLight, packedOverlay, color));
 	}
 
 	private void cloak(float c) {
