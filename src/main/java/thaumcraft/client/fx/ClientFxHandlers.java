@@ -1411,6 +1411,14 @@ public final class ClientFxHandlers {
 				(float) (r.nextGaussian() * 0.01));
 	}
 
+	/** The original drawWispyMotesOnBlock: a still, pale mote at a random spot on top of a block. */
+	public static void wispyMotesOnBlock(net.minecraft.world.level.Level level, BlockPos pos, int age, float grav) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var r = clientLevel.random;
+		drawWispyMotes(clientLevel, pos.getX() + r.nextFloat(), pos.getY(), pos.getZ() + r.nextFloat(), 0.0, 0.0, 0.0, age,
+				0.4f + r.nextFloat() * 0.6f, 0.6f + r.nextFloat() * 0.4f, 0.6f + r.nextFloat() * 0.4f, grav);
+	}
+
 	public static void drawWispyMotes(ClientLevel level, double x, double y, double z, double vx, double vy, double vz, int age, float grav) {
 		var random = level.random;
 		drawWispyMotes(level, x, y, z, vx, vy, vz, age, 0.25f + random.nextFloat() * 0.75f, 0.25f + random.nextFloat() * 0.75f,

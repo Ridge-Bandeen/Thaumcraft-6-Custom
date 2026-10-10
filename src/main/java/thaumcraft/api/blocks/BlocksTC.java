@@ -102,6 +102,11 @@ public final class BlocksTC {
 	 * {@code BlockTranslucent} (glass material, translucent render layer, valid beacon base, culls faces
 	 * against itself) maps directly onto vanilla's own {@link TransparentBlock} - the same base class
 	 * vanilla's stained glass uses - rather than needing a custom subclass. */
+	/** The Magical Forest's ambient grass - see {@link thaumcraft.common.blocks.world.BlockGrassAmbient}. */
+	public static final DeferredBlock<thaumcraft.common.blocks.world.BlockGrassAmbient> grassAmbient = BLOCKS.registerBlock("grass_ambient",
+			thaumcraft.common.blocks.world.BlockGrassAmbient::new,
+			BlockBehaviour.Properties.of().mapColor(MapColor.GRASS).randomTicks().strength(0.6f).sound(SoundType.GRAVEL));
+
 	public static final DeferredBlock<TransparentBlock> amberBlock = BLOCKS.registerBlock("amber_block",
 			TransparentBlock::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_ORANGE).strength(0.5f).sound(SoundType.GLASS).noOcclusion());

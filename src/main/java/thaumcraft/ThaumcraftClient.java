@@ -344,6 +344,10 @@ public class ThaumcraftClient {
      * inventory/hand icon. */
     @SubscribeEvent
     static void onRegisterBlockColors(RegisterColorHandlersEvent.Block event) {
+        // ambient grass: the biome grass colour, as vanilla grass
+        event.register((state, level, pos, tintIndex) -> level != null && pos != null
+                ? net.minecraft.client.renderer.BiomeColors.getAverageGrassColor(level, pos)
+                : net.minecraft.world.level.GrassColor.getDefaultColor(), BlocksTC.grassAmbient.get());
         event.register((state, level, pos, tintIndex) -> {
             net.minecraft.world.level.block.Block block = state.getBlock();
             return block instanceof BlockCandle candle ? candle.dye.getTextureDiffuseColor() : -1;
@@ -402,6 +406,7 @@ public class ThaumcraftClient {
      * dyed) are already opaque. Found 2026-09-25 in the first real playtest (invisible crystal essences). */
     @SubscribeEvent
     static void onRegisterItemColors(RegisterColorHandlersEvent.Item event) {
+        event.register((stack, tintIndex) -> net.minecraft.world.level.GrassColor.get(0.5, 1.0), ItemsTC.grassAmbient.get());
         event.register((stack, tintIndex) -> {
             net.minecraft.world.level.block.Block block = net.minecraft.world.level.block.Block.byItem(stack.getItem());
             return block instanceof BlockCandle candle ? candle.dye.getTextureDiffuseColor() : -1;

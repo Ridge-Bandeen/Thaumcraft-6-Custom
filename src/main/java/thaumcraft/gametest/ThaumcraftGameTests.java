@@ -18151,6 +18151,23 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** The original aspect entries for Celestial Notes (5 Mind, Darkness, Light) and ambient grass (grass plus 5 Light), and
+	 * ambient grass breaks to dirt as 1.12 grass did. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void ambientGrassAndCelestialNotesAspects(GameTestHelper helper) {
+		AspectList notes = thaumcraft.api.aspects.AspectHelper.getObjectAspects(new ItemStack(ItemsTC.celestialNotes.get(0).get()));
+		helper.assertTrue(notes != null && notes.getAmount(Aspect.MIND) == 5 && notes.getAmount(Aspect.DARKNESS) == 5
+				&& notes.getAmount(Aspect.LIGHT) == 5, "celestial notes should be 5 mind/darkness/light, got " + notes);
+		AspectList grass = thaumcraft.api.aspects.AspectHelper.getObjectAspects(new ItemStack(ItemsTC.grassAmbient.get()));
+		helper.assertTrue(grass != null && grass.getAmount(Aspect.LIGHT) == 5 && grass.getAmount(Aspect.EARTH) == 5,
+				"ambient grass should be grass plus 5 light, got " + grass);
+		BlockPos pos = new BlockPos(1, 2, 1);
+		helper.setBlock(pos, BlocksTC.grassAmbient.get());
+		var drops = net.minecraft.world.level.block.Block.getDrops(helper.getBlockState(pos), helper.getLevel(), helper.absolutePos(pos), null);
+		helper.assertTrue(drops.size() == 1 && drops.get(0).is(Items.DIRT), "ambient grass should drop dirt without silk touch, got " + drops);
+		helper.succeed();
+	}
+
 	private static final java.util.List<String> BELLOWS_PULSES = new java.util.concurrent.CopyOnWriteArrayList<>();
 
 	/** An enabled bellows calls the pulse hooks every 2 ticks with its position and facing (COMPAT_HOOKS.md #23); a

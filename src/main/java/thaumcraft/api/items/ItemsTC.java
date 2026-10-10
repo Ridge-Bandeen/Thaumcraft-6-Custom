@@ -351,6 +351,8 @@ public final class ItemsTC {
 	public static final DeferredItem<Item> mirroredGlass =
 			ITEMS.registerSimpleItem("mirrored_glass");
 
+	public static final DeferredItem<BlockItem> grassAmbient = ITEMS.registerSimpleBlockItem("grass_ambient", BlocksTC.grassAmbient);
+
 	public static final DeferredItem<BlockItem> amberBlock =
 			ITEMS.registerSimpleBlockItem("amber_block", BlocksTC.amberBlock);
 

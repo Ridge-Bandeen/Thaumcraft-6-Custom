@@ -445,8 +445,8 @@ final class ThaumcraftAspectTable {
 		return b.get().asItem();
 	}
 
-	/** The mod's own entries from the original table. Ones for content this port has not built yet (eldritch blocks, the
-	 * runed tablet, celestial notes, Eldritch Eye, ambient grass, the Pure fluid bucket) are simply not listed. */
+	/** The mod's own entries from the original table. The original also listed the eldritch blocks, runed tablet and Eldritch
+	 * Eye, which it never registered; the Purifying Fluid bucket is left out because the port's fluid has no bucket. */
 	/**
 	 * Everything Minecraft added after the original's version that has no recipe to take aspects from (plants, stone,
 	 * creature drops, trial chamber loot, ...), plus additions for a few crafted things whose defining trait the recipes
@@ -706,6 +706,11 @@ final class ThaumcraftAspectTable {
 		// the original's Curio meta 4 (the plain one); its other six variants share this one item here
 		// the seven curiosities, as the original ConfigAspects registered them by metadata
 		item(ItemsTC.curio.get(), new AspectList().add(Aspect.MIND, 15).add(Aspect.MAGIC, 15));
+		for (var notes : ItemsTC.celestialNotes) {
+			item(notes.get(), new AspectList().add(Aspect.MIND, 5).add(Aspect.DARKNESS, 5).add(Aspect.LIGHT, 5));
+		}
+		// grass plus light, as the original's new AspectList(grass).add(LIGHT, 5)
+		item(blk(BlocksTC.grassAmbient), new AspectList().add(Aspect.EARTH, 5).add(Aspect.PLANT, 2).add(Aspect.LIGHT, 5));
 		item(ItemsTC.curioPreserved.get(), new AspectList().add(Aspect.MIND, 15).add(Aspect.BEAST, 15));
 		item(ItemsTC.curioAncient.get(), new AspectList().add(Aspect.MIND, 15).add(Aspect.DEATH, 15));
 		item(ItemsTC.curioEldritch.get(), new AspectList().add(Aspect.MIND, 15).add(Aspect.ELDRITCH, 15));

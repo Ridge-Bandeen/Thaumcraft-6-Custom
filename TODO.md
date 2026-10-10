@@ -12,8 +12,8 @@ in a client are tracked in the `thaumcraft-ui-visual-parity-checklist` memory, n
   file for new requests.
 - Renderer fidelity: the noted list and a first sweep of the rest are done (see archive). Still to compare: GUI
   screens and the remaining client FX classes not yet checked against their originals.
-- Aspect table: entries for content the port hasn't built are skipped (ambient grass, the Pure bucket); the
-  original's shield-banner and per-colour potion loops are only covered by the generic bonuses.
+- Purifying Fluid is a plain block here; in the original it was a Forge fluid with a bucket (aspects: the bucket plus 15 Mind and
+  15 Order). Rebuild as a real fluid like Liquid Death, with its bucket and aspect entry.
 
 ## Design questions for the user
 

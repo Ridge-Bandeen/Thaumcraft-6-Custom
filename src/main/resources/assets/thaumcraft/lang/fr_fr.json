@@ -1821,5 +1821,6 @@
   "item.thaumcraft.curio_knowledge": "Curiosité éclairante",
   "item.thaumcraft.curio_twisted": "Curiosité déformée",
   "item.thaumcraft.curio_rites": "Rituels cramoisis",
-  "item.thaumcraft.thaumonomicon_cheat": "Thaumonomicon du tricheur"
+  "item.thaumcraft.thaumonomicon_cheat": "Thaumonomicon du tricheur",
+  "block.thaumcraft.grass_ambient": "Bloc d'herbe ambiante"
 }

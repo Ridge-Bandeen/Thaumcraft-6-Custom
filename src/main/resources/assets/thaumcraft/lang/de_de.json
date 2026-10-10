@@ -1295,5 +1295,6 @@
   "item.thaumcraft.curio_knowledge": "Erleuchtende Kuriosität",
   "item.thaumcraft.curio_twisted": "Seltsame Kuriosität",
   "item.thaumcraft.curio_rites": "Karmesinriten",
-  "item.thaumcraft.thaumonomicon_cheat": "Schummler-Thaumonomikon"
+  "item.thaumcraft.thaumonomicon_cheat": "Schummler-Thaumonomikon",
+  "block.thaumcraft.grass_ambient": "Umgebungsgrasblock"
 }

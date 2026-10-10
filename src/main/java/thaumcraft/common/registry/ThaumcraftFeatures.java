@@ -20,6 +20,8 @@ public final class ThaumcraftFeatures {
 	public static final DeferredHolder<Feature<?>, CultistPortalSpawnFeature> CULTIST_PORTAL_SPAWN = FEATURES.register("cultist_portal_spawn",
 			() -> new CultistPortalSpawnFeature(NoneFeatureConfiguration.CODEC));
 
+	public static final DeferredHolder<Feature<?>, thaumcraft.common.world.AmbientGrassFeature> AMBIENT_GRASS = FEATURES.register("ambient_grass",
+			() -> new thaumcraft.common.world.AmbientGrassFeature(net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration.CODEC));
 	public static final DeferredHolder<Feature<?>, MoundFeature> MOUND = FEATURES.register("mound",
 			() -> new MoundFeature(MoundFeature.Config.CODEC));
 

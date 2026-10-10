@@ -71,6 +71,7 @@
     [],
     [],
     [
+      "thaumcraft:ambient_grass",
       "minecraft:patch_grass_forest",
       "minecraft:flower_default",
       "minecraft:patch_waterlily",

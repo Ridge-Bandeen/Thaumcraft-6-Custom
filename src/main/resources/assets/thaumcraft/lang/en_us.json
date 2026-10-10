@@ -1958,5 +1958,6 @@
   "thaumcraft.configuration.shieldWait": "Shield Wait (ms)",
   "thaumcraft.configuration.shieldCost": "Shield Cost",
   "tc.dust.notempty": "It has to be empty before the Salis Mundus can work on it.",
-  "tc.blueprint.anyof": "or anything in %s"
+  "tc.blueprint.anyof": "or anything in %s",
+  "block.thaumcraft.grass_ambient": "Ambient Grass Block"
 }
