@@ -13,6 +13,24 @@ public final class EntityChecks {
 	private EntityChecks() {
 	}
 
+	/** Saves a mob's home (its restriction), as the original's cultists, bosses and Eldritch Guardian did by hand:
+	 * {@code HomeD} (the radius) and {@code HomeX/Y/Z}. Vanilla's {@code Mob} doesn't save it. */
+	public static void saveHome(net.minecraft.world.entity.Mob mob, net.minecraft.nbt.CompoundTag tag) {
+		if (mob.getRestrictRadius() > 0.0f) {
+			tag.putInt("HomeD", (int) mob.getRestrictRadius());
+			tag.putInt("HomeX", mob.getRestrictCenter().getX());
+			tag.putInt("HomeY", mob.getRestrictCenter().getY());
+			tag.putInt("HomeZ", mob.getRestrictCenter().getZ());
+		}
+	}
+
+	/** Restores a home saved by {@link #saveHome}. */
+	public static void loadHome(net.minecraft.world.entity.Mob mob, net.minecraft.nbt.CompoundTag tag) {
+		if (tag.contains("HomeD")) {
+			mob.restrictTo(new net.minecraft.core.BlockPos(tag.getInt("HomeX"), tag.getInt("HomeY"), tag.getInt("HomeZ")), tag.getInt("HomeD"));
+		}
+	}
+
 	/** The original's isFriendly: the same entity, riding together, on one team, owned by {@code source}, or a player
 	 * while PvP is off. */
 	public static boolean isFriendly(Entity source, Entity target) {

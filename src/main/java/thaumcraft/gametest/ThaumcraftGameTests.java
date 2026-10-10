@@ -18116,6 +18116,33 @@ public class ThaumcraftGameTests {
 		helper.succeedWhen(() -> helper.assertTrue(NITOR_TICKED.contains(abs), "the hook should have ticked the placed Nitor"));
 	}
 
+	/** Cultists, bosses and the Eldritch Guardian keep their home through a save, as the original's HomeD/X/Y/Z (vanilla's
+	 * Mob doesn't save it); a ritual cleric keeps its ritualist flag. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void homesAndRitualistSurviveSaving(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos home = helper.absolutePos(new BlockPos(2, 2, 2));
+		java.util.List<net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.Mob>> types = java.util.List.of(
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_CLERIC.get(),
+				thaumcraft.common.registry.ThaumcraftEntities.CULTIST_LEADER.get(),
+				thaumcraft.common.registry.ThaumcraftEntities.ELDRITCH_GUARDIAN.get());
+		for (var type : types) {
+			net.minecraft.world.entity.Mob mob = type.create(level);
+			mob.restrictTo(home, 12);
+			if (mob instanceof thaumcraft.common.entities.monster.cult.EntityCultistCleric cleric) cleric.setRitualist(true);
+			net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+			mob.saveWithoutId(tag);
+			net.minecraft.world.entity.Mob copy = type.create(level);
+			copy.load(tag);
+			helper.assertTrue(copy.getRestrictCenter().equals(home) && copy.getRestrictRadius() == 12.0f,
+					type.getDescriptionId() + " should keep its home, got " + copy.getRestrictCenter() + " r" + copy.getRestrictRadius());
+			if (copy instanceof thaumcraft.common.entities.monster.cult.EntityCultistCleric cleric) {
+				helper.assertTrue(cleric.getIsRitualist(), "a ritual cleric should stay a ritualist through a save");
+			}
+		}
+		helper.succeed();
+	}
+
 	private static final java.util.List<String> BELLOWS_PULSES = new java.util.concurrent.CopyOnWriteArrayList<>();
 
 	/** An enabled bellows calls the pulse hooks every 2 ticks with its position and facing (COMPAT_HOOKS.md #23); a

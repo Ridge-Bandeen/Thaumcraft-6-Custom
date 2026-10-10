@@ -219,4 +219,16 @@ public class EntityEldritchGuardian extends Monster implements RangedAttackMob, 
 	public float getArmLiftR() {
 		return armLiftR;
 	}
+
+	@Override
+	public void addAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+		super.addAdditionalSaveData(tag);
+		thaumcraft.common.lib.utils.EntityChecks.saveHome(this, tag);
+	}
+
+	@Override
+	public void readAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+		super.readAdditionalSaveData(tag);
+		thaumcraft.common.lib.utils.EntityChecks.loadHome(this, tag);
+	}
 }

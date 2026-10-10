@@ -65,13 +65,12 @@ import thaumcraft.common.entities.projectile.EntityGolemOrb;
  * {@link #setRitualist} is real and public, ready for whatever real trigger surfaces when that system is
  * ported.
  *
- * Real, documented cuts: no client-side floaty-line visual effect (this project's established "no client
- * FX" simplification - the original's own version lived in {@code RenderCultist}'s {@code doRender}, tied
- * to raw {@code Tessellator} calls that don't exist in the modern rendering pipeline) and no NBT persistence
- * of the ritualist flag across a save/reload (it's meant to be a short-lived channeling state, not something
- * that needs to survive a server restart).
+ * As the original: the ritualist flag is saved ({@code ritualist}), so a ritual cleric can come from saved or summon
+ * data; the home travels in the spawn data so the client knows where the altar is; and on the client a ritualist keeps
+ * its head turned to the altar (home + 0.5, 1.5, 0.5) while {@link thaumcraft.client.render.RenderCultistKnight}
+ * bobs it and draws its ritual lines there.
  */
-public class EntityCultistCleric extends EntityCultist implements RangedAttackMob {
+public class EntityCultistCleric extends EntityCultist implements RangedAttackMob, net.neoforged.neoforge.entity.IEntityWithComplexSpawn {
 
 	private static final EntityDataAccessor<Boolean> DATA_RITUALIST =
 			SynchedEntityData.defineId(EntityCultistCleric.class, EntityDataSerializers.BOOLEAN);
@@ -113,6 +112,49 @@ public class EntityCultistCleric extends EntityCultist implements RangedAttackMo
 		targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers());
 		targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
 		targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, AbstractIllager.class, true));
+	}
+
+	@Override
+	public void addAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+		super.addAdditionalSaveData(tag);
+		tag.putBoolean("ritualist", getIsRitualist());
+	}
+
+	@Override
+	public void readAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+		super.readAdditionalSaveData(tag);
+		setRitualist(tag.getBoolean("ritualist"));
+	}
+
+	@Override
+	public void writeSpawnData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
+		buffer.writeBlockPos(getRestrictCenter());
+	}
+
+	@Override
+	public void readSpawnData(net.minecraft.network.RegistryFriendlyByteBuf buffer) {
+		restrictTo(buffer.readBlockPos(), 8);
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+		if (level().isClientSide && getIsRitualist()) {
+			// the original's client-side gaze at the altar
+			BlockPos home = getRestrictCenter();
+			double dx = home.getX() + 0.5 - getX();
+			double dy = home.getY() + 1.5 - (getY() + getEyeHeight());
+			double dz = home.getZ() + 0.5 - getZ();
+			double horizontal = Math.sqrt(dx * dx + dz * dz);
+			float yaw = (float) (Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0f;
+			float pitch = (float) -(Math.atan2(dy, horizontal) * 180.0 / Math.PI);
+			setXRot(turnTowards(getXRot(), pitch, 10.0f));
+			setYHeadRot(turnTowards(getYHeadRot(), yaw, getMaxHeadXRot()));
+		}
+	}
+
+	private static float turnTowards(float from, float to, float maxStep) {
+		return from + net.minecraft.util.Mth.clamp(net.minecraft.util.Mth.wrapDegrees(to - from), -maxStep, maxStep);
 	}
 
 	@Override

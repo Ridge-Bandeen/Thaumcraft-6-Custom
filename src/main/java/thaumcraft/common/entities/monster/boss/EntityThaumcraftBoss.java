@@ -264,4 +264,16 @@ public class EntityThaumcraftBoss extends Monster {
 		}
 		return super.hurt(source, amount);
 	}
+
+	@Override
+	public void addAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+		super.addAdditionalSaveData(tag);
+		thaumcraft.common.lib.utils.EntityChecks.saveHome(this, tag);
+	}
+
+	@Override
+	public void readAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+		super.readAdditionalSaveData(tag);
+		thaumcraft.common.lib.utils.EntityChecks.loadHome(this, tag);
+	}
 }

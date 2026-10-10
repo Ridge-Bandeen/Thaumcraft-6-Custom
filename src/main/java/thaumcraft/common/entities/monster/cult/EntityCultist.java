@@ -31,10 +31,8 @@ import thaumcraft.common.entities.monster.boss.EntityCultistLeader;
  *
  * Not carried over because they did nothing in the original: its "any light" spawn rule (cultists never spawn
  * naturally, only from portals), its spawn-in particles (only ever called on the server, where they didn't draw),
- * and {@code canAttackClass} (cultists only ever target players). Real home-position restriction
- * now comes free from vanilla's own {@link net.minecraft.world.entity.Mob#restrictTo} (persisted
- * automatically) - the original had to hand-roll its own NBT read/write for this because 1.12's {@code
- * EntityCreature} lacked it.
+ * and {@code canAttackClass} (cultists only ever target players). The home (vanilla's
+ * {@link net.minecraft.world.entity.Mob#restrictTo}) is saved as the original saved it, since vanilla doesn't save it.
  */
 public abstract class EntityCultist extends Monster {
 
@@ -59,5 +57,17 @@ public abstract class EntityCultist extends Monster {
 	@Override
 	public boolean isAlliedTo(Entity other) {
 		return other instanceof EntityCultist || other instanceof EntityCultistLeader || super.isAlliedTo(other);
+	}
+
+	@Override
+	public void addAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+		super.addAdditionalSaveData(tag);
+		thaumcraft.common.lib.utils.EntityChecks.saveHome(this, tag);
+	}
+
+	@Override
+	public void readAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+		super.readAdditionalSaveData(tag);
+		thaumcraft.common.lib.utils.EntityChecks.loadHome(this, tag);
 	}
 }
