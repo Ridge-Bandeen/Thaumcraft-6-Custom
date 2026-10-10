@@ -22,13 +22,20 @@ public class RenderFireBat extends MobRenderer<EntityFireBat, ModelFireBat<Entit
 		super(context, new ModelFireBat<>(), 0.25f);
 	}
 
+	/** As the original's applyRotations: bobbing in flight, or 0.1 lower while hanging, before the body turn (and so
+	 * before the model's upside-down flip). */
 	@Override
-	protected void scale(EntityFireBat entity, PoseStack poseStack, float partialTick) {
+	protected void setupRotations(EntityFireBat entity, PoseStack poseStack, float bob, float yBodyRot, float partialTick, float scale) {
 		if (entity.isHanging()) {
 			poseStack.translate(0.0, -0.1, 0.0);
 		} else {
-			poseStack.translate(0.0, Mth.cos((entity.tickCount + partialTick) * 0.3f) * 0.1, 0.0);
+			poseStack.translate(0.0, Mth.cos(bob * 0.3f) * 0.1, 0.0);
 		}
+		super.setupRotations(entity, poseStack, bob, yBodyRot, partialTick, scale);
+	}
+
+	@Override
+	protected void scale(EntityFireBat entity, PoseStack poseStack, float partialTick) {
 		poseStack.scale(0.35f, 0.35f, 0.35f);
 	}
 

@@ -48,9 +48,15 @@ public class RenderSpellBat extends MobRenderer<EntitySpellBat, ModelFireBat<Ent
 		return 15;
 	}
 
+	/** As the original's applyRotations: 0.1 lower, before the body turn (and the model's upside-down flip). */
+	@Override
+	protected void setupRotations(EntitySpellBat entity, PoseStack poseStack, float bob, float yBodyRot, float partialTick, float scale) {
+		poseStack.translate(0.0, -0.1, 0.0);
+		super.setupRotations(entity, poseStack, bob, yBodyRot, partialTick, scale);
+	}
+
 	@Override
 	protected void scale(EntitySpellBat entity, PoseStack poseStack, float partialTick) {
-		poseStack.translate(0.0, -0.1, 0.0);
 		poseStack.scale(0.35f, 0.35f, 0.35f);
 	}
 
