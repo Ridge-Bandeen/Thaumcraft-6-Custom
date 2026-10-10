@@ -67,10 +67,11 @@ public class RenderFocusMine extends EntityRenderer<EntityFocusMine> {
 		int color = (255 << 24) | (255 << 16) | (g << 8) | g;
 
 		var consumer = bufferSource.getBuffer(RenderType.entityCutout(TEXTURE));
-		core.render(poseStack, consumer, packedLight, OverlayTexture.NO_OVERLAY, color);
-		prong1.render(poseStack, consumer, packedLight, OverlayTexture.NO_OVERLAY, color);
-		prong2.render(poseStack, consumer, packedLight, OverlayTexture.NO_OVERLAY, color);
-		prong3.render(poseStack, consumer, packedLight, OverlayTexture.NO_OVERLAY, color);
+		int light = 0xF0; // the original's lightmap 61680: full block light, as it glows
+		core.render(poseStack, consumer, light, OverlayTexture.NO_OVERLAY, color);
+		prong1.render(poseStack, consumer, light, OverlayTexture.NO_OVERLAY, color);
+		prong2.render(poseStack, consumer, light, OverlayTexture.NO_OVERLAY, color);
+		prong3.render(poseStack, consumer, light, OverlayTexture.NO_OVERLAY, color);
 		poseStack.popPose();
 		super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
 	}
