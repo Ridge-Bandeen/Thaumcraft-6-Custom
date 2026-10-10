@@ -10,8 +10,8 @@ in a client are tracked in the `thaumcraft-ui-visual-parity-checklist` memory, n
   over compiled classes): done (see archive).
 - ThaumCompat hooks: all of `COMPAT_HOOKS.md` (#1-#23, the setup-event delivery fix, undead tags, Nitor) done 2026-10-05; watch that
   file for new requests.
-- Renderer fidelity - noted simplifications still to compare against the originals: Eldritch sonic grey dim, banner, Bellows nozzle, Dioptra skirt and lighting, Focal
-  Manipulator glow quad, Golem Press steam, hole / void siphon in-plane roll, Infusion Matrix base cubes, Pattern
+- Renderer fidelity - noted simplifications still to compare against the originals: banner, Bellows nozzle, Dioptra skirt and lighting, Focal
+  Manipulator glow quad, hole / void siphon in-plane roll, Infusion Matrix base cubes, Pattern
   Crafter gear icons, Focus projectile trail, Pech model proportions. Then a sweep of renderers with no notes.
 - Aspect table: entries for content the port hasn't built are skipped (ambient grass, the Pure bucket); the
   original's shield-banner and per-colour potion loops are only covered by the generic bonuses.
