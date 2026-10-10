@@ -49,7 +49,6 @@ public class TileJarRenderer implements BlockEntityRenderer<BlockEntity> {
 	private static final ResourceLocation TEX_LABEL = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/models/label.png");
 	private static final ResourceLocation TEX_BRAIN = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/models/brain2.png");
 	private static final ResourceLocation TEX_BRINE = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/models/jarbrine.png");
-	private static final ResourceLocation TEX_LIQUID = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/blocks/animatedglow.png");
 
 	private final ModelJar model = new ModelJar();
 	private final ModelBrain brain = new ModelBrain();
@@ -128,27 +127,41 @@ public class TileJarRenderer implements BlockEntityRenderer<BlockEntity> {
 		}
 	}
 
+	private static final ResourceLocation LIQUID_SPRITE = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "blocks/animatedglow");
+
+	/** The original's renderLiquid: a box 0.25-0.75 across, from 0.0625 up to its fill level, each face using the animated
+	 * {@code animatedglow} block sprite mapped to the box's bounds as a block face would be, in the aspect's colour, at the
+	 * fixed brightness 200. */
 	private void renderLiquid(TileJarFillable tile, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
 		float top = 0.0625f + tile.getAmount() / (float) TileJarFillable.getCapacity() * 0.625f;
 		Aspect aspect = tile.getAspect();
 		int tint = aspect != null ? FastColor.ARGB32.opaque(aspect.getColor()) : 0xFF000000;
-
-		VertexConsumer vc = bufferSource.getBuffer(RenderType.entityTranslucent(TEX_LIQUID));
+		var sprite = net.minecraft.client.Minecraft.getInstance().getTextureAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS).apply(LIQUID_SPRITE);
+		VertexConsumer vc = bufferSource.getBuffer(RenderType.entityTranslucent(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS));
 		PoseStack.Pose pose = poseStack.last();
 		float lo = 0.25f, hi = 0.75f, bottom = 0.0625f;
+		int light = 200;
+		float ul = sprite.getU(lo), uh = sprite.getU(hi);
+		float vlo = sprite.getV(lo), vhi = sprite.getV(hi);
+		float vTop = sprite.getV(1.0f - top), vBottom = sprite.getV(1.0f - bottom);
+		// -Y and +Y (u from x, v from z)
+		face(vc, pose, lo, bottom, lo, ul, vlo, lo, bottom, hi, ul, vhi, hi, bottom, hi, uh, vhi, hi, bottom, lo, uh, vlo, tint, light, packedOverlay, 0, -1, 0);
+		face(vc, pose, lo, top, hi, ul, vhi, hi, top, hi, uh, vhi, hi, top, lo, uh, vlo, lo, top, lo, ul, vlo, tint, light, packedOverlay, 0, 1, 0);
+		// -Z and +Z (u from x, v from height)
+		face(vc, pose, hi, top, lo, uh, vTop, hi, bottom, lo, uh, vBottom, lo, bottom, lo, ul, vBottom, lo, top, lo, ul, vTop, tint, light, packedOverlay, 0, 0, -1);
+		face(vc, pose, lo, top, hi, ul, vTop, lo, bottom, hi, ul, vBottom, hi, bottom, hi, uh, vBottom, hi, top, hi, uh, vTop, tint, light, packedOverlay, 0, 0, 1);
+		// -X and +X (u from z, v from height)
+		face(vc, pose, lo, top, lo, ul, vTop, lo, bottom, lo, ul, vBottom, lo, bottom, hi, uh, vBottom, lo, top, hi, uh, vTop, tint, light, packedOverlay, -1, 0, 0);
+		face(vc, pose, hi, top, hi, uh, vTop, hi, bottom, hi, uh, vBottom, hi, bottom, lo, ul, vBottom, hi, top, lo, ul, vTop, tint, light, packedOverlay, 1, 0, 0);
+	}
 
-		// -Y (bottom)
-		quad(vc, pose, lo, bottom, lo, lo, bottom, hi, hi, bottom, hi, hi, bottom, lo, tint, packedLight, packedOverlay, 0, -1, 0);
-		// +Y (top)
-		quad(vc, pose, lo, top, hi, hi, top, hi, hi, top, lo, lo, top, lo, tint, packedLight, packedOverlay, 0, 1, 0);
-		// -Z (north)
-		quad(vc, pose, hi, top, lo, hi, bottom, lo, lo, bottom, lo, lo, top, lo, tint, packedLight, packedOverlay, 0, 0, -1);
-		// +Z (south)
-		quad(vc, pose, lo, top, hi, lo, bottom, hi, hi, bottom, hi, hi, top, hi, tint, packedLight, packedOverlay, 0, 0, 1);
-		// -X (west)
-		quad(vc, pose, lo, top, lo, lo, bottom, lo, lo, bottom, hi, lo, top, hi, tint, packedLight, packedOverlay, -1, 0, 0);
-		// +X (east)
-		quad(vc, pose, hi, top, hi, hi, bottom, hi, hi, bottom, lo, hi, top, lo, tint, packedLight, packedOverlay, 1, 0, 0);
+	private static void face(VertexConsumer vc, PoseStack.Pose pose, float x0, float y0, float z0, float u0, float v0, float x1, float y1, float z1,
+			float u1, float v1, float x2, float y2, float z2, float u2, float v2, float x3, float y3, float z3, float u3, float v3, int tint, int light,
+			int overlay, float nx, float ny, float nz) {
+		vertex(vc, pose, x0, y0, z0, u0, v0, tint, light, overlay, nx, ny, nz);
+		vertex(vc, pose, x1, y1, z1, u1, v1, tint, light, overlay, nx, ny, nz);
+		vertex(vc, pose, x2, y2, z2, u2, v2, tint, light, overlay, nx, ny, nz);
+		vertex(vc, pose, x3, y3, z3, u3, v3, tint, light, overlay, nx, ny, nz);
 	}
 
 	private static void quad(VertexConsumer vc, PoseStack.Pose pose,
