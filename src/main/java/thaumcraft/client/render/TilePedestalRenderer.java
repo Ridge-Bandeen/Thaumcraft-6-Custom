@@ -36,8 +36,9 @@ public class TilePedestalRenderer implements BlockEntityRenderer<TilePedestal> {
 		poseStack.translate(0.5, 0.75, 0.5);
 		poseStack.scale(1.25f, 1.25f, 1.25f);
 		poseStack.mulPose(Axis.YP.rotationDegrees(ticks % 360.0f));
-		mc.getItemRenderer().renderStatic(held, ItemDisplayContext.GROUND, packedLight, packedOverlay,
-				poseStack, bufferSource, tile.getLevel(), 0);
+		// as the original, drawn as a fresh dropped item (one of the stack): lifted by its bob and a quarter of its ground scale
+		ItemStack one = held.copyWithCount(1);
+		TileFocalManipulatorRenderer.renderAsDropped(mc, tile.getLevel(), one, 0.0f, poseStack, bufferSource, packedLight, packedOverlay);
 		poseStack.popPose();
 	}
 }

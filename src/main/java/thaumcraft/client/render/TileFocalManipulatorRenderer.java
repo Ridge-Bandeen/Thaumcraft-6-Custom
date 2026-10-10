@@ -54,7 +54,7 @@ public class TileFocalManipulatorRenderer implements BlockEntityRenderer<TileFoc
 			poseStack.pushPose();
 			poseStack.translate(0.5, 0.8, 0.5);
 			poseStack.mulPose(Axis.YP.rotationDegrees(ticks % 360.0f));
-			renderAsDropped(mc, tile, focus, Mth.sin(ticks / 14.0f) * 0.2f + 0.2f, poseStack, bufferSource, packedLight, packedOverlay);
+			renderAsDropped(mc, tile.getLevel(), focus, Mth.sin(ticks / 14.0f) * 0.2f + 0.2f, poseStack, bufferSource, packedLight, packedOverlay);
 			poseStack.popPose();
 		}
 
@@ -102,16 +102,16 @@ public class TileFocalManipulatorRenderer implements BlockEntityRenderer<TileFoc
 			poseStack.scale(0.5f, 0.5f, 0.5f);
 			drawRay(poseStack, bufferSource, angle, i, bob, r, g, b, ticks);
 			drawRay(poseStack, bufferSource, angle, (i + 1) * 5, bob, r, g, b, ticks);
-			renderAsDropped(mc, tile, ItemCrystalEssence.of(aspect), 0.0f, poseStack, bufferSource, packedLight, packedOverlay);
+			renderAsDropped(mc, tile.getLevel(), ItemCrystalEssence.of(aspect), 0.0f, poseStack, bufferSource, packedLight, packedOverlay);
 			poseStack.popPose();
 		}
 	}
 
 	/** The original drew these as a fresh EntityItem: age 0, so lifted by its hover bob plus a quarter of its ground
 	 * scale, and turned by its hover phase. */
-	private static void renderAsDropped(Minecraft mc, TileFocalManipulator tile, ItemStack stack, float hoverStart, PoseStack poseStack,
+	static void renderAsDropped(Minecraft mc, net.minecraft.world.level.Level level, ItemStack stack, float hoverStart, PoseStack poseStack,
 			MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
-		var model = mc.getItemRenderer().getModel(stack, tile.getLevel(), null, 0);
+		var model = mc.getItemRenderer().getModel(stack, level, null, 0);
 		float groundScale = model.getTransforms().getTransform(ItemDisplayContext.GROUND).scale.y();
 		poseStack.pushPose();
 		poseStack.translate(0.0, Mth.sin(hoverStart) * 0.1f + 0.1f + 0.25f * groundScale, 0.0);

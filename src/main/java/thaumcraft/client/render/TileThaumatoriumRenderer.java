@@ -41,9 +41,8 @@ public class TileThaumatoriumRenderer implements BlockEntityRenderer<TileThaumat
 
 		Direction facing = tile.getBlockState().hasProperty(BlockThaumatorium.FACING) ? tile.getBlockState().getValue(BlockThaumatorium.FACING) : Direction.NORTH;
 		poseStack.pushPose();
-		// 1.125 is the original height, but it drew the item through the old entity-item renderer, which lifted it by its ground
-		// offset plus a hover bob (about 0.25); renderStatic does neither, so the lift is added here (playtest 2026-09-25).
-		poseStack.translate(0.5 + facing.getStepX() / 1.99, 1.125 + 0.25, 0.5 + facing.getStepZ() / 1.99);
+		// as the original: 1.125 up, drawn as a fresh dropped item (lifted by its bob and a quarter of its ground scale)
+		poseStack.translate(0.5 + facing.getStepX() / 1.99, 1.125, 0.5 + facing.getStepZ() / 1.99);
 		switch (facing) {
 			case EAST -> poseStack.mulPose(Axis.YP.rotationDegrees(90.0f));
 			case WEST -> poseStack.mulPose(Axis.YP.rotationDegrees(270.0f));
@@ -52,8 +51,8 @@ public class TileThaumatoriumRenderer implements BlockEntityRenderer<TileThaumat
 			}
 		}
 		poseStack.scale(0.75f, 0.75f, 0.75f);
-		Minecraft.getInstance().getItemRenderer().renderStatic(preview, ItemDisplayContext.GROUND, packedLight, packedOverlay,
-				poseStack, bufferSource, tile.getLevel(), 0);
+		TileFocalManipulatorRenderer.renderAsDropped(Minecraft.getInstance(), tile.getLevel(), preview, 0.0f, poseStack, bufferSource,
+				packedLight, packedOverlay);
 		poseStack.popPose();
 	}
 }
