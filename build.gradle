@@ -476,6 +476,7 @@ sourceSets {
             include 'thaumcraft/client/render/VoidStreamRenderer.java'
             include 'thaumcraft/client/render/ObjModels.java'
             include 'thaumcraft/client/render/RenderNoProjectile.java'
+            include 'thaumcraft/client/render/TextureIn3D.java'
             include 'thaumcraft/client/render/GolemPartAnimations.java'
             include 'thaumcraft/api/golems/parts/GolemPartAnimators.java'
             include 'thaumcraft/common/golems/parts/PartModelDarts.java'

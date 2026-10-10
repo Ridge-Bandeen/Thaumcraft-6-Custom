@@ -39,11 +39,11 @@ import thaumcraft.common.tiles.devices.TileMirrorEssentia;
  * repeats across its 15 foreground layers) - a faithful, not-simplified port of the same real visual technique,
  * just built on the modern equivalent of the exact same trick the original itself used.
  *
- * Only draws the tunnel quad when the tile's own real link is valid ({@link TileMirror#isLinkValid()} /
- * {@link TileMirrorEssentia#isLinkValid()} - the modern equivalent of the original's {@code linked} boolean)
- * and the viewer is within the original's own real 32-block (1024 distance-squared) cutoff. Backface culling is
- * disabled for the quad rather than chasing exact vanilla winding order - harmless here since the mirror's own
- * support block already occludes the one side that would otherwise show through.
+ * As the original (whose block is invisible - its cube model is only for particles and the item): the frame, its
+ * block sprite ({@code mirrorframe}, or {@code mirrorframe2} for the essentia mirror) extruded 1/16 deep against the
+ * mounting face; the glass pane just inside it ({@code mirrorpane}, or the see-through {@code mirrorpanetrans} while
+ * linked and the viewer is within 32 blocks); and in that case the tunnel behind the glass, 0.01 from the mounting face
+ * and inset 3 pixels a side.
  */
 public class TileMirrorRenderer<T extends BlockEntity> implements BlockEntityRenderer<T> {
 
@@ -66,12 +66,16 @@ public class TileMirrorRenderer<T extends BlockEntity> implements BlockEntityRen
 					.setCullState(RenderStateShard.NO_CULL)
 					.createCompositeState(false));
 
-	private static final float INSET = 0.0625f;
-	private static final float EPSILON = 0.001f;
+	private static final float INSET = 0.1875f;
 	private static final double VIEW_DISTANCE_SQR = 1024.0;
 
 	public TileMirrorRenderer(BlockEntityRendererProvider.Context context) {
 	}
+
+	private static final ResourceLocation PANE = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/blocks/mirrorpane.png");
+	private static final ResourceLocation PANE_TRANS = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/blocks/mirrorpanetrans.png");
+	private static final ResourceLocation FRAME = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "blocks/mirrorframe");
+	private static final ResourceLocation FRAME_ESSENTIA = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "blocks/mirrorframe2");
 
 	@Override
 	public void render(T tile, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
@@ -83,15 +87,35 @@ public class TileMirrorRenderer<T extends BlockEntity> implements BlockEntityRen
 		} else {
 			return;
 		}
-		if (!linked) return;
+		Direction facing = tile.getBlockState().getValue(BlockStateProperties.FACING);
+
+		// the frame
+		var sprite = Minecraft.getInstance().getTextureAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS)
+				.apply(tile instanceof TileMirrorEssentia ? FRAME_ESSENTIA : FRAME);
+		poseStack.pushPose();
+		orient(poseStack, facing, 0.01f);
+		TextureIn3D.render(bufferSource.getBuffer(RenderType.entityTranslucent(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS)), poseStack.last(),
+				sprite.getU1(), sprite.getV0(), sprite.getU0(), sprite.getV1(), 16, 16, 0.0625f, packedLight, packedOverlay);
+		poseStack.popPose();
 
 		BlockPos pos = tile.getBlockPos();
 		var player = Minecraft.getInstance().player;
-		if (player == null || player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > VIEW_DISTANCE_SQR) {
-			return;
-		}
+		boolean open = linked && player != null && player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) < VIEW_DISTANCE_SQR;
 
-		Direction facing = tile.getBlockState().getValue(BlockStateProperties.FACING);
+		// the glass: renderQuadCentered, turned a quarter and moved to the 0-1 square
+		poseStack.pushPose();
+		orient(poseStack, facing, 0.02f);
+		poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(90.0f));
+		poseStack.translate(0.5, -0.5, 0.0);
+		VertexConsumer pane = bufferSource.getBuffer(RenderType.entityTranslucent(open ? PANE_TRANS : PANE));
+		PoseStack.Pose pp = poseStack.last();
+		TextureIn3D.vertex(pane, pp, -0.5f, 0.5f, 0, 1, 1, 0, 0, 1, packedLight, packedOverlay);
+		TextureIn3D.vertex(pane, pp, 0.5f, 0.5f, 0, 1, 0, 0, 0, 1, packedLight, packedOverlay);
+		TextureIn3D.vertex(pane, pp, 0.5f, -0.5f, 0, 0, 0, 0, 0, 1, packedLight, packedOverlay);
+		TextureIn3D.vertex(pane, pp, -0.5f, -0.5f, 0, 0, 1, 0, 0, 1, packedLight, packedOverlay);
+		poseStack.popPose();
+
+		if (!open) return;
 		Matrix4f pose = poseStack.last().pose();
 		VertexConsumer consumer = bufferSource.getBuffer(MIRROR_PORTAL);
 
@@ -101,10 +125,10 @@ public class TileMirrorRenderer<T extends BlockEntity> implements BlockEntityRen
 			case Y -> facing.getStepY();
 			case Z -> facing.getStepZ();
 		};
-		float coord = step > 0 ? INSET + EPSILON : 1.0f - INSET - EPSILON;
+		// the original's drawPlane*: 0.01 from the mounting face, inset 3 pixels
+		float coord = step > 0 ? 0.01f : 0.99f;
 		float lo = INSET;
 		float hi = 1.0f - INSET;
-
 		switch (axis) {
 			case Y -> {
 				consumer.addVertex(pose, lo, coord, lo);
@@ -125,5 +149,27 @@ public class TileMirrorRenderer<T extends BlockEntity> implements BlockEntityRen
 				consumer.addVertex(pose, hi, lo, coord);
 			}
 		}
+	}
+
+	/** The original's translateFromOrientation: the frame's plane against the mounting face, {@code off} out from it. */
+	private static void orient(PoseStack poseStack, Direction facing, float off) {
+		switch (facing) {
+			case DOWN -> {
+				poseStack.translate(0.0, 1.0, 1.0);
+				poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(-90.0f));
+			}
+			case UP -> poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90.0f));
+			case NORTH -> poseStack.translate(0.0, 0.0, 1.0);
+			case SOUTH -> {
+				poseStack.translate(1.0, 0.0, 0.0);
+				poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180.0f));
+			}
+			case WEST -> {
+				poseStack.translate(1.0, 0.0, 1.0);
+				poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(90.0f));
+			}
+			case EAST -> poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(-90.0f));
+		}
+		poseStack.translate(0.0, 0.0, -off);
 	}
 }

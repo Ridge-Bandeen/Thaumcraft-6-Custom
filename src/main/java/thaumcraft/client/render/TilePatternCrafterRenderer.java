@@ -62,52 +62,10 @@ public class TilePatternCrafterRenderer implements BlockEntityRenderer<TilePatte
 			poseStack.mulPose(Axis.ZP.rotationDegrees(side * (tile.rot % 360.0f)));
 			poseStack.scale(0.5f, 0.5f, 1.0f);
 			poseStack.translate(-0.5f, -0.5f, 0.0f);
-			extruded(gear, poseStack.last(), 1.0f, 0.0f, 0.0f, 1.0f, 16, 16, 0.1f, packedLight, packedOverlay);
+			TextureIn3D.render(gear, poseStack.last(), 1.0f, 0.0f, 0.0f, 1.0f, 16, 16, 0.1f, packedLight, packedOverlay);
 			poseStack.popPose();
 		}
 		poseStack.popPose();
-	}
-
-	/** The original's UtilsFX.renderTextureIn3D: front and back faces plus a strip per texel column and row. */
-	private static void extruded(VertexConsumer vc, PoseStack.Pose pose, float maxu, float maxv, float minu, float minv, int width, int height,
-			float thickness, int light, int overlay) {
-		float t = -thickness;
-		vertex(vc, pose, 0, 0, 0, maxu, minv, 0, 0, 1, light, overlay);
-		vertex(vc, pose, 1, 0, 0, minu, minv, 0, 0, 1, light, overlay);
-		vertex(vc, pose, 1, 1, 0, minu, maxv, 0, 0, 1, light, overlay);
-		vertex(vc, pose, 0, 1, 0, maxu, maxv, 0, 0, 1, light, overlay);
-		vertex(vc, pose, 0, 1, t, maxu, maxv, 0, 0, -1, light, overlay);
-		vertex(vc, pose, 1, 1, t, minu, maxv, 0, 0, -1, light, overlay);
-		vertex(vc, pose, 1, 0, t, minu, minv, 0, 0, -1, light, overlay);
-		vertex(vc, pose, 0, 0, t, maxu, minv, 0, 0, -1, light, overlay);
-		float f5 = 0.5f * (maxu - minu) / width;
-		float f6 = 0.5f * (minv - maxv) / height;
-		for (int k = 0; k < width; k++) {
-			float f7 = k / (float) width;
-			float f8 = maxu + (minu - maxu) * f7 - f5;
-			vertex(vc, pose, f7, 0, t, f8, minv, -1, 0, 0, light, overlay);
-			vertex(vc, pose, f7, 0, 0, f8, minv, -1, 0, 0, light, overlay);
-			vertex(vc, pose, f7, 1, 0, f8, maxv, -1, 0, 0, light, overlay);
-			vertex(vc, pose, f7, 1, t, f8, maxv, -1, 0, 0, light, overlay);
-			float f9 = f7 + 1.0f / width;
-			vertex(vc, pose, f9, 1, t, f8, maxv, 1, 0, 0, light, overlay);
-			vertex(vc, pose, f9, 1, 0, f8, maxv, 1, 0, 0, light, overlay);
-			vertex(vc, pose, f9, 0, 0, f8, minv, 1, 0, 0, light, overlay);
-			vertex(vc, pose, f9, 0, t, f8, minv, 1, 0, 0, light, overlay);
-		}
-		for (int k = 0; k < height; k++) {
-			float f7 = k / (float) height;
-			float f8 = minv + (maxv - minv) * f7 - f6;
-			float f9 = f7 + 1.0f / height;
-			vertex(vc, pose, 0, f9, 0, maxu, f8, 0, 1, 0, light, overlay);
-			vertex(vc, pose, 1, f9, 0, minu, f8, 0, 1, 0, light, overlay);
-			vertex(vc, pose, 1, f9, t, minu, f8, 0, 1, 0, light, overlay);
-			vertex(vc, pose, 0, f9, t, maxu, f8, 0, 1, 0, light, overlay);
-			vertex(vc, pose, 1, f7, 0, minu, f8, 0, -1, 0, light, overlay);
-			vertex(vc, pose, 0, f7, 0, maxu, f8, 0, -1, 0, light, overlay);
-			vertex(vc, pose, 0, f7, t, maxu, f8, 0, -1, 0, light, overlay);
-			vertex(vc, pose, 1, f7, t, minu, f8, 0, -1, 0, light, overlay);
-		}
 	}
 
 	private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float x, float y, float z, float u, float v, float nx, float ny, float nz,

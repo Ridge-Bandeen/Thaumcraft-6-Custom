@@ -69,6 +69,12 @@ public class BlockMirror extends Block implements EntityBlock {
 		return defaultBlockState().setValue(BlockStateProperties.FACING, context.getClickedFace());
 	}
 
+	/** As the original: drawn only by TileMirrorRenderer (the frame and glass); the cube model is for particles. */
+	@Override
+	protected net.minecraft.world.level.block.RenderShape getRenderShape(BlockState state) {
+		return net.minecraft.world.level.block.RenderShape.INVISIBLE;
+	}
+
 	@Override
 	protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
 		return switch (state.getValue(BlockStateProperties.FACING)) {
