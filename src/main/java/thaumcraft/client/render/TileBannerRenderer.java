@@ -35,11 +35,9 @@ import thaumcraft.common.tiles.misc.TileBanner;
  * overload instead since block/item color handlers can't reach a {@code RenderShape.INVISIBLE} block's
  * geometry at all).
  *
- * The cloth sways (the original's small sine-wave tilt, restored 2026-09-25). Real, documented cut: no
- * aspect-icon overlay drawn on the cloth once tagged (the original's own {@code UtilsFX.drawTag} call, which
- * needs a whole separate icon-atlas texture system this port doesn't have wired up for blocks) - a minor,
- * purely cosmetic simplification; the banner's own real state (facing, wall/floor, tagged aspect) is
- * unaffected.
+ * As the original: only the tabs and cloth take the dye (the pole and crossbeam keep their own colours); the cloth
+ * sways by a small sine-wave tilt on the viewing player's age, phase-offset by position; and a tagged banner shows its
+ * aspect's icon on the cloth (the original's {@code UtilsFX.drawTag}: the icon in the aspect's colour at 0.75 alpha).
  */
 public class TileBannerRenderer implements BlockEntityRenderer<TileBanner> {
 
@@ -86,21 +84,40 @@ public class TileBannerRenderer implements BlockEntityRenderer<TileBanner> {
 		var vertexConsumer = bufferSource.getBuffer(RenderType.entityCutout(texture));
 
 		if (!tile.getWall()) {
-			pole.render(poseStack, vertexConsumer, packedLight, packedOverlay, tint);
+			pole.render(poseStack, vertexConsumer, packedLight, packedOverlay);
 		}
 		else {
 			poseStack.translate(0.0, 1.0, -0.4125);
 		}
-		beam.render(poseStack, vertexConsumer, packedLight, packedOverlay, tint);
+		beam.render(poseStack, vertexConsumer, packedLight, packedOverlay);
 		tab1.render(poseStack, vertexConsumer, packedLight, packedOverlay, tint);
 		tab2.render(poseStack, vertexConsumer, packedLight, packedOverlay, tint);
 		// Cloth sway, restored 2026-09-25: the original tilted the cloth by 0.02 - sin(t / 11) * 0.02 rad, phase-offset
 		// per position (x*7 + y*9 + z*13) so neighbouring banners don't move in step.
 		var pos = tile.getBlockPos();
-		float t = pos.getX() * 7 + pos.getY() * 9 + pos.getZ() * 13
-				+ (tile.getLevel() != null ? tile.getLevel().getGameTime() : 0L) + partialTick;
-		banner.xRot = 0.02f - net.minecraft.util.Mth.sin(t / 11.0f) * 0.02f;
+		var player = net.minecraft.client.Minecraft.getInstance().player;
+		float t = pos.getX() * 7 + pos.getY() * 9 + pos.getZ() * 13 + (player != null ? player.tickCount : 0) + partialTick;
+		float rx = 0.02f - net.minecraft.util.Mth.sin(t / 11.0f) * 0.02f;
+		banner.xRot = rx;
 		banner.render(poseStack, vertexConsumer, packedLight, packedOverlay, tint);
+
+		thaumcraft.api.aspects.Aspect aspect = tile.getAspect();
+		if (aspect != null) {
+			poseStack.pushPose();
+			poseStack.translate(0.0, 0.0, 0.05001);
+			poseStack.scale(0.0375f, 0.0375f, 0.0375f);
+			poseStack.mulPose(Axis.YP.rotationDegrees(180.0f));
+			poseStack.mulPose(Axis.XP.rotationDegrees(-rx * net.minecraft.util.Mth.RAD_TO_DEG * 2.0f));
+			int colour = net.minecraft.util.FastColor.ARGB32.color(191, aspect.getColor());
+			var icon = bufferSource.getBuffer(RenderType.entityTranslucent(aspect.getImage()));
+			var pose = poseStack.last();
+			float[][] corners = { { -8, 16, 0, 1 }, { 8, 16, 1, 1 }, { 8, 0, 1, 0 }, { -8, 0, 0, 0 } };
+			for (float[] c : corners) {
+				icon.addVertex(pose, c[0], c[1], 0.0f).setColor(colour).setUv(c[2], c[3]).setOverlay(packedOverlay)
+						.setLight(packedLight).setNormal(pose, 0.0f, 0.0f, 1.0f);
+			}
+			poseStack.popPose();
+		}
 
 		poseStack.popPose();
 	}
