@@ -272,6 +272,7 @@ public class EntityCultistPortalGreater extends Monster {
 		cultist.finalizeSpawn(serverLevel, level().getCurrentDifficultyAt(cultist.blockPosition()), MobSpawnType.MOB_SUMMONED, null);
 		cultist.restrictTo(blockPosition(), 32);
 		serverLevel.addFreshEntity(cultist);
+		cultist.spawnAnim();
 		cultist.playSound(SoundEvents.EVOKER_CAST_SPELL, 1.0f, 1.0f);
 		if (stage > 12) {
 			hurt(damageSources().magic(), 5 + random.nextInt(5));
@@ -285,6 +286,7 @@ public class EntityCultistPortalGreater extends Monster {
 		leader.finalizeSpawn(serverLevel, level().getCurrentDifficultyAt(leader.blockPosition()), MobSpawnType.MOB_SUMMONED, null);
 		leader.restrictTo(blockPosition(), 32);
 		serverLevel.addFreshEntity(leader);
+		leader.spawnAnim();
 		leader.playSound(SoundEvents.EVOKER_CAST_SPELL, 1.0f, 1.0f);
 	}
 

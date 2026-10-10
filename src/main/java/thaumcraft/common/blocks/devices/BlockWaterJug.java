@@ -93,6 +93,14 @@ public class BlockWaterJug extends Block implements EntityBlock {
 		return new TileWaterJug(pos, state);
 	}
 
+	/** As the original: a full urn splashes water up over its top. */
+	@Override
+	public void animateTick(BlockState state, Level level, BlockPos pos, net.minecraft.util.RandomSource random) {
+		if (level.getBlockEntity(pos) instanceof TileWaterJug tile && tile.isFull()) {
+			thaumcraft.client.fx.ClientFxHandlers.jarSplash(level, pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5);
+		}
+	}
+
 	@Override
 	protected boolean triggerEvent(BlockState state, Level level, BlockPos pos, int id, int param) {
 		if (level.getBlockEntity(pos) instanceof TileWaterJug tile && tile.onBlockEvent(id, param)) return true;

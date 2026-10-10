@@ -30,8 +30,8 @@ import thaumcraft.common.entities.monster.boss.EntityCultistLeader;
  * caught up to it), matching the true original's own {@code isOnSameTeam} exactly.
  *
  * Not carried over because they did nothing in the original: its "any light" spawn rule (cultists never spawn
- * naturally, only from portals), its spawn-in particles (only ever called on the server, where they didn't draw),
- * and {@code canAttackClass} (cultists only ever target players). The home (vanilla's
+ * naturally, only from portals) and {@code canAttackClass} (cultists only ever target players). The spawn-in burst
+ * ({@link #spawnAnim}) is kept: the original's server call sent entity event 20, which drew it on the client. The home (vanilla's
  * {@link net.minecraft.world.entity.Mob#restrictTo}) is saved as the original saved it, since vanilla doesn't save it.
  */
 public abstract class EntityCultist extends Monster {
@@ -69,5 +69,16 @@ public abstract class EntityCultist extends Monster {
 	public void readAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
 		super.readAdditionalSaveData(tag);
 		thaumcraft.common.lib.utils.EntityChecks.loadHome(this, tag);
+	}
+
+	/** As the original's spawnExplosionParticle: on the server, entity event 20; on the client, a burst of twenty
+	 * white-to-red clouds over the body. Portals call it as they spawn a cultist. */
+	@Override
+	public void spawnAnim() {
+		if (level().isClientSide) {
+			thaumcraft.client.fx.ClientFxHandlers.cultistSpawn(this);
+		} else {
+			super.spawnAnim();
+		}
 	}
 }

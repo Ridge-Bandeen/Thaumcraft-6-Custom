@@ -170,6 +170,7 @@ public class EntityCultistPortalLesser extends Monster {
 		cultist.finalizeSpawn(serverLevel, level().getCurrentDifficultyAt(cultist.blockPosition()),
 				net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, null);
 		serverLevel.addFreshEntity(cultist);
+		cultist.spawnAnim();
 		cultist.playSound(ThaumcraftSounds.WANDFAIL.get(), 1.0f, 1.0f);
 		hurt(damageSources().magic(), 5 + random.nextInt(5));
 		level().broadcastEntityEvent(this, (byte) 16);

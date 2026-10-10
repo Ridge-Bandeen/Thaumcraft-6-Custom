@@ -112,4 +112,14 @@ public class BlockJarBrain extends Block implements EntityBlock {
 	public float getEnchantPowerBonus(BlockState state, net.minecraft.world.level.LevelReader level, BlockPos pos) {
 		return 5.0f;
 	}
+
+	/** As the original BlockJar#randomDisplayTick: a full brain jar gives off green sparks. */
+	@Override
+	public void animateTick(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.Level level,
+			net.minecraft.core.BlockPos pos, net.minecraft.util.RandomSource random) {
+		if (level.getBlockEntity(pos) instanceof thaumcraft.common.tiles.devices.TileJarBrain tile && tile.isFull()) {
+			thaumcraft.client.fx.ClientFxHandlers.spawnSpark(level, pos.getX() + 0.5f, pos.getY() + 0.8f, pos.getZ() + 0.5f, 3.0f,
+					0.2f + random.nextFloat() * 0.2f, 1.0f, 0.3f + random.nextFloat() * 0.2f, 0.5f);
+		}
+	}
 }

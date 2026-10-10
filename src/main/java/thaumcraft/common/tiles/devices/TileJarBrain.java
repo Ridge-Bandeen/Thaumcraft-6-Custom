@@ -186,4 +186,32 @@ public class TileJarBrain extends BlockEntity {
 		super.loadAdditional(tag, registries);
 		xp = tag.getInt("XP");
 	}
+
+	/** The client only needs to know when this turns full or not (the original synced the whole tile); sent then. */
+	private boolean syncedFull;
+
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		boolean full = isFull();
+		if (level != null && !level.isClientSide && full != syncedFull) {
+			syncedFull = full;
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+		}
+	}
+
+	@Override
+	public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+		return saveCustomOnly(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	/** Whether the jar holds all it can - the original's jar then sparks green (see BlockJarBrain#animateTick). */
+	public boolean isFull() {
+		return xp >= XP_MAX;
+	}
 }

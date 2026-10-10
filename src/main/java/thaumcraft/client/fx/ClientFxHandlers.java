@@ -1427,6 +1427,79 @@ public final class ClientFxHandlers {
 		Minecraft.getInstance().particleEngine.add(fb);
 	}
 
+	/** The original cultist spawnExplosionParticle + FXDispatcher#cultistSpawn: twenty big clouds fading white to red over
+	 * the body, drifting a little. */
+	public static void cultistSpawn(Entity e) {
+		if (!(e.level() instanceof ClientLevel clientLevel)) return;
+		var r = clientLevel.random;
+		float w = e.getBbWidth();
+		float h = e.getBbHeight();
+		for (int i = 0; i < 20; i++) {
+			double d0 = r.nextGaussian() * 0.05;
+			double d2 = r.nextGaussian() * 0.05;
+			double d3 = r.nextGaussian() * 0.05;
+			var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, e.getX() + r.nextFloat() * w * 2.0f - w + d0 * 2.0,
+					e.getY() + r.nextFloat() * h + d2 * 2.0, e.getZ() + r.nextFloat() * w * 2.0f - w + d3 * 2.0, d0, d2, d3);
+			fb.setMaxAge(10 + r.nextInt(10));
+			fb.setRBGColorF(1.0f, 1.0f, 1.0f, 0.6f, 0.0f, 0.0f);
+			fb.setAlphaF(0.8f);
+			fb.setGridSize(16);
+			fb.setParticles(160, 6, 1);
+			fb.setScale(3.0f + r.nextFloat() * 2.0f);
+			fb.setLayer(1);
+			Minecraft.getInstance().particleEngine.add(fb);
+		}
+	}
+
+	/** The original FXDispatcher#jarSplashFx: a drop of water thrown up from a full Everfull Urn. */
+	public static void jarSplash(net.minecraft.world.level.Level level, double x, double y, double z) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var r = clientLevel.random;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x + r.nextGaussian() * 0.075, y, z + r.nextGaussian() * 0.075,
+				r.nextGaussian() * 0.015, 0.075f + r.nextFloat() * 0.05f, r.nextGaussian() * 0.015);
+		fb.setMaxAge(20 + r.nextInt(10));
+		fb.setRBGColorF(((2650102 >> 16) & 255) / 255.0f, ((2650102 >> 8) & 255) / 255.0f, (2650102 & 255) / 255.0f);
+		fb.setAlphaF(0.5f);
+		fb.setLoop(false);
+		fb.setParticles(73, 1, 1);
+		fb.setScale(0.4f + r.nextFloat() * 0.3f, 0.0f);
+		fb.setLayer(1);
+		fb.setGravity(0.3f);
+		fb.setRotationSpeed(0.0f);
+		Minecraft.getInstance().particleEngine.add(fb);
+	}
+
+	/** The original TileInfernalFurnace event 3 with FXDispatcher#furnaceLavaFx: five lava sparks out of the mouth (facing
+	 * {@code fx, fz}), each with a quiet lava pop. */
+	public static void furnaceLava(net.minecraft.world.level.Level level, BlockPos pos, int fx, int fz) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var r = clientLevel.random;
+		for (int a = 0; a < 5; a++) {
+			clientLevel.addParticle(ParticleTypes.LAVA, pos.getX() + 0.5f + (r.nextFloat() - r.nextFloat()) * 0.3f + fx, pos.getY() + 0.3f,
+					pos.getZ() + 0.5f + (r.nextFloat() - r.nextFloat()) * 0.3f + fz, 0.0, 0.0, 0.0);
+			clientLevel.playLocalSound(pos.getX() + 0.5f, pos.getY() + 0.5f, pos.getZ() + 0.5f, SoundEvents.LAVA_POP, SoundSource.BLOCKS,
+					0.1f + r.nextFloat() * 0.1f, 0.9f + r.nextFloat() * 0.15f, false);
+		}
+	}
+
+	/** The original TileSmelter event 1: a hiss and four puffs of grey steam blown out of the vent on side {@code vent}. */
+	public static void smelterVent(net.minecraft.world.level.Level level, BlockPos pos, net.minecraft.core.Direction vent) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var r = clientLevel.random;
+		clientLevel.playLocalSound(pos.getX() + 0.5 + vent.getStepX(), pos.getY() + 0.5, pos.getZ() + 0.5 + vent.getStepZ(), SoundEvents.LAVA_EXTINGUISH,
+				SoundSource.BLOCKS, 0.25f, 2.6f + (r.nextFloat() - r.nextFloat()) * 0.8f, true);
+		for (int a = 0; a < 4; a++) {
+			float x1 = 0.1f - r.nextFloat() * 0.2f;
+			float z1 = 0.1f - r.nextFloat() * 0.2f;
+			float y1 = 0.1f - r.nextFloat() * 0.2f;
+			float x2 = 0.1f - r.nextFloat() * 0.2f;
+			float z2 = 0.1f - r.nextFloat() * 0.2f;
+			float y2 = 0.1f - r.nextFloat() * 0.2f;
+			spawnVent(level, pos.getX() + 0.5f + x1 + vent.getStepX(), pos.getY() + 0.5f + y1, pos.getZ() + 0.5f + z1 + vent.getStepZ(),
+					vent.getStepX() / 4.0f + x2, vent.getStepY() / 4.0f + y2, vent.getStepZ() / 4.0f + z2, 0xAAAAAA);
+		}
+	}
+
 	/** The original drawWispyMotesOnBlock: a still, pale mote at a random spot on top of a block. */
 	public static void wispyMotesOnBlock(net.minecraft.world.level.Level level, BlockPos pos, int age, float grav) {
 		if (!(level instanceof ClientLevel clientLevel)) return;

@@ -272,9 +272,8 @@ public class TileSmelter extends BlockEntity implements net.minecraft.world.Worl
 			for (Direction side : ventSides) {
 				if (level.getRandom().nextFloat() < 0.333f) {
 					vented = true;
-					level.playSound(null, pos.getX() + 0.5 + side.getStepX() * 0.5, pos.getY() + 0.5, pos.getZ() + 0.5 + side.getStepZ() * 0.5,
-							SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.25f,
-							2.6f + (level.getRandom().nextFloat() - level.getRandom().nextFloat()) * 0.8f);
+					// as the original: block event 1, the client's hiss and steam out of that vent
+					level.blockEvent(pos, state.getBlock(), 1, side.getOpposite().get3DDataValue());
 					break;
 				}
 			}

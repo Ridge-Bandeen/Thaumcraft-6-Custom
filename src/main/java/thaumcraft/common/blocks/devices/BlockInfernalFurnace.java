@@ -176,4 +176,18 @@ public class BlockInfernalFurnace extends Block implements EntityBlock {
 			}
 		}
 	}
+
+	/** Event 3 (an item finished): the original's five lava spurts and pops at the mouth. */
+	@Override
+	protected boolean triggerEvent(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.Level level,
+			net.minecraft.core.BlockPos pos, int id, int param) {
+		if (id == 3) {
+			if (level.isClientSide) {
+				net.minecraft.core.Direction out = state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING).getOpposite();
+				thaumcraft.client.fx.ClientFxHandlers.furnaceLava(level, pos, out.getStepX(), out.getStepZ());
+			}
+			return true;
+		}
+		return super.triggerEvent(state, level, pos, id, param);
+	}
 }

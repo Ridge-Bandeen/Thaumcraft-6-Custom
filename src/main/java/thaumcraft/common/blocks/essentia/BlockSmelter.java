@@ -131,4 +131,17 @@ public class BlockSmelter extends Block implements EntityBlock {
 	protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
 		return level.getBlockEntity(pos) instanceof TileSmelter tile ? AbstractContainerMenu.getRedstoneSignalFromContainer(tile) : 0;
 	}
+
+	/** Event 1: a vent took a unit of flux - the original's hiss and four puffs of grey steam out of it. */
+	@Override
+	protected boolean triggerEvent(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.Level level,
+			net.minecraft.core.BlockPos pos, int id, int param) {
+		if (id == 1) {
+			if (level.isClientSide) {
+				thaumcraft.client.fx.ClientFxHandlers.smelterVent(level, pos, net.minecraft.core.Direction.from3DDataValue(param).getOpposite());
+			}
+			return true;
+		}
+		return super.triggerEvent(state, level, pos, id, param);
+	}
 }

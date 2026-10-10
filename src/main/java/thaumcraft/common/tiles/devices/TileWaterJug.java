@@ -145,4 +145,32 @@ public class TileWaterJug extends BlockEntity {
 			tank.readFromNBT(registries, tag.getCompound("Tank"));
 		}
 	}
+
+	/** The client only needs to know when this turns full or not (the original synced the whole tile); sent then. */
+	private boolean syncedFull;
+
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		boolean full = isFull();
+		if (level != null && !level.isClientSide && full != syncedFull) {
+			syncedFull = full;
+			level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+		}
+	}
+
+	@Override
+	public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+		return saveCustomOnly(registries);
+	}
+
+	@Override
+	public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+		return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+	}
+
+	/** Whether the tank is full - the original's urn then splashes water over its top (see BlockWaterJug#animateTick). */
+	public boolean isFull() {
+		return tank.getFluidAmount() >= tank.getCapacity();
+	}
 }

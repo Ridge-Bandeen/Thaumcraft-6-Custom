@@ -230,6 +230,8 @@ public class TileInfernalFurnace extends BlockEntity implements thaumcraft.commo
 	}
 
 	private void ejectItem(Level level, BlockPos pos, BlockState state, ItemStack result, float experience) {
+		// as the original: block event 3, the client's lava spurts and pops at the mouth
+		level.blockEvent(pos, state.getBlock(), 3, 0);
 		Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
 		BlockPos frontPos = pos.relative(facing);
 		IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, frontPos, facing.getOpposite());

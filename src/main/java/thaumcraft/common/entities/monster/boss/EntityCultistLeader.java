@@ -174,4 +174,15 @@ public class EntityCultistLeader extends EntityThaumcraftBoss implements RangedA
 		// the original's own override: only the rare loot bag (no primordial pearl, unlike the Warden and Golem)
 		spawnAtLocation(new ItemStack(ItemsTC.lootBagRare.get()), 1.5f);
 	}
+
+	/** As the original's spawnExplosionParticle: on the server, entity event 20; on the client, a burst of twenty
+	 * white-to-red clouds over the body. Portals call it as they spawn a cultist. */
+	@Override
+	public void spawnAnim() {
+		if (level().isClientSide) {
+			thaumcraft.client.fx.ClientFxHandlers.cultistSpawn(this);
+		} else {
+			super.spawnAnim();
+		}
+	}
 }
