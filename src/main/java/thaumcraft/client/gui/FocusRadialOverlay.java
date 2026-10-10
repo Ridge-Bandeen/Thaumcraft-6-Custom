@@ -35,14 +35,9 @@ import thaumcraft.common.lib.network.ServerboundChangeCasterFocusPacket;
  * only ever reads it to decide what to draw and to compute which real inventory slot a hover corresponds to;
  * the actual bind still only happens once the real packet reaches the real server-side handler.
  *
- * Real, documented simplification: selection fires after hovering an icon continuously for
- * {@link #HOVER_SELECT_TICKS} (~150ms) rather than the original's own "fires the instant the cursor is over
- * it, from the very first frame the menu is unlocked" behavior - a real, deliberate improvement over a
- * genuine rough edge in the original (an already-positioned cursor could otherwise fire an accidental
- * selection the instant the key was pressed); everything else about the interaction is kept faithful. See
- * the port-tracking memory's UI-visual-parity checklist for the manual playtest this class still needs - a
- * custom HUD overlay like this has no automated coverage at all (GameTest is server-only, screens/overlays
- * are structurally unreachable from it).
+ * Controls as the original (KeyHandler + WandRenderingHandler): holding the key with a caster opens the radial and frees
+ * the mouse cursor; clicking an icon picks it and closes the radial, and letting go of the key over an icon picks that
+ * one. Either way the radial stays shut until the key is pressed afresh (or it has faded out).
  */
 @EventBusSubscriber(modid = Thaumcraft.MODID, value = Dist.CLIENT)
 public class FocusRadialOverlay {
@@ -51,29 +46,61 @@ public class FocusRadialOverlay {
 	private static final ResourceLocation RING_INNER = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "textures/misc/radial2.png");
 
 	private static final float FADE_PER_TICK = 1000.0f / 150.0f / 20.0f;
-	private static final int HOVER_SELECT_TICKS = 3;
 	private static final int HIT_RADIUS = 10;
 
 	private static float scale = 0.0f;
 	private static int hoveredIndex = -1;
-	private static int hoverTicks = 0;
-	private static boolean firedThisHold = false;
+	/** The original's radialActive / radialLock / keyPressedF. */
+	private static boolean active;
+	private static boolean lock;
+	private static boolean keyWasDown;
+	private static List<CasterFocusHelper.Carried> shown = List.of();
 	private static float[] iconScale = new float[0];
 
 	@SubscribeEvent
 	static void onClientTick(ClientTickEvent.Post event) {
 		Minecraft mc = Minecraft.getInstance();
-		// (with Shift, F takes the focus out instead - see KeyBindings)
-		boolean wantOpen = mc.screen == null && KeyBindings.CHANGE_CASTER_FOCUS.isDown() && heldCaster(mc.player) != null && !mc.player.isShiftKeyDown();
-
-		if (wantOpen) {
+		boolean keyDown = KeyBindings.CHANGE_CASTER_FOCUS.isDown();
+		if (keyDown && !keyWasDown) lock = false;
+		keyWasDown = keyDown;
+		if (active && mc.screen != null) {
+			active = false;
+			lock = true;
+		} else if (keyDown && !lock && mc.screen == null && heldCaster(mc.player) != null && !mc.player.isShiftKeyDown()) {
+			// (with Shift, F takes the focus out instead - see KeyBindings)
+			if (!active) {
+				active = true;
+				if (!CasterFocusHelper.findCarried(mc.player).isEmpty()) mc.mouseHandler.releaseMouse();
+			}
+		} else if (!keyDown && active) {
+			// letting go over an icon picks it
+			close(mc, !lock && hoveredIndex >= 0 ? hoveredIndex : -1);
+		}
+		if (active) {
 			scale = Math.min(1.0f, scale + FADE_PER_TICK);
 		} else {
 			scale = Math.max(0.0f, scale - FADE_PER_TICK);
 			hoveredIndex = -1;
-			hoverTicks = 0;
-			firedThisHold = false;
+			if (scale <= 0.0f) lock = false;
 		}
+	}
+
+	/** A click on an icon picks it and closes the radial. */
+	@SubscribeEvent
+	static void onMouseButton(net.neoforged.neoforge.client.event.InputEvent.MouseButton.Pre event) {
+		if (!active || lock || event.getButton() != org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT
+				|| event.getAction() != org.lwjgl.glfw.GLFW.GLFW_PRESS || hoveredIndex < 0) return;
+		close(Minecraft.getInstance(), hoveredIndex);
+		event.setCanceled(true);
+	}
+
+	private static void close(Minecraft mc, int pick) {
+		if (pick >= 0 && pick < shown.size()) {
+			PacketDistributor.sendToServer(new ServerboundChangeCasterFocusPacket(shown.get(pick).code()));
+		}
+		active = false;
+		lock = true;
+		if (mc.screen == null) mc.mouseHandler.grabMouse();
 	}
 
 	private static ItemStack heldCaster(LocalPlayer player) {
@@ -94,6 +121,7 @@ public class FocusRadialOverlay {
 		if (casterStack == null) return;
 
 		List<CasterFocusHelper.Carried> carried = CasterFocusHelper.findCarried(mc.player);
+		shown = carried;
 		List<ItemStack> foci = carried.stream().map(CasterFocusHelper.Carried::stack).toList();
 		if (foci.isEmpty()) return;
 		if (iconScale.length != foci.size()) {
@@ -136,7 +164,7 @@ public class FocusRadialOverlay {
 			int iy = cy + (int) (Math.sin(rad) * radius);
 			currentRot += pieSlice;
 
-			boolean hovered = Math.abs(mouseX - ix) <= HIT_RADIUS && Math.abs(mouseY - iy) <= HIT_RADIUS;
+			boolean hovered = active && !lock && Math.abs(mouseX - ix) <= HIT_RADIUS && Math.abs(mouseY - iy) <= HIT_RADIUS;
 			if (hovered) newHovered = i;
 			iconScale[i] = Mth.clamp(iconScale[i] + (hovered ? 0.05f : -0.03f), 1.0f, 1.3f);
 
@@ -153,16 +181,7 @@ public class FocusRadialOverlay {
 
 		graphics.pose().popPose();
 
-		if (newHovered != hoveredIndex) {
-			hoveredIndex = newHovered;
-			hoverTicks = 0;
-		} else if (hoveredIndex >= 0) {
-			hoverTicks++;
-		}
-		if (hoveredIndex >= 0 && !firedThisHold && hoverTicks >= HOVER_SELECT_TICKS) {
-			firedThisHold = true;
-			PacketDistributor.sendToServer(new ServerboundChangeCasterFocusPacket(carried.get(hoveredIndex).code()));
-		}
+		hoveredIndex = newHovered;
 	}
 
 	private static final int RING_TEXTURE_SIZE = 256;
