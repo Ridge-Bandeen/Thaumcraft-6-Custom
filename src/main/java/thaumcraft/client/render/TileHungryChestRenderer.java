@@ -26,8 +26,8 @@ import thaumcraft.common.tiles.devices.TileHungryChest;
  * <i>is</i> a real vanilla {@link net.minecraft.world.level.block.entity.ChestBlockEntity} (see that class's
  * own doc comment), so it already carries vanilla's own real, correct {@code getOpenNess(partialTick)} lid
  * progress for free - the exact same real geometry/UV layout vanilla's own {@code ChestRenderer#createSingleBodyLayer}
- * uses, just pointed at this port's own real {@code chesthungry.png} (confirmed the same 64x64 layout vanilla's
- * chest sheet uses) instead of vanilla's texture via {@code Sheets.chooseMaterial} (which only special-cases
+ * uses, just pointed at this port's own real {@code chesthungry.png}. The geometry and transform are the 1.12 chest's,
+ * though: the texture is in the 1.12 layout, which 1.15's flipped chest model no longer matches instead of vanilla's texture via {@code Sheets.chooseMaterial} (which only special-cases
  * {@code EnderChestBlockEntity}/{@code TrappedChestBlockEntity} - a plain reuse of vanilla's own
  * {@code ChestRenderer} would've rendered the wrong, generic vanilla chest texture).
  *
@@ -48,9 +48,10 @@ public class TileHungryChestRenderer implements BlockEntityRenderer<TileHungryCh
 	public TileHungryChestRenderer(BlockEntityRendererProvider.Context context) {
 		MeshDefinition mesh = new MeshDefinition();
 		PartDefinition root = mesh.getRoot();
-		root.addOrReplaceChild("bottom", CubeListBuilder.create().texOffs(0, 19).addBox(1.0f, 0.0f, 1.0f, 14, 10, 14), PartPose.ZERO);
-		root.addOrReplaceChild("lid", CubeListBuilder.create().texOffs(0, 0).addBox(1.0f, 0.0f, 0.0f, 14, 5, 14), PartPose.offset(0.0f, 9.0f, 1.0f));
-		root.addOrReplaceChild("lock", CubeListBuilder.create().texOffs(0, 0).addBox(7.0f, -2.0f, 14.0f, 2, 4, 1), PartPose.offset(0.0f, 9.0f, 1.0f));
+		// the 1.12 ModelChest, which the original texture is laid out for (1.15 flipped vanilla's chest model and textures)
+		root.addOrReplaceChild("bottom", CubeListBuilder.create().texOffs(0, 19).addBox(0.0f, 0.0f, 0.0f, 14, 10, 14), PartPose.offset(1.0f, 6.0f, 1.0f));
+		root.addOrReplaceChild("lid", CubeListBuilder.create().texOffs(0, 0).addBox(0.0f, -5.0f, -14.0f, 14, 5, 14), PartPose.offset(1.0f, 7.0f, 15.0f));
+		root.addOrReplaceChild("lock", CubeListBuilder.create().texOffs(0, 0).addBox(-1.0f, -2.0f, -15.0f, 2, 4, 1), PartPose.offset(8.0f, 7.0f, 15.0f));
 		ModelPart baked = LayerDefinition.create(mesh, 64, 64).bakeRoot();
 		bottom = baked.getChild("bottom");
 		lid = baked.getChild("lid");
@@ -60,9 +61,17 @@ public class TileHungryChestRenderer implements BlockEntityRenderer<TileHungryCh
 	@Override
 	public void render(TileHungryChest tile, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
 		poseStack.pushPose();
-		float facingDegrees = tile.getBlockState().getValue(ChestBlock.FACING).toYRot();
+		// the original's transform: the 1.12 chest model drawn upside down and back to front, then turned by the facing
+		poseStack.translate(0.0, 1.0, 1.0);
+		poseStack.scale(1.0f, -1.0f, -1.0f);
 		poseStack.translate(0.5, 0.5, 0.5);
-		poseStack.mulPose(Axis.YP.rotationDegrees(-facingDegrees));
+		float turn = switch (tile.getBlockState().getValue(ChestBlock.FACING)) {
+			case NORTH -> 180.0f;
+			case WEST -> 90.0f;
+			case EAST -> -90.0f;
+			default -> 0.0f;
+		};
+		poseStack.mulPose(Axis.YP.rotationDegrees(turn));
 		poseStack.translate(-0.5, -0.5, -0.5);
 
 		// Same real easing curve vanilla's own ChestRenderer applies to getOpenNess.
