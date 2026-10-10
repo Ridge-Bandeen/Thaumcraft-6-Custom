@@ -179,13 +179,13 @@ final class CustomArmorMeshes {
 		if (!legs) {
 			part(body, "CloakAtR", 0, 43, false, -4.5f, 1.0f, 2.0f, 2, 1, 3, 0.0f, 0.0f, 0.0f, 0.1396263f, 0.0f, 0.0f);
 		}
-		part(rightArm, "ShoulderR", 56, 35, true, -3.5f, -2.5f, -2.5f, 5, 5, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-		part(rightArm, "ShoulderR0", 0, 0, true, -4.3f, -1.5f, -3.0f, 3, 5, 6, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.7853982f);
+		part(rightArm, "ShoulderR", 56, 35, false, -3.5f, -2.5f, -2.5f, 5, 5, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+		part(rightArm, "ShoulderR0", 0, 0, false, -4.3f, -1.5f, -3.0f, 3, 5, 6, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.7853982f);
 		part(rightArm, "ShoulderR1", 0, 19, false, -3.3f, 3.5f, -2.5f, 1, 1, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.7853982f);
-		part(rightArm, "ShoulderR2", 0, 11, true, -2.3f, 3.5f, -3.0f, 1, 2, 6, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.7853982f);
-		part(rightArm, "GauntletR", 100, 26, true, -3.5f, 3.5f, -2.5f, 2, 6, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-		part(rightArm, "GauntletstrapR1", 84, 31, true, -1.5f, 3.5f, -2.5f, 3, 1, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-		part(rightArm, "GauntletstrapR2", 84, 31, true, -1.5f, 6.5f, -2.5f, 3, 1, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+		part(rightArm, "ShoulderR2", 0, 11, false, -2.3f, 3.5f, -3.0f, 1, 2, 6, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.7853982f);
+		part(rightArm, "GauntletR", 100, 26, false, -3.5f, 3.5f, -2.5f, 2, 6, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+		part(rightArm, "GauntletstrapR1", 84, 31, false, -1.5f, 3.5f, -2.5f, 3, 1, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+		part(rightArm, "GauntletstrapR2", 84, 31, false, -1.5f, 6.5f, -2.5f, 3, 1, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 		part(leftArm, "ShoulderL", 56, 35, false, -1.5f, -2.5f, -2.5f, 5, 5, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 		part(leftArm, "ShoulderL0", 0, 0, false, 1.3f, -1.5f, -3.0f, 3, 5, 6, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.7853982f);
 		part(leftArm, "ShoulderL1", 0, 19, true, 2.3f, 3.5f, -2.5f, 1, 1, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -0.7853982f);
@@ -383,7 +383,7 @@ final class CustomArmorMeshes {
 		part(rightArm, "ShoulderplateR1", 56, 33, false, -4.5f, -1.5f, -3.5f, 1, 4, 7, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.4363323f);
 		part(rightArm, "ShoulderplateR2", 40, 33, false, -3.5f, 1.5f, -3.5f, 1, 3, 7, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.4363323f);
 		part(rightArm, "ShoulderplateR3", 40, 33, false, -2.5f, 3.5f, -3.5f, 1, 3, 7, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.4363323f);
-		part(leftArm, "ShoulderL", 16, 45, true, -1.5f, -2.5f, -2.5f, 5, 5, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+		part(leftArm, "ShoulderL", 16, 45, false, -1.5f, -2.5f, -2.5f, 5, 5, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 		part(leftArm, "LArm1", 88, 39, true, -1.5f, 2.5f, -2.5f, 5, 7, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 		part(leftArm, "LArm2", 76, 32, false, -1.0f, 5.5f, 2.5f, 4, 4, 2, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 		part(leftArm, "LArm3", 88, 32, false, -0.5f, 3.5f, 2.5f, 3, 2, 1, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
@@ -394,7 +394,7 @@ final class CustomArmorMeshes {
 		part(rightLeg, "LegpanelR4", 76, 38, false, -3.0f, 0.5f, -3.5f, 2, 3, 1, 0.0f, 0.0f, 0.0f, -0.4363323f, 0.0f, 0.0f);
 		part(rightLeg, "LegpanelR5", 76, 42, false, -3.0f, 2.5f, -2.5f, 2, 3, 1, 0.0f, 0.0f, 0.0f, -0.4363323f, 0.0f, 0.0f);
 		part(rightLeg, "LegpanelR6", 82, 38, false, -3.0f, 4.5f, -1.5f, 2, 3, 1, 0.0f, 0.0f, 0.0f, -0.4363323f, 0.0f, 0.0f);
-		part(rightLeg, "SidepanelR1", 116, 25, true, -2.5f, 0.5f, -2.5f, 1, 4, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.4363323f);
+		part(rightLeg, "SidepanelR1", 116, 25, false, -2.5f, 0.5f, -2.5f, 1, 4, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.4363323f);
 		part(rightLeg, "SideclothR1", 116, 42, false, -2.5f, 0.5f, -2.5f, 1, 5, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.122173f);
 		part(rightLeg, "SideclothR2", 116, 34, false, -1.5f, 5.5f, -2.5f, 1, 3, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.296706f);
 		part(rightLeg, "SideclothR3", 116, 1, false, 0.4f, 8.4f, -2.5f, 1, 3, 5, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5235988f);

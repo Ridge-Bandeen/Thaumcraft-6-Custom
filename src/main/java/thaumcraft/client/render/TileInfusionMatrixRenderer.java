@@ -30,7 +30,7 @@ import thaumcraft.common.tiles.crafting.TileInfusionMatrix;
  * Draws the Infusion Matrix as the original {@code TileInfusionMatrixRenderer} (the block itself is invisible, as the
  * original's was; its JSON model is only the item's):
  * <ul>
- * <li>eight cubes ({@code ModelCube}: a mirrored 16-pixel box, scaled 0.45) at the corners a quarter-block out from the
+ * * <li>eight cubes ({@code ModelCube}: a 16-pixel box, scaled 0.45; its mirror flag was set after the box, so had no effect) at the corners a quarter-block out from the
  * centre, each turned a quarter-turn about the axes it sits on the positive side of. While active the whole cluster
  * spins about Y and tilts 35 degrees on X and 45 on Z, all scaled by the tile's eased {@link TileInfusionMatrix#startUp},
  * and each cube wobbles by up to 0.01 x startUp x instability (instability grows with the craft count, more when the
@@ -56,8 +56,8 @@ public class TileInfusionMatrixRenderer implements BlockEntityRenderer<TileInfus
 	public TileInfusionMatrixRenderer(BlockEntityRendererProvider.Context context) {
 		MeshDefinition mesh = new MeshDefinition();
 		PartDefinition root = mesh.getRoot();
-		root.addOrReplaceChild("cube", CubeListBuilder.create().mirror().texOffs(0, 0).addBox(-8.0f, -8.0f, -8.0f, 16, 16, 16), PartPose.ZERO);
-		root.addOrReplaceChild("over", CubeListBuilder.create().mirror().texOffs(0, 32).addBox(-8.0f, -8.0f, -8.0f, 16, 16, 16), PartPose.ZERO);
+		root.addOrReplaceChild("cube", CubeListBuilder.create().texOffs(0, 0).addBox(-8.0f, -8.0f, -8.0f, 16, 16, 16), PartPose.ZERO);
+		root.addOrReplaceChild("over", CubeListBuilder.create().texOffs(0, 32).addBox(-8.0f, -8.0f, -8.0f, 16, 16, 16), PartPose.ZERO);
 		ModelPart baked = LayerDefinition.create(mesh, 64, 64).bakeRoot();
 		cube = baked.getChild("cube");
 		cubeOver = baked.getChild("over");

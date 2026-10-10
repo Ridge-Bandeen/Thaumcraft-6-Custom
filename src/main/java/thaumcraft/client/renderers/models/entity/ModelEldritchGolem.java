@@ -169,7 +169,7 @@ public class ModelEldritchGolem extends EntityModel<EntityEldritchGolem> {
 				PartPose.offsetAndRotation(2.0f, 12.0f, 0.0f, 0.0f, 0.0f, -0.1396263f));
 		root.addOrReplaceChild("backpanel_l1", CubeListBuilder.create().texOffs(96, 7).addBox(-2.0f, 2.5f, -2.5f, 2, 2, 5),
 				PartPose.offsetAndRotation(2.0f, 12.0f, 0.0f, 0.0f, 0.0f, -0.1396263f));
-		root.addOrReplaceChild("leg_l", CubeListBuilder.create().texOffs(79, 19).mirror().addBox(-1.5f, 2.5f, -2.0f, 4, 9, 4),
+		root.addOrReplaceChild("leg_l", CubeListBuilder.create().texOffs(79, 19).addBox(-1.5f, 2.5f, -2.0f, 4, 9, 4),
 				PartPose.offset(2.0f, 12.5f, 0.0f));
 
 		ModelPart baked = LayerDefinition.create(mesh, 128, 64).bakeRoot();

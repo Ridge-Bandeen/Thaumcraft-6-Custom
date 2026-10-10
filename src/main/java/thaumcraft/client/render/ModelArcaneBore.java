@@ -50,9 +50,9 @@ public class ModelArcaneBore extends EntityModel<EntityArcaneBore> {
 		baseDef.addOrReplaceChild("domebase",
 				CubeListBuilder.create().texOffs(32, 19).addBox(-2.0f, -5.0f, 3.0f, 4, 4, 1), PartPose.ZERO);
 		baseDef.addOrReplaceChild("magbase",
-				CubeListBuilder.create().texOffs(0, 18).mirror().addBox(-1.0f, -4.0f, -6.0f, 2, 2, 3), PartPose.ZERO);
+				CubeListBuilder.create().texOffs(0, 18).addBox(-1.0f, -4.0f, -6.0f, 2, 2, 3), PartPose.ZERO);
 		baseDef.addOrReplaceChild("tip",
-				CubeListBuilder.create().texOffs(0, 9).mirror().addBox(-1.5f, 0.0f, -1.5f, 3, 3, 3),
+				CubeListBuilder.create().texOffs(0, 9).addBox(-1.5f, 0.0f, -1.5f, 3, 3, 3),
 				PartPose.offsetAndRotation(0.0f, -3.0f, -6.0f, -1.570796f, 0.0f, 0.0f));
 
 		root.addOrReplaceChild("tripod",
