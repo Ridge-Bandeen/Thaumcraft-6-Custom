@@ -131,14 +131,14 @@ public class TileSpa extends BlockEntity implements MenuProvider {
 	@javax.annotation.Nullable
 	private BlockState placeState() {
 		if (mix) {
-			return thaumcraft.api.blocks.BlocksTC.purifyingFluid.get().defaultBlockState().setValue(BlockPurifyingFluid.LEVEL, BlockPurifyingFluid.MAX_LEVEL);
+			return thaumcraft.common.registry.ThaumcraftFluids.PURIFYING_FLUID.get().defaultFluidState().createLegacyBlock();
 		}
 		return tank.isEmpty() ? null : tank.getFluid().getFluid().defaultFluidState().createLegacyBlock();
 	}
 
 	private boolean isFull(BlockState state) {
 		if (mix) {
-			return state.is(thaumcraft.api.blocks.BlocksTC.purifyingFluid.get()) && state.getValue(BlockPurifyingFluid.LEVEL) == BlockPurifyingFluid.MAX_LEVEL;
+			return state.is(thaumcraft.api.blocks.BlocksTC.purifyingFluid.get()) && state.getFluidState().isSource();
 		}
 		return !tank.isEmpty() && state.getFluidState().isSource() && state.getFluidState().getType().isSame(tank.getFluid().getFluid());
 	}

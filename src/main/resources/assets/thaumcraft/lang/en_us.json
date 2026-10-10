@@ -1959,5 +1959,7 @@
   "thaumcraft.configuration.shieldCost": "Shield Cost",
   "tc.dust.notempty": "It has to be empty before the Salis Mundus can work on it.",
   "tc.blueprint.anyof": "or anything in %s",
-  "block.thaumcraft.grass_ambient": "Ambient Grass Block"
+  "block.thaumcraft.grass_ambient": "Ambient Grass Block",
+  "item.thaumcraft.bucket_pure": "Bucket of Purifying Fluid",
+  "fluid_type.thaumcraft.purifying_fluid": "Purifying Fluid"
 }

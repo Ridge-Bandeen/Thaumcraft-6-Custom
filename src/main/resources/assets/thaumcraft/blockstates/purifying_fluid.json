@@ -1,7 +1,7 @@
 {
-  "multipart": [
-    {
-      "apply": { "model": "thaumcraft:block/purifying_fluid" }
+  "variants": {
+    "": {
+      "model": "thaumcraft:block/purifying_fluid"
     }
-  ]
+  }
 }

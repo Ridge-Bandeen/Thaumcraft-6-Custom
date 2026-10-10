@@ -1411,6 +1411,22 @@ public final class ClientFxHandlers {
 				(float) (r.nextGaussian() * 0.01));
 	}
 
+	/** The original BlockFluidPure#randomDisplayTick bubble: a small pale bubble rising off the surface and popping. */
+	public static void purifyingBubble(net.minecraft.world.level.Level level, double x, double y, double z) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var r = clientLevel.random;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, 0.0, 0.0, 0.0);
+		fb.setMaxAge(10 + r.nextInt(10));
+		fb.setScale(r.nextFloat() * 0.3f + 0.3f);
+		fb.setRBGColorF(1.0f, 1.0f, 1.0f);
+		fb.setRandomMovementScale(0.001f, 0.001f, 0.001f);
+		fb.setGravity(-0.01f);
+		fb.setAlphaF(0.25f);
+		fb.setParticle(64);
+		fb.setFinalFrames(65, 66);
+		Minecraft.getInstance().particleEngine.add(fb);
+	}
+
 	/** The original drawWispyMotesOnBlock: a still, pale mote at a random spot on top of a block. */
 	public static void wispyMotesOnBlock(net.minecraft.world.level.Level level, BlockPos pos, int age, float grav) {
 		if (!(level instanceof ClientLevel clientLevel)) return;

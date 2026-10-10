@@ -923,13 +923,10 @@ public final class BlocksTC {
 					.noCollission().liquid().noLootTable().noOcclusion()
 					.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
 
-	/** Real, from-scratch finite-fluid block - see {@link thaumcraft.common.blocks.misc.BlockPurifyingFluid}'s
-	 * own doc comment, same real precedent as {@link #fluxGoo} above (a plain {@code Block}, not a real
-	 * vanilla {@code Fluid}/{@code FluidType} - no bucket, {@code .noLootTable()} since fluids don't drop
-	 * themselves). */
+	/** Purifying Fluid, a real flowing fluid with a bucket - see {@link thaumcraft.common.blocks.misc.BlockPurifyingFluid}. */
 	public static final DeferredBlock<thaumcraft.common.blocks.misc.BlockPurifyingFluid> purifyingFluid = BLOCKS.registerBlock("purifying_fluid",
-			thaumcraft.common.blocks.misc.BlockPurifyingFluid::new,
-			BlockBehaviour.Properties.of().mapColor(MapColor.SNOW).sound(SoundType.SLIME_BLOCK)
+			props -> new thaumcraft.common.blocks.misc.BlockPurifyingFluid(thaumcraft.common.registry.ThaumcraftFluids.PURIFYING_FLUID.get(), props),
+			BlockBehaviour.Properties.of().mapColor(MapColor.WOOL).lightLevel(state -> 5).replaceable()
 					.noCollission().liquid().noLootTable().noOcclusion()
 					.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
 

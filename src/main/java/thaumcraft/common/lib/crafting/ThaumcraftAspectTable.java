@@ -446,7 +446,7 @@ final class ThaumcraftAspectTable {
 	}
 
 	/** The mod's own entries from the original table. The original also listed the eldritch blocks, runed tablet and Eldritch
-	 * Eye, which it never registered; the Purifying Fluid bucket is left out because the port's fluid has no bucket. */
+	 * Eye, which it never registered. */
 	/**
 	 * Everything Minecraft added after the original's version that has no recipe to take aspects from (plants, stone,
 	 * creature drops, trial chamber loot, ...), plus additions for a few crafted things whose defining trait the recipes
@@ -636,6 +636,7 @@ final class ThaumcraftAspectTable {
 		item(blk(BlocksTC.arcaneWorkbench), () -> of(Items.CRAFTING_TABLE).add(Aspect.MAGIC, 5).add(Aspect.AURA, 5));
 		item(ItemsTC.tripleMeatTreat.get(), new AspectList().add(Aspect.LIFE, 10).add(Aspect.DESIRE, 10));
 		item(ItemsTC.bucketDeath.get(), () -> of(Items.BUCKET).add(Aspect.DEATH, 15).add(Aspect.ENTROPY, 15));
+		item(ItemsTC.bucketPure.get(), () -> of(Items.BUCKET).add(Aspect.MIND, 15).add(Aspect.ORDER, 15));
 		item(ItemsTC.nuggetRareearth.get(), new AspectList().add(Aspect.EARTH, 5).add(Aspect.ORDER, 5).add(Aspect.METAL, 5));
 
 		item(blk(BlocksTC.taintFibre), new AspectList().add(Aspect.PLANT, 5).add(Aspect.FLUX, 10));

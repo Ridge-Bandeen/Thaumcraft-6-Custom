@@ -16584,8 +16584,7 @@ public class ThaumcraftGameTests {
 	public static void purifyingFluidGrantsWarpWardOnTouchThenConsumesItself(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 		BlockPos pos = helper.absolutePos(BlockPos.ZERO);
-		level.setBlockAndUpdate(pos, BlocksTC.purifyingFluid.get().defaultBlockState()
-				.setValue(thaumcraft.common.blocks.misc.BlockPurifyingFluid.LEVEL, thaumcraft.common.blocks.misc.BlockPurifyingFluid.MAX_LEVEL));
+		level.setBlockAndUpdate(pos, BlocksTC.purifyingFluid.get().defaultBlockState());
 
 		ServerPlayer player = spawnCasterAt(helper, pos);
 		ThaumcraftCapabilities.getWarp(player).set(thaumcraft.api.capabilities.IPlayerWarp.EnumWarpType.PERMANENT, 4);
@@ -16604,7 +16603,7 @@ public class ThaumcraftGameTests {
 		ServerLevel level = helper.getLevel();
 		BlockPos partialPos = helper.absolutePos(BlockPos.ZERO);
 		level.setBlockAndUpdate(partialPos, BlocksTC.purifyingFluid.get().defaultBlockState()
-				.setValue(thaumcraft.common.blocks.misc.BlockPurifyingFluid.LEVEL, 3));
+				.setValue(net.minecraft.world.level.block.LiquidBlock.LEVEL, 3));
 		ServerPlayer player = spawnCasterAt(helper, partialPos);
 		level.getBlockState(partialPos).entityInside(level, partialPos, player);
 		helper.assertFalse(player.hasEffect(thaumcraft.common.registry.ThaumcraftMobEffects.WARP_WARD),
@@ -16612,12 +16611,23 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(level.getBlockState(partialPos).is(BlocksTC.purifyingFluid.get()), "a real partial-level block shouldn't have consumed itself");
 
 		BlockPos fullPos = helper.absolutePos(new BlockPos(2, 0, 0));
-		level.setBlockAndUpdate(fullPos, BlocksTC.purifyingFluid.get().defaultBlockState()
-				.setValue(thaumcraft.common.blocks.misc.BlockPurifyingFluid.LEVEL, thaumcraft.common.blocks.misc.BlockPurifyingFluid.MAX_LEVEL));
+		level.setBlockAndUpdate(fullPos, BlocksTC.purifyingFluid.get().defaultBlockState());
 		player.addEffect(new net.minecraft.world.effect.MobEffectInstance(thaumcraft.common.registry.ThaumcraftMobEffects.WARP_WARD, 200));
 		level.getBlockState(fullPos).entityInside(level, fullPos, player);
 		helper.assertTrue(level.getBlockState(fullPos).is(BlocksTC.purifyingFluid.get()),
 				"a real full-level block shouldn't consume itself on a player who already has a real active Warp Ward");
+		helper.succeed();
+	}
+
+	/** As the original, Purifying Fluid is a real fluid with a bucket: the bucket places a source, and it has its aspects. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void purifyingFluidIsARealFluidWithABucket(GameTestHelper helper) {
+		var source = thaumcraft.common.registry.ThaumcraftFluids.PURIFYING_FLUID.get().defaultFluidState();
+		helper.assertTrue(source.createLegacyBlock().is(BlocksTC.purifyingFluid.get()), "the fluid's block should be Purifying Fluid");
+		helper.assertTrue(source.getType().getBucket() == ItemsTC.bucketPure.get(), "the fluid's bucket should be the Purifying Fluid bucket");
+		AspectList aspects = thaumcraft.api.aspects.AspectHelper.getObjectAspects(new ItemStack(ItemsTC.bucketPure.get()));
+		helper.assertTrue(aspects != null && aspects.getAmount(Aspect.MIND) == 15 && aspects.getAmount(Aspect.ORDER) == 15,
+				"the bucket should carry 15 mind and order, got " + aspects);
 		helper.succeed();
 	}
 

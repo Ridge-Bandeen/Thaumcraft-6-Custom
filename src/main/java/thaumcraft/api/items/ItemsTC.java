@@ -129,6 +129,11 @@ public final class ItemsTC {
 	/** Real bucket for {@link thaumcraft.api.blocks.BlocksTC#liquidDeath} - the true original's own real
 	 * {@code FluidRegistry.addBucketForFluid} equivalent. {@code .craftRemainder(Items.BUCKET)} matches every
 	 * vanilla fluid bucket's own real "using it up returns an empty bucket" behavior. */
+	/** The original's Purifying Fluid bucket (a Forge universal bucket there; rare, as the fluid). */
+	public static final DeferredItem<BucketItem> bucketPure = ITEMS.registerItem("bucket_pure",
+			props -> new BucketItem(thaumcraft.common.registry.ThaumcraftFluids.PURIFYING_FLUID.get(),
+					props.craftRemainder(Items.BUCKET).stacksTo(1).rarity(net.minecraft.world.item.Rarity.RARE)));
+
 	public static final DeferredItem<BucketItem> bucketDeath = ITEMS.registerItem("bucket_death",
 			props -> new BucketItem(thaumcraft.common.registry.ThaumcraftFluids.LIQUID_DEATH.get(), props.craftRemainder(Items.BUCKET).stacksTo(1)));
 

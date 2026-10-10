@@ -62,6 +62,11 @@ public class ThaumcraftClient {
         // Recipe tracing for item aspects needs a level to read recipes from when no integrated server is running.
         thaumcraft.common.lib.crafting.ThaumcraftObjectTags.setClientLevelSupplier(() -> net.minecraft.client.Minecraft.getInstance().level);
         Thaumcraft.LOGGER.info("Thaumcraft {} client setup", Thaumcraft.VERSION);
+        // Purifying Fluid is see-through (its tint has alpha)
+        net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(thaumcraft.common.registry.ThaumcraftFluids.PURIFYING_FLUID.get(),
+                net.minecraft.client.renderer.RenderType.translucent());
+        net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(thaumcraft.common.registry.ThaumcraftFluids.PURIFYING_FLUID_FLOWING.get(),
+                net.minecraft.client.renderer.RenderType.translucent());
         // the original's animated golem parts (claws, breaker grinders, wheels, the hauler's load)
         thaumcraft.client.render.GolemPartAnimations.register();
 
@@ -120,6 +125,24 @@ public class ThaumcraftClient {
                 return TEXTURE;
             }
         }, thaumcraft.common.registry.ThaumcraftFluids.LIQUID_DEATH_TYPE);
+
+        // Purifying Fluid: the water textures, tinted as the original FluidPure#getColor (0x77FFCCAA)
+        event.registerFluidType(new net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions() {
+            @Override
+            public ResourceLocation getStillTexture() {
+                return ResourceLocation.withDefaultNamespace("block/water_still");
+            }
+
+            @Override
+            public ResourceLocation getFlowingTexture() {
+                return ResourceLocation.withDefaultNamespace("block/water_flow");
+            }
+
+            @Override
+            public int getTintColor() {
+                return 0x77FFCCAA;
+            }
+        }, thaumcraft.common.registry.ThaumcraftFluids.PURIFYING_FLUID_TYPE);
 
         // The original's own custom armor meshes (see CustomArmorModel's doc comment) - before 2026-09-25 all
         // of these were drawn on the vanilla biped with a texture laid out for the custom mesh.
