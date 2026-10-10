@@ -45,14 +45,17 @@ import thaumcraft.common.entities.monster.boss.EntityEldritchGolem;
  * {@code handleStatusUpdate} case 4 entity-event broadcast - this port's own {@code EntityEldritchGolem} had
  * the real server-side attack-cooldown gate ({@code hurtTimer}) but never actually broadcast the matching
  * real client entity-event, since nothing client-side needed it before this mesh existed. See {@code
- * EntityEldritchGolem#doHurtTarget}'s own doc comment for the real fix. Real, minor simplification within
- * that fix: the true original's own real sub-tick interpolation smoothing for the swing (subtracting a
- * fractional partial-tick value from the integer countdown) is dropped - modern {@link #setupAnim} doesn't
- * expose a raw partial-tick value separately from the already-blended {@code ageInTicks}, so the swing is
- * driven by the plain integer countdown instead; over a 10-tick swing this only costs the very last tick's
- * worth of sub-frame smoothness, not worth adding new plumbing for.
+ * EntityEldritchGolem#doHurtTarget}'s own doc comment for the real fix. The swing is smoothed between ticks as
+ * the original ({@code timer - partialTick}, the partial tick taken in {@link #prepareMobModel}).
  */
 public class ModelEldritchGolem extends EntityModel<EntityEldritchGolem> {
+
+	private float partialTick;
+
+	@Override
+	public void prepareMobModel(EntityEldritchGolem entity, float limbSwing, float limbSwingAmount, float partialTick) {
+		this.partialTick = partialTick;
+	}
 
 	private final ModelPart frontcloth0;
 	private final ModelPart frontcloth1;
@@ -268,7 +271,7 @@ public class ModelEldritchGolem extends EntityModel<EntityEldritchGolem> {
 		// previously-unwired client entity-event restoration and its own real sub-tick simplification.
 		int swing = entity.getHurtTimer();
 		if (swing > 0) {
-			float t = -2.0f + 1.5f * doAbs(swing, 10.0f);
+			float t = -2.0f + 1.5f * doAbs(swing - partialTick, 10.0f);
 			armR.setRotation(t, 0.0f, 0.1047198f);
 			armL.setRotation(t, 0.0f, -0.1047198f);
 		} else {
