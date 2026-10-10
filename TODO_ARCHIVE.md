@@ -15,6 +15,17 @@
   Alumentum / Causality Collapser invisible with their trails; Pech shadow 0.25 and no armour layer.
 - Placeholder renderers checked: cultist portals, golem orb, eldritch orb and wisp are drawn by tracking particles matching
   the originals; focus cloud and taint swarm drew nothing in the original either.
+- Sweep of un-noted renderers against the originals: model mirroring (1.12 boxes take the flag at addBox - flags set
+  afterwards did nothing; unmirrored matrix cubes, bore magbase/tip, golem left leg, knight right-arm parts, robe shoulder
+  and side panel); Eldritch Golem swing smoothing; armour heads 1.01x; bosses frozen while their spawn timer runs; Warden
+  150-tick rise (server timer, event 18, smoke, sink); Eldritch Guardian ghost fade; Mind Spider faint fade; giant brainy
+  zombie texture and anger tint; fire/spell bat offsets before the flip; focus mine full-bright; Crucible tint channels;
+  Magic Mirror (invisible block, frame, pane, tunnel placement); pedestal / recharge pedestal / Thaumatorium items as
+  dropped items; jar liquid from the animated atlas sprite; Hungry Chest on the 1.12 chest model.
+- Checked and matching: centrifuge, Alembic, Research Table, tubes, crab, crawler, slime, cultist portals, seals (icon
+  is the item model, already extruded, rather than the 0.1-deep sprite).
+- Not a gap: Eldritch Golem spawn-timer head nod (its client never received the timer in the original);
+  KnowledgeGainOverlay Z layering (paint order gives the same result).
 - Not a gap: hole / Void Siphon in-plane roll (the ender shader reads position only, culling off). Golem Press steam was
   already in TileGolemBuilder#tickPress.
 
