@@ -23,10 +23,10 @@ import thaumcraft.common.entities.monster.EntityPech;
  * hand-written animation: limb swing, the mirrored idle arm sway, the pack wobble, and the "mumble" jaw flap
  * driven by {@link EntityPech#mumble}.
  *
- * <p>Built as a {@link HumanoidModel} so vanilla's armor and held-item layers keep working. The jowls hang off
+ * <p>Built as a {@link HumanoidModel} so the held-item layer can find the hands. The jowls hang off
  * the head part (the original copied the head's rotation onto them and added the jaw motion, which is the same
  * thing as a child part with only the jaw rotation); the two packs are separate parts drawn after the rest.
- * Not reproduced: the original's custom held-item nudge ({@code LayerHeldItemPech}: -0.1 down, extra for bows).
+ * The original's held-item nudge ({@code LayerHeldItemPech}) is in {@link RenderPech}.
  */
 public class ModelPech extends HumanoidModel<EntityPech> {
 

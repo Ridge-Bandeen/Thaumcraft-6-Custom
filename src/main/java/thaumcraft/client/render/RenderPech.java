@@ -1,10 +1,7 @@
 package thaumcraft.client.render;
 
-import net.minecraft.client.model.HumanoidModel;
-import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
-import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.resources.ResourceLocation;
 import thaumcraft.common.entities.monster.EntityPech;
@@ -23,11 +20,8 @@ public class RenderPech extends HumanoidMobRenderer<EntityPech, ModelPech> {
 	private static final ResourceLocation STALKER = ResourceLocation.fromNamespaceAndPath("thaumcraft", "textures/entity/pech_stalker.png");
 
 	public RenderPech(EntityRendererProvider.Context context) {
-		super(context, new ModelPech(ModelPech.createBodyLayer().bakeRoot()), 0.4f);
-		addLayer(new HumanoidArmorLayer<>(this,
-				new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
-				new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)),
-				context.getModelManager()));
+		// as the original: a 0.25 shadow and only the held-item layer (no armour layer)
+		super(context, new ModelPech(ModelPech.createBodyLayer().bakeRoot()), 0.25f);
 		// HumanoidMobRenderer adds its own ItemInHandLayer (the port drew held items twice): swap it for the Pech's own
 		layers.removeIf(layer -> layer instanceof ItemInHandLayer);
 		addLayer(new PechItemInHandLayer(this, context.getItemInHandRenderer()));
@@ -53,6 +47,9 @@ public class RenderPech extends HumanoidMobRenderer<EntityPech, ModelPech> {
 			poseStack.translate(0.0f, -0.1f, 0.0625f);
 			if (stack.getItem() instanceof net.minecraft.world.item.BowItem) {
 				poseStack.translate(-0.075f, -0.1f, 0.0f);
+			}
+			if (entity.isCrouching()) {
+				poseStack.translate(0.0f, 0.2f, 0.0f);
 			}
 			poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(-90.0f));
 			poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180.0f));
