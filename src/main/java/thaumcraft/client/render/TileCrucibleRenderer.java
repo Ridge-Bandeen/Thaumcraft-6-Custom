@@ -50,10 +50,11 @@ public class TileCrucibleRenderer implements BlockEntityRenderer<TileCrucible> {
 		// 1.21's water sprite is white (the blue is a biome tint applied by the block renderer), so tint it by the biome's
 		// water colour here - the 1.12 sprite was already blue. Then the original's vis-driven recolour on top.
 		int water = tile.getLevel() != null ? net.minecraft.client.renderer.BiomeColors.getAverageWaterColor(tile.getLevel(), tile.getBlockPos()) : 0x3F76E4;
+		// the original's tint: red x (1 - recolor / 3), green x (1 - recolor), blue x (1 - recolor / 2)
 		int color = FastColor.ARGB32.color(255,
-				(int) (((water >> 16) & 255) * 1.0f),
-				(int) (((water >> 8) & 255) * (1.0f - recolor / 3.0f)),
-				(int) ((water & 255) * (1.0f - recolor)));
+				(int) (((water >> 16) & 255) * (1.0f - recolor / 3.0f)),
+				(int) (((water >> 8) & 255) * (1.0f - recolor)),
+				(int) ((water & 255) * (1.0f - recolor / 2.0f)));
 
 		poseStack.pushPose();
 		poseStack.translate(0.0, tile.getFluidHeight(), 1.0);
