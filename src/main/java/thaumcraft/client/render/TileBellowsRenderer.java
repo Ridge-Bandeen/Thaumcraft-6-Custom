@@ -37,14 +37,9 @@ import thaumcraft.common.tiles.essentia.TileTubeBuffer;
  * per-part texture-size override) uses the same numeric offset directly against the model's own single
  * declared 128x128 size - same real texture region either way.
  *
- * <p>Real, disclosed simplification: the true original's own real "bore extension" nozzle (only drawn when a
- * {@link TileTubeBuffer} sits directly against the bellows' own facing, reusing the same real {@code
- * ModelBoreBase#renderNozzle} geometry {@link TileAlembicRenderer} already established) is restored for the 4
- * horizontal facings using that same real proven mapping, but the true original's own real per-facing rotation
- * table for the 2 vertical facings (a genuinely different Z-axis rotation, not a clean 1:1 translation) is
- * approximated with the same general "point outward along facing" intent instead of chasing the exact old
- * numbers - a narrow, rarely-seen decorative sub-case (needs a Bellows placed vertically AND directly against a
- * Tube Buffer), not the main animation.
+ * <p>The "bore extension" nozzle (drawn when a {@link TileTubeBuffer} sits directly in front of the bellows, the
+ * {@code ModelBoreBase#renderNozzle} geometry) uses the original's table, keyed on the opposite of the facing: it sits
+ * on the buffer's face toward the bellows.
  */
 public class TileBellowsRenderer implements BlockEntityRenderer<TileBellows> {
 
@@ -135,16 +130,22 @@ public class TileBellowsRenderer implements BlockEntityRenderer<TileBellows> {
 		poseStack.popPose();
 	}
 
+	/** The original's table, on the opposite of the facing (the model's nozzle points along +X). */
 	private static void orientNozzle(PoseStack poseStack, Direction facing) {
-		switch (facing) {
+		switch (facing.getOpposite()) {
+			case DOWN -> {
+				poseStack.translate(-0.5, 0.5, 0.0);
+				poseStack.mulPose(Axis.ZN.rotationDegrees(90.0f));
+			}
+			case UP -> {
+				poseStack.translate(0.5, 0.5, 0.0);
+				poseStack.mulPose(Axis.ZP.rotationDegrees(90.0f));
+			}
 			case NORTH -> poseStack.mulPose(Axis.YP.rotationDegrees(90.0f));
 			case SOUTH -> poseStack.mulPose(Axis.YP.rotationDegrees(270.0f));
 			case WEST -> poseStack.mulPose(Axis.YP.rotationDegrees(180.0f));
 			case EAST -> {
-				// identity - local +X already points east
 			}
-			case UP -> poseStack.mulPose(Axis.ZP.rotationDegrees(-90.0f));
-			case DOWN -> poseStack.mulPose(Axis.ZP.rotationDegrees(90.0f));
 		}
 	}
 
