@@ -1,5 +1,18 @@
 # Thaumcraft 1.21.1 Port — TODO archive
 
+## Closed 2026-10-10 (renderer fidelity list; commits untested until the evening test pass)
+
+- Arcane Bore mining beam; crossbow turret fire flex, reload slide, frozen body yaw, minecart legs; advanced turret on
+  ObjModels with hurt tint and shadow; Taintacle flail and Taint Seed lunge plus its lost client FX (2795057d).
+- Homes saved (HomeD/X/Y/Z) for cultists, bosses, Eldritch Guardian - vanilla Mob never saved restrictCenter; ritual
+  cleric saved flag, spawn-data home, gaze, bob and ritual lines (617cbd26). The leader's line was dead in the original.
+- Sonic and shield runes V-flipped (the original WavefrontObject flips V; the Golem Press undid it with a texture-matrix
+  flip, so it stays unflipped); sonic 50% grey. 1.12 brightness ints pack like 1.21 packed light (block low, sky high).
+- Banner (dye scope, sway clock, aspect icon), Bellows nozzle table (was mirrored), Dioptra hologram rebuilt (was half a
+  block off and inside the block), Focal Manipulator glow, rays and dropped-item draws.
+- Not a gap: hole / Void Siphon in-plane roll (the ender shader reads position only, culling off). Golem Press steam was
+  already in TileGolemBuilder#tickPress.
+
 ## Closed 2026-10-05
 
 - Golem renderer rebuilt as the original: OBJ groups read at runtime (ObjModels, the original WavefrontObject's

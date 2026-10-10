@@ -19,7 +19,7 @@ import thaumcraft.common.tiles.crafting.TileVoidSiphon;
  * tile's own real {@link BlockStateProperties#ENABLED} is set - painted through the same real
  * {@link EnderShader} as {@link TileHoleRenderer}/{@code RenderFluxRift}.
  *
- * <p>Real, checked-not-guessed simplification: the true original's own real per-face in-plane roll is dropped
+ * <p>Not a difference: the original's per-face in-plane roll is left out
  * (a real no-op - see {@link TileHoleRenderer}'s own doc comment for why). The per-layer blend function is
  * kept (additive for the small top ring, normal alpha for the large one) - it is NOT a no-op even though the
  * shader's output alpha is always 1, since additive is dst+src while normal blend at alpha 1 is an opaque

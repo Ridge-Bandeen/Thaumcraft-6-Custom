@@ -20,7 +20,7 @@ import thaumcraft.common.tiles.misc.TileHole;
  * through the real {@link EnderShader} - see that class's own doc comment for the real shader-porting work
  * this and {@link TileVoidSiphonRenderer}/{@code RenderFluxRift} all share.
  *
- * <p>Real, checked-not-guessed simplification: the true original's own real in-plane 90-degree roll (applied
+ * <p>Not a difference: the original's in-plane 90-degree roll (applied
  * after orienting each quad to face outward) is dropped - confirmed by reading the shader's own real math
  * first (see {@link EnderShader}'s own doc comment) that it computes colour purely from each vertex's own
  * camera-relative 3D position, never from the mesh's own UVs/tangent frame, so a quad's own rotation about its
