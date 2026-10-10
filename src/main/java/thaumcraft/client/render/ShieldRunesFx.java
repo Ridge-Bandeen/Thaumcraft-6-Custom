@@ -173,7 +173,7 @@ public final class ShieldRunesFx {
 		});
 	}
 
-	private static RenderType additive(ResourceLocation texture) {
+	static RenderType additive(ResourceLocation texture) {
 		return AdditiveType.get(texture);
 	}
 
