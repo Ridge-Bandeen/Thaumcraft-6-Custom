@@ -176,20 +176,18 @@ public class ThaumcraftClient {
     @SubscribeEvent
     static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ThaumcraftEntities.SPECIAL_ITEM.get(), net.minecraft.client.renderer.entity.ItemEntityRenderer::new);
-        event.registerEntityRenderer(ThaumcraftEntities.FOCUS_PROJECTILE.get(), RenderFocusProjectile::new);
+        event.registerEntityRenderer(ThaumcraftEntities.FOCUS_PROJECTILE.get(), thaumcraft.client.render.RenderNoProjectile::new);
         // Real caltrop-shaped geometry + pulsing red tint restored 2026-09-16 - see RenderFocusMine's own doc
         // comment. This was a real, previously-undocumented gap (not the same permanent "no client FX" case
         // FOCUS_PROJECTILE/FOCUS_CLOUD below genuinely are), found via a direct cross-check of every entity
         // type hiding behind the RenderFocusProjectile placeholder.
         event.registerEntityRenderer(ThaumcraftEntities.FOCUS_MINE.get(), thaumcraft.client.render.RenderFocusMine::new);
         event.registerEntityRenderer(ThaumcraftEntities.FOCUS_CLOUD.get(), RenderFocusProjectile::new);
-        // Alumentum renders as a real spinning item icon (vanilla's own snowball/egg renderer), unlike
-        // the invisible focus-carrier entities above.
-        event.registerEntityRenderer(ThaumcraftEntities.ALUMENTUM.get(), ThrownItemRenderer::new);
-        // Real vanilla-item spinning-icon renderer too, matching Alumentum above - the original's own
-        // EntityBottleTaint really is an EntityThrowable, no bespoke model.
+        // Thrown Alumentum and the Causality Collapser show only as their trails, as the original (RenderNoProjectile).
+        event.registerEntityRenderer(ThaumcraftEntities.ALUMENTUM.get(), thaumcraft.client.render.RenderNoProjectile::new);
+        // A spinning item icon, as the original's RenderSnowball for the bottle of taint.
         event.registerEntityRenderer(ThaumcraftEntities.BOTTLE_TAINT.get(), ThrownItemRenderer::new);
-        event.registerEntityRenderer(ThaumcraftEntities.CAUSALITY_COLLAPSER.get(), ThrownItemRenderer::new);
+        event.registerEntityRenderer(ThaumcraftEntities.CAUSALITY_COLLAPSER.get(), thaumcraft.client.render.RenderNoProjectile::new);
         // Real vanilla ItemEntityRenderer, unmodified - EntityFollowingItem really is a plain ItemEntity
         // subtype in this port (see its own doc comment), so it just gets the exact same real rendering any
         // dropped item does, for free.

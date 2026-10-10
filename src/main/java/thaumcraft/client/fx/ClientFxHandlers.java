@@ -289,6 +289,33 @@ public final class ClientFxHandlers {
 				bb ? scale / 3.0f : scale).setLayer(bb ? 1 : 0));
 	}
 
+	/** The original thrown Alumentum's and Causality Collapser's client tick: three motes a tick along the path from the
+	 * last position (dark red, or orange for the Collapser), each with a puff of smoke (frames 448-455) nearby. */
+	public static void thrownTrail(net.minecraft.world.level.Level level, Entity e, boolean collapser) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var random = clientLevel.random;
+		for (int i = 0; i < 3; i++) {
+			double coeff = i / 3.0;
+			float r = collapser ? 0.8f + random.nextFloat() * 0.2f : random.nextFloat() * 0.2f;
+			float g = collapser ? 0.3f + random.nextFloat() * 0.1f : random.nextFloat() * 0.1f;
+			float b = random.nextFloat() * 0.1f;
+			spawnAlumentumMote(level, (float) (e.xo + (e.getX() - e.xo) * coeff), (float) (e.yo + (e.getY() - e.yo) * coeff) + e.getBbHeight() / 2.0f,
+					(float) (e.zo + (e.getZ() - e.zo) * coeff), 0.0125f * (random.nextFloat() - 0.5f), 0.0125f * (random.nextFloat() - 0.5f),
+					0.0125f * (random.nextFloat() - 0.5f), r, g, b, 4.0f);
+			var fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, e.getX() + random.nextGaussian() * 0.2,
+					e.getY() + random.nextGaussian() * 0.2, e.getZ() + random.nextGaussian() * 0.2, 0.0, 0.0, 0.0);
+			fb.setMaxAge(8);
+			fb.setRBGColorF(1.0f, 1.0f, 1.0f);
+			fb.setAlphaF(0.7f);
+			fb.setLoop(false);
+			fb.setParticles(448, 8, 1);
+			fb.setScale(0.3f);
+			fb.setLayer(1);
+			fb.setRotationSpeed(0.0f);
+			Minecraft.getInstance().particleEngine.add(fb);
+		}
+	}
+
 	/** The original's {@code FXDispatcher#drawAlumentum}: a normal-blend fire mote (Alumentum, Causality Collapser). */
 	public static void spawnAlumentumMote(net.minecraft.world.level.Level level, double x, double y, double z,
 			double mx, double my, double mz, float r, float g, float b, float scale) {

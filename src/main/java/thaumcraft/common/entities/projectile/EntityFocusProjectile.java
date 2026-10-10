@@ -35,7 +35,9 @@ import thaumcraft.common.registry.ThaumcraftEntities;
  * losing a tenth of its speed each time, until it is too slow), or seeking (2: the nearest hostile, 3: the nearest
  * friendly thing in a cone ahead and in sight, re-checked every 5 ticks); it falls slowly (0.01 a tick, 0.005 when
  * seeking), lasts at most a minute, and vanishes if its caster is gone. The spell travels to the client with it, so the
- * trail is a mote in the colour of one of its effects, plus that effect's own particles.
+ * trail is a mote in the colour of one of its effects, plus that effect's own particles. As the original, the trail is
+ * spawned from the renderer ({@link #renderParticle}): a mote each time the partial tick has moved on by 0.2 since the
+ * last (so up to about five a tick, at the drawn position), the effect's particles with the first of each tick.
  */
 public class EntityFocusProjectile extends ThrowableProjectile implements IEntityWithComplexSpawn {
 
@@ -44,6 +46,9 @@ public class EntityFocusProjectile extends ThrowableProjectile implements IEntit
 	private FocusPackage remainingPackage;
 	private Entity target;
 	private FocusEffect[] effects;
+	/** Client: the partial tick of the last trail mote, and whether this tick's first mote is still to come. */
+	public float lastRenderTick;
+	private boolean firstParticle;
 
 	public EntityFocusProjectile(EntityType<? extends EntityFocusProjectile> type, Level level) {
 		super(type, level);
@@ -86,7 +91,7 @@ public class EntityFocusProjectile extends ThrowableProjectile implements IEntit
 			return;
 		}
 		if (level().isClientSide) {
-			trail();
+			firstParticle = true;
 			return;
 		}
 		if (target == null && tickCount % 5 == 0 && getSpecial() > 1) {
@@ -115,18 +120,26 @@ public class EntityFocusProjectile extends ThrowableProjectile implements IEntit
 		}
 	}
 
-	/** A mote in the colour of one of the spell's effects, and that effect's own particles. */
-	private void trail() {
+	/** Client, from the renderer: a mote in the colour of one of the spell's effects at the drawn position, and with the
+	 * first of each tick that effect's own particles. */
+	public void renderParticle(float partialTick) {
+		lastRenderTick = partialTick;
 		if (effects == null) effects = remainingPackage != null ? remainingPackage.getFocusEffects() : new FocusEffect[0];
 		if (effects == null || effects.length == 0) return;
 		FocusEffect effect = effects[random.nextInt(effects.length)];
 		int c = FocusEngine.getElementColor(effect.getKey());
-		double y = getY() + getBbHeight() / 2.0;
-		thaumcraft.client.fx.ClientFxHandlers.spawnFireMote(level(), getX(), y, getZ(),
+		double x = xo + (getX() - xo) * partialTick;
+		double y = yo + (getY() - yo) * partialTick + getBbHeight() / 2.0;
+		double z = zo + (getZ() - zo) * partialTick;
+		thaumcraft.client.fx.ClientFxHandlers.spawnFireMote(level(), x, y, z,
 				0.0125 * (random.nextFloat() - 0.5), 0.0125 * (random.nextFloat() - 0.5), 0.0125 * (random.nextFloat() - 0.5),
 				((c >> 16) & 255) / 255.0f, ((c >> 8) & 255) / 255.0f, (c & 255) / 255.0f, 7.0f);
-		effect.renderParticleFX(level(), getX() + random.nextGaussian() * 0.1, y + random.nextGaussian() * 0.1, getZ() + random.nextGaussian() * 0.1,
-				random.nextGaussian() * 0.01, random.nextGaussian() * 0.01, random.nextGaussian() * 0.01);
+		if (firstParticle) {
+			firstParticle = false;
+			effect.renderParticleFX(level(), x + level().random.nextGaussian() * 0.1, y + level().random.nextGaussian() * 0.1,
+					z + level().random.nextGaussian() * 0.1, level().random.nextGaussian() * 0.01, level().random.nextGaussian() * 0.01,
+					level().random.nextGaussian() * 0.01);
+		}
 	}
 
 	@Override
