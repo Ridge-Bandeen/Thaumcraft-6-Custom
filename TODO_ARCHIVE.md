@@ -10,6 +10,11 @@
   flip, so it stays unflipped); sonic 50% grey. 1.12 brightness ints pack like 1.21 packed light (block low, sky high).
 - Banner (dye scope, sway clock, aspect icon), Bellows nozzle table (was mirrored), Dioptra hologram rebuilt (was half a
   block off and inside the block), Focal Manipulator glow, rays and dropped-item draws.
+- Infusion Matrix drawn by its renderer as the original (invisible block; spin/tilt/wobble, glow pass, tier textures,
+  accumulating halo); Pattern Crafter placement facing and renderer; focus projectile trail from the renderer;
+  Alumentum / Causality Collapser invisible with their trails; Pech shadow 0.25 and no armour layer.
+- Placeholder renderers checked: cultist portals, golem orb, eldritch orb and wisp are drawn by tracking particles matching
+  the originals; focus cloud and taint swarm drew nothing in the original either.
 - Not a gap: hole / Void Siphon in-plane roll (the ender shader reads position only, culling off). Golem Press steam was
   already in TileGolemBuilder#tickPress.
 

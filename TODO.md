@@ -10,10 +10,8 @@ in a client are tracked in the `thaumcraft-ui-visual-parity-checklist` memory, n
   over compiled classes): done (see archive).
 - ThaumCompat hooks: all of `COMPAT_HOOKS.md` (#1-#23, the setup-event delivery fix, undead tags, Nitor) done 2026-10-05; watch that
   file for new requests.
-- Renderer fidelity - noted simplifications still to compare against the originals:
-  Then a sweep of renderers with no notes (seen so far: cultist portals, golem orb, eldritch
-  orb, focus cloud, wisp and taint swarm all use the empty placeholder - the original had RenderCultistPortal*, RenderElectricOrb,
-  RenderEldritchOrb, RenderFocusCloud; check each).
+- Renderer fidelity: the noted list is done (see archive). Remaining: a sweep of the renderers with no notes, against
+  the originals.
 - Aspect table: entries for content the port hasn't built are skipped (ambient grass, the Pure bucket); the
   original's shield-banner and per-colour potion loops are only covered by the generic bonuses.
 
