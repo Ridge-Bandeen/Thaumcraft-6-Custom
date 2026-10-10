@@ -167,7 +167,7 @@ public final class ShieldRunesFx {
 
 	private static CompositeRenderable renderable(String texture) {
 		return RENDERABLES.computeIfAbsent(texture, t -> {
-			ObjModel model = ObjLoader.INSTANCE.loadModel(new ObjModel.ModelSettings(MODEL, true, true, false, true, MTL_OVERRIDE.toString()));
+			ObjModel model = ObjLoader.INSTANCE.loadModel(new ObjModel.ModelSettings(MODEL, true, true, true, true, MTL_OVERRIDE.toString()));
 			// the short name: ObjModel#bakeRenderable adds "textures/" and ".png" itself
 			return model.bakeRenderable(StandaloneGeometryBakingContext.create(Map.of("#Material__25", ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, t))));
 		});
@@ -199,7 +199,7 @@ public final class ShieldRunesFx {
 	}
 
 	/** Multiplies every vertex colour by the shield's tint and fade. */
-	private record Tint(VertexConsumer inner, float r, float g, float b, float a) implements VertexConsumer {
+	record Tint(VertexConsumer inner, float r, float g, float b, float a) implements VertexConsumer {
 		@Override
 		public VertexConsumer addVertex(float x, float y, float z) {
 			inner.addVertex(x, y, z);

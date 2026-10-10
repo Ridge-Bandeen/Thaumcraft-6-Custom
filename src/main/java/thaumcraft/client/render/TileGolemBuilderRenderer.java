@@ -47,12 +47,10 @@ import thaumcraft.common.tiles.crafting.TileGolemBuilder;
  * client-only field, computed off already-synced {@link TileGolemBuilder#cost}/{@link TileGolemBuilder#golem}
  * state, restored alongside this renderer). {@code table}/{@code anvil}/{@code box} render with no transform
  * at all (matches the true original's own real {@code renderAllExcept("press")} call exactly). A real static
- * decorative "molten glow" quad is also drawn using vanilla's own real lava particle sprite, matching the
- * true original's own real {@code renderQuadFromIcon} call (a real, reasonable approximation of its exact
- * placement, not a verified pixel match - see the UI visual-parity checklist).
- *
- * <p>Real, disclosed cut: the true original's own real vent-steam particle bursts at the 60%/90%+ press
- * thresholds aren't restored here - see {@link TileGolemBuilder#tickPress}'s own doc comment.
+ * decorative "molten glow" quad is also drawn using vanilla's own real lava particle sprite, as the original's
+ * {@code renderQuadFromIcon} (same corners and UVs, lit as its brightness 200: sky light only, so it dims at night).
+ * The texture is not V-flipped: the original's loader flipped V, but this renderer flipped the texture matrix back.
+ * The press's steam is spawned by {@link TileGolemBuilder#tickPress}.
  */
 public class TileGolemBuilderRenderer implements BlockEntityRenderer<TileGolemBuilder> {
 
@@ -96,7 +94,7 @@ public class TileGolemBuilderRenderer implements BlockEntityRenderer<TileGolemBu
 
 		TextureAtlasSprite icon = Minecraft.getInstance().getBlockRenderer().getBlockModelShaper().getParticleIcon(Blocks.LAVA.defaultBlockState());
 		VertexConsumer consumer = bufferSource.getBuffer(RenderType.translucent());
-		int light = LightTexture.FULL_BRIGHT;
+		int light = 200 << 16; // the original's brightness 200: sky 200, block 0
 		PoseStack.Pose pose = poseStack.last();
 		addVertex(consumer, pose, 0.0f, 0.0f, icon.getU1(), icon.getV1(), light);
 		addVertex(consumer, pose, 1.0f, 0.0f, icon.getU0(), icon.getV1(), light);

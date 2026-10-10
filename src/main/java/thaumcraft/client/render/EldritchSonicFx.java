@@ -45,11 +45,8 @@ import thaumcraft.Thaumcraft;
  * either (confirmed directly against {@code master}) - fixed with the same synthetic-stub technique
  * {@code golembuilder_override.mtl} already established.
  *
- * <p>Real, disclosed simplification: the true original's own real 50%-grey vertex dim
- * ({@code glColor4f(0.5,0.5,0.5,1)}) is dropped - {@link CompositeRenderable}'s own real mesh-rendering path
- * hardcodes full white/opaque per real vertex (confirmed directly in its own real {@code Mesh#render}, which
- * always calls {@code putBulkData(..., 1, 1, 1, 1, ...)}), same real "no exposed tint parameter" limitation
- * {@link RenderTurretCrossbowAdvanced}'s own hurt-tint already hit.
+ * <p>As the original: V flipped (its loader's {@code 1 - v}), dimmed to 50% grey ({@code glColor4f(0.5, 0.5, 0.5, 1)},
+ * through {@link ShieldRunesFx.Tint}), blended without writing depth and nearly full-bright (its lightmap 220).
  */
 final class EldritchSonicFx {
 
@@ -63,7 +60,7 @@ final class EldritchSonicFx {
 
 	private static CompositeRenderable renderableForFrame(int frame) {
 		return RENDERABLES.computeIfAbsent(frame, f -> {
-			ObjModel model = ObjLoader.INSTANCE.loadModel(new ObjModel.ModelSettings(MODEL, true, true, false, true, MTL_OVERRIDE.toString()));
+			ObjModel model = ObjLoader.INSTANCE.loadModel(new ObjModel.ModelSettings(MODEL, true, true, true, true, MTL_OVERRIDE.toString()));
 			// the short name: ObjModel#bakeRenderable adds "textures/" and ".png" itself (a full path drew the missing texture)
 			ResourceLocation texture = ResourceLocation.fromNamespaceAndPath(Thaumcraft.MODID, "models/ripple" + f);
 			return model.bakeRenderable(StandaloneGeometryBakingContext.create(Map.of("#Material__25", texture)));
@@ -97,7 +94,8 @@ final class EldritchSonicFx {
 		poseStack.translate(0.0, 0.0, 2.0 * height + width / 2.0);
 		poseStack.scale(0.25f * height, 0.25f * height, -1.0f * height);
 
-		renderableForFrame(frame).render(poseStack, bufferSource, texture -> RenderType.entityTranslucent(texture),
+		MultiBufferSource dimmed = type -> new ShieldRunesFx.Tint(bufferSource.getBuffer(type), 0.5f, 0.5f, 0.5f, 1.0f);
+		renderableForFrame(frame).render(poseStack, dimmed, texture -> RenderType.entityTranslucentEmissive(texture),
 				packedLight, OverlayTexture.NO_OVERLAY, partialTick, CompositeRenderable.Transforms.EMPTY);
 
 		poseStack.popPose();
