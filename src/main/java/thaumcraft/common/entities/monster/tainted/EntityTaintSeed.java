@@ -128,10 +128,21 @@ public class EntityTaintSeed extends Monster implements ITaintedMob {
 		super.die(cause);
 	}
 
+	/** Client-side: the lunge after an attack (0.5, shrinking by a quarter each tick), which tips the model's tentacles
+	 * and the effects above it. Not vanilla's {@code attackAnim}, which this would otherwise hide. */
+	public float attackLunge;
+
 	@Override
 	public void tick() {
 		super.tick();
 		if (level().isClientSide) {
+			if (attackLunge > 0.0f) {
+				attackLunge *= 0.75f;
+			}
+			if (attackLunge < 0.001f) {
+				attackLunge = 0.0f;
+			}
+			thaumcraft.client.fx.ClientFxHandlers.taintSeedFx(level(), this, attackLunge);
 			return;
 		}
 		BlockPos pos = blockPosition();
@@ -203,13 +214,21 @@ public class EntityTaintSeed extends Monster implements ITaintedMob {
 		return !level().containsAnyLiquid(getBoundingBox()) && level().noCollision(this);
 	}
 
+	/** As the original: every swing lunges the model (event 16) and plays the tentacle sound, hit or miss. */
 	@Override
 	public boolean doHurtTarget(Entity target) {
-		if (super.doHurtTarget(target)) {
-			playSound(ThaumcraftSounds.TENTACLE.get(), getSoundVolume(), getVoicePitch());
-			return true;
+		level().broadcastEntityEvent(this, (byte) 16);
+		playSound(ThaumcraftSounds.TENTACLE.get(), getSoundVolume(), getVoicePitch());
+		return super.doHurtTarget(target);
+	}
+
+	@Override
+	public void handleEntityEvent(byte id) {
+		if (id == 16) {
+			attackLunge = 0.5f;
+		} else {
+			super.handleEntityEvent(id);
 		}
-		return false;
 	}
 
 	@Override

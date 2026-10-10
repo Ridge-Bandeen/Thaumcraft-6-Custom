@@ -32,10 +32,8 @@ import thaumcraft.common.entities.monster.tainted.EntityTaintacle;
  * {@link thaumcraft.common.entities.monster.tainted.EntityTaintSeed}/{@code EntityTaintSeedPrime} use the
  * real, separate {@code ModelTaintSeed} in the original, ported as its own class.
  *
- * Real, documented simplification: {@code flailIntensity} (a real synced float the original bumped on a
- * successful attack, then let decay) isn't ported on {@link EntityTaintacle} itself yet (see that class's
- * own doc comment) - modeled here as a constant 1.0, matching its own real resting value, so the idle
- * sway/rise/scale animation is still fully real, just without the extra post-attack flail intensity spike.
+ * The flail follows {@link EntityTaintacle#flailIntensity} (3 after an attack: the wave runs at triple speed and swings
+ * wider), and the model is drawn blended, as the original - the texture's edges are semi-transparent.
  */
 public class ModelTaintacle extends EntityModel<EntityTaintacle> {
 
@@ -53,7 +51,7 @@ public class ModelTaintacle extends EntityModel<EntityTaintacle> {
 	private float bodyScale;
 
 	public ModelTaintacle(int length) {
-		super(RenderType::entityCutout);
+		super(RenderType::entityTranslucent);
 		this.length = length;
 		this.segRotX = new float[length - 1];
 		this.segRotZ = new float[length - 1];
@@ -73,12 +71,12 @@ public class ModelTaintacle extends EntityModel<EntityTaintacle> {
 
 	@Override
 	public void setupAnim(EntityTaintacle entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-		float flail = 1.0f;
+		float flail = entity.flailIntensity;
 		float ht = entity.hurtTime;
 		float mod = 0.0125f; // real scaleFactor(0.0625) * 0.2 from the original - modern setupAnim has no
 		// equivalent parameter to read this from, but it was always this same near-constant value in
 		// practice anyway (scaleFactor is always 0.0625 in every real render call).
-		float fs = 1.0f + (ht > 0.0f ? mod : -mod);
+		float fs = flail > 1.0f ? 3.0f : 1.0f - mod;
 		float fi = flail + (ht > 0.0f ? mod : -mod);
 		for (int k = 0; k < length - 1; k++) {
 			segRotX[k] = 0.15f * fi * Mth.sin(ageInTicks * 0.1f * fs - k / 2.0f);

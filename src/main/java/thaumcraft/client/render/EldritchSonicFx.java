@@ -43,7 +43,7 @@ import thaumcraft.Thaumcraft;
  * first use, and selects which one to draw each frame. {@code hemis.obj} (like every other entity-side OBJ in
  * this port) has no real companion {@code .mtl} - the true original's own bespoke loader never needed one
  * either (confirmed directly against {@code master}) - fixed with the same synthetic-stub technique
- * {@code crossbow_advanced.mtl}/{@code golembuilder_override.mtl} already established.
+ * {@code golembuilder_override.mtl} already established.
  *
  * <p>Real, disclosed simplification: the true original's own real 50%-grey vertex dim
  * ({@code glColor4f(0.5,0.5,0.5,1)}) is dropped - {@link CompositeRenderable}'s own real mesh-rendering path

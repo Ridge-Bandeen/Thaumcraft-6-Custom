@@ -48,9 +48,8 @@ import thaumcraft.common.registry.ThaumcraftSounds;
  * terrain (previously only the taint-terrain half was ported), and being in that biome over real air adjacent
  * to a real solid block additionally places a real {@code taint_fibre} there too, matching the true original's
  * own real {@code BlockUtils.isAdjacentToSolidBlock} check (ported as {@link #isAdjacentToSolidBlock}, the
- * modern equivalent). No client-side flail animation ({@code flailIntensity}, purely cosmetic,
- * driven by a status-event this port doesn't broadcast since there's no renderer to consume it yet - same
- * real "no renderer yet" gap {@code FIRE_BAT}/{@code SPELL_BAT} already carry). The original's own {@code
+ * modern equivalent). Every attack swing sends entity event 16, which sets the client's {@link #flailIntensity} to 3
+ * (the model whips faster and wider), decaying by 0.01 a tick back to 1, as the original. The original's own {@code
  * faceEntity}/{@code updateRotation} pair is real, harmless dead code in the original itself (a 2-argument
  * override that doesn't actually match vanilla 1.12's real 3-argument {@code EntityLiving#faceEntity}, so
  * nothing ever called it) - not reproduced. Real custom {@code tentacle} sound restored 2026-09-15 for
@@ -59,6 +58,9 @@ import thaumcraft.common.registry.ThaumcraftSounds;
  * choice, kept unchanged.
  */
 public class EntityTaintacle extends Monster implements ITaintedMob {
+
+	/** Client-side: how hard the model flails - 3 right after an attack, easing back to 1. */
+	public float flailIntensity = 1.0f;
 
 	public EntityTaintacle(EntityType<? extends EntityTaintacle> type, Level level) {
 		super(type, level);
@@ -123,6 +125,9 @@ public class EntityTaintacle extends Monster implements ITaintedMob {
 		// Real client-only "arising from the ground" cue restored 2026-09-17 (was dropped under this port's
 		// old blanket "no client FX" rule) - routed through ClientFxHandlers#spawnTentacleArise for the same
 		// real dist-crash-avoidance reason every other client-only trigger in this port uses.
+		if (level().isClientSide && flailIntensity > 1.0f) {
+			flailIntensity -= 0.01f;
+		}
 		if (level().isClientSide && tickCount < getBbHeight() * 10.0f && onGround()) {
 			thaumcraft.client.fx.ClientFxHandlers.spawnTentacleArise(level(), this);
 		}
@@ -162,13 +167,21 @@ public class EntityTaintacle extends Monster implements ITaintedMob {
 		return false;
 	}
 
+	/** As the original: every swing flails the model (event 16) and plays the tentacle sound, hit or miss. */
 	@Override
 	public boolean doHurtTarget(Entity target) {
-		if (super.doHurtTarget(target)) {
-			playSound(ThaumcraftSounds.TENTACLE.get(), getSoundVolume(), getVoicePitch());
-			return true;
+		level().broadcastEntityEvent(this, (byte) 16);
+		playSound(ThaumcraftSounds.TENTACLE.get(), getSoundVolume(), getVoicePitch());
+		return super.doHurtTarget(target);
+	}
+
+	@Override
+	public void handleEntityEvent(byte id) {
+		if (id == 16) {
+			flailIntensity = 3.0f;
+		} else {
+			super.handleEntityEvent(id);
 		}
-		return false;
 	}
 
 	@Override

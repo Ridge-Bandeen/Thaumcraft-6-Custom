@@ -18,6 +18,15 @@ public class RenderTurretCrossbow extends MobRenderer<EntityTurretCrossbow, Mode
 	}
 
 	@Override
+	public void render(EntityTurretCrossbow entity, float entityYaw, float partialTick, com.mojang.blaze3d.vertex.PoseStack poseStack,
+			net.minecraft.client.renderer.MultiBufferSource bufferSource, int packedLight) {
+		// as the original: the body never turns, the head alone aims
+		entity.yBodyRot = 0.0f;
+		entity.yBodyRotO = 0.0f;
+		super.render(entity, 0.0f, partialTick, poseStack, bufferSource, packedLight);
+	}
+
+	@Override
 	public ResourceLocation getTextureLocation(EntityTurretCrossbow entity) {
 		return TEXTURE;
 	}

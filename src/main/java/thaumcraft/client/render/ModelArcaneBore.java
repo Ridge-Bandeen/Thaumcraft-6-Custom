@@ -24,13 +24,7 @@ import thaumcraft.common.entities.construct.EntityArcaneBore;
  * ModelCrossbow#setupAnim}, see that class's own doc comment for why the original's own 4th/5th parameter
  * names there are misleading rather than actually swapped.
  *
- * <p>Real, documented cut: the original's own {@code RenderArcaneBore} drew a real animated mining-beam
- * VFX (a hand-tessellated swirling particle billboard plus a 3-blade rotating beam quad fan) directly with
- * raw immediate-mode {@code Tessellator} calls on top of this model - a genuine custom vertex-buffer effect,
- * not a model part, and not a quick port to the modern {@link VertexConsumer}/{@link RenderType} pipeline.
- * Dropped for now, same real "bespoke Tessellator FX, real separate follow-up" reasoning {@code EntityGrapple}'s
- * own tether-rope visual already carries - the real static geometry (tripod/legs/rotating head/crystal/dome)
- * still renders correctly without it.
+ * <p>The mining beam is drawn by {@link RenderArcaneBore} on top of this model, as the original.
  */
 public class ModelArcaneBore extends EntityModel<EntityArcaneBore> {
 

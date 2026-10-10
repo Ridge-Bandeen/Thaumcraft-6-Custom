@@ -30,10 +30,8 @@ import thaumcraft.common.entities.monster.tainted.EntityTaintSeed;
  * its value at segment {@code k} is always exactly {@code k} - so this port computes that same real phase
  * directly from the loop index instead, the same real visual result with no shared mutable state.
  *
- * Real, documented simplification: {@code attackAnim} (a real synced float the original bumped via a status
- * event on a successful attack, then let decay) isn't ported on {@link EntityTaintSeed} yet, same real gap
- * {@code EntityTaintacle}'s own {@code flailIntensity} carries - modeled here as a constant 0, so the real
- * idle sway/pulse/rise animation is still fully real, just without the extra post-attack twitch.
+ * After an attack the tentacles tip forward by {@link EntityTaintSeed#attackLunge}, and the model is drawn blended, as
+ * the original - the texture's edges are semi-transparent.
  */
 public class ModelTaintSeed extends EntityModel<EntityTaintSeed> {
 
@@ -52,7 +50,7 @@ public class ModelTaintSeed extends EntityModel<EntityTaintSeed> {
 	private float bodyScale;
 
 	public ModelTaintSeed() {
-		super(RenderType::entityCutout);
+		super(RenderType::entityTranslucent);
 		MeshDefinition mesh = new MeshDefinition();
 		PartDefinition root = mesh.getRoot();
 		root.addOrReplaceChild("segment_root", CubeListBuilder.create().texOffs(0, 0).addBox(-4.0f, -4.0f, -4.0f, 8, 8, 8), PartPose.ZERO);
@@ -74,7 +72,7 @@ public class ModelTaintSeed extends EntityModel<EntityTaintSeed> {
 		float mod = 0.0125f; // same real near-constant simplification ModelTaintacle uses - see its own doc comment.
 		float fi = (flail + (ht > 0.0f ? mod : -mod)) * 3.0f;
 		for (int k = 0; k < LENGTH - 1; k++) {
-			segRotX[k] = 0.1f / fi * Mth.sin(rawAgeInTicks * 0.06f - k / 2.0f) / 5.0f + ht;
+			segRotX[k] = 0.1f / fi * Mth.sin(rawAgeInTicks * 0.06f - k / 2.0f) / 5.0f + ht + entity.attackLunge;
 			segRotZ[k] = 0.1f / fi * Mth.sin(rawAgeInTicks * 0.05f - k / 2.0f) / 5.0f;
 		}
 

@@ -725,6 +725,45 @@ public final class ClientFxHandlers {
 
 	/** Real {@link thaumcraft.client.fx.particles.FXBreakingFade} shatter burst - see the true original's own
 	 * real {@code FXDispatcher.taintsplosionFX}. */
+	/** The original EntityTaintSeed's client tick: above the seed, swaying as it sways and pushed by a hit or a lunge,
+	 * a lightning flash 3.3% of ticks (FXDispatcher#drawLightningFlash), otherwise a falling purple taint mote
+	 * (FXDispatcher#drawTaintParticles). */
+	public static void taintSeedFx(net.minecraft.world.level.Level level, net.minecraft.world.entity.LivingEntity seed, float lunge) {
+		if (!(level instanceof ClientLevel clientLevel)) return;
+		var random = clientLevel.random;
+		float xx = Mth.sin(seed.tickCount * 0.05f - 0.5f) / 5.0f;
+		float zz = Mth.sin(seed.tickCount * 0.06f - 0.5f) / 5.0f + seed.hurtTime / 200.0f + lunge;
+		float x = (float) seed.getX() + xx;
+		float y = (float) seed.getY() + seed.getBbHeight() + 0.25f;
+		float z = (float) seed.getZ() + zz;
+		thaumcraft.client.fx.particles.FXGeneric fb;
+		if (random.nextFloat() < 0.033f) {
+			fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, 0.0, 0.0, 0.0);
+			fb.setMaxAge(5 + random.nextInt(5));
+			fb.setGridSize(16);
+			fb.setRBGColorF(0.7f, 0.1f, 0.9f);
+			fb.setAlphaF(0.5f, 0.0f);
+			fb.setParticles(108 + random.nextInt(4), 1, 1);
+			fb.setScale(1.5f + random.nextFloat());
+			fb.setLayer(0);
+			fb.setRotationSpeed(random.nextFloat(), 0.0f);
+		} else {
+			fb = new thaumcraft.client.fx.particles.FXGeneric(clientLevel, x, y, z, (float) random.nextGaussian() * 0.05f,
+					0.1f + 0.01f * random.nextFloat(), (float) random.nextGaussian() * 0.05f);
+			fb.setMaxAge(80 + random.nextInt(20));
+			fb.setRBGColorF(0.4f + random.nextFloat() * 0.2f, 0.1f + random.nextFloat() * 0.3f, 0.5f + random.nextFloat() * 0.2f);
+			fb.setAlphaF(0.75f, 0.0f);
+			fb.setGridSize(16);
+			fb.setParticles(57 + random.nextInt(3), 1, 1);
+			fb.setScale(2.0f, 0.5f);
+			fb.setLayer(1);
+			fb.setSlowDown(0.9750000238418579);
+			fb.setGravity(0.2f);
+			fb.setRotationSpeed(random.nextFloat(), random.nextBoolean() ? -1.0f : 1.0f);
+		}
+		Minecraft.getInstance().particleEngine.add(fb);
+	}
+
 	public static void spawnTaintsplosion(net.minecraft.world.level.Level level, Entity target) {
 		if (!(level instanceof ClientLevel clientLevel)) return;
 		var random = clientLevel.random;

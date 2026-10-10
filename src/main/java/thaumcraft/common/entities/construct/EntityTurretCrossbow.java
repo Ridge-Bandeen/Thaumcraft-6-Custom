@@ -169,7 +169,7 @@ public class EntityTurretCrossbow extends EntityOwnedConstruct implements Ranged
 	public void handleEntityEvent(byte id) {
 		if (id == 17) {
 			if (!loadInProgress) {
-				loadProgressTicks = 0;
+				loadProgressTicks = -1;
 				loadInProgress = true;
 			}
 		} else {

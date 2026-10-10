@@ -29,17 +29,11 @@ import thaumcraft.common.entities.construct.EntityTurretCrossbow;
  * rotateAngleX} the real head pitch, the ordinary yaw-around-Y/pitch-around-X convention, not an actual
  * swap. Reproduced here with the real (correctly-named) modern params.
  *
- * Real, documented simplification: the original's own renderer froze its body-facing render yaw at a fixed
- * baseline every frame (a real {@code RenderLiving} override) so the whole aim illusion came from the head
- * part alone spinning a full circle - this port doesn't fight {@link net.minecraft.client.renderer.entity.MobRenderer}'s
- * own body-yaw smoothing to reproduce that quirk, so the whole tripod turns to face its target the ordinary
- * way instead (a real, easier-to-read visual, not a broken one).
- *
- * Real, documented cut: the original's own real bow-arm "fire" flex and load-bar "reload" slide were both
- * driven by a bespoke {@code swingProgressInt}/{@code loadProgressInt} animation state hand-rolled directly
- * on {@code EntityTurretCrossbow} itself (not vanilla's own attack-swing system despite the similar name) -
- * porting that whole extra animation-state machine is real, separate follow-up work; the bow arms and load
- * bar render in their real, correct rest pose here instead of animating.
+ * As the original: the renderer holds the body yaw at 0 ({@link RenderTurretCrossbow}), so the tripod never turns
+ * and the head alone aims. The bow arms flex through each shot ({@link #attackTime}, vanilla's attack swing, which
+ * runs the original's 6 ticks) and the load bar swings through a reload ({@link EntityTurretCrossbow#getLoadProgress});
+ * at rest they sit at the original's -0.2 / -0.5, set every frame, not the model's built-in angles. Riding a minecart,
+ * the legs sit half a block higher and fold in (0.1 instead of 0.5).
  */
 public class ModelCrossbow extends EntityModel<EntityTurretCrossbow> {
 
@@ -49,6 +43,10 @@ public class ModelCrossbow extends EntityModel<EntityTurretCrossbow> {
 	private final ModelPart leg2;
 	private final ModelPart leg3;
 	private final ModelPart leg4;
+	private final ModelPart[] armsLeft;
+	private final ModelPart[] armsRight;
+	private final ModelPart[] loadBar;
+	private float loadProgress;
 
 	public ModelCrossbow() {
 		super(RenderType::entityCutout);
@@ -110,12 +108,31 @@ public class ModelCrossbow extends EntityModel<EntityTurretCrossbow> {
 		leg2 = baked.getChild("leg2");
 		leg3 = baked.getChild("leg3");
 		leg4 = baked.getChild("leg4");
+		armsLeft = new ModelPart[] { crossbow.getChild("crossl1"), crossbow.getChild("crossl2"), crossbow.getChild("crossl3") };
+		armsRight = new ModelPart[] { crossbow.getChild("crossr1"), crossbow.getChild("crossr2"), crossbow.getChild("crossr3") };
+		loadBar = new ModelPart[] { crossbow.getChild("loadbarcross"), crossbow.getChild("loadbarl"), crossbow.getChild("loadbarr") };
+	}
+
+	@Override
+	public void prepareMobModel(EntityTurretCrossbow entity, float limbSwing, float limbSwingAmount, float partialTick) {
+		loadProgress = entity.getLoadProgress(partialTick);
 	}
 
 	@Override
 	public void setupAnim(EntityTurretCrossbow entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
 		crossbow.yRot = netHeadYaw / Mth.RAD_TO_DEG;
 		crossbow.xRot = headPitch / Mth.RAD_TO_DEG;
+		float flex = Mth.sin(Mth.sqrt(attackTime) * Mth.PI * 2.0f) * 0.2f;
+		for (ModelPart arm : armsLeft) arm.yRot = -0.2f + flex;
+		for (ModelPart arm : armsRight) arm.yRot = 0.2f - flex;
+		float load = -0.5f + Mth.sin(Mth.sqrt(loadProgress) * Mth.PI * 2.0f) * 0.5f;
+		for (ModelPart bar : loadBar) bar.xRot = load;
+		boolean onCart = entity.isPassenger() && entity.getVehicle() instanceof net.minecraft.world.entity.vehicle.AbstractMinecart;
+		for (ModelPart leg : new ModelPart[] { leg1, leg2, leg3, leg4 }) {
+			// the original's offsetY of -0.5 (blocks) on top of the 12-pixel pivot
+			leg.y = onCart ? 4.0f : 12.0f;
+			leg.xRot = onCart ? 0.1f : 0.5f;
+		}
 	}
 
 	@Override
