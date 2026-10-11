@@ -244,7 +244,7 @@ public class EntityTurretCrossbowAdvanced extends EntityTurretCrossbow implement
 	public InteractionResult mobInteract(Player player, InteractionHand hand) {
 		if (!level().isClientSide && isOwnedBy(player) && isAlive()) {
 			if (player.isShiftKeyDown()) {
-				playSound(SoundEvents.AMETHYST_BLOCK_CHIME, 1.0f, 1.0f);
+				playSound(thaumcraft.common.registry.ThaumcraftSounds.ZAP.get(), 1.0f, 1.0f);
 				dropAmmo();
 				spawnAtLocation(new ItemStack(ItemsTC.turretPlacerAdvanced.get()), 0.5f);
 				discard();

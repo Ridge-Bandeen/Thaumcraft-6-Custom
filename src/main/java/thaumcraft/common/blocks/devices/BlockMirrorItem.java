@@ -50,7 +50,7 @@ public class BlockMirrorItem extends BlockItem {
 		ItemStack held = context.getItemInHand();
 		ItemStack charged = held.copyWithCount(1);
 		charged.set(ThaumcraftDataComponents.MIRROR_LINK.get(), new MirrorLink(level.dimension(), context.getClickedPos().immutable()));
-		level.playSound(null, context.getClickedPos(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0f, 2.0f);
+		level.playSound(null, context.getClickedPos(), thaumcraft.common.registry.ThaumcraftSounds.JAR.get(), SoundSource.BLOCKS, 1.0f, 2.0f);
 		if (!player.getInventory().add(charged)) {
 			player.drop(charged, false);
 		}

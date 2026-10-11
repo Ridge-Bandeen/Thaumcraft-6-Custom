@@ -168,14 +168,14 @@ public class EntityEldritchGuardian extends Monster implements RangedAttackMob, 
 			double dz = target.getZ() - getZ();
 			var dir = new net.minecraft.world.phys.Vec3(dx, dy, dz).normalize();
 			blast.shoot(dir.x, dir.y, dir.z, 1.1f, 2.0f);
-			playSound(net.minecraft.sounds.SoundEvents.WITHER_SHOOT, 2.0f, 1.0f + random.nextFloat() * 0.1f);
+			playSound(thaumcraft.common.registry.ThaumcraftSounds.EGATTACK.get(), 2.0f, 1.0f + random.nextFloat() * 0.1f);
 			level().addFreshEntity(blast);
 		} else if (hasLineOfSight(target)) {
 			target.addEffect(new MobEffectInstance(MobEffects.WITHER, 400, 1));
 			if (target instanceof net.minecraft.server.level.ServerPlayer player) {
 				thaumcraft.api.ThaumcraftApi.internalMethods.addWarpToPlayer(player, 1 + random.nextInt(3), IPlayerWarp.EnumWarpType.TEMPORARY);
 			}
-			playSound(net.minecraft.sounds.SoundEvents.WARDEN_SONIC_BOOM, 3.0f, 1.0f + random.nextFloat() * 0.1f);
+			playSound(thaumcraft.common.registry.ThaumcraftSounds.EGSCREECH.get(), 3.0f, 1.0f + random.nextFloat() * 0.1f);
 			level().broadcastEntityEvent(this, SONIC_EVENT);
 		}
 	}
@@ -230,5 +230,16 @@ public class EntityEldritchGuardian extends Monster implements RangedAttackMob, 
 	public void readAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
 		super.readAdditionalSaveData(tag);
 		thaumcraft.common.lib.utils.EntityChecks.loadHome(this, tag);
+	}
+
+	/** As the original: the Eldritch idle murmur and death cry. */
+	@Override
+	protected net.minecraft.sounds.SoundEvent getAmbientSound() {
+		return thaumcraft.common.registry.ThaumcraftSounds.EGIDLE.get();
+	}
+
+	@Override
+	protected net.minecraft.sounds.SoundEvent getDeathSound() {
+		return thaumcraft.common.registry.ThaumcraftSounds.EGDEATH.get();
 	}
 }

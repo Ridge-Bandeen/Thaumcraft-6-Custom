@@ -276,7 +276,7 @@ public class EntityEldritchGolem extends EntityThaumcraftBoss implements RangedA
 		double dz = target.getZ() - getZ();
 		Vec3 dir = new Vec3(dx, dy, dz).normalize();
 		blast.shoot(dir.x, dir.y, dir.z, 0.66f, 5.0f);
-		playSound(SoundEvents.WITHER_SHOOT, 1.0f, 1.0f + random.nextFloat() * 0.1f);
+		playSound(thaumcraft.common.registry.ThaumcraftSounds.EGATTACK.get(), 1.0f, 1.0f + random.nextFloat() * 0.1f);
 		level().addFreshEntity(blast);
 	}
 }

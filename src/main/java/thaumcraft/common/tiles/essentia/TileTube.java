@@ -334,7 +334,7 @@ public class TileTube extends BlockEntity implements IEssentiaTransport, IIntera
 		Object hit = CuboidTargeting.pick(player, candidates);
 		if (hit == null) return false;
 
-		world.playSound(null, worldPosition, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.5f, 0.9f + world.random.nextFloat() * 0.2f);
+		world.playSound(null, worldPosition, thaumcraft.common.registry.ThaumcraftSounds.TOOL.get(), SoundSource.BLOCKS, 0.5f, 0.9f + world.random.nextFloat() * 0.2f);
 		if (hit instanceof Direction dir) {
 			openSides[dir.ordinal()] = !openSides[dir.ordinal()];
 			setChanged();

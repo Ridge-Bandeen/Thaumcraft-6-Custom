@@ -54,7 +54,7 @@ public class ItemLootBag extends Item {
 			for (ItemStack loot : table.getRandomItems(params)) {
 				player.spawnAtLocation(loot);
 			}
-			level.playSound(null, player.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.75f, 1.0f);
+			level.playSound(null, player.blockPosition(), thaumcraft.common.registry.ThaumcraftSounds.COINS.get(), SoundSource.PLAYERS, 0.75f, 1.0f);
 		}
 		stack.shrink(1);
 		return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);

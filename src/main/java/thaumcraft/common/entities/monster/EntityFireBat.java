@@ -137,12 +137,14 @@ public class EntityFireBat extends FlyingMob implements Enemy {
 			setPosRaw(getX(), Mth.floor(getY()) + 1.0 - getBbHeight(), getZ());
 			if (!level.getBlockState(above).isFaceSturdy(level, above, net.minecraft.core.Direction.DOWN)) {
 				setHanging(false);
+				level.levelEvent(null, net.minecraft.world.level.block.LevelEvent.SOUND_BAT_LIFTOFF, blockPosition(), 0);
 			} else {
 				if (random.nextInt(200) == 0) {
 					setYHeadRot(random.nextInt(360));
 				}
 				if (thaumcraft.common.entities.PlayerTargeting.nearestTargetable(level, this, 4.0) != null) {
 					setHanging(false);
+					level.levelEvent(null, net.minecraft.world.level.block.LevelEvent.SOUND_BAT_LIFTOFF, blockPosition(), 0);
 				}
 			}
 		} else if (getTarget() == null) {

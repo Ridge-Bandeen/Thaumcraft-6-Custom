@@ -273,7 +273,7 @@ public class EntityCultistPortalGreater extends Monster {
 		cultist.restrictTo(blockPosition(), 32);
 		serverLevel.addFreshEntity(cultist);
 		cultist.spawnAnim();
-		cultist.playSound(SoundEvents.EVOKER_CAST_SPELL, 1.0f, 1.0f);
+		cultist.playSound(thaumcraft.common.registry.ThaumcraftSounds.WANDFAIL.get(), 1.0f, 1.0f);
 		if (stage > 12) {
 			hurt(damageSources().magic(), 5 + random.nextInt(5));
 		}
@@ -287,13 +287,13 @@ public class EntityCultistPortalGreater extends Monster {
 		leader.restrictTo(blockPosition(), 32);
 		serverLevel.addFreshEntity(leader);
 		leader.spawnAnim();
-		leader.playSound(SoundEvents.EVOKER_CAST_SPELL, 1.0f, 1.0f);
+		leader.playSound(thaumcraft.common.registry.ThaumcraftSounds.WANDFAIL.get(), 1.0f, 1.0f);
 	}
 
 	@Override
 	public void playerTouch(Player player) {
 		if (distanceToSqr(player) < 3.0 && player.hurt(damageSources().indirectMagic(this, this), 8.0f)) {
-			playSound(SoundEvents.LIGHTNING_BOLT_THUNDER, 1.0f, (random.nextFloat() - random.nextFloat()) * 0.1f + 1.0f);
+			playSound(thaumcraft.common.registry.ThaumcraftSounds.ZAP.get(), 1.0f, (random.nextFloat() - random.nextFloat()) * 0.1f + 1.0f);
 		}
 	}
 
@@ -329,16 +329,16 @@ public class EntityCultistPortalGreater extends Monster {
 
 	@Override
 	protected SoundEvent getAmbientSound() {
-		return SoundEvents.BEACON_AMBIENT;
+		return thaumcraft.common.registry.ThaumcraftSounds.MONOLITH.get();
 	}
 
 	@Override
 	protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
-		return SoundEvents.LIGHTNING_BOLT_THUNDER;
+		return thaumcraft.common.registry.ThaumcraftSounds.ZAP.get();
 	}
 
 	@Override
 	protected SoundEvent getDeathSound() {
-		return SoundEvents.LIGHTNING_BOLT_IMPACT;
+		return thaumcraft.common.registry.ThaumcraftSounds.SHOCK.get();
 	}
 }

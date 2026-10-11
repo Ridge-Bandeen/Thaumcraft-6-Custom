@@ -268,4 +268,15 @@ public class EntityCultistCleric extends EntityCultist implements RangedAttackMo
 			setRitualist(false);
 		}
 	}
+
+	/** As the original: clerics chant, now and then (every 500 ticks on average). */
+	@Override
+	protected net.minecraft.sounds.SoundEvent getAmbientSound() {
+		return thaumcraft.common.registry.ThaumcraftSounds.CHANT.get();
+	}
+
+	@Override
+	public int getAmbientSoundInterval() {
+		return 500;
+	}
 }

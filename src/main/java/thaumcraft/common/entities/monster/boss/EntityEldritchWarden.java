@@ -339,7 +339,7 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 			double dz = target.getZ() - getZ();
 			var dir = new net.minecraft.world.phys.Vec3(dx, dy, dz).normalize();
 			blast.shoot(dir.x, dir.y, dir.z, 1.0f, 2.0f);
-			playSound(SoundEvents.WITHER_SHOOT, 2.0f, 1.0f + random.nextFloat() * 0.1f);
+			playSound(thaumcraft.common.registry.ThaumcraftSounds.EGATTACK.get(), 2.0f, 1.0f + random.nextFloat() * 0.1f);
 			level().addFreshEntity(blast);
 		} else if (hasLineOfSight(target)) {
 			target.push(-Math.sin(getYRot() * Math.PI / 180.0) * 1.5, 0.1, Math.cos(getYRot() * Math.PI / 180.0) * 1.5);
@@ -348,7 +348,7 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 			if (target instanceof net.minecraft.server.level.ServerPlayer player) {
 				thaumcraft.api.ThaumcraftApi.internalMethods.addWarpToPlayer(player, 3 + random.nextInt(3), IPlayerWarp.EnumWarpType.TEMPORARY);
 			}
-			playSound(SoundEvents.WARDEN_SONIC_BOOM, 4.0f, 1.0f + random.nextFloat() * 0.1f);
+			playSound(thaumcraft.common.registry.ThaumcraftSounds.EGSCREECH.get(), 4.0f, 1.0f + random.nextFloat() * 0.1f);
 			level().broadcastEntityEvent(this, SONIC_EVENT);
 		}
 	}
@@ -393,5 +393,16 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 
 	public float getArmLiftR() {
 		return armLiftR;
+	}
+
+	/** As the original: the Eldritch idle murmur and death cry. */
+	@Override
+	protected net.minecraft.sounds.SoundEvent getAmbientSound() {
+		return thaumcraft.common.registry.ThaumcraftSounds.EGIDLE.get();
+	}
+
+	@Override
+	protected net.minecraft.sounds.SoundEvent getDeathSound() {
+		return thaumcraft.common.registry.ThaumcraftSounds.EGDEATH.get();
 	}
 }

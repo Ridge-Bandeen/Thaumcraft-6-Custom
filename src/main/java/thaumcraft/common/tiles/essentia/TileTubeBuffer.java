@@ -154,7 +154,7 @@ public class TileTubeBuffer extends BlockEntity implements IEssentiaTransport, I
 			chokedSides[hit.ordinal()] = (byte) ((chokedSides[hit.ordinal()] + 1) % 3);
 			setChanged();
 		} else {
-			world.playSound(null, worldPosition, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.5f, 0.9f + world.random.nextFloat() * 0.2f);
+			world.playSound(null, worldPosition, thaumcraft.common.registry.ThaumcraftSounds.TOOL.get(), SoundSource.BLOCKS, 0.5f, 0.9f + world.random.nextFloat() * 0.2f);
 			openSides[hit.ordinal()] = !openSides[hit.ordinal()];
 			setChanged();
 			if (world.getBlockEntity(worldPosition.relative(hit)) instanceof TileTube neighbor) {

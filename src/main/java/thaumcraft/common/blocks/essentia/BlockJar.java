@@ -81,6 +81,15 @@ public class BlockJar extends Block implements EntityBlock, ILabelable {
 		if (level.isClientSide) return ItemInteractionResult.sidedSuccess(true);
 		if (!(level.getBlockEntity(pos) instanceof TileJarFillable tile)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 
+		Direction side = hitResult.getDirection();
+		if (player.isShiftKeyDown() && tile.getAspectFilter() != null && side == tile.getFacing()) {
+			// as the original: sneak-clicking the label peels it off
+			tile.removeLabel();
+			level.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(level, pos.getX() + 0.5f + side.getStepX() / 3.0f, pos.getY() + 0.5f,
+					pos.getZ() + 0.5f + side.getStepZ() / 3.0f, new ItemStack(thaumcraft.api.items.ItemsTC.label.get())));
+			level.playSound(null, pos, ThaumcraftSounds.PAGE.get(), SoundSource.BLOCKS, 1.0f, 1.0f);
+			return ItemInteractionResult.SUCCESS;
+		}
 		if (player.isShiftKeyDown() && stack.isEmpty()) {
 			tile.emptyIntoAura(level, pos);
 			level.playSound(null, pos, ThaumcraftSounds.JAR.get(), SoundSource.BLOCKS, 0.4f, 1.0f);

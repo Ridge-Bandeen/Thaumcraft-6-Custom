@@ -120,10 +120,16 @@ public class TileJarFillable extends BlockEntity implements IAspectSource, IEsse
 
 	/** Empties the jar back into the local aura - the sneak+empty-hand interaction from the original. */
 	public void emptyIntoAura(Level level, BlockPos pos) {
-		if (amount <= 0) return;
-		AuraHandler.addVis(level, pos, amount / 1000.0f);
-		aspect = null;
+		// as the original: the essentia poured out pollutes the aura with as much flux; a labelled jar keeps its aspect
+		if (amount > 0) thaumcraft.api.aura.AuraHelper.polluteAura(level, pos, amount, true);
+		if (aspectFilter == null) aspect = null;
 		amount = 0;
+		setChanged();
+	}
+
+	/** Takes the label off (the original's sneak-click on the labelled face). */
+	public void removeLabel() {
+		aspectFilter = null;
 		setChanged();
 	}
 

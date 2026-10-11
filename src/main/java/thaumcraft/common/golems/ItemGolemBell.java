@@ -68,7 +68,7 @@ public class ItemGolemBell extends Item implements ISealDisplayer {
 		}
 		if (player.isShiftKeyDown()) {
 			SealHandler.removeSealEntity(level, sealPos);
-			level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.5f, 1.0f);
+			level.playSound(null, pos, thaumcraft.common.registry.ThaumcraftSounds.ZAP.get(), SoundSource.BLOCKS, 0.5f, 1.0f);
 			return InteractionResult.SUCCESS;
 		}
 		if (seal instanceof net.minecraft.world.MenuProvider provider) {
@@ -81,6 +81,10 @@ public class ItemGolemBell extends Item implements ISealDisplayer {
 	@Override
 	public net.minecraft.world.InteractionResultHolder<net.minecraft.world.item.ItemStack> use(Level level, Player player, net.minecraft.world.InteractionHand hand) {
 		net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
+		if (level.isClientSide) {
+			// as the original: the bell's chime, heard by the one ringing it
+			player.playSound(net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, 0.6f, 1.0f + level.random.nextFloat() * 0.1f);
+		}
 		if (!level.isClientSide && player.isShiftKeyDown() && thaumcraft.api.capabilities.ThaumcraftCapabilities.knowsResearch(player, "GOLEMLOGISTICS")
 				&& getPlayerPOVHitResult(level, player, net.minecraft.world.level.ClipContext.Fluid.NONE).getType() == net.minecraft.world.phys.HitResult.Type.MISS) {
 			openLogistics(player, null, null);

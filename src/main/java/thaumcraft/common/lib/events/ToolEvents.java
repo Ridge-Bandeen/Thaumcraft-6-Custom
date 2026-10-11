@@ -230,7 +230,7 @@ public class ToolEvents {
 		}
 		tool.hurtAndBreak(5, player, EquipmentSlot.MAINHAND);
 		BlockPos pos = event.getPos();
-		level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.BLOCKS, 0.2f,
+		level.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, thaumcraft.common.registry.ThaumcraftSounds.WANDFAIL.get(), SoundSource.BLOCKS, 0.2f,
 				0.2f + level.getRandom().nextFloat() * 0.2f);
 		if (player instanceof ServerPlayer serverPlayer) {
 			int rank = EnumInfusionEnchantment.getInfusionEnchantmentLevel(tool, EnumInfusionEnchantment.SOUNDING);
@@ -307,16 +307,25 @@ public class ToolEvents {
 		if (enchantments.contains(EnumInfusionEnchantment.COLLECTOR)) {
 			redirectToHomeOn(event.getDrops(), harvester);
 		}
-		if (enchantments.contains(EnumInfusionEnchantment.REFINING)) {
-			rollSpecialMining(event.getDrops(), EnumInfusionEnchantment.getInfusionEnchantmentLevel(tool, EnumInfusionEnchantment.REFINING), harvester.getRandom());
+		if (enchantments.contains(EnumInfusionEnchantment.REFINING)
+				&& rollSpecialMining(event.getDrops(), EnumInfusionEnchantment.getInfusionEnchantmentLevel(tool, EnumInfusionEnchantment.REFINING), harvester.getRandom())) {
+			// as the original: a soft chime when a drop was refined
+			level.playSound(null, pos, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.2f, 0.7f + level.getRandom().nextFloat() * 0.2f);
 		}
 	}
 
-	private static void rollSpecialMining(List<ItemEntity> drops, int level, RandomSource rand) {
-		drops.replaceAll(drop -> {
-			drop.setItem(rollSpecialMiningResult(drop.getItem(), level, rand));
-			return drop;
-		});
+	/** @return whether any drop was refined */
+	private static boolean rollSpecialMining(List<ItemEntity> drops, int level, RandomSource rand) {
+		boolean changed = false;
+		for (ItemEntity drop : drops) {
+			ItemStack before = drop.getItem();
+			ItemStack after = rollSpecialMiningResult(before, level, rand);
+			if (after != before) {
+				drop.setItem(after);
+				changed = true;
+			}
+		}
+		return changed;
 	}
 
 	/** REFINING's real target-table roll, on a single drop rather than a whole {@code BlockDropsEvent} list -

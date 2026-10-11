@@ -252,7 +252,7 @@ public class EntityArcaneBore extends EntityOwnedConstruct {
 				setCharge(getCharge() - DIG_COST);
 				if (soundDelay < System.currentTimeMillis()) {
 					soundDelay = System.currentTimeMillis() + 1200L + level().random.nextInt(100);
-					playSound(SoundEvents.STONE_BREAK, 0.25f, 0.9f + level().random.nextFloat() * 0.2f);
+					playSound(thaumcraft.common.registry.ThaumcraftSounds.RUMBLE.get(), 0.25f, 0.9f + level().random.nextFloat() * 0.2f);
 				}
 			}
 		}
@@ -505,7 +505,7 @@ public class EntityArcaneBore extends EntityOwnedConstruct {
 		}
 		if (!level().isClientSide && isOwnedBy(player)) {
 			if (player.isShiftKeyDown()) {
-				playSound(SoundEvents.AMETHYST_BLOCK_CHIME, 1.0f, 1.0f);
+				playSound(thaumcraft.common.registry.ThaumcraftSounds.ZAP.get(), 1.0f, 1.0f);
 				dropStuff();
 				spawnAtLocation(new ItemStack(ItemsTC.turretPlacerBore.get()), 0.5f);
 				discard();
