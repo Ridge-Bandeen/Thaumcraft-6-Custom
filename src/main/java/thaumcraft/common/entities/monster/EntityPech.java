@@ -732,6 +732,23 @@ public class EntityPech extends Monster implements RangedAttackMob {
 		setCombatTask();
 	}
 
+	/** As the original playLivingSound: a third of the time, a Pech with another Pech within 4 blocks chatters to it (the
+	 * trade sound, and its jaw flaps wide - event 17) instead of its idle sound; otherwise it mumbles (event 16). */
+	@Override
+	public void playAmbientSound() {
+		if (!level().isClientSide && random.nextInt(3) == 0) {
+			for (net.minecraft.world.entity.Entity other : level().getEntities(this, getBoundingBox().inflate(4.0, 2.0, 4.0))) {
+				if (other instanceof EntityPech) {
+					level().broadcastEntityEvent(this, (byte) 17);
+					playSound(thaumcraft.common.registry.ThaumcraftSounds.PECH_TRADE.get(), getSoundVolume(), getVoicePitch());
+					return;
+				}
+			}
+			level().broadcastEntityEvent(this, (byte) 16);
+		}
+		super.playAmbientSound();
+	}
+
 	@Override
 	protected SoundEvent getAmbientSound() {
 		return thaumcraft.common.registry.ThaumcraftSounds.PECH_IDLE.get();
