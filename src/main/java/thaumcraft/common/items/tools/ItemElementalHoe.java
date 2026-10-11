@@ -52,6 +52,8 @@ public class ItemElementalHoe extends HoeItem {
 			if (BoneMealItem.applyBonemeal(context.getItemInHand(), level, center, player)) {
 				context.getItemInHand().hurtAndBreak(3, player, context.getHand() == net.minecraft.world.InteractionHand.OFF_HAND ? EquipmentSlot.OFFHAND : EquipmentSlot.MAINHAND);
 				if (level.isClientSide) thaumcraft.client.fx.ClientFxHandlers.spawnBlockMist(level, center, 4259648);
+				// as the original's playBroadcastSound(2005): the bone meal growth sparkles (1.21's event adds its sound)
+				else level.levelEvent(net.minecraft.world.level.block.LevelEvent.PARTICLES_AND_SOUND_PLANT_GROWTH, center, 15);
 			}
 		}
 		return InteractionResult.SUCCESS;

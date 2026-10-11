@@ -13,6 +13,7 @@ public class ChampionModSpined implements IChampionModifierEffect {
 	public float performEffect(LivingEntity boss, LivingEntity target, DamageSource source, float amount) {
 		if (target == null || source.is(DamageTypes.THORNS)) return amount;
 		target.hurt(boss.damageSources().thorns(boss), 1 + boss.getRandom().nextInt(3));
+		target.playSound(net.minecraft.sounds.SoundEvents.THORNS_HIT, 0.5f, 1.0f);
 		return amount;
 	}
 }

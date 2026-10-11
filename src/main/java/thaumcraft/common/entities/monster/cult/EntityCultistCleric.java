@@ -178,9 +178,12 @@ public class EntityCultistCleric extends EntityCultist implements RangedAttackMo
 			Vec3 dir = target.position().add(0, target.getEyeHeight() * 0.6, 0)
 					.subtract(position().add(0, getEyeHeight() * 0.6, 0)).normalize();
 			blast.shoot(dir.x, dir.y, dir.z, 0.66f, 3.0f);
+			playSound(thaumcraft.common.registry.ThaumcraftSounds.EGATTACK.get(), 1.0f, 1.0f + random.nextFloat() * 0.1f);
 			level().addFreshEntity(blast);
 		}
 		else {
+			// as the original: the fire-extinguish fizz with the fireballs
+			level().levelEvent(null, net.minecraft.world.level.block.LevelEvent.SOUND_EXTINGUISH_FIRE, blockPosition(), 0);
 			double dx = target.getX() - getX();
 			double dy = target.getBoundingBox().minY + target.getBbHeight() / 2.0 - (getY() + getEyeHeight());
 			double dz = target.getZ() - getZ();

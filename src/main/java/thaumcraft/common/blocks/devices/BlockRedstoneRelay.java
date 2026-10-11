@@ -128,6 +128,8 @@ public class BlockRedstoneRelay extends DiodeBlock {
 			int in = state.getValue(IN) % 15 + 1;
 			level.setBlock(pos, state.setValue(IN, in), 2);
 		}
+		// as the original: the key click on each turn of a dial
+		level.playSound(null, pos, thaumcraft.common.registry.ThaumcraftSounds.KEY.get(), net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1.0f);
 		checkTickOnNeighbor(level, pos, level.getBlockState(pos));
 		return InteractionResult.CONSUME;
 	}

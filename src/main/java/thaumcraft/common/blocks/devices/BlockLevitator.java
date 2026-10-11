@@ -115,6 +115,9 @@ public class BlockLevitator extends Block implements EntityBlock {
 		if (hitButton == null) return InteractionResult.PASS;
 		if (level.getBlockEntity(pos) instanceof TileLevitator tile) {
 			tile.increaseRange(player);
+			// as the original: the key click
+			level.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, thaumcraft.common.registry.ThaumcraftSounds.KEY.get(),
+					net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 1.0f);
 		}
 		return InteractionResult.CONSUME;
 	}
