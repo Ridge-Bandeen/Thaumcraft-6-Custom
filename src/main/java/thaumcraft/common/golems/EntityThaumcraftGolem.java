@@ -752,4 +752,10 @@ public class EntityThaumcraftGolem extends TamableAnimal implements IGolemAPI, R
 		IGolemProperties props = getProperties();
 		return props.hasTrait(EnumGolemTrait.HEAVY) && !props.hasTrait(EnumGolemTrait.FLYER) ? Entity.MovementEmission.ALL : Entity.MovementEmission.NONE;
 	}
+
+	/** As the original ({@code canDespawn} false): never despawns, however far away the players are. */
+	@Override
+	public boolean removeWhenFarAway(double distanceSquared) {
+		return false;
+	}
 }

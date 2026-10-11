@@ -242,4 +242,10 @@ public class EntityEldritchGuardian extends Monster implements RangedAttackMob, 
 	protected net.minecraft.sounds.SoundEvent getDeathSound() {
 		return thaumcraft.common.registry.ThaumcraftSounds.EGDEATH.get();
 	}
+
+	/** As the original ({@code canDespawn} = no home): guardians placed with a home (the Eldritch maze's) stay put. */
+	@Override
+	public boolean removeWhenFarAway(double distanceSquared) {
+		return !hasRestriction() && super.removeWhenFarAway(distanceSquared);
+	}
 }

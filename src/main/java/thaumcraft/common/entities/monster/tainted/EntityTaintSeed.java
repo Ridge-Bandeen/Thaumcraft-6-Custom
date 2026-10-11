@@ -277,4 +277,10 @@ public class EntityTaintSeed extends Monster implements ITaintedMob {
 	public boolean isPushable() {
 		return false;
 	}
+
+	/** As the original ({@code canDespawn} false): never despawns, however far away the players are. */
+	@Override
+	public boolean removeWhenFarAway(double distanceSquared) {
+		return false;
+	}
 }

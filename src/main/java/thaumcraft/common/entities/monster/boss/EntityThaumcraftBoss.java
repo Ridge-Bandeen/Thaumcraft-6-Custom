@@ -283,4 +283,10 @@ public class EntityThaumcraftBoss extends Monster {
 		super.readAdditionalSaveData(tag);
 		thaumcraft.common.lib.utils.EntityChecks.loadHome(this, tag);
 	}
+
+	/** As the original ({@code canDespawn} false): never despawns, however far away the players are. */
+	@Override
+	public boolean removeWhenFarAway(double distanceSquared) {
+		return false;
+	}
 }

@@ -119,4 +119,10 @@ public class EntityOwnedConstruct extends TamableAnimal {
 		}
 		return super.mobInteract(player, hand);
 	}
+
+	/** As the original ({@code canDespawn} false): never despawns, however far away the players are. */
+	@Override
+	public boolean removeWhenFarAway(double distanceSquared) {
+		return false;
+	}
 }
