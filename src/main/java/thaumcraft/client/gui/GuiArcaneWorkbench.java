@@ -16,7 +16,7 @@ import thaumcraft.common.container.ArcaneWorkbenchMenu;
 /**
  * Replaces the old (1.12.2) {@code GuiArcaneWorkbench}. Reuses the original background texture and its
  * xSize/ySize (190/234), and (restored 2026-09-25) the original's vis readout above the result socket - "N available"
- * and "N vis (X% discount)" in half-size text - the greyed-out result preview while the vis is short, and the slowly
+ * and "N vis (X% discount)" in half-size text - the result preview while the vis is short, and the slowly
  * turning coloured glow behind each crystal-ring slot the current recipe needs.
  */
 public class GuiArcaneWorkbench extends AbstractContainerScreen<ArcaneWorkbenchMenu> {
@@ -78,16 +78,17 @@ public class GuiArcaneWorkbench extends AbstractContainerScreen<ArcaneWorkbenchM
 		graphics.pose().translate(leftPos + 168, topPos + 46, 0.0f);
 		graphics.pose().scale(0.5f, 0.5f, 1.0f);
 		String text = available + " " + Component.translatable("workbench.available").getString();
-		graphics.drawString(font, text, -font.width(text) / 2, 0, available < cost ? 0xEE6E6E : 0x6E6E6E, false);
+		graphics.drawString(font, text, -font.width(text) / 2, 0, available < cost ? 0xEE6E6E : 0x6E6EEE, false);
 		graphics.pose().popPose();
 
 		if (cost > 0) {
 			if (available < cost) {
 				ItemStack preview = menu.previewResult(minecraft.level);
 				if (!preview.isEmpty()) {
+					// as the original drew it: its grey tint never reached the item (item vertex colours override the GL
+					// colour), so the result shows plainly, with its durability bar but no count
 					graphics.renderItem(preview, leftPos + 160, topPos + 64);
-					// a translucent slot-grey wash over the item dims it, standing in for the original's grey tint
-					graphics.fill(leftPos + 160, topPos + 64, leftPos + 176, topPos + 80, 0xAA555555);
+					graphics.renderItemDecorations(font, preview, leftPos + 160, topPos + 64, "");
 				}
 			}
 			graphics.pose().pushPose();
@@ -100,7 +101,7 @@ public class GuiArcaneWorkbench extends AbstractContainerScreen<ArcaneWorkbenchM
 			} else if (discount < 0) {
 				text += " (+" + -discount + "%)";
 			}
-			graphics.drawString(font, text, -font.width(text) / 2, 0, 0xC0C0FF, false);
+			graphics.drawString(font, text, -font.width(text) / 2, 0, 0xC0FFFF, false);
 			graphics.pose().popPose();
 		}
 	}
