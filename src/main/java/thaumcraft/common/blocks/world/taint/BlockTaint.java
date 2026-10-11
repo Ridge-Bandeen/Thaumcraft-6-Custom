@@ -164,10 +164,12 @@ public class BlockTaint extends Block implements ITaintBlock, Fallable {
 		}
 	}
 
-	/** Real, portable version of the original's own {@code BlockTaint#canFallBelow} static helper. Real,
-	 * still-documented gap vs the original: the original's own wood-log proximity check (a 3x3x3 scan that
-	 * refuses to fall near any real log, presumably to protect trees) isn't ported. */
+	/** The original's {@code BlockTaint#canFallBelow}: taint never falls into a spot with a log within a block of it
+	 * (so crust over a tree stays put), and otherwise only into air, fire, fibres, replaceable blocks or liquid. */
 	public static boolean canFallBelow(LevelReader level, BlockPos pos) {
+		for (BlockPos p : BlockPos.betweenClosed(pos.offset(-1, -1, -1), pos.offset(1, 1, 1))) {
+			if (level.getBlockState(p).is(net.minecraft.tags.BlockTags.LOGS)) return false;
+		}
 		BlockState state = level.getBlockState(pos);
 		Block block = state.getBlock();
 		if (block == BlocksTC.fluxGoo.get()) {

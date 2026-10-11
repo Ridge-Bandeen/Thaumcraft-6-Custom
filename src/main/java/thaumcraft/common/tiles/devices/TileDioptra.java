@@ -23,13 +23,7 @@ import thaumcraft.common.world.aura.AuraHandler;
  * Dropped {@code grid_amt_p} - the original declared and initialized a second identical array but never
  * read or wrote it anywhere past the constructor; genuinely dead code, not a missed feature.
  *
- * <b>Not ported: the radar's visual rendering.</b> The original's {@code TileDioptraRenderer} is a
- * fixed-function-OpenGL {@code TileEntitySpecialRenderer} building a dynamic heightmap mesh every frame
- * (raw {@code GL11}/{@code GlStateManager} calls, an API 1.21.1 no longer has) - a real rewrite onto
- * {@code BlockEntityRenderer}/{@code PoseStack}/{@code VertexConsumer}, not a mechanical port. Matches this
- * session's consistent boundary so far (no custom tile/entity renderer has been ported yet at all - every
- * device so far has stayed within static blockstate models). The scan data, comparator output, and vis/flux
- * toggle are all fully functional and tested; only the in-world radar visualization is missing.
+ * The radar itself is drawn by {@code TileDioptraRenderer}, as the original's.
  *
  * <b>Update, now real:</b> {@code thaumcraft.client.render.TileDioptraRenderer} ports the real undulating-grid
  * technique on {@code BlockEntityRenderer}/{@code PoseStack}/{@code VertexConsumer} - see that class's own doc

@@ -28,7 +28,7 @@ import thaumcraft.common.tiles.devices.TileDioptra;
 
 /**
  * Replaces the old (1.12.2) {@code BlockDioptra} - an aura radar block. See {@link TileDioptra}'s own doc
- * comment for the actual scan logic and what's not ported (the radar's visual rendering).
+ * comment for the scan logic.
  *
  * Unlike most of the toggleable devices this session, {@code ENABLED} here isn't a redstone-driven state
  * (the original overrode {@code updateState} to a no-op specifically to opt out of that) - it's a manual

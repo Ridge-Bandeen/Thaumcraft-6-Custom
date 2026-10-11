@@ -73,24 +73,9 @@ import thaumcraft.common.world.aura.AuraHandler;
  * own real "ore -> essentia cluster" substitution now reuses {@link ToolEvents#rollSpecialMiningResult} directly
  * (see that method's own doc comment) rather than a separate copy of the same table.
  *
- * <p>Item ejection into a real adjacent inventory (checked via NeoForge's own {@link Capabilities.ItemHandler#BLOCK}
- * capability, the modern replacement for the original's own {@code ThaumcraftInvHelper}/{@code InventoryUtils}
- * pair - neither of those is ported, not worth pulling in for this one real use) falls back to a plain real
- * {@link Containers#dropItemStack} at the bore's own position when no adjacent inventory takes it (or none
- * exists) - a real, minor simplification of the original's own directional "eject toward the open face with
- * outward velocity" flourish.
- *
- * <p>Real digging particle burst restored 2026-09-15 ({@link #sendDigFx}, see {@code
- * ClientFxHandlers#handleBoreDig}'s own doc comment) - was never actually self-documented as a gap before,
- * only found by cross-checking the true original directly. Distinct from the real mining-beam mesh VFX
- * below (still not ported).
- *
- * <p>Real, documented cuts: no dedicated GUI - the original's own version only ever held one real pickaxe
- * slot, and a right-click (holding a real pickaxe, or empty-handed to retrieve one) now swaps it directly via
- * {@link #mobInteract}, same real "no GUI, a simpler direct interaction already covers the one real slot"
- * reasoning {@link EntityTurretCrossbow}'s own dispenser-auto-reload cut established. No real mining-beam VFX
- * (see {@code ModelArcaneBore}'s own doc comment - a genuine bespoke Tessellator effect, real separate follow-
- * up). Its death drops are the original's whole table, Looting included.
+ * <p>What it digs goes into an adjacent inventory or is thrown out of its back ({@link #ejectStack}), as the original.
+ * Digging particles ({@link #sendDigFx}), its screen ({@code ArcaneBoreMenu}) and its beam ({@code RenderArcaneBore})
+ * are as the original too. Its death drops are the original's whole table, Looting included.
  */
 public class EntityArcaneBore extends EntityOwnedConstruct {
 
@@ -342,23 +327,32 @@ public class EntityArcaneBore extends EntityOwnedConstruct {
 		return true;
 	}
 
-	/** Tries every adjacent real inventory (via {@link Capabilities.ItemHandler#BLOCK}) for the first one that
-	 * takes it, otherwise a plain real drop at the bore's own position - see this class's own doc comment. */
+	/** As the original: into the first adjacent inventory (what it won't take is thrown toward it), or with none, thrown
+	 * out of the bore's back. */
 	private void ejectStack(ItemStack stack) {
 		if (stack.isEmpty()) {
 			return;
 		}
 		for (Direction face : Direction.values()) {
-			BlockPos neighbor = blockPosition().relative(face);
-			IItemHandler handler = level().getCapability(Capabilities.ItemHandler.BLOCK, neighbor, face.getOpposite());
-			if (handler != null) {
-				stack = ItemHandlerHelper.insertItemStacked(handler, stack, false);
-				break;
+			if (level().getCapability(Capabilities.ItemHandler.BLOCK, blockPosition().relative(face), face.getOpposite()) != null) {
+				ejectStackAt(level(), blockPosition(), face, stack);
+				return;
 			}
 		}
-		if (!stack.isEmpty()) {
-			Containers.dropItemStack(level(), getX(), getY(), getZ(), stack);
-		}
+		ejectStackAt(level(), blockPosition(), getFacing().getOpposite(), stack);
+	}
+
+	/** The original's {@code InventoryUtils#ejectStackAt}: into the inventory on that side if it takes it, otherwise thrown
+	 * that way from just beyond the block (from behind it when that side is solid). */
+	private static void ejectStackAt(net.minecraft.world.level.Level level, BlockPos pos, Direction side, ItemStack out) {
+		IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos.relative(side), side.getOpposite());
+		if (handler != null) out = ItemHandlerHelper.insertItemStacked(handler, out, false);
+		if (out.isEmpty()) return;
+		if (level.getBlockState(pos.relative(side)).isCollisionShapeFullBlock(level, pos.relative(side))) pos = pos.relative(side.getOpposite());
+		net.minecraft.world.entity.item.ItemEntity item = new net.minecraft.world.entity.item.ItemEntity(level,
+				pos.getX() + 0.5 + side.getStepX(), pos.getY() + side.getStepY(), pos.getZ() + 0.5 + side.getStepZ(), out);
+		item.setDeltaMovement(0.3 * side.getStepX(), 0.3 * side.getStepY(), 0.3 * side.getStepZ());
+		level.addFreshEntity(item);
 	}
 
 	/** Real port of the original's own {@code findNextBlockToDig} - first tries a straight raytrace out to
