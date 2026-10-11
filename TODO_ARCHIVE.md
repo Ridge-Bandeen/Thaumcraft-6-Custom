@@ -33,6 +33,13 @@
   brain jar sparks, Infernal Furnace lava spurts, Alchemical Furnace vent steam, cultist spawn bursts (the note wrongly
   said server-only), champion particles/tints/tainted skin. Dead in the original: Thaumatorium venting (no event ever
   sent), effect_shock sparks (never placed), homing shard (never created), knowledge-gain sparks (flag never set).
+- Sound audit: vanilla stand-ins replaced with the original's sounds (Eldritch mobs, greater portal, bore, turret, loot bag,
+  mirror, golem bell, Sounding, tubes, Refining chime, fire bat liftoff, cleric chant, Spined thorns, Levitator/Relay
+  keys, hoe sparkles). Jar emptying polluted vis instead of flux - fixed; label sneak-removal restored.
+- Aura audit: essentia devices spill flux when removed (BlockTCTile#breakBlock); natural silverwood leaves feed vis.
+- Event audit: Pech chatter/mumble restored; golem emotes already present. Dead in the original: taint block/fibre
+  event sounds (client playSound with a null player plays nothing in 1.12), research-table learn event (never sent),
+  Thaumatorium venting (never sent), Rift focus Outer-Lands failure.
 - Not a gap: hole / Void Siphon in-plane roll (the ender shader reads position only, culling off). Golem Press steam was
   already in TileGolemBuilder#tickPress.
 
