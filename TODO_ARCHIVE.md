@@ -2804,3 +2804,23 @@ incrementally as items close or new gaps are found in between.*
     text colour literal in the original screens appears in the port.
 - Client FX: FXBlockWard, FXBeamWand, FXBeamBore (the dispatcher's `beamBore`, not the bore's beam) and
   FXGenericP2E are built only by dispatcher methods nothing calls - dead in the original, confirmed.
+
+## 2026-10-11: stats, drops, effects and network passes
+
+Method as before: per-class counts of the original's calls against the port, then each gap read by hand.
+- Mob stats (attributes, armour, experience, hitboxes, despawning): experience for 13 mobs (vanilla defaults before;
+  Wisp gave none, Praetor 50 not 40, Thaumic Slime size+2); Warden armour 4 (was 8), basic turret armour 2; hitboxes for
+  golems 0.4x0.9 (were too tall for 1-high gaps), Mind Spiders 0.7x0.5, Warden 1.5x3.5; constructs, golems, bosses,
+  Taint Seeds and homed Eldritch Guardians never despawn; golem darts are their own small entity again (RenderDart).
+- Spawns and drops: Void Siphon, Spa, Infernal Furnace drop contents; a linked Magic Mirror drops as a linked item and
+  spills items in transit; banners drop through getDrops (none in creative); seals drop their item when removed; rift
+  event 1 (Taint Seed Prime) restored; Arcane Lamps pop off; silverwood quicksilver drops and 1-in-75 saplings; swap
+  puffs; champion experience skips fake players; sky-scan days by total world time; loot bags, urns and crates use
+  the original's generator again (LootGenerator, ThaumcraftApi.addLootBagItem), Silk Touch keeps urns and crates.
+- Effects and damage: Guardian Wither I, Fire Bats hurt by rain, Sap lingers, Travel paving stone without particles,
+  the nine effect colours.
+- Network: flux pollution smoke (PacketFXPollute) restored; taint never falls next to logs; bore ejects as the original.
+- Dead in the original, not ported: PacketFXFocusPartImpactBurst and PacketBiomeChange (never sent), the Infusion
+  Matrix's experience drain (recipeType is only ever 0), the unused commonLoot/uncommonLoot/rareLoot arrays.
+- Not gaps: the seals' golem.dropItem (takes from the golem's hands), Unnatural Hunger's cure (in Thaumcraft.java),
+  the Eldritch Crab's helm speed (always 0.3 in practice), barrow chests (vanilla dungeon table, as the original).
