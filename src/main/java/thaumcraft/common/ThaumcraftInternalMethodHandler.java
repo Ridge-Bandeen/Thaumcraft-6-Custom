@@ -313,8 +313,12 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 		AuraHandler.addFlux(level, pos, amount);
 		// as the original: flux smoke where it went in
 		if (showEffect && amount > 0.0f && level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-			net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(serverLevel, null, pos.getX(), pos.getY(), pos.getZ(), 32.0,
-					thaumcraft.common.lib.network.fx.PacketFXPollute.of(pos, amount));
+			try {
+				net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(serverLevel, null, pos.getX(), pos.getY(), pos.getZ(), 32.0,
+						thaumcraft.common.lib.network.fx.PacketFXPollute.of(pos, amount));
+			} catch (Exception e) {
+				thaumcraft.Thaumcraft.LOGGER.debug("Pollute FX packet failed to send (no real client connection?)", e);
+			}
 		}
 	}
 

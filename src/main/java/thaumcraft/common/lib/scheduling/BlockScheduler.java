@@ -275,10 +275,14 @@ public final class BlockScheduler {
 
 		// as the original: each swapped block goes with a puff in the swap's colour
 		if (entry.fx && level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-			net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(serverLevel, null,
-					entry.pos.getX() + 0.5, entry.pos.getY() + 0.5, entry.pos.getZ() + 0.5, 32.0,
-					new thaumcraft.common.lib.network.fx.PacketFXBlockBamf(entry.pos.getX() + 0.5, entry.pos.getY() + 0.5, entry.pos.getZ() + 0.5,
-							entry.color, true, entry.fancy));
+			try {
+				net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(serverLevel, null,
+						entry.pos.getX() + 0.5, entry.pos.getY() + 0.5, entry.pos.getZ() + 0.5, 32.0,
+						new thaumcraft.common.lib.network.fx.PacketFXBlockBamf(entry.pos.getX() + 0.5, entry.pos.getY() + 0.5, entry.pos.getZ() + 0.5,
+								entry.color, true, entry.fancy));
+			} catch (Exception e) {
+				thaumcraft.Thaumcraft.LOGGER.debug("Swap bamf FX packet failed to send (no real client connection?)", e);
+			}
 		}
 
 		if (entry.life <= 0) return; // real match to the original's own "if (vs.lifespan <= 0) continue" - no further spread
