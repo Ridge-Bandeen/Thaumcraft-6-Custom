@@ -26,6 +26,13 @@
   is the item model, already extruded, rather than the 0.1-deep sprite).
 - Not a gap: Eldritch Golem spawn-timer head nod (its client never received the timer in the original);
   KnowledgeGainOverlay Z layering (paint order gives the same result).
+- Afternoon: ambient grass built (Magical Forest); Celestial Notes aspects; Purifying Fluid rebuilt as a real fluid with
+  its bucket (the port's notes wrongly said finite / no bucket); Liquid Death tint 0xF0440099 (note said untinted); focus
+  radial controls (click or release-over; the note wrongly said hover selected).
+- FXDispatcher call audit (every original effect call vs its port): restored homing-item bubbles, full urn splash, full
+  brain jar sparks, Infernal Furnace lava spurts, Alchemical Furnace vent steam, cultist spawn bursts (the note wrongly
+  said server-only), champion particles/tints/tainted skin. Dead in the original: Thaumatorium venting (no event ever
+  sent), effect_shock sparks (never placed), homing shard (never created), knowledge-gain sparks (flag never set).
 - Not a gap: hole / Void Siphon in-plane roll (the ender shader reads position only, culling off). Golem Press steam was
   already in TileGolemBuilder#tickPress.
 
