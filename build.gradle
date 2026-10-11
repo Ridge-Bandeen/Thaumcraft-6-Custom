@@ -348,6 +348,8 @@ sourceSets {
             include 'thaumcraft/common/container/MobMainHandContainer.java'
             include 'thaumcraft/client/gui/TurretBasicScreen.java'
             include 'thaumcraft/client/gui/TCWidgets.java'
+            include 'thaumcraft/common/entities/projectile/EntityGolemDart.java'
+            include 'thaumcraft/client/renderers/entity/projectile/RenderDart.java'
             include 'thaumcraft/common/entities/construct/EntityArcaneBore.java'
             include 'thaumcraft/client/render/ModelArcaneBore.java'
             include 'thaumcraft/client/render/RenderArcaneBore.java'

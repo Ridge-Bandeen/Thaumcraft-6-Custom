@@ -72,6 +72,7 @@ public class EntityWisp extends FlyingMob implements Enemy {
 
 	public EntityWisp(EntityType<? extends EntityWisp> type, Level level) {
 		super(type, level);
+		xpReward = 5; // as the original
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {

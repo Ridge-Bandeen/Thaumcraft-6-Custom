@@ -39,6 +39,7 @@ public class EntityMindSpider extends Spider implements IEldritchMob {
 
 	public EntityMindSpider(EntityType<? extends EntityMindSpider> type, Level level) {
 		super(type, level);
+		xpReward = 1; // as the original
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {

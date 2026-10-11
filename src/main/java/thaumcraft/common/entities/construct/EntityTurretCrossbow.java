@@ -87,7 +87,8 @@ public class EntityTurretCrossbow extends EntityOwnedConstruct implements Ranged
 		return Mob.createMobAttributes()
 				.add(Attributes.MAX_HEALTH, 30.0)
 				.add(Attributes.FOLLOW_RANGE, 24.0)
-				.add(Attributes.MOVEMENT_SPEED, 0.0);
+				.add(Attributes.MOVEMENT_SPEED, 0.0)
+				.add(Attributes.ARMOR, 2.0); // the original's getTotalArmorValue
 	}
 
 	@Override

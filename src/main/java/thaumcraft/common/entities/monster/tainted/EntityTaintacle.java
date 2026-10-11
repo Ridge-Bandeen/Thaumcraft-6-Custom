@@ -64,6 +64,7 @@ public class EntityTaintacle extends Monster implements ITaintedMob {
 
 	public EntityTaintacle(EntityType<? extends EntityTaintacle> type, Level level) {
 		super(type, level);
+		xpReward = 8; // as the original
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {

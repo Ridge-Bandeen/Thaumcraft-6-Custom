@@ -64,6 +64,7 @@ public class EntityTaintCrawler extends Monster implements ITaintedMob {
 
 	public EntityTaintCrawler(EntityType<? extends EntityTaintCrawler> type, Level level) {
 		super(type, level);
+		xpReward = 3; // as the original
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {

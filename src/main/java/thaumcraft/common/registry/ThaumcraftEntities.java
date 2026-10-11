@@ -112,7 +112,7 @@ public final class ThaumcraftEntities {
 	 * {@code Thaumcraft#registerEntityAttributes}). */
 	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.golems.EntityThaumcraftGolem>> GOLEM = ENTITY_TYPES.register("golem",
 			() -> EntityType.Builder.<thaumcraft.common.golems.EntityThaumcraftGolem>of(thaumcraft.common.golems.EntityThaumcraftGolem::new, MobCategory.MISC)
-					.sized(0.7f, 1.1f)
+					.sized(0.4f, 0.9f) // the original's setSize
 					.eyeHeight(0.7f)
 					.clientTrackingRange(64)
 					.build("golem"));
@@ -162,11 +162,10 @@ public final class ThaumcraftEntities {
 
 	/** Real {@link net.minecraft.world.entity.monster.Spider} subclass - real vanilla spider texture/model
 	 * reused unchanged (no bundled custom texture in the original either - see that class's own doc comment
-	 * for why an "illusory" mob makes sense looking identical to a real one). {@code sized(1.4f, 0.9f)}
-	 * matches vanilla's own {@code EntityType.SPIDER} sizing exactly. */
+	 * for why an "illusory" mob makes sense looking identical to a real one). */
 	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.EntityMindSpider>> MIND_SPIDER = ENTITY_TYPES.register("mind_spider",
 			() -> EntityType.Builder.<thaumcraft.common.entities.monster.EntityMindSpider>of(thaumcraft.common.entities.monster.EntityMindSpider::new, MobCategory.MONSTER)
-					.sized(1.4f, 0.9f)
+					.sized(0.7f, 0.5f) // the original's setSize: half a spider
 					.clientTrackingRange(64)
 					.build("mind_spider"));
 
@@ -361,6 +360,15 @@ public final class ThaumcraftEntities {
 
 	/** {@link thaumcraft.common.entities.projectile.EntityEldritchOrb}'s own type - same short-lived,
 	 * server-only bolt shape as {@link #GOLEM_ORB}. */
+	/** What a golem's Dart Launcher fires - see {@link thaumcraft.common.entities.projectile.EntityGolemDart}. Tracked like
+	 * vanilla's arrow. */
+	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.projectile.EntityGolemDart>> GOLEM_DART = ENTITY_TYPES.register("golem_dart",
+			() -> EntityType.Builder.<thaumcraft.common.entities.projectile.EntityGolemDart>of(thaumcraft.common.entities.projectile.EntityGolemDart::new, MobCategory.MISC)
+					.sized(0.2f, 0.2f)
+					.clientTrackingRange(4)
+					.updateInterval(20)
+					.build("golem_dart"));
+
 	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.projectile.EntityEldritchOrb>> ELDRITCH_ORB = ENTITY_TYPES.register("eldritch_orb",
 			() -> EntityType.Builder.<thaumcraft.common.entities.projectile.EntityEldritchOrb>of(thaumcraft.common.entities.projectile.EntityEldritchOrb::new, MobCategory.MISC)
 					.sized(0.25f, 0.25f)
@@ -378,9 +386,7 @@ public final class ThaumcraftEntities {
 					.clientTrackingRange(64)
 					.build("eldritch_guardian"));
 
-	/** The Eldritch dimension's real boss - see {@code EntityEldritchWarden}'s own doc comment. Same
-	 * {@code sized(0.8f, 2.25f)} as {@link #ELDRITCH_GUARDIAN} - the original's own constructor never called
-	 * {@code setSize} differently for this subclass either. */
+	/** The Eldritch dimension's real boss - see {@code EntityEldritchWarden}'s own doc comment. */
 	/** A Salis Mundus conversion's non-block result, hovering - see {@link thaumcraft.common.entities.EntitySpecialItem}. */
 	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.EntitySpecialItem>> SPECIAL_ITEM = ENTITY_TYPES.register("special_item",
 			() -> EntityType.Builder.<thaumcraft.common.entities.EntitySpecialItem>of(thaumcraft.common.entities.EntitySpecialItem::new, MobCategory.MISC)
@@ -389,7 +395,7 @@ public final class ThaumcraftEntities {
 
 	public static final DeferredHolder<EntityType<?>, EntityType<thaumcraft.common.entities.monster.boss.EntityEldritchWarden>> ELDRITCH_WARDEN = ENTITY_TYPES.register("eldritch_warden",
 			() -> EntityType.Builder.<thaumcraft.common.entities.monster.boss.EntityEldritchWarden>of(thaumcraft.common.entities.monster.boss.EntityEldritchWarden::new, MobCategory.MONSTER)
-					.sized(0.8f, 2.25f)
+					.sized(1.5f, 3.5f) // the original's setSize
 					.clientTrackingRange(64)
 					.build("eldritch_warden"));
 

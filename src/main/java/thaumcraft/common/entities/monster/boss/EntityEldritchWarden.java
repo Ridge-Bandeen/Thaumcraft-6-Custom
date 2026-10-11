@@ -136,7 +136,7 @@ public class EntityEldritchWarden extends EntityThaumcraftBoss implements Ranged
 				.add(Attributes.MAX_HEALTH, 400.0)
 				.add(Attributes.MOVEMENT_SPEED, 0.33)
 				.add(Attributes.ATTACK_DAMAGE, 10.0)
-				.add(Attributes.ARMOR, 8.0)
+				.add(Attributes.ARMOR, 4.0) // the original's getTotalArmorValue: super (0) + 4
 				.add(Attributes.MAX_ABSORPTION, SHIELD_AMOUNT);
 	}
 

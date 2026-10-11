@@ -38,6 +38,7 @@ public abstract class EntityCultist extends Monster {
 
 	protected EntityCultist(EntityType<? extends EntityCultist> type, Level level) {
 		super(type, level);
+		xpReward = 10; // as the original
 		setDropChance(EquipmentSlot.CHEST, 0.05f);
 		setDropChance(EquipmentSlot.FEET, 0.05f);
 		setDropChance(EquipmentSlot.HEAD, 0.05f);

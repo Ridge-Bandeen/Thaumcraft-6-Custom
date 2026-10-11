@@ -13312,6 +13312,37 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** Mob stats as the original: experience rewards, armour and hitbox sizes the port had at vanilla defaults or wrong. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void mobStatsMatchTheOriginal(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		java.util.Map<net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.LivingEntity>, Integer> xp = new java.util.LinkedHashMap<>();
+		xp.put(ThaumcraftEntities.TAINT_CRAWLER.get(), 3);
+		xp.put(ThaumcraftEntities.TAINT_SEED.get(), 8);
+		xp.put(ThaumcraftEntities.TAINT_SEED_PRIME.get(), 12);
+		xp.put(ThaumcraftEntities.TAINTACLE.get(), 8);
+		xp.put(ThaumcraftEntities.TAINTACLE_SMALL.get(), 0);
+		xp.put(ThaumcraftEntities.WISP.get(), 5);
+		xp.put(ThaumcraftEntities.ELDRITCH_CRAB.get(), 6);
+		for (var entry : xp.entrySet()) {
+			net.minecraft.world.entity.LivingEntity mob = entry.getKey().create(level);
+			helper.assertTrue(mob != null, "should create " + entry.getKey());
+			int got = mob.getExperienceReward(level, null);
+			helper.assertTrue(got == entry.getValue(), entry.getKey().getDescriptionId() + " should give " + entry.getValue() + " experience, got " + got);
+		}
+		var warden = ThaumcraftEntities.ELDRITCH_WARDEN.get().create(level);
+		helper.assertTrue(warden.getArmorValue() == 4, "the Eldritch Warden's armour should be 4, got " + warden.getArmorValue());
+		var turret = ThaumcraftEntities.TURRET_CROSSBOW.get().create(level);
+		helper.assertTrue(turret.getArmorValue() == 2, "the basic turret's armour should be 2, got " + turret.getArmorValue());
+		helper.assertTrue(warden.getBbWidth() == 1.5f && warden.getBbHeight() == 3.5f, "the Warden should be 1.5 x 3.5, got " + warden.getBbWidth() + " x " + warden.getBbHeight());
+		var golem = ThaumcraftEntities.GOLEM.get().create(level);
+		helper.assertTrue(golem.getBbWidth() == 0.4f && golem.getBbHeight() == 0.9f, "a golem should be 0.4 x 0.9, got " + golem.getBbWidth() + " x " + golem.getBbHeight());
+		var spider = ThaumcraftEntities.MIND_SPIDER.get().create(level);
+		helper.assertTrue(spider.getBbWidth() == 0.7f && spider.getBbHeight() == 0.5f, "a mind spider should be 0.7 x 0.5, got " + spider.getBbWidth() + " x " + spider.getBbHeight());
+		helper.assertTrue(ThaumcraftEntities.GOLEM_DART.get().getWidth() == 0.2f, "a golem dart should have a 0.2 hitbox");
+		helper.succeed();
+	}
+
 	/** As the original: right-clicking a Basic Crossbow Turret opens its ammo screen, whose one slot is the turret's main
 	 * hand and takes arrows only. */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")

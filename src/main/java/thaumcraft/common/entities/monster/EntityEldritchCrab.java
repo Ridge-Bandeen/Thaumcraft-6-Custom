@@ -53,6 +53,7 @@ public class EntityEldritchCrab extends Monster implements IEldritchMob {
 
 	public EntityEldritchCrab(EntityType<? extends EntityEldritchCrab> type, Level level) {
 		super(type, level);
+		xpReward = 6; // as the original
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {

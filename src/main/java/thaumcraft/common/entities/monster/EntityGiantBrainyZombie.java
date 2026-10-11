@@ -36,6 +36,7 @@ public class EntityGiantBrainyZombie extends EntityBrainyZombie {
 
 	public EntityGiantBrainyZombie(EntityType<? extends EntityGiantBrainyZombie> type, Level level) {
 		super(type, level);
+		xpReward = 15; // as the original
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {
@@ -66,11 +67,6 @@ public class EntityGiantBrainyZombie extends EntityBrainyZombie {
 			entityData.set(DATA_ANGER, clamped);
 			refreshDimensions();
 		}
-	}
-
-	@Override
-	protected int getBaseExperienceReward() {
-		return 15;
 	}
 
 	@Override

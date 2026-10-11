@@ -80,6 +80,7 @@ public class EntityCultistLeader extends EntityThaumcraftBoss implements RangedA
 
 	public EntityCultistLeader(EntityType<? extends EntityCultistLeader> type, Level level) {
 		super(type, level);
+		xpReward = 40; // as the original
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {

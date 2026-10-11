@@ -17,10 +17,8 @@ import thaumcraft.api.golems.parts.GolemArm;
  * Replaces the old (1.12.2) {@code GolemArmDart} - the real {@link GolemArm.IArmFunction} the "DARTS" arm
  * (see {@link thaumcraft.common.golems.GolemProperties#init}) was registered without until now, closing a
  * real gap that class's own doc comment flagged ("no shipped {@code GolemArm} has a real
- * {@code IArmFunction} yet"). Real ranged attack: a real vanilla {@link Arrow} (the true original's own
- * {@code EntityGolemDart} was itself just a re-skinned, smaller-hitbox {@code EntityArrow} with no other
- * real behavior - not worth a whole new {@code EntityType} for a purely cosmetic difference, same "drop the
- * cosmetic-only divergence, keep the real mechanic" precedent this whole port has used throughout), damage
+ * {@code IArmFunction} yet"). Real ranged attack: an {@link thaumcraft.common.entities.projectile.EntityGolemDart} (as the original: an
+ * arrow with a small hitbox, drawn smaller), damage
  * scaled to a third of the golem's own real attack damage plus range plus a small real random spread, same
  * real formula and 1.6/3.0 velocity/inaccuracy as the original's own {@code onRangedAttack}.
  *
@@ -42,7 +40,7 @@ public class GolemArmDart implements GolemArm.IArmFunction {
 		LivingEntity shooter = golem.getGolemEntity();
 		if (!(shooter.level() instanceof ServerLevel level)) return;
 
-		Arrow dart = new Arrow(level, shooter, new ItemStack(Items.ARROW), null);
+		thaumcraft.common.entities.projectile.EntityGolemDart dart = new thaumcraft.common.entities.projectile.EntityGolemDart(level, shooter);
 		var atk = shooter.getAttribute(Attributes.ATTACK_DAMAGE);
 		double baseDamage = (atk != null ? atk.getValue() : 1.0) / 3.0;
 		dart.setBaseDamage(baseDamage + range + level.getRandom().nextGaussian() * 0.25);

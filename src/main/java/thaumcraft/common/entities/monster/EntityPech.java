@@ -257,6 +257,7 @@ public class EntityPech extends Monster implements RangedAttackMob {
 
 	public EntityPech(EntityType<? extends EntityPech> type, Level level) {
 		super(type, level);
+		xpReward = 8; // as the original
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {

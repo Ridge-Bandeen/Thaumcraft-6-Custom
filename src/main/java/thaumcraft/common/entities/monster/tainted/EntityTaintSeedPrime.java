@@ -15,6 +15,7 @@ public class EntityTaintSeedPrime extends EntityTaintSeed {
 
 	public EntityTaintSeedPrime(EntityType<? extends EntityTaintSeedPrime> type, Level level) {
 		super(type, level);
+		xpReward = 12; // as the original
 	}
 
 	/** Real, own hitbox (bigger than the base {@link EntityTaintSeed}'s own real 1.5x1.25) - the true

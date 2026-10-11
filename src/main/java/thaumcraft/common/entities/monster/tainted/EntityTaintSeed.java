@@ -69,6 +69,7 @@ public class EntityTaintSeed extends Monster implements ITaintedMob {
 
 	public EntityTaintSeed(EntityType<? extends EntityTaintSeed> type, Level level) {
 		super(type, level);
+		xpReward = 8; // as the original
 	}
 
 	/** Real hitbox, restored 2026-09-15 (a real, separate gap found while restoring

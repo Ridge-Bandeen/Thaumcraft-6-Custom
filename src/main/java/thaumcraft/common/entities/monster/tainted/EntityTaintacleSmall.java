@@ -22,6 +22,7 @@ public class EntityTaintacleSmall extends EntityTaintacle implements ITaintedMob
 
 	public EntityTaintacleSmall(EntityType<? extends EntityTaintacleSmall> type, Level level) {
 		super(type, level);
+		xpReward = 0; // as the original
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {

@@ -52,6 +52,13 @@ public class EntityThaumicSlime extends Slime implements ITaintedMob {
 		super(type, level);
 	}
 
+	/** As the original: two more experience than a vanilla slime of the same size. */
+	@Override
+	public void setSize(int size, boolean resetHealth) {
+		super.setSize(size, resetHealth);
+		xpReward = getSize() + 2;
+	}
+
 	/** Vanilla's {@code Slime#tick} spawns {@code size*8} of this particle on every landing. The original avoided
 	 * it by pre-setting its own {@code wasOnGround} before calling {@code super.onUpdate()}; that field is private now,
 	 * so instead the burst is pointed at a provider-less particle type, i.e. nothing - the purple

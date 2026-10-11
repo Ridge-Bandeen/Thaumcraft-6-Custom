@@ -66,6 +66,7 @@ public class EntityCultistPortalLesser extends Monster {
 
 	public EntityCultistPortalLesser(EntityType<? extends EntityCultistPortalLesser> type, Level level) {
 		super(type, level);
+		xpReward = 10; // as the original
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {
