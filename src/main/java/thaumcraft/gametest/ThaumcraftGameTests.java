@@ -9713,8 +9713,9 @@ public class ThaumcraftGameTests {
 
 		ServerPlayer target = spawnCasterAt(helper, origin.offset(6, 0, 0));
 		golem.performRangedAttack(target, 6.0f);
-		boolean spawnedDart = !helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.projectile.Arrow.class, new AABB(origin).inflate(10)).isEmpty();
-		helper.assertTrue(spawnedDart, "a real ranged attack from a DARTS-armed golem should really spawn a real arrow-based dart");
+		// as the original: its own small golem dart, not a full arrow
+		boolean spawnedDart = !helper.getLevel().getEntitiesOfClass(thaumcraft.common.entities.projectile.EntityGolemDart.class, new AABB(origin).inflate(10)).isEmpty();
+		helper.assertTrue(spawnedDart, "a ranged attack from a DARTS-armed golem should spawn a golem dart");
 		helper.succeed();
 	}
 
