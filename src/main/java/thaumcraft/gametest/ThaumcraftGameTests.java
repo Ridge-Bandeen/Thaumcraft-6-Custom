@@ -4796,7 +4796,7 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.tiles.essentia.TileJarFillable tile = helper.getBlockEntity(pos);
 		tile.setAspects(new AspectList().add(Aspect.WATER, 50));
 
-		float visBefore = AuraHandler.getVis(helper.getLevel(), absolute);
+		float fluxBefore = AuraHandler.getFlux(helper.getLevel(), absolute);
 
 		ServerPlayer player = spawnCasterAt(helper, absolute);
 		player.setShiftKeyDown(true);
@@ -4805,8 +4805,9 @@ public class ThaumcraftGameTests {
 		helper.getBlockState(pos).useItemOn(ItemStack.EMPTY, helper.getLevel(), player, net.minecraft.world.InteractionHand.MAIN_HAND, hit);
 
 		helper.assertTrue(tile.getAspects().size() == 0, "emptying the jar should leave it with no aspects, got " + tile.getAspects());
-		helper.assertTrue(AuraHandler.getVis(helper.getLevel(), absolute) > visBefore,
-				"emptying a jar into the aura should have raised the local vis, was " + visBefore + " now " + AuraHandler.getVis(helper.getLevel(), absolute));
+		// as the original: the poured-out essentia pollutes the aura with as much flux
+		helper.assertTrue(AuraHandler.getFlux(helper.getLevel(), absolute) > fluxBefore,
+				"emptying a jar into the aura should have raised the local flux, was " + fluxBefore + " now " + AuraHandler.getFlux(helper.getLevel(), absolute));
 		helper.succeed();
 	}
 
@@ -18229,6 +18230,66 @@ public class ThaumcraftGameTests {
 		net.minecraft.world.level.block.state.BlockState off = on.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ENABLED, false);
 		for (int i = 0; i < 4; i++) thaumcraft.common.tiles.devices.TileBellows.tick(level, abs, off, tile);
 		helper.assertTrue(BELLOWS_PULSES.stream().noneMatch(key::equals), "a disabled bellows shouldn't pulse");
+		helper.succeed();
+	}
+
+	/** Thaumcraft's tools and armour are in vanilla's tool and armour tags, so enchantments apply to them as they did by
+	 * class in the original (an addon's report); the Primal Crusher is a shovel by tag but still takes pickaxe-only
+	 * Infusion Enchantments, as its tool classes allowed. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void toolsAndArmourAreInVanillaTagsAndEnchantable(GameTestHelper helper) {
+		var enchantments = helper.getLevel().registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT);
+		ItemStack sword = new ItemStack(ItemsTC.thaumiumSword.get());
+		ItemStack pick = new ItemStack(ItemsTC.thaumiumPick.get());
+		ItemStack helm = new ItemStack(ItemsTC.voidHelm.get());
+		ItemStack boots = new ItemStack(ItemsTC.travellerBoots.get());
+		ItemStack crusher = new ItemStack(ItemsTC.primalCrusher.get());
+		helper.assertTrue(sword.is(net.minecraft.tags.ItemTags.SWORDS) && pick.is(net.minecraft.tags.ItemTags.PICKAXES)
+				&& helm.is(net.minecraft.tags.ItemTags.HEAD_ARMOR) && boots.is(net.minecraft.tags.ItemTags.FOOT_ARMOR), "tools and armour should be in the vanilla tags");
+		helper.assertTrue(crusher.is(net.minecraft.tags.ItemTags.SHOVELS) && !crusher.is(net.minecraft.tags.ItemTags.PICKAXES), "the Primal Crusher should be a shovel only");
+		helper.assertTrue(enchantments.getHolderOrThrow(net.minecraft.world.item.enchantment.Enchantments.SHARPNESS).value().canEnchant(sword),
+				"Sharpness should go on a thaumium sword");
+		helper.assertTrue(enchantments.getHolderOrThrow(net.minecraft.world.item.enchantment.Enchantments.PROTECTION).value().canEnchant(helm),
+				"Protection should go on a void helm");
+		helper.assertTrue(enchantments.getHolderOrThrow(net.minecraft.world.item.enchantment.Enchantments.EFFICIENCY).value().canEnchant(crusher),
+				"Efficiency should go on the Primal Crusher");
+		helper.assertTrue(thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.REFINING.isValidTool(pick)
+				&& thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.REFINING.isValidTool(crusher)
+				&& !thaumcraft.common.lib.enchantment.EnumInfusionEnchantment.REFINING.isValidTool(sword), "Refining should take pickaxes and the crusher, not swords");
+		helper.succeed();
+	}
+
+	private static volatile boolean recipeSourceAdded;
+
+	/** An addon's recipe source is weighed like a crafting recipe (COMPAT_HOOKS.md #24): two diamonds in, one out, plus
+	 * 5 Magic for the process, gives three quarters of the diamonds' aspects plus the Magic. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void addonRecipeSourcesFeedTheAspectTracer(GameTestHelper helper) {
+		if (!recipeSourceAdded) {
+			recipeSourceAdded = true;
+			thaumcraft.api.aspects.RecipeTracing.addSource((recipes, access, item, out) -> {
+				if (item == Items.STRUCTURE_VOID) {
+					out.accept(new thaumcraft.api.aspects.RecipeTracing.TracedRecipe(
+							java.util.List.of(net.minecraft.world.item.crafting.Ingredient.of(Items.DIAMOND), net.minecraft.world.item.crafting.Ingredient.of(Items.DIAMOND)),
+							new ItemStack(Items.STRUCTURE_VOID), java.util.List.of(), new AspectList().add(Aspect.MAGIC, 5)));
+				}
+			});
+		}
+		thaumcraft.common.lib.crafting.ThaumcraftObjectTags.clearDerived();
+		AspectList diamond = thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(new ItemStack(Items.DIAMOND));
+		AspectList traced = thaumcraft.common.lib.crafting.ThaumcraftObjectTags.getObjectTags(new ItemStack(Items.STRUCTURE_VOID));
+		helper.assertTrue(diamond != null && diamond.size() > 0, "a diamond should have aspects");
+		AspectList expected = new AspectList();
+		for (Aspect aspect : diamond.getAspects()) {
+			float v = diamond.getAmount(aspect) * 2 * 0.75f;
+			if (v < 1.0f && v > 0.75f) v = 1.0f;
+			if ((int) v > 0) expected.add(aspect, (int) v);
+		}
+		expected.add(Aspect.MAGIC, 5);
+		helper.assertTrue(traced != null && traced.size() == expected.size(), "expected " + expected.aspects + ", got " + (traced == null ? null : traced.aspects));
+		for (Aspect aspect : expected.getAspects()) {
+			helper.assertTrue(traced.getAmount(aspect) == expected.getAmount(aspect), "expected " + expected.aspects + ", got " + traced.aspects);
+		}
 		helper.succeed();
 	}
 

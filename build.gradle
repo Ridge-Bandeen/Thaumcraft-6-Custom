@@ -492,6 +492,7 @@ sourceSets {
             include 'thaumcraft/api/ThaumcraftSetupEvent.java'
             include 'thaumcraft/api/NitorHooks.java'
             include 'thaumcraft/api/BellowsHooks.java'
+            include 'thaumcraft/api/aspects/RecipeTracing.java'
             include 'thaumcraft/api/TaintHooks.java'
             include 'thaumcraft/api/world/WorldFlavour.java'
             include 'thaumcraft/api/events/LampGrowthEvent.java'

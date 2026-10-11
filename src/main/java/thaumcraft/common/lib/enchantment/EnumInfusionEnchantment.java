@@ -14,6 +14,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
+import net.neoforged.neoforge.common.ItemAbilities;
 import thaumcraft.api.items.IRechargable;
 import thaumcraft.api.items.ThaumcraftDataComponents;
 
@@ -25,7 +26,7 @@ import thaumcraft.api.items.ThaumcraftDataComponents;
  *
  * {@link #isValidTool} replaces the big inline tool/armor/bauble/rechargable-matching block that used to live
  * in {@code InfusionEnchantmentRecipe.matches()} - {@code ItemTool}/{@code getToolClasses()} don't exist
- * anymore, so tool-class membership is now a vanilla {@link ItemTags} check, and "weapon" is now a scan of the
+ * anymore, so tool-class membership is now a vanilla {@link ItemTags} check or the matching dig {@link ItemAbilities}, and "weapon" is now a scan of the
  * item's own {@link DataComponents#ATTRIBUTE_MODIFIERS} for an {@code ATTACK_DAMAGE} entry rather than
  * {@code getAttributeModifiers(EntityEquipmentSlot.MAINHAND)}. {@link #isValidTool} still recognizes the
  * bauble-slot classes as vocabulary ("bauble", "amulet", "belt", "ring") but they can never match - Baubles/
@@ -72,11 +73,13 @@ public enum EnumInfusionEnchantment {
 	public boolean isValidTool(ItemStack stack) {
 		if (toolClasses.contains("all")) return true;
 		if (toolClasses.contains("weapon") && hasAttackDamage(stack)) return true;
-		if (toolClasses.contains("axe") && stack.is(ItemTags.AXES)) return true;
-		if (toolClasses.contains("pickaxe") && stack.is(ItemTags.PICKAXES)) return true;
-		if (toolClasses.contains("shovel") && stack.is(ItemTags.SHOVELS)) return true;
-		if (toolClasses.contains("hoe") && stack.is(ItemTags.HOES)) return true;
-		if (toolClasses.contains("sword") && stack.is(ItemTags.SWORDS)) return true;
+		// the original's tool classes: the vanilla tool tag, or the matching dig ability (the Primal Crusher is tagged
+		// only as a shovel but digs as a pickaxe too, as its tool classes said)
+		if (toolClasses.contains("axe") && (stack.is(ItemTags.AXES) || stack.canPerformAction(ItemAbilities.AXE_DIG))) return true;
+		if (toolClasses.contains("pickaxe") && (stack.is(ItemTags.PICKAXES) || stack.canPerformAction(ItemAbilities.PICKAXE_DIG))) return true;
+		if (toolClasses.contains("shovel") && (stack.is(ItemTags.SHOVELS) || stack.canPerformAction(ItemAbilities.SHOVEL_DIG))) return true;
+		if (toolClasses.contains("hoe") && (stack.is(ItemTags.HOES) || stack.canPerformAction(ItemAbilities.HOE_DIG))) return true;
+		if (toolClasses.contains("sword") && (stack.is(ItemTags.SWORDS) || stack.canPerformAction(ItemAbilities.SWORD_DIG))) return true;
 		if (stack.getItem() instanceof ArmorItem armor) {
 			String slot = switch (armor.getType()) {
 				case HELMET -> "helm";

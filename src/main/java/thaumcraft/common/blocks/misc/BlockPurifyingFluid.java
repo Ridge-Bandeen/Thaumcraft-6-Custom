@@ -41,7 +41,8 @@ public class BlockPurifyingFluid extends LiquidBlock {
 		int div = Math.max(1, (int) Math.sqrt(warp));
 		int duration = Math.min(32000, 200000 / div);
 		player.addEffect(new MobEffectInstance(ThaumcraftMobEffects.WARP_WARD, duration, 0, true, true));
-		level.removeBlock(pos, false);
+		// not removeBlock: for a liquid that puts the fluid's own block straight back
+		level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
 	}
 
 	@Override

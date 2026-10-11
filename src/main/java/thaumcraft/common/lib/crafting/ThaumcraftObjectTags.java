@@ -64,7 +64,8 @@ import thaumcraft.api.crafting.ThaumcraftRecipeTypes;
  * <li><b>Recipe tracing</b> for everything else ({@code generateTags}): a Crucible recipe's own aspects (square-rooted)
  * plus its catalyst, else an Infusion recipe likewise, else the cheapest crafting/arcane recipe - three quarters of
  * the ingredients' aspects, divided by the output count, less what the recipe hands back (buckets etc.), plus a Magic
- * cost for arcane recipes. Recursive over the ingredients with the original's cycle guard and depth limit.</li>
+ * cost for arcane recipes. Recursive over the ingredients with the original's cycle guard and depth limit. Addons can
+ * add their own recipe types to the crafting candidates through {@link thaumcraft.api.aspects.RecipeTracing}.</li>
  * <li><b>Bonuses</b> for what the item is (armor, weapons, tools, dyes, enchantments, potions), then a 500 cap.</li>
  * </ol>
  *
@@ -368,6 +369,37 @@ public final class ThaumcraftObjectTags {
 				bestSize = ph.visSize();
 			} catch (Exception e) {
 				// a recipe that can't be walked simply doesn't contribute
+			}
+		}
+
+		// addons' own recipe types (thaumcraft.api.aspects.RecipeTracing), weighed like crafting recipes
+		if (!thaumcraft.api.aspects.RecipeTracing.sources().isEmpty()) {
+			List<thaumcraft.api.aspects.RecipeTracing.TracedRecipe> traced = new ArrayList<>();
+			for (thaumcraft.api.aspects.RecipeTracing.RecipeTraceSource source : thaumcraft.api.aspects.RecipeTracing.sources()) {
+				try {
+					source.collect(recipes, access, item, traced::add);
+				} catch (Exception e) {
+					// a source that fails simply doesn't contribute
+				}
+			}
+			for (thaumcraft.api.aspects.RecipeTracing.TracedRecipe recipe : traced) {
+				ItemStack out = recipe.output();
+				if (out == null || out.isEmpty() || out.getItem() != item || recipe.ingredients() == null) continue;
+				try {
+					AspectList ph = aspectsFromIngredients(recipe.ingredients(), out, recipe.remaining() == null ? List.of() : recipe.remaining());
+					AspectList extra = recipe.extra();
+					if (extra != null) {
+						for (Aspect aspect : extra.getAspects()) {
+							if (aspect != null) ph.add(aspect, extra.getAmount(aspect));
+						}
+					}
+					ph = dropNonPositive(ph);
+					if (ph.visSize() >= bestSize || ph.visSize() <= 0) continue;
+					best = ph;
+					bestSize = ph.visSize();
+				} catch (Exception e) {
+					// as above
+				}
 			}
 		}
 		return best;

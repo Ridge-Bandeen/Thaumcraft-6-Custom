@@ -53,6 +53,14 @@ public class ItemPrimalCrusher extends TieredItem implements IWarpingGear {
 		}
 	}
 
+	/** Its tool classes were pickaxe and shovel, so it counts as both for Infusion Enchantment (and other mods asking).
+	 * It is only in {@code #minecraft:shovels}, though, which already makes it enchantable for mining (an addon asked:
+	 * the pickaxe tag would make it a piercing weapon in TFC). */
+	@Override
+	public boolean canPerformAction(ItemStack stack, net.neoforged.neoforge.common.ItemAbility ability) {
+		return ability == net.neoforged.neoforge.common.ItemAbilities.PICKAXE_DIG || ability == net.neoforged.neoforge.common.ItemAbilities.SHOVEL_DIG;
+	}
+
 	@Override
 	public int getWarp(ItemStack itemstack, Player player) {
 		return 2;
