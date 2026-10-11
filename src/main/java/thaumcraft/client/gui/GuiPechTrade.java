@@ -37,7 +37,11 @@ public class GuiPechTrade extends AbstractContainerScreen<PechMenu> {
 		super(menu, playerInventory, title);
 		imageWidth = 175;
 		imageHeight = 232;
-		inventoryLabelY = imageHeight - 94;
+	}
+
+	/** As the original: no title or inventory label on this screen. */
+	@Override
+	protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
 	}
 
 	/** The original's own enable condition: a valued item in the input and nothing in any output slot. */

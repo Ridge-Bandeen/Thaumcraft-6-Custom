@@ -23,6 +23,11 @@ public class GuiSpa extends AbstractContainerScreen<SpaMenu> {
 		imageHeight = 166;
 	}
 
+	/** As the original: no title or inventory label on this screen. */
+	@Override
+	protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+	}
+
 	/** {@code AbstractContainerScreen#render} doesn't draw item tooltips by itself in 1.21 - vanilla's own container
 	 * screens call {@code renderTooltip} at the end of their own {@code render}. Missing here until the 2026-09-25
 	 * playtest found no tooltips on this screen. */
