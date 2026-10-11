@@ -323,6 +323,37 @@ public final class ClientFxHandlers {
 		Minecraft.getInstance().particleEngine.add(new thaumcraft.client.fx.particles.FXFireMote(clientLevel, x, y, z, mx, my, mz, r, g, b, scale).setLayer(1));
 	}
 
+	/** The original's PacketFXPollute: a puff of flux smoke for each point of flux, at most 40 (none if the amount wrapped
+	 * negative in its byte, as the original). */
+	public static void handlePollute(thaumcraft.common.lib.network.fx.PacketFXPollute payload) {
+		ClientLevel level = Minecraft.getInstance().level;
+		if (level == null) return;
+		for (int a = 0; a < Math.min(40, payload.amount()); a++) {
+			drawPollutionParticles(level, payload.pos());
+		}
+	}
+
+	/** The original's {@code FXDispatcher#drawPollutionParticles}: a slow magenta smoke puff drifting up out of the block. */
+	public static void drawPollutionParticles(ClientLevel level, net.minecraft.core.BlockPos p) {
+		var random = level.random;
+		float x = p.getX() + 0.2f + random.nextFloat() * 0.6f;
+		float y = p.getY() + 0.2f + random.nextFloat() * 0.6f;
+		float z = p.getZ() + 0.2f + random.nextFloat() * 0.6f;
+		var fb = new thaumcraft.client.fx.particles.FXGeneric(level, x, y, z, (random.nextFloat() - random.nextFloat()) * 0.005, 0.02,
+				(random.nextFloat() - random.nextFloat()) * 0.005);
+		fb.setMaxAge(100 + random.nextInt(60));
+		fb.setRBGColorF(1.0f, 0.3f, 0.9f);
+		fb.setAlphaF(0.5f, 0.0f);
+		fb.setGridSize(16);
+		fb.setParticles(56, 1, 1);
+		fb.setScale(2.0f, 5.0f);
+		fb.setLayer(1);
+		fb.setSlowDown(1.0);
+		fb.setWind(0.001);
+		fb.setRotationSpeed(random.nextFloat(), random.nextBoolean() ? -1.0f : 1.0f);
+		addDelayed(fb, 0);
+	}
+
 	/** The original's {@code FXDispatcher#drawFocusCloudParticle}: a large, slow, fading puff in a focus effect's colour. */
 	public static void spawnFocusCloud(net.minecraft.world.level.Level level, double x, double y, double z, double mx, double my, double mz, int color) {
 		if (!(level instanceof ClientLevel clientLevel)) return;

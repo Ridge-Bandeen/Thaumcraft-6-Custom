@@ -309,8 +309,13 @@ public class ThaumcraftInternalMethodHandler implements IInternalMethodHandler {
 
 	@Override
 	public void addFlux(Level level, BlockPos pos, float amount, boolean showEffect) {
-		// showEffect (flux smoke/sound) is client FX, not ported - same simplification as everywhere else.
+		if (level.isClientSide) return;
 		AuraHandler.addFlux(level, pos, amount);
+		// as the original: flux smoke where it went in
+		if (showEffect && amount > 0.0f && level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+			net.neoforged.neoforge.network.PacketDistributor.sendToPlayersNear(serverLevel, null, pos.getX(), pos.getY(), pos.getZ(), 32.0,
+					thaumcraft.common.lib.network.fx.PacketFXPollute.of(pos, amount));
+		}
 	}
 
 	@Override
