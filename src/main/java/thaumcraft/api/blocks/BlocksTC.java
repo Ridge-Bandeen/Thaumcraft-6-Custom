@@ -244,8 +244,8 @@ public final class BlocksTC {
 			Block::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.0f).sound(SoundType.WOOD).ignitedByLava());
 
-	public static final DeferredBlock<LeavesBlock> leavesSilverwood = BLOCKS.registerBlock("leaves_silverwood",
-			LeavesBlock::new,
+	public static final DeferredBlock<thaumcraft.common.blocks.world.BlockSilverwoodLeaves> leavesSilverwood = BLOCKS.registerBlock("leaves_silverwood",
+			thaumcraft.common.blocks.world.BlockSilverwoodLeaves::new,
 			BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).strength(0.2f).sound(SoundType.GRASS)
 					.randomTicks().noOcclusion().isValidSpawn((state, level, pos, type) -> false)
 					.isSuffocating((state, level, pos) -> false).isViewBlocking((state, level, pos) -> false)

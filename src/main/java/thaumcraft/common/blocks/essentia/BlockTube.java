@@ -119,4 +119,12 @@ public class BlockTube extends Block implements EntityBlock {
 		super.setPlacedBy(level, pos, state, placer, stack);
 		if (placer != null && level.getBlockEntity(pos) instanceof thaumcraft.common.tiles.essentia.TileTube tube) tube.faceTowards(placer);
 	}
+
+	/** As the original: the essentia inside pours into the aura as flux when this goes. */
+	@Override
+	protected void onRemove(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.Level level,
+			net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState newState, boolean movedByPiston) {
+		thaumcraft.common.blocks.EssentiaSpill.onRemove(state, level, pos, newState);
+		super.onRemove(state, level, pos, newState, movedByPiston);
+	}
 }

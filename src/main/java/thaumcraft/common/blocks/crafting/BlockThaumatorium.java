@@ -125,6 +125,7 @@ public class BlockThaumatorium extends Block implements EntityBlock {
 
 	@Override
 	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+		thaumcraft.common.blocks.EssentiaSpill.onRemove(state, level, pos, newState);
 		if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TileThaumatorium tile) {
 			ItemStack held = tile.getItem();
 			if (!held.isEmpty()) {

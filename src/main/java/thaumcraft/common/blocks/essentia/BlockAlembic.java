@@ -107,4 +107,12 @@ public class BlockAlembic extends Block implements EntityBlock, ILabelable {
 		float ratio = tile.getEssentiaAmount(Direction.UP) / (float) TileAlembic.MAX_AMOUNT;
 		return net.minecraft.util.Mth.floor(ratio * 14.0f) + (tile.getEssentiaAmount(Direction.UP) > 0 ? 1 : 0);
 	}
+
+	/** As the original: the essentia inside pours into the aura as flux when this goes. */
+	@Override
+	protected void onRemove(net.minecraft.world.level.block.state.BlockState state, net.minecraft.world.level.Level level,
+			net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState newState, boolean movedByPiston) {
+		thaumcraft.common.blocks.EssentiaSpill.onRemove(state, level, pos, newState);
+		super.onRemove(state, level, pos, newState, movedByPiston);
+	}
 }

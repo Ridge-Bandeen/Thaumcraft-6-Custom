@@ -7341,6 +7341,31 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	/** As the original BlockTCTile#breakBlock, an essentia device's contents pour into the aura as flux when it is removed,
+	 * and as BlockJar, emptying a jar does the same (it had been adding vis). */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void removedEssentiaPollutesTheAura(GameTestHelper helper) {
+		Level level = helper.getLevel();
+		BlockPos pos = new BlockPos(2, 2, 2);
+		BlockPos abs = helper.absolutePos(pos);
+		helper.setBlock(pos, BlocksTC.alembic.get());
+		thaumcraft.common.tiles.essentia.TileAlembic tile = helper.getBlockEntity(pos);
+		tile.addToContainer(Aspect.FIRE, 10);
+		float before = AuraHandler.getFlux(level, abs);
+		helper.setBlock(pos, Blocks.AIR);
+		helper.assertTrue(AuraHandler.getFlux(level, abs) >= before + 9.99f, "removing a filled alembic should add its 10 essentia as flux, flux went "
+				+ before + " -> " + AuraHandler.getFlux(level, abs));
+
+		helper.setBlock(pos, BlocksTC.jarNormal.get());
+		thaumcraft.common.tiles.essentia.TileJarFillable jar = helper.getBlockEntity(pos);
+		jar.addToContainer(Aspect.WATER, 20);
+		float beforeJar = AuraHandler.getFlux(level, abs);
+		jar.emptyIntoAura(level, abs);
+		helper.assertTrue(AuraHandler.getFlux(level, abs) >= beforeJar + 19.99f && jar.getAmount() == 0,
+				"emptying a jar should pour its 20 essentia out as flux, flux went " + beforeJar + " -> " + AuraHandler.getFlux(level, abs));
+		helper.succeed();
+	}
+
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
 	public static void alembicCanBeLabelledToOneAspectAndCleared(GameTestHelper helper) {
 		BlockPos pos = new BlockPos(2, 2, 2);

@@ -150,6 +150,7 @@ public class BlockGolemBuilder extends Block implements EntityBlock {
 
 	@Override
 	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+		thaumcraft.common.blocks.EssentiaSpill.onRemove(state, level, pos, newState);
 		if (!state.is(newState.getBlock())) {
 			if (level.getBlockEntity(pos) instanceof TileGolemBuilder tile) {
 				ItemStack held = tile.getItemHandler().getStackInSlot(0);
