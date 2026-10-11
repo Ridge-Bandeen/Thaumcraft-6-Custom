@@ -13301,6 +13301,39 @@ public class ThaumcraftGameTests {
 		menu.broadcastChanges();
 		helper.assertTrue(menu.isTargetAnimal() == turret.getTargetAnimal(), "the menu's own synced flag readout should match the live turret after broadcastChanges");
 
+		// as the original: the screen's first slot is the turret's ammo (its main hand), arrows only
+		helper.assertTrue(menu.slots.size() == 37, "the advanced turret menu should have the ammo slot and the player inventory, got " + menu.slots.size());
+		helper.assertFalse(menu.getSlot(0).mayPlace(new ItemStack(Items.STICK)), "the ammo slot must refuse a non-arrow");
+		owner.getInventory().setItem(0, new ItemStack(Items.ARROW, 16));
+		menu.quickMoveStack(owner, 28); // hotbar slot 0
+		helper.assertTrue(turret.getMainHandItem().is(Items.ARROW) && turret.getMainHandItem().getCount() == 16,
+				"shift-clicking arrows should load them into the turret, got " + turret.getMainHandItem());
+
+		helper.succeed();
+	}
+
+	/** As the original: right-clicking a Basic Crossbow Turret opens its ammo screen, whose one slot is the turret's main
+	 * hand and takes arrows only. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void basicTurretAmmoScreenLoadsArrows(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		BlockPos abs = helper.absolutePos(new BlockPos(2, 1, 2));
+		ServerPlayer owner = spawnCasterAt(helper, abs.above(2));
+		EntityTurretCrossbow turret = ThaumcraftEntities.TURRET_CROSSBOW.get().create(level);
+		helper.assertTrue(turret != null, "the basic turret entity type should be able to create an instance");
+		turret.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0.0f, 0.0f);
+		turret.setValidSpawn();
+		level.addFreshEntity(turret);
+		turret.tame(owner);
+
+		thaumcraft.common.container.TurretBasicMenu menu = new thaumcraft.common.container.TurretBasicMenu(1, owner.getInventory(), turret);
+		helper.assertTrue(menu.slots.size() == 37, "ammo slot plus player inventory, got " + menu.slots.size());
+		helper.assertFalse(menu.getSlot(0).mayPlace(new ItemStack(Items.STICK)), "the ammo slot must refuse a non-arrow");
+		helper.assertTrue(menu.getSlot(0).mayPlace(new ItemStack(Items.TIPPED_ARROW)), "the ammo slot takes tipped arrows");
+		menu.getSlot(0).set(new ItemStack(Items.ARROW, 8));
+		helper.assertTrue(turret.getMainHandItem().is(Items.ARROW) && turret.getMainHandItem().getCount() == 8, "the ammo slot is the turret's main hand");
+		ItemStack moved = menu.quickMoveStack(owner, 0);
+		helper.assertTrue(!moved.isEmpty() && turret.getMainHandItem().isEmpty(), "shift-clicking the ammo should take it back out");
 		helper.succeed();
 	}
 

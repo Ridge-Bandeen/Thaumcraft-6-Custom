@@ -61,8 +61,7 @@ import thaumcraft.api.items.ItemsTC;
  * has no simple modern equivalent and is dropped - a player target still needs real line of sight and real
  * detection range, just without that extra fudge factor.
  *
- * <p>Real, documented cut, same reasoning as the base turret: no ammo slot in the GUI (real dispenser auto-
- * reload already covers it, matching {@link EntityTurretCrossbow}'s own documented cut). Real detailed,
+ * <p>Its screen has the ammo slot as well as the target filters, as the original. Real detailed,
  * non-cuboid OBJ mesh renderer restored 2026-09-16 - see {@link
  * thaumcraft.client.render.RenderTurretCrossbowAdvanced}'s own doc comment for the real modern OBJ-loading
  * path (the vanilla {@code ModelPart}/{@code CubeListBuilder} cuboid system this port used for every other
@@ -250,7 +249,7 @@ public class EntityTurretCrossbowAdvanced extends EntityTurretCrossbow implement
 				discard();
 				player.swing(hand);
 			} else if (player instanceof ServerPlayer serverPlayer) {
-				serverPlayer.openMenu(this);
+				serverPlayer.openMenu(this, buf -> buf.writeVarInt(getId()));
 			}
 			return InteractionResult.SUCCESS;
 		}

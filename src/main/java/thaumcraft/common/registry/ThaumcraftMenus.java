@@ -32,10 +32,13 @@ public final class ThaumcraftMenus {
 	public static final Supplier<MenuType<thaumcraft.common.container.SealConfigMenu>> SEAL_CONFIG = MENUS.register("seal_config",
 			() -> IMenuTypeExtension.create(thaumcraft.common.container.SealConfigMenu::new));
 
-	/** Like {@link #GOLEM_BUILDER} above, the client constructor ignores the buffer entirely - {@code
-	 * TurretConfigMenu}'s own shape never varies per instance, see its own doc comment. */
+	/** Entity-bound, like {@link #ARCANE_BORE}: the client constructor reads the turret's entity id from the extra data. */
 	public static final Supplier<MenuType<thaumcraft.common.container.TurretConfigMenu>> TURRET_CONFIG = MENUS.register("turret_config",
 			() -> IMenuTypeExtension.create(thaumcraft.common.container.TurretConfigMenu::new));
+
+	/** The Basic Crossbow Turret's ammo screen; entity-bound like {@link #TURRET_CONFIG}. */
+	public static final Supplier<MenuType<thaumcraft.common.container.TurretBasicMenu>> TURRET_BASIC = MENUS.register("turret_basic",
+			() -> IMenuTypeExtension.create(thaumcraft.common.container.TurretBasicMenu::new));
 
 	public static final Supplier<MenuType<thaumcraft.common.container.ThaumonomiconMenu>> THAUMONOMICON = MENUS.register("thaumonomicon",
 			() -> IMenuTypeExtension.create((windowId, inv, buf) -> new thaumcraft.common.container.ThaumonomiconMenu(windowId, inv)));

@@ -192,6 +192,7 @@ public class ThaumcraftClient {
         event.register(ThaumcraftMenus.GOLEM_BUILDER.get(), thaumcraft.client.gui.GuiGolemBuilder::new);
         event.register(ThaumcraftMenus.SEAL_CONFIG.get(), thaumcraft.client.gui.SealConfigScreen::new);
         event.register(ThaumcraftMenus.TURRET_CONFIG.get(), thaumcraft.client.gui.TurretConfigScreen::new);
+        event.register(ThaumcraftMenus.TURRET_BASIC.get(), thaumcraft.client.gui.TurretBasicScreen::new);
         event.register(ThaumcraftMenus.THAUMONOMICON.get(), thaumcraft.client.gui.ThaumonomiconScreen::new);
         event.register(ThaumcraftMenus.PECH_TRADE.get(), thaumcraft.client.gui.GuiPechTrade::new);
         event.register(ThaumcraftMenus.SPA.get(), thaumcraft.client.gui.GuiSpa::new);

@@ -15,9 +15,8 @@ import thaumcraft.common.container.TurretConfigMenu;
  * (192,16)}, an "on" overlay at {@code (192,24)}, both 8x8 - taken directly from that class's own real
  * {@code drawButton}) rather than inventing new art. Real health bar overlay at the original's own real
  * {@code (192,48)} UV, width scaled 0-39px by {@link TurretConfigMenu#getHealthFraction}, same real math
- * as the original's own {@code (int)(39f * health/maxHealth)}.
- *
- * <p>No player-inventory slots to lay out at all - see {@code TurretConfigMenu}'s own doc comment for why.
+ * as the original's own {@code (int)(39f * health/maxHealth)}. The ammo slot and player inventory are laid out by
+ * the menu; as the original, no title or inventory label, and each toggle has its label written beside it.
  */
 public class TurretConfigScreen extends AbstractContainerScreen<TurretConfigMenu> {
 
@@ -27,7 +26,10 @@ public class TurretConfigScreen extends AbstractContainerScreen<TurretConfigMenu
 		super(menu, playerInventory, title);
 		imageWidth = 175;
 		imageHeight = 232;
-		inventoryLabelY = -1000; // no player-inventory slots in this menu at all
+	}
+
+	@Override
+	protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
 	}
 
 	@Override
@@ -84,9 +86,7 @@ public class TurretConfigScreen extends AbstractContainerScreen<TurretConfigMenu
 			if (active.getAsBoolean()) {
 				graphics.blit(TEXTURE, getX(), getY(), 192, 24, 8, 8);
 			}
-			if (isHovered) {
-				graphics.renderTooltip(net.minecraft.client.Minecraft.getInstance().font, getMessage(), mouseX, mouseY);
-			}
+			graphics.drawString(net.minecraft.client.Minecraft.getInstance().font, getMessage(), getX() + 12, getY(), 0xFFFFFF, true);
 		}
 
 		@Override

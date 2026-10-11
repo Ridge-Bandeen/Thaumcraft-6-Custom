@@ -68,11 +68,11 @@ public class ArcaneBoreScreen extends AbstractContainerScreen<ArcaneBoreMenu> {
 			base += 9;
 		}
 		if (fortune > 0) {
-			graphics.drawString(font, "Fortune " + fortune, 4, 34 + base, 0xEE5C4A, true);
+			graphics.drawString(font, "Fortune " + fortune, 4, 34 + base, 0xEEC64A, true);
 			base += 9;
 		}
 		if (bore.hasSilkTouch()) {
-			graphics.drawString(font, "Silk Touch", 4, 34 + base, 0x80DFFF, true);
+			graphics.drawString(font, "Silk Touch", 4, 34 + base, 0x8080FF, true);
 		}
 		graphics.pose().popPose();
 	}

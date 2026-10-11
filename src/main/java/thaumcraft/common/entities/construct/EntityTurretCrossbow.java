@@ -54,11 +54,9 @@ import thaumcraft.api.items.ItemsTC;
  * main hand is empty), and a real "toggle my AI off while a real activator rail beneath me is powered" check
  * (matching the original's own real rail-based on/off switch).
  *
- * Real, documented cuts: no dedicated turret GUI yet - the original's own version only ever showed a real
- * single ammo slot, and real auto-reload from a dispenser already covers the same real need without one;
- * sneaking to pick the turret back up still works. No looting-level scaling on death drops (the original's
- * own manual {@code treasure*0.15f} bonus needed a real looting-level lookup this port doesn't have a
- * ready modern helper for) - flat base chances only, a real, minor simplification. Real custom {@code
+ * Right-clicking opens the ammo screen ({@link thaumcraft.common.container.TurretBasicMenu}), as the original;
+ * sneaking picks the turret back up. Death drops come from a loot table, Looting included (see
+ * {@link #dropCustomDeathLoot}). Real custom {@code
  * ticks}/{@code zap} sounds restored 2026-09-15 (were vanilla stand-ins) - see {@link
  * thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment.
  *
@@ -239,12 +237,19 @@ public class EntityTurretCrossbow extends EntityOwnedConstruct implements Ranged
 
 	@Override
 	public InteractionResult mobInteract(Player player, InteractionHand hand) {
-		if (!level().isClientSide && isOwnedBy(player) && isAlive() && player.isShiftKeyDown()) {
-			playSound(thaumcraft.common.registry.ThaumcraftSounds.ZAP.get(), 1.0f, 1.0f);
-			dropAmmo();
-			spawnAtLocation(new ItemStack(ItemsTC.turretPlacerBasic.get()), 0.5f);
-			discard();
-			player.swing(hand);
+		if (!level().isClientSide && isOwnedBy(player) && isAlive()) {
+			if (player.isShiftKeyDown()) {
+				playSound(thaumcraft.common.registry.ThaumcraftSounds.ZAP.get(), 1.0f, 1.0f);
+				dropAmmo();
+				spawnAtLocation(new ItemStack(ItemsTC.turretPlacerBasic.get()), 0.5f);
+				discard();
+				player.swing(hand);
+			} else if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+				// as the original: the ammo screen
+				serverPlayer.openMenu(new net.minecraft.world.SimpleMenuProvider(
+						(id, inv, p) -> new thaumcraft.common.container.TurretBasicMenu(id, inv, this), getDisplayName()),
+						buf -> buf.writeVarInt(getId()));
+			}
 			return InteractionResult.SUCCESS;
 		}
 		return super.mobInteract(player, hand);
