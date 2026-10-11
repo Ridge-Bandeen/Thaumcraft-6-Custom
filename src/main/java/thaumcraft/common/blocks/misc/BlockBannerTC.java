@@ -118,20 +118,16 @@ public class BlockBannerTC extends Block implements EntityBlock {
 		return InteractionResult.SUCCESS;
 	}
 
-	/** Restored 2026-09-27: the dropped item now carries the tile's stored aspect forward (the original preserved
-	 * that via NBT on the dropped item), via {@link thaumcraft.api.items.ThaumcraftDataComponents#ASPECTS} - the
-	 * same component {@link BannerBlockItem#place} already reads back onto a newly placed banner. */
+	/** The dropped banner carries the tile's aspect, via {@link thaumcraft.api.items.ThaumcraftDataComponents#ASPECTS} -
+	 * the component {@link BannerBlockItem#place} reads back onto a newly placed banner. As the original
+	 * ({@code dropBlockAsItemWithChance}): an ordinary block drop, so nothing in creative, and always on an explosion. */
 	@Override
-	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-		if (!state.is(newState.getBlock())) {
-			ItemStack stack = new ItemStack(this);
-			if (level.getBlockEntity(pos) instanceof TileBanner banner && banner.getAspect() != null) {
-				stack.set(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get(), new AspectList().add(banner.getAspect(), 1));
-			}
-			net.minecraft.world.entity.item.ItemEntity out = new net.minecraft.world.entity.item.ItemEntity(level,
-					pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);
-			level.addFreshEntity(out);
+	protected java.util.List<ItemStack> getDrops(BlockState state, net.minecraft.world.level.storage.loot.LootParams.Builder params) {
+		ItemStack stack = new ItemStack(this);
+		if (params.getOptionalParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_ENTITY) instanceof TileBanner banner
+				&& banner.getAspect() != null) {
+			stack.set(thaumcraft.api.items.ThaumcraftDataComponents.ASPECTS.get(), new AspectList().add(banner.getAspect(), 1));
 		}
-		super.onRemove(state, level, pos, newState, movedByPiston);
+		return java.util.List.of(stack);
 	}
 }

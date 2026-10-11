@@ -97,4 +97,16 @@ public class BlockMirrorEssentia extends Block implements EntityBlock {
 				? (lvl, p, st, be) -> TileMirrorEssentia.tick(lvl, p, st, (TileMirrorEssentia) be)
 				: null;
 	}
+
+	/** As the original ({@code dropMirror}): a linked mirror drops as a linked mirror item, still pointing at its partner,
+	 * so it can be placed somewhere else and pair up again without relinking. */
+	@Override
+	protected java.util.List<net.minecraft.world.item.ItemStack> getDrops(BlockState state, net.minecraft.world.level.storage.loot.LootParams.Builder params) {
+		net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(this);
+		if (params.getOptionalParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_ENTITY) instanceof thaumcraft.common.tiles.devices.TileMirrorEssentia tile
+				&& tile.getLink() != null) {
+			stack.set(thaumcraft.api.items.ThaumcraftDataComponents.MIRROR_LINK.get(), tile.getLink());
+		}
+		return java.util.List.of(stack);
+	}
 }

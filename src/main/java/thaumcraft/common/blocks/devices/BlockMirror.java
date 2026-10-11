@@ -39,11 +39,7 @@ import thaumcraft.common.tiles.devices.TileMirror;
  * port has kept, replaced with a single static thin-panel model instead (real geometry now, not invisible) -
  * see {@code data/.../models/block/mirror.json}.
  *
- * Also drops the original's "preserve the link in the dropped item's NBT when you break a linked mirror"
- * mechanic - same precedent the Void Jar's own port already set (breaking a filled jar drops a plain empty
- * one instead of preserving contents); breaking a linked mirror here just drops a plain unlinked one, and
- * the other side's link is left dangling (harmless - {@link TileMirror#isLinkValid()} simply reports false
- * once the tile is gone).
+ * Breaking a linked mirror drops a linked mirror item ({@link #getDrops}), as the original.
  */
 public class BlockMirror extends Block implements EntityBlock {
 
@@ -130,5 +126,29 @@ public class BlockMirror extends Block implements EntityBlock {
 		return type == ThaumcraftBlockEntities.MIRROR.get()
 				? (lvl, p, st, be) -> TileMirror.tick(lvl, p, st, (TileMirror) be)
 				: null;
+	}
+
+	/** As the original ({@code dropMirror}): a linked mirror drops as a linked mirror item, still pointing at its partner,
+	 * so it can be placed somewhere else and pair up again without relinking. */
+	@Override
+	protected java.util.List<net.minecraft.world.item.ItemStack> getDrops(BlockState state, net.minecraft.world.level.storage.loot.LootParams.Builder params) {
+		net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(this);
+		if (params.getOptionalParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_ENTITY) instanceof TileMirror tile
+				&& tile.getLink() != null) {
+			stack.set(thaumcraft.api.items.ThaumcraftDataComponents.MIRROR_LINK.get(), tile.getLink());
+		}
+		return java.util.List.of(stack);
+	}
+
+	/** As the original (BlockTCTile#breakBlock): items still waiting to come out drop when the mirror goes. */
+	@Override
+	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+		if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TileMirror tile) {
+			for (net.minecraft.world.item.ItemStack stack : tile.getOutputStacks()) {
+				net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), stack.copy());
+			}
+			tile.getOutputStacks().clear();
+		}
+		super.onRemove(state, level, pos, newState, movedByPiston);
 	}
 }

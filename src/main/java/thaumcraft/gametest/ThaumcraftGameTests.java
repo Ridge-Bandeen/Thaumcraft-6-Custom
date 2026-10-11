@@ -11846,7 +11846,7 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(banner.getAspect() == thaumcraft.api.aspects.Aspect.WATER,
 				"right-clicking a real dyed banner with a real filled phial should really tag it too, same as the Crimson Cult one");
 
-		level.destroyBlock(bannerAbs, false, player);
+		level.destroyBlock(bannerAbs, true, player);
 		helper.assertTrue(level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new AABB(bannerAbs).inflate(2))
 						.stream().anyMatch(e -> e.getItem().is(thaumcraft.api.items.ItemsTC.banners.get(net.minecraft.world.item.DyeColor.RED).get())),
 				"breaking a real dyed banner should really drop a real matching-color banner item");

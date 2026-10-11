@@ -265,4 +265,9 @@ public class TileMirror extends BlockEntity {
 			}
 		}
 	}
+
+	/** Items delivered here and still waiting to come out. */
+	public List<ItemStack> getOutputStacks() {
+		return outputStacks;
+	}
 }

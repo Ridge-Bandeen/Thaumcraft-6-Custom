@@ -97,4 +97,16 @@ public class BlockVoidSiphon extends Block implements EntityBlock {
 				net.minecraft.network.chat.Component.translatable(getDescriptionId())), buf -> buf.writeBlockPos(pos));
 		return InteractionResult.SUCCESS;
 	}
+
+	/** As the original (BlockTCTile#breakBlock): whatever it holds drops when the block goes. */
+	@Override
+	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+		if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof thaumcraft.common.tiles.crafting.TileVoidSiphon tile) {
+			var items = tile.getItemHandler();
+			for (int i = 0; i < items.getSlots(); i++) {
+				net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), items.getStackInSlot(i).copy());
+			}
+		}
+		super.onRemove(state, level, pos, newState, movedByPiston);
+	}
 }

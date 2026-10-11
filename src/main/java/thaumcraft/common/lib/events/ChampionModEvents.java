@@ -129,8 +129,10 @@ public class ChampionModEvents {
 	@SubscribeEvent
 	public static void onDrops(LivingDropsEvent event) {
 		LivingEntity entity = event.getEntity();
-		if (!event.isRecentlyHit() || !(entity instanceof Mob mob) || !(entity.level() instanceof ServerLevel serverLevel)) return;
+		// as the original: hostile mobs only, and not when a fake player (a mob farm) made the kill
+		if (!event.isRecentlyHit() || !(entity instanceof net.minecraft.world.entity.monster.Monster mob) || !(entity.level() instanceof ServerLevel serverLevel)) return;
 		if (mob instanceof thaumcraft.common.entities.monster.boss.EntityThaumcraftBoss) return;
+		if (event.getSource().getEntity() instanceof net.neoforged.neoforge.common.util.FakePlayer) return;
 		int t = championId(mob);
 		if (t < 0 || t == 13) return;
 

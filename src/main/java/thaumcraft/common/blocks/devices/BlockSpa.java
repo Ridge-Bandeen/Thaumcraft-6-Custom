@@ -81,4 +81,16 @@ public class BlockSpa extends Block implements EntityBlock {
 				? (lvl, pos, st, be) -> TileSpa.tick(lvl, pos, st, (TileSpa) be)
 				: null;
 	}
+
+	/** As the original (BlockTCTile#breakBlock): whatever it holds drops when the block goes. */
+	@Override
+	protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+		if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof thaumcraft.common.tiles.devices.TileSpa tile) {
+			var items = tile.getItemHandler();
+			for (int i = 0; i < items.getSlots(); i++) {
+				net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), items.getStackInSlot(i).copy());
+			}
+		}
+		super.onRemove(state, level, pos, newState, movedByPiston);
+	}
 }
