@@ -477,6 +477,8 @@ sourceSets {
             include 'thaumcraft/client/render/ObjModels.java'
             include 'thaumcraft/client/render/RenderNoProjectile.java'
             include 'thaumcraft/client/render/TextureIn3D.java'
+            include 'thaumcraft/client/render/Tinted.java'
+            include 'thaumcraft/client/fx/ChampionFx.java'
             include 'thaumcraft/common/blocks/world/BlockGrassAmbient.java'
             include 'thaumcraft/common/world/AmbientGrassFeature.java'
             include 'thaumcraft/client/render/GolemPartAnimations.java'

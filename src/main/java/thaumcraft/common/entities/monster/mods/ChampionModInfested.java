@@ -13,10 +13,7 @@ import thaumcraft.common.registry.ThaumcraftSounds;
  * to spawn a real {@link EntityTaintCrawler} on being hit, now with the true original's own real "gore" sound
  * cue restored 2026-09-17 (corrects a stale doc-comment claim here that no sound registry existed yet in this
  * port - {@link ThaumcraftSounds#GORE} has been real since the "Custom sounds" chunk, this call site had just
- * never been revisited). The interface's own real {@code showFX}/{@code preRender} client-only hooks stay
- * dropped - see {@link IChampionModifierEffect}'s own doc comment; restoring those means changing a shared
- * interface every champion-mod effect implements, a real, separate, bigger decision than this one call site's
- * own sound cue.
+ * never been revisited). Its slime-burst particles are in {@link thaumcraft.client.fx.ChampionFx}.
  */
 public class ChampionModInfested implements IChampionModifierEffect {
 	@Override

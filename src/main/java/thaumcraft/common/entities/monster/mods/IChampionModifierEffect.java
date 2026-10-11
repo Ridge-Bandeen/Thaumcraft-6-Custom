@@ -4,10 +4,9 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
- * Replaces the old (1.12.2) {@code IChampionModifierEffect}. Real, per-mod combat/tick behavior only -
- * {@code showFX}/{@code preRender} (client-only particle/render-layer flourishes) are dropped, same
- * established cut as everywhere else in this port for client-only rendering this session's GameTest
- * discipline can't reach.
+ * Replaces the old (1.12.2) {@code IChampionModifierEffect}: the per-mod combat/tick behaviour. The original's
+ * client-only {@code showFX}/{@code preRender} (each mod's particles, tints and the tainted skin) live in
+ * {@link thaumcraft.client.fx.ChampionFx}, kept out of this common interface.
  *
  * @param boss the champion mob this modifier belongs to
  * @param target for type 1 (offensive, called on a hit dealt) and type 2 (defensive, called on a hit taken)
