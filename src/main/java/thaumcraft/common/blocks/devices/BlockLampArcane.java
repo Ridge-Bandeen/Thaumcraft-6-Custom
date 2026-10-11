@@ -74,6 +74,11 @@ public class BlockLampArcane extends Block implements EntityBlock {
 
 	@Override
 	protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock, BlockPos neighborPos, boolean movedByPiston) {
+		// as the original: with nothing left to hang on, it pops off as an item
+		if (level.getBlockState(pos.relative(state.getValue(BlockStateProperties.FACING))).isAir()) {
+			level.destroyBlock(pos, true);
+			return;
+		}
 		boolean shouldBeEnabled = !level.hasNeighborSignal(pos);
 		if (shouldBeEnabled != state.getValue(BlockStateProperties.ENABLED)) {
 			level.setBlock(pos, state.setValue(BlockStateProperties.ENABLED, shouldBeEnabled), 3);

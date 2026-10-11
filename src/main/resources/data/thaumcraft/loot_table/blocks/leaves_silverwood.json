@@ -14,13 +14,23 @@
                 {
                   "condition": "minecraft:any_of",
                   "terms": [
-                    { "condition": "minecraft:match_tool", "predicate": { "items": "minecraft:shears" } },
+                    {
+                      "condition": "minecraft:match_tool",
+                      "predicate": {
+                        "items": "minecraft:shears"
+                      }
+                    },
                     {
                       "condition": "minecraft:match_tool",
                       "predicate": {
                         "predicates": {
                           "minecraft:enchantments": [
-                            { "enchantments": "minecraft:silk_touch", "levels": { "min": 1 } }
+                            {
+                              "enchantments": "minecraft:silk_touch",
+                              "levels": {
+                                "min": 1
+                              }
+                            }
                           ]
                         }
                       }
@@ -33,10 +43,77 @@
             {
               "type": "minecraft:item",
               "conditions": [
-                { "condition": "minecraft:survives_explosion" },
-                { "condition": "minecraft:random_chance", "chance": 0.05 }
+                {
+                  "condition": "minecraft:survives_explosion"
+                },
+                {
+                  "condition": "minecraft:table_bonus",
+                  "enchantment": "minecraft:fortune",
+                  "chances": [
+                    0.013333333333333334,
+                    0.014084507042253521,
+                    0.014925373134328358,
+                    0.01694915254237288
+                  ]
+                }
               ],
               "name": "thaumcraft:sapling_silverwood"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rolls": 1.0,
+      "bonus_rolls": 0.0,
+      "conditions": [
+        {
+          "condition": "minecraft:inverted",
+          "term": {
+            "condition": "minecraft:any_of",
+            "terms": [
+              {
+                "condition": "minecraft:match_tool",
+                "predicate": {
+                  "items": "minecraft:shears"
+                }
+              },
+              {
+                "condition": "minecraft:match_tool",
+                "predicate": {
+                  "predicates": {
+                    "minecraft:enchantments": [
+                      {
+                        "enchantments": "minecraft:silk_touch",
+                        "levels": {
+                          "min": 1
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "thaumcraft:nugget_quicksilver",
+          "conditions": [
+            {
+              "condition": "minecraft:survives_explosion"
+            },
+            {
+              "condition": "minecraft:table_bonus",
+              "enchantment": "minecraft:fortune",
+              "chances": [
+                0.006666666666666667,
+                0.007407407407407408,
+                0.008333333333333333,
+                0.011111111111111112
+              ]
             }
           ]
         }

@@ -130,6 +130,13 @@ public final class SealHandler {
 		if (removed == null) return;
 		if (!level.isClientSide && removed.getSeal() != null) {
 			removed.getSeal().onRemoval(level, pos.pos, pos.face);
+			// as the original: the seal comes off as its item, just off the face it was on
+			net.minecraft.world.item.Item placer = placerFor(removed.getSeal().getKey());
+			if (placer != null) {
+				level.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(level,
+						pos.pos.getX() + 0.5 + pos.face.getStepX() / 1.7f, pos.pos.getY() + 0.5 + pos.face.getStepY() / 1.7f,
+						pos.pos.getZ() + 0.5 + pos.face.getStepZ() / 1.7f, new net.minecraft.world.item.ItemStack(placer)));
+			}
 		}
 		for (Task task : GolemHelper.getTasks(level.dimension()).values()) {
 			if (task.getSealPos() != null && task.getSealPos().equals(pos)) {
@@ -161,6 +168,15 @@ public final class SealHandler {
 				removeSealEntity(level, entity.getSealPos());
 			}
 		}
+	}
+
+	/** The seal item that places the seal with this key, or null. */
+	@javax.annotation.Nullable
+	private static net.minecraft.world.item.Item placerFor(String key) {
+		for (net.minecraft.world.item.Item item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+			if (item instanceof thaumcraft.common.golems.ItemSealPlacer placer && key.equals(placer.getSealKey())) return item;
+		}
+		return null;
 	}
 
 	private SealHandler() {

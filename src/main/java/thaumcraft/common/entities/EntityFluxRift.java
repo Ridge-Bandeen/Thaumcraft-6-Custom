@@ -77,16 +77,8 @@ import thaumcraft.common.world.aura.AuraHandler;
  *
  * Real, documented cuts, each with precedent already set elsewhere this session:
  * <ul>
- * <li>Rift event index 1 (spawning {@code EntityTaintSeedPrime}) is dropped from the weighted event table
- * entirely rather than kept as a guaranteed no-op - that monster is Taint-subsystem-adjacent, itself a
- * confirmed hard blocker (the finite-fluid disqualifier). The other four entries keep their original
- * weights/costs unchanged.</li>
- * <li>{@code TaintHelper.isNearTaintSeed} (originally gating some rift events) is dropped rather than
- * ported - its real implementation depends on the same blocked Taint subsystem, and with no taint seeds
- * able to exist yet, it would always return {@code false} anyway.</li>
- * <li>No client-side tendril particle trail ({@code FXDispatcher.drawCurlyWisp}, driven by the unconverted
- * client FX dispatcher) - the same "no custom renderer/particle pipeline" boundary this whole port has
- * kept since Cinderpearl's own client FX.</li>
+ * <li>All five rift events as the original, weights and costs included; the Taint Seed Prime one never happens near
+ * a Taint Seed ({@code TaintHelper.isNearTaintSeed}).</li>
  * <li>Real custom {@code evilportal} sound restored 2026-09-15 (was a vanilla {@code PORTAL_AMBIENT}
  * stand-in) - see {@link thaumcraft.common.registry.ThaumcraftSounds}'s own doc comment.</li>
  * </ul>
@@ -103,10 +95,11 @@ public class EntityFluxRift extends Entity {
 			SynchedEntityData.defineId(EntityFluxRift.class, EntityDataSerializers.BOOLEAN);
 
 	private static final List<RandomItemChooser.Item> EVENTS = List.of(
-			new FluxEventEntry(0, 50, 5),
-			new FluxEventEntry(1, 20, 10),
-			new FluxEventEntry(2, 20, 10),
-			new FluxEventEntry(3, 1, 0));
+			new FluxEventEntry(0, 50, 5, true),
+			new FluxEventEntry(1, 10, 0, false),
+			new FluxEventEntry(2, 20, 10, true),
+			new FluxEventEntry(3, 20, 10, true),
+			new FluxEventEntry(4, 1, 0, true));
 
 	private int maxSize;
 	private int lastSize = -1;
@@ -346,6 +339,9 @@ public class EntityFluxRift extends Entity {
 		}
 		FluxEventEntry ei = (FluxEventEntry) chosen;
 		ServerLevel level = (ServerLevel) level();
+		if (!ei.nearTaintAllowed() && thaumcraft.common.blocks.world.taint.TaintHelper.isNearTaintSeed(level, blockPosition())) {
+			return;
+		}
 		boolean didit = false;
 		switch (ei.event) {
 			case 0 -> {
@@ -359,6 +355,19 @@ public class EntityFluxRift extends Entity {
 				}
 			}
 			case 1 -> {
+				// a Taint Seed Prime takes the rift's place, boosted by its size
+				thaumcraft.common.entities.monster.tainted.EntityTaintSeedPrime seed =
+						new thaumcraft.common.entities.monster.tainted.EntityTaintSeedPrime(ThaumcraftEntities.TAINT_SEED_PRIME.get(), level);
+				seed.moveTo((int) (getX() + random.nextGaussian() * 5.0) + 0.5, (int) (getY() + random.nextGaussian() * 5.0),
+						(int) (getZ() + random.nextGaussian() * 5.0) + 0.5, random.nextInt(360), 0.0f);
+				if (seed.canSpawnHere() && level.addFreshEntity(seed)) {
+					didit = true;
+					seed.boost = getRiftSize();
+					AuraHelper.polluteAura(level, blockPosition(), getRiftSize() / 2, true);
+					discard();
+				}
+			}
+			case 2 -> {
 				for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, getBoundingBox().inflate(16.0))) {
 					didit = true;
 					if (target instanceof ServerPlayer player) {
@@ -370,7 +379,7 @@ public class EntityFluxRift extends Entity {
 					}
 				}
 			}
-			case 2 -> {
+			case 3 -> {
 				Player target2 = thaumcraft.common.entities.PlayerTargeting.nearestTargetable(level, this, 16.0);
 				if (target2 != null) {
 					FocusPackage p = new FocusPackage(target2);
@@ -386,7 +395,7 @@ public class EntityFluxRift extends Entity {
 					didit = true;
 				}
 			}
-			case 3 -> setCollapse(true);
+			case 4 -> setCollapse(true);
 			default -> {
 			}
 		}
@@ -501,7 +510,8 @@ public class EntityFluxRift extends Entity {
 		discard();
 	}
 
-	private record FluxEventEntry(int event, double weight, int cost) implements RandomItemChooser.Item {
+	/** @param nearTaintAllowed whether the event may happen near a Taint Seed (only the seed-spawning one may not) */
+	private record FluxEventEntry(int event, double weight, int cost, boolean nearTaintAllowed) implements RandomItemChooser.Item {
 		@Override
 		public double getWeight() {
 			return weight;

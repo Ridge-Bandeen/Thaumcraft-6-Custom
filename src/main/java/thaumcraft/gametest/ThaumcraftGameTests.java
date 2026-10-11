@@ -10090,6 +10090,9 @@ public class ThaumcraftGameTests {
 		thaumcraft.common.golems.seals.SealHandler.removeSealEntity(helper.getLevel(), sealPos);
 		helper.assertTrue(thaumcraft.api.golems.GolemHelper.getSealEntity(helper.getLevel().dimension(), sealPos) == null, "the seal should be gone after removal");
 		helper.assertTrue(task.isSuspended(), "removing a seal should suspend every task still tied to it");
+		// as the original: the seal comes off as its item
+		helper.assertTrue(helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new AABB(sealPos.pos).inflate(2))
+				.stream().anyMatch(e -> e.getItem().getItem() instanceof thaumcraft.common.golems.ItemSealPlacer), "removing a seal should drop its seal item");
 
 		helper.succeed();
 	}

@@ -92,7 +92,8 @@ public class ScanSky implements IScanThing {
 			inRangePitch = Math.abs(celestialAngle - pitch) < 7;
 		}
 
-		long worldDay = level.getDayTime() / 24000L;
+		// as the original: days by total world time (sleeping or /time do not start a new day of scans)
+		long worldDay = level.getGameTime() / 24000L;
 		String prefix = "CEL_" + worldDay + "_";
 
 		if (inRangeYaw && inRangePitch) {
