@@ -18337,6 +18337,42 @@ public class ThaumcraftGameTests {
 		helper.succeed();
 	}
 
+	private static volatile boolean heatSourceAdded;
+
+	/** COMPAT_HOOKS.md #25 and #26: a registered crucible heat predicate counts a block by its state (here a lit furnace,
+	 * not an unlit one), and an addon's loot gear ladder replaces the built-in one for its slot. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void crucibleHeatPredicatesAndLootGearLaddersApply(GameTestHelper helper) {
+		if (!heatSourceAdded) {
+			heatSourceAdded = true;
+			thaumcraft.api.CrucibleHeaters.addHeatSource(state -> state.is(Blocks.FURNACE)
+					&& state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT));
+		}
+		var furnace = Blocks.FURNACE.defaultBlockState();
+		helper.assertTrue(thaumcraft.common.tiles.crafting.TileCrucible.isHeatSource(
+				furnace.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT, true)), "a lit furnace should heat the crucible");
+		helper.assertFalse(thaumcraft.common.tiles.crafting.TileCrucible.isHeatSource(
+				furnace.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.LIT, false)), "an unlit furnace shouldn't");
+
+		net.minecraft.world.item.Item[] previous = thaumcraft.api.internal.WeightedRandomLoot.lootBagGear[0];
+		try {
+			net.minecraft.world.item.Item[] ladder = new net.minecraft.world.item.Item[7];
+			java.util.Arrays.fill(ladder, Items.WOODEN_SWORD);
+			thaumcraft.api.ThaumcraftApi.setLootBagGear(0, ladder);
+			net.minecraft.util.RandomSource random = net.minecraft.util.RandomSource.create(1L);
+			boolean sawWooden = false, sawVanillaWeapon = false;
+			for (int i = 0; i < 4000; i++) {
+				ItemStack loot = thaumcraft.common.lib.utils.LootGenerator.generateLoot(2, random, helper.getLevel().registryAccess());
+				sawWooden |= loot.is(Items.WOODEN_SWORD);
+				sawVanillaWeapon |= loot.is(Items.IRON_AXE) || loot.is(Items.IRON_SWORD) || loot.is(Items.DIAMOND_SWORD);
+			}
+			helper.assertTrue(sawWooden && !sawVanillaWeapon, "the replaced weapon ladder should be rolled instead of the built-in one");
+		} finally {
+			thaumcraft.api.internal.WeightedRandomLoot.lootBagGear[0] = previous;
+		}
+		helper.succeed();
+	}
+
 	private static volatile boolean recipeSourceAdded;
 
 	/** An addon's recipe source is weighed like a crafting recipe (COMPAT_HOOKS.md #24): two diamonds in, one out, plus

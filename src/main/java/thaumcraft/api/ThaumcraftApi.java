@@ -73,6 +73,19 @@ public class ThaumcraftApi {
 		}
 	}
 
+	/**
+	 * Replaces the gear a loot bag, urn or crate can roll for one slot (slot 0 a weapon, 1-4 boots, leggings, chestplate,
+	 * helmet). {@code byQuality} runs from worst to best; the built-in ladders have seven steps (leather or an iron axe up
+	 * to void metal), and a roll above the end of a shorter ladder simply rolls again. Register from
+	 * {@code ThaumcraftSetupEvent}; without a call the built-in ladder is used.
+	 */
+	public static void setLootBagGear(int slot, net.minecraft.world.item.Item... byQuality) {
+		if (slot < 0 || slot >= thaumcraft.api.internal.WeightedRandomLoot.lootBagGear.length) {
+			throw new IllegalArgumentException("loot bag gear slot must be 0-4, got " + slot);
+		}
+		thaumcraft.api.internal.WeightedRandomLoot.lootBagGear[slot] = byQuality == null ? null : byQuality.clone();
+	}
+
 	public static void addWarpToItem(ItemStack craftresult, int amount) {
 		if (craftresult == null || craftresult.isEmpty()) return;
 		WARP_MAP.put(craftresult.getItem(), amount);

@@ -73,9 +73,11 @@ public final class LootGenerator {
 				access.registryOrThrow(Registries.ENCHANTMENT).getTag(EnchantmentTags.IN_ENCHANTING_TABLE));
 	}
 
-	/** Slot 0 a weapon, 1-4 boots to helmet; quality 0-6 from leather (or an iron axe) up to void metal. */
+	/** Slot 0 a weapon, 1-4 boots to helmet; quality 0-6 from leather (or an iron axe) up to void metal, unless an addon
+	 * replaced the slot's ladder ({@code ThaumcraftApi#setLootBagGear}). */
 	private static Item gearItemForSlot(int slot, int quality) {
-		Item[] tier = switch (slot) {
+		Item[] replaced = slot >= 0 && slot < WeightedRandomLoot.lootBagGear.length ? WeightedRandomLoot.lootBagGear[slot] : null;
+		Item[] tier = replaced != null ? replaced : switch (slot) {
 			case 4 -> new Item[] { Items.LEATHER_HELMET, Items.GOLDEN_HELMET, Items.CHAINMAIL_HELMET, Items.IRON_HELMET,
 					ItemsTC.thaumiumHelm.get(), Items.DIAMOND_HELMET, ItemsTC.voidHelm.get() };
 			case 3 -> new Item[] { Items.LEATHER_CHESTPLATE, Items.GOLDEN_CHESTPLATE, Items.CHAINMAIL_CHESTPLATE, Items.IRON_CHESTPLATE,

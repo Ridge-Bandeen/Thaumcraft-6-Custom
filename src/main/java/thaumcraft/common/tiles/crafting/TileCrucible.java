@@ -61,12 +61,14 @@ public class TileCrucible extends BlockEntity implements IAspectContainer {
 	private int externalHeat;
 
 	/** Blocks that heat a crucible (or a Thaumatorium) from below. The original counted any lava or fire material;
-	 * the tag's default is lava, fire, soul fire and magma. Nitor always counts. */
+	 * the tag's default is lava, fire, soul fire and magma. Nitor always counts, and so does anything an addon's
+	 * {@link thaumcraft.api.CrucibleHeaters} predicate accepts. */
 	public static final net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block> HEATERS = net.minecraft.tags.BlockTags.create(
 			net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("thaumcraft", "crucible_heaters"));
 
 	public static boolean isHeatSource(BlockState state) {
-		return state.is(HEATERS) || state.getBlock() instanceof thaumcraft.common.blocks.misc.BlockNitor;
+		return state.is(HEATERS) || state.getBlock() instanceof thaumcraft.common.blocks.misc.BlockNitor
+				|| thaumcraft.api.CrucibleHeaters.isExtraHeatSource(state);
 	}
 
 	/** Counts the crucible as heated for the next {@code ticks} ticks, whatever is below it - for addons whose heaters
