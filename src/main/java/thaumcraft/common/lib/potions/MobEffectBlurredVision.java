@@ -15,7 +15,7 @@ public class MobEffectBlurredVision extends MobEffect {
 	public static MobEffect instance = null; // assigned at registration time, same convention as its siblings
 
 	public MobEffectBlurredVision() {
-		super(MobEffectCategory.HARMFUL, 0x707070);
+		super(MobEffectCategory.HARMFUL, 0x808080); // the original's colour
 	}
 
 	@Override

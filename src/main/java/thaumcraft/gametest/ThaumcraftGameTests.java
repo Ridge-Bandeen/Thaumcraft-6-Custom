@@ -16826,7 +16826,7 @@ public class ThaumcraftGameTests {
 	// --------------------------------------------------------------------------------------------------
 
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
-	public static void blockEffectSapDebuffsANonEldritchLivingEntityAndSelfDestructsButSparesEldritchMobs(GameTestHelper helper) {
+	public static void blockEffectSapDebuffsANonEldritchLivingEntityAndLingersButSparesEldritchMobs(GameTestHelper helper) {
 		ServerLevel level = helper.getLevel();
 		BlockPos pos = helper.absolutePos(BlockPos.ZERO);
 		level.setBlockAndUpdate(pos, BlocksTC.effectSap.get().defaultBlockState());
@@ -16841,7 +16841,8 @@ public class ThaumcraftGameTests {
 		helper.assertTrue(pig.hasEffect(net.minecraft.world.effect.MobEffects.WITHER), "touching a real effect_sap block should really grant a real non-Eldritch entity Wither");
 		helper.assertTrue(pig.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN), "touching a real effect_sap block should really grant a real non-Eldritch entity Slowness");
 		helper.assertTrue(pig.hasEffect(net.minecraft.world.effect.MobEffects.HUNGER), "touching a real effect_sap block should really grant a real non-Eldritch entity Hunger");
-		helper.assertTrue(level.getBlockState(pos).isAir(), "a real effect_sap block should really consume itself once it debuffs something");
+		// as the original: it lingers until its own tick clears it
+		helper.assertTrue(level.getBlockState(pos).is(BlocksTC.effectSap.get()), "effect_sap should linger after debuffing something");
 
 		BlockPos eldritchPos = pos.offset(2, 0, 0);
 		level.setBlockAndUpdate(eldritchPos, BlocksTC.effectSap.get().defaultBlockState());

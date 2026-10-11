@@ -24,7 +24,7 @@ public class MobEffectFluxTaint extends MobEffect {
     public static MobEffect instance = null; // assigned at registration time
 
     public MobEffectFluxTaint() {
-        super(MobEffectCategory.HARMFUL, 0x8080a0);
+        super(MobEffectCategory.HARMFUL, 0x663377); // the original's colour
     }
 
     @Override

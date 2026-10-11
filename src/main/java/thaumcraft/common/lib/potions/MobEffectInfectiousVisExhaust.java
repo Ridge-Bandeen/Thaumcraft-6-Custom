@@ -26,7 +26,7 @@ public class MobEffectInfectiousVisExhaust extends MobEffect {
 	public static MobEffect instance = null; // assigned at registration time, same convention as its siblings
 
 	public MobEffectInfectiousVisExhaust() {
-		super(MobEffectCategory.HARMFUL, 0xa0a0ff);
+		super(MobEffectCategory.HARMFUL, 0x665577); // the original's colour
 	}
 
 	@Override

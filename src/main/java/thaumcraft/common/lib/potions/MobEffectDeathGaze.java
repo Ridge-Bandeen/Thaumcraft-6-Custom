@@ -16,7 +16,7 @@ public class MobEffectDeathGaze extends MobEffect {
 	public static MobEffect instance = null; // assigned at registration time, same convention as its siblings
 
 	public MobEffectDeathGaze() {
-		super(MobEffectCategory.HARMFUL, 0x400040);
+		super(MobEffectCategory.HARMFUL, 0x664433); // the original's colour
 	}
 
 	@Override

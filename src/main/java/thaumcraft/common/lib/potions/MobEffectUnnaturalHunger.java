@@ -15,7 +15,7 @@ public class MobEffectUnnaturalHunger extends MobEffect {
 	public static MobEffect instance = null; // assigned at registration time, same convention as its siblings
 
 	public MobEffectUnnaturalHunger() {
-		super(MobEffectCategory.HARMFUL, 0x604000);
+		super(MobEffectCategory.HARMFUL, 0x446633); // the original's colour
 	}
 
 	@Override

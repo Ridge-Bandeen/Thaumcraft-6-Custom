@@ -45,8 +45,8 @@ public class BlockPavingStoneTravel extends Block {
 	@Override
 	public void stepOn(Level level, BlockPos pos, BlockState state, Entity entity) {
 		if (!level.isClientSide && entity instanceof LivingEntity living) {
-			living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 40, 1));
-			living.addEffect(new MobEffectInstance(MobEffects.JUMP, 40, 0));
+			living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 40, 1, false, false)); // as the original: no particles
+			living.addEffect(new MobEffectInstance(MobEffects.JUMP, 40, 0, false, false));
 		}
 		super.stepOn(level, pos, state, entity);
 	}

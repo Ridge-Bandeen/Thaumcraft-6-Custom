@@ -16,7 +16,7 @@ public class MobEffectWarpWard extends MobEffect {
 	public static MobEffect instance = null; // assigned at registration time, same convention as its siblings
 
 	public MobEffectWarpWard() {
-		super(MobEffectCategory.BENEFICIAL, 0x00ffff);
+		super(MobEffectCategory.BENEFICIAL, 0xE0F2F7); // the original's colour
 	}
 
 	@Override

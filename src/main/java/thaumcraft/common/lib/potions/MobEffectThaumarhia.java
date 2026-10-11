@@ -17,7 +17,7 @@ public class MobEffectThaumarhia extends MobEffect {
 	public static MobEffect instance = null; // assigned at registration time, same convention as its siblings
 
 	public MobEffectThaumarhia() {
-		super(MobEffectCategory.HARMFUL, 0xa05000);
+		super(MobEffectCategory.HARMFUL, 0x664477); // the original's colour
 	}
 
 	@Override

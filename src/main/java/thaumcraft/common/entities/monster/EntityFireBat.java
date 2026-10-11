@@ -119,7 +119,7 @@ public class EntityFireBat extends FlyingMob implements Enemy {
 	@Override
 	public void aiStep() {
 		super.aiStep();
-		if (isInWater()) {
+		if (isInWaterRainOrBubble()) { // as the original (isWet): rain hurts it too
 			hurt(damageSources().drown(), 1.0f);
 		}
 		if (level().isClientSide) {

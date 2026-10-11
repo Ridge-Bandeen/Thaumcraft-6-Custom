@@ -21,7 +21,7 @@ public class MobEffectSunScorned extends MobEffect {
 	public static MobEffect instance = null; // assigned at registration time, same convention as its siblings
 
 	public MobEffectSunScorned() {
-		super(MobEffectCategory.HARMFUL, 0xffa000);
+		super(MobEffectCategory.HARMFUL, 0xF8D86A); // the original's colour
 	}
 
 	@Override

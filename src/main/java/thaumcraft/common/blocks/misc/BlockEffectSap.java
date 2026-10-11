@@ -38,9 +38,9 @@ import thaumcraft.api.entities.IEldritchMob;
  * <p>Real mechanic ({@link #entityInside}): a real, non-{@link IEldritchMob}, not-already-Withered
  * {@link LivingEntity} that touches it takes a real short Wither I / Slowness II / Hunger II burst (same
  * real durations/amplifiers/ambient-and-visible flags as the true original's own
- * {@code PotionEffect(..., 40, 0/1, true, true)} calls), then the block consumes itself - a one-shot ground
- * trap, not a lingering hazard. {@link IEldritchMob}s are immune so the 2 real placers below don't hurt
- * their own summoner.
+ * {@code PotionEffect(..., 40, 0/1, true, true)} calls). As the original it lingers until its own tick clears it,
+ * catching anything standing in it again once the Wither wears off. {@link IEldritchMob}s are immune so the 2
+ * real placers below don't hurt their own summoner.
  *
  * <p>Real self-destruct timing, faithfully split the same way the true original split it across 2 separate
  * Forge mechanisms now unified under vanilla's own real {@link #tick}/{@link #randomTick} pair: the true
@@ -115,7 +115,6 @@ public class BlockEffectSap extends Block {
 		living.addEffect(new MobEffectInstance(MobEffects.WITHER, 40, 0, true, true));
 		living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 1, true, true));
 		living.addEffect(new MobEffectInstance(MobEffects.HUNGER, 40, 1, true, true));
-		level.removeBlock(pos, false);
 	}
 
 	@Override

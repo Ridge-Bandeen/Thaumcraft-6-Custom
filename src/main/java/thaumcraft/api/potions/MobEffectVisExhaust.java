@@ -13,7 +13,7 @@ public class MobEffectVisExhaust extends MobEffect {
     public static MobEffect instance = null; // assigned at registration time
 
     public MobEffectVisExhaust() {
-        super(MobEffectCategory.HARMFUL, 0xa0a0ff);
+        super(MobEffectCategory.HARMFUL, 0x664477); // the original's colour
     }
 
     @Override
