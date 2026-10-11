@@ -1,11 +1,5 @@
 package thaumcraft.common.items.curios;
 
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -13,46 +7,32 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.storage.loot.LootParams;
-import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+import thaumcraft.common.lib.utils.LootGenerator;
 
 /**
- * Replaces the old (1.12.2) {@code ItemLootBag} - right-click to consume and spill several random items on
- * the ground, three separate tiers (common/uncommon/rare, each its own item rather than the original's
- * damage-value variants). A recently-hit vanilla hostile mob has a chance to drop one, tiered by looting
- * level - see {@code Thaumcraft#onLivingDrops}.
- *
- * The original rolled its own hand-written weighted item pool ({@code Utils.generateLoot}/{@code genGear} -
- * a full random-gear generator picking from the leather-through-diamond progression with random
- * enchantments and durability) referencing a large, mostly still-unbuilt mod item pool. Reproduced here with
- * vanilla's own data-driven loot table system instead - each tier is a real loot table
- * ({@code loot_table/gameplay/loot_bag_<tier>.json}) rolled via {@code LootContextParamSets.GIFT} (the same
- * context vanilla uses for villager gifts - a good semantic match for "open this, get random stuff"). Same
- * net shape (better tier, better stuff) with a much smaller, curated vanilla-only pool rather than porting a
- * generator that mostly targets items this port doesn't have yet.
+ * Replaces the old (1.12.2) {@code ItemLootBag} - right-click to consume and spill 8 to 12 random items on the ground,
+ * three tiers (common/uncommon/rare, each its own item rather than the original's damage-value variants). A recently-hit
+ * champion drops one, tiered by looting level - see {@code Thaumcraft#onLivingDrops}. The items come from the original's
+ * generator ({@link LootGenerator}), whose pools addons fill through {@code ThaumcraftApi#addLootBagItem}.
  */
 public class ItemLootBag extends Item {
 
-	private final ResourceKey<LootTable> lootTable;
+	private final int rarity;
 
-	public ItemLootBag(Properties properties, ResourceLocation lootTableId) {
+	public ItemLootBag(Properties properties, int rarity) {
 		super(properties);
-		this.lootTable = ResourceKey.create(Registries.LOOT_TABLE, lootTableId);
+		this.rarity = rarity;
 	}
 
 	@Override
 	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
 		ItemStack stack = player.getItemInHand(hand);
-		if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer) {
-			LootTable table = serverLevel.getServer().reloadableRegistries().getLootTable(lootTable);
-			LootParams params = new LootParams.Builder(serverLevel)
-					.withParameter(LootContextParams.ORIGIN, player.position())
-					.withParameter(LootContextParams.THIS_ENTITY, player)
-					.create(LootContextParamSets.GIFT);
-			for (ItemStack loot : table.getRandomItems(params)) {
-				player.spawnAtLocation(loot);
+		if (!level.isClientSide) {
+			for (int q = 8 + level.random.nextInt(5), a = 0; a < q; ++a) {
+				ItemStack loot = LootGenerator.generateLoot(rarity, level.random, level.registryAccess());
+				if (!loot.isEmpty()) {
+					level.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(level, player.getX(), player.getY(), player.getZ(), loot));
+				}
 			}
 			level.playSound(null, player.blockPosition(), thaumcraft.common.registry.ThaumcraftSounds.COINS.get(), SoundSource.PLAYERS, 0.75f, 1.0f);
 		}

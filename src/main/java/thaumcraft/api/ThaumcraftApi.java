@@ -52,6 +52,27 @@ public class ThaumcraftApi {
 	 * {@code SmeltBonus} and the rest of its unported baggage, so the map lives here beside its only two
 	 * real accessors instead.
 	 */
+	/**
+	 * Adds possible loot to loot bags (and the urns and crates found in the world). As a reference, the weight of a gold
+	 * nugget is 2500 in a common bag and a diamond's is 50 in the better bags.
+	 * @param bagTypes which bags to add it to (several may be given): 0 = common, 1 = uncommon, 2 = rare; none means common
+	 */
+	public static void addLootBagItem(ItemStack item, int weight, int... bagTypes) {
+		if (bagTypes == null || bagTypes.length == 0) {
+			thaumcraft.api.internal.WeightedRandomLoot.lootBagCommon.add(new thaumcraft.api.internal.WeightedRandomLoot(item, weight));
+			return;
+		}
+		for (int rarity : bagTypes) {
+			switch (rarity) {
+				case 0 -> thaumcraft.api.internal.WeightedRandomLoot.lootBagCommon.add(new thaumcraft.api.internal.WeightedRandomLoot(item, weight));
+				case 1 -> thaumcraft.api.internal.WeightedRandomLoot.lootBagUncommon.add(new thaumcraft.api.internal.WeightedRandomLoot(item, weight));
+				case 2 -> thaumcraft.api.internal.WeightedRandomLoot.lootBagRare.add(new thaumcraft.api.internal.WeightedRandomLoot(item, weight));
+				default -> {
+				}
+			}
+		}
+	}
+
 	public static void addWarpToItem(ItemStack craftresult, int amount) {
 		if (craftresult == null || craftresult.isEmpty()) return;
 		WARP_MAP.put(craftresult.getItem(), amount);

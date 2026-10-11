@@ -1,24 +1,23 @@
 package thaumcraft.api.internal;
-import java.util.ArrayList;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.WeightedRandom;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
+import net.minecraft.util.random.WeightedEntry;
+import net.minecraft.world.item.ItemStack;
 
+/** One weighted entry in a loot bag's pool (common, uncommon, rare) - filled through {@code ThaumcraftApi#addLootBagItem}. */
+public class WeightedRandomLoot extends WeightedEntry.IntrusiveBase {
 
-public class WeightedRandomLoot extends WeightedRandom.Item {
-	
-	/** The Item/Block ID to generate in the bag. */
-    public ItemStack item;
+	/** What this entry gives. */
+	public final ItemStack item;
 
-    public WeightedRandomLoot(ItemStack stack, int weight)
-    {
-        super(weight);
-        item = stack;
-    }
-    
-    public static ArrayList<WeightedRandomLoot> lootBagCommon = new ArrayList<WeightedRandomLoot>();
-    public static ArrayList<WeightedRandomLoot> lootBagUncommon = new ArrayList<WeightedRandomLoot>();
-    public static ArrayList<WeightedRandomLoot> lootBagRare = new ArrayList<WeightedRandomLoot>();
-    
+	public WeightedRandomLoot(ItemStack stack, int weight) {
+		super(weight);
+		item = stack;
+	}
+
+	public static final List<WeightedRandomLoot> lootBagCommon = new CopyOnWriteArrayList<>();
+	public static final List<WeightedRandomLoot> lootBagUncommon = new CopyOnWriteArrayList<>();
+	public static final List<WeightedRandomLoot> lootBagRare = new CopyOnWriteArrayList<>();
 }

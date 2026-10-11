@@ -134,6 +134,9 @@ public class Thaumcraft {
         // mod constructor itself.
         thaumcraft.common.lib.crafting.ThaumcraftObjectTags.init();
 
+        // The loot bags' and urns' pools (the original's ModConfig list) - addons add to them from ThaumcraftSetupEvent.
+        thaumcraft.common.lib.utils.LootGenerator.registerDefaults();
+
         // Its entity-tag sibling - see ThaumcraftEntityTags' own doc comment. No registry-timing dependency
         // of its own (every entry keys off a vanilla EntityType constant), but grouped here with the
         // object-tag table it mirrors rather than in the constructor.

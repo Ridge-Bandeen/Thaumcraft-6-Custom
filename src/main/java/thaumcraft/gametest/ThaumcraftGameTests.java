@@ -4460,7 +4460,8 @@ public class ThaumcraftGameTests {
 		ItemsTC.lootBagCommon.get().use(helper.getLevel(), player, hand);
 
 		List<ItemEntity> spilled = helper.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(origin).inflate(3.0));
-		helper.assertTrue(!spilled.isEmpty(), "opening a common loot bag should have spilled at least one real item");
+		// as the original: 8 to 12 items from the loot generator
+		helper.assertTrue(spilled.size() >= 8 && spilled.size() <= 12, "opening a loot bag should spill 8 to 12 items, got " + spilled.size());
 		helper.assertTrue(player.getItemInHand(hand).isEmpty(), "the bag itself should have been consumed");
 		helper.succeed();
 	}
@@ -11891,6 +11892,14 @@ public class ThaumcraftGameTests {
 					level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new AABB(abs).inflate(2));
 			helper.assertTrue(!drops.isEmpty(), "breaking a real loot urn (tier " + i + ") should really drop real tiered loot");
 		}
+		// as the original: Silk Touch gives the urn itself
+		ItemStack silk = new ItemStack(Items.DIAMOND_PICKAXE);
+		silk.enchant(level.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+				.getHolderOrThrow(net.minecraft.world.item.enchantment.Enchantments.SILK_TOUCH), 1);
+		BlockPos silkAbs = helper.absolutePos(new BlockPos(7, 0, 1));
+		level.setBlockAndUpdate(silkAbs, blocks[2].defaultBlockState());
+		var silkDrops = net.minecraft.world.level.block.Block.getDrops(level.getBlockState(silkAbs), level, silkAbs, null, player, silk);
+		helper.assertTrue(silkDrops.size() == 1 && silkDrops.get(0).is(blocks[2].asItem()), "Silk Touch should give the urn itself, got " + silkDrops);
 
 		helper.succeed();
 	}

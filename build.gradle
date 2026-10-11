@@ -413,6 +413,8 @@ sourceSets {
             include 'thaumcraft/common/lib/network/fx/PacketFXScanSource.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXBlockBamf.java'
             include 'thaumcraft/common/lib/network/fx/PacketFXPollute.java'
+            include 'thaumcraft/common/lib/utils/LootGenerator.java'
+            include 'thaumcraft/api/internal/WeightedRandomLoot.java'
             include 'thaumcraft/common/lib/network/ServerboundSaveFocusGraphPacket.java'
             include 'thaumcraft/common/lib/network/ServerFocalManipulatorHandlers.java'
             include 'thaumcraft/client/fx/ClientFxHandlers.java'

@@ -820,15 +820,15 @@ public final class ItemsTC {
 	 * comment. A recently-hit vanilla hostile mob has a chance to drop one, tiered by looting level. */
 	public static final DeferredItem<thaumcraft.common.items.curios.ItemLootBag> lootBagCommon = ITEMS.registerItem("loot_bag_common",
 			props -> new thaumcraft.common.items.curios.ItemLootBag(props.stacksTo(16).rarity(net.minecraft.world.item.Rarity.COMMON),
-					ResourceLocation.fromNamespaceAndPath("thaumcraft", "gameplay/loot_bag_common")));
+					0));
 
 	public static final DeferredItem<thaumcraft.common.items.curios.ItemLootBag> lootBagUncommon = ITEMS.registerItem("loot_bag_uncommon",
 			props -> new thaumcraft.common.items.curios.ItemLootBag(props.stacksTo(16).rarity(net.minecraft.world.item.Rarity.UNCOMMON),
-					ResourceLocation.fromNamespaceAndPath("thaumcraft", "gameplay/loot_bag_uncommon")));
+					1));
 
 	public static final DeferredItem<thaumcraft.common.items.curios.ItemLootBag> lootBagRare = ITEMS.registerItem("loot_bag_rare",
 			props -> new thaumcraft.common.items.curios.ItemLootBag(props.stacksTo(16).rarity(net.minecraft.world.item.Rarity.RARE),
-					ResourceLocation.fromNamespaceAndPath("thaumcraft", "gameplay/loot_bag_rare")));
+					2));
 
 	public static final DeferredItem<thaumcraft.common.items.consumables.ItemZombieBrain> brain = ITEMS.registerItem("brain",
 			props -> new thaumcraft.common.items.consumables.ItemZombieBrain(props.food(
