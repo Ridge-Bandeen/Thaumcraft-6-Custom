@@ -2782,3 +2782,25 @@ empty again; the whole-tree sweep is worth re-running much less often
 (most of its own findings are large, slow-moving scope buckets, not fast-
 changing content) - update
 incrementally as items close or new gaps are found in between.*
+
+## 2026-10-10: screens compared against the originals, addon #24 and tags
+
+- Addon: tools and armour in vanilla's tool/armour item tags (enchanting by tag in 1.21; the original's classes were
+  enchantable, and Infusion Enchantment reads the same tags, so it couldn't go on Thaumcraft's own tools). Primal Crusher
+  tagged as a shovel only (addon request) but reports PICKAXE_DIG and SHOVEL_DIG, and Infusion Enchantment accepts the
+  tag or the dig ability. #24: `RecipeTracing` API for addon recipe types in the aspect tracer.
+- Purifying Fluid was never used up on a dip: `removeBlock` on a liquid puts the fluid's block straight back.
+- Screens, each against its uncompiled original `Gui*` file:
+  - Turrets: the Basic Crossbow Turret's ammo screen was missing entirely, and the advanced turret's screen had lost its
+    ammo slot and player inventory ("documented cut" - dispenser reload only). Both restored (TurretAmmoMenu,
+    TurretBasicMenu/Screen); toggle labels written beside the buttons as the original (were hover tooltips).
+  - Golem Logistics: vanilla buttons and grey fill thumbs replaced by the original's widgets (TCWidgets: scroll arrows,
+    plus/minus, sliders, image button), search hint as the original, search box keeps typed keys.
+  - Wrong text colours: Arcane Bore Fortune/Silk Touch, Arcane Workbench vis-available and cost lines.
+  - Stray title/"Inventory" labels the original never drew: Pech, Spa, turrets.
+  - Arcane Workbench preview: the original's grey tint never reached the item (item vertex colours override the GL
+    colour), so it draws plainly with its durability bar; the port's grey wash removed.
+  - Matching already: Golem Press, Thaumatorium, Focus Pouch, Hand Mirror, Smelter, Void Siphon, Potion Sprayer; every
+    text colour literal in the original screens appears in the port.
+- Client FX: FXBlockWard, FXBeamWand, FXBeamBore (the dispatcher's `beamBore`, not the bore's beam) and
+  FXGenericP2E are built only by dispatcher methods nothing calls - dead in the original, confirmed.

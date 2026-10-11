@@ -8,10 +8,9 @@ in a client are tracked in the `thaumcraft-ui-visual-parity-checklist` memory, n
 
 - Parity sweep of the "simplified"/"stand-in"/"cut" doc notes (list: `grep -iE "simplif|stand-in|cut|not ported"`
   over compiled classes): done (see archive).
-- ThaumCompat hooks: all of `COMPAT_HOOKS.md` (#1-#23, the setup-event delivery fix, undead tags, Nitor) done 2026-10-05; watch that
+- ThaumCompat hooks: all of `COMPAT_HOOKS.md` (#1-#24, the setup-event delivery fix, undead tags, Nitor, tool/armour tags) done 2026-10-10; watch that
   file for new requests.
-- Renderer fidelity: the noted list and a first sweep of the rest are done (see archive). Still to compare: GUI
-  screens and the remaining client FX classes not yet checked against their originals.
+- Renderer, screen and client-FX fidelity: compared class by class against the originals, done 2026-10-10 (see archive).
 
 ## Design questions for the user
 
