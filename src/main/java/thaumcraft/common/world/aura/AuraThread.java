@@ -50,7 +50,7 @@ public class AuraThread implements Runnable
 
                 for (AuraChunk chunk : auraWorld.getAuraChunks().values()) {
                     if (AuraHandler.isChunkLoaded(dim, chunk.getLoc().x, chunk.getLoc().z)) {
-                        processAuraChunk(auraWorld, chunk);
+                        processAuraChunk(level, auraWorld, chunk);
                     }
                 }
             }
@@ -65,7 +65,11 @@ public class AuraThread implements Runnable
         Thaumcraft.LOGGER.info("Stopping aura thread for {}", dim.location());
     }
 
-    private void processAuraChunk(AuraWorld auraWorld, AuraChunk auraChunk) {
+    private void processAuraChunk(ServerLevel level, AuraWorld auraWorld, AuraChunk auraChunk) {
+        thaumcraft.api.world.WorldFlavour flavour = thaumcraft.api.world.WorldFlavour.get();
+        float regen = phaseVis * flavour.auraRegenModifier(level, auraChunk.getLoc());
+        float drift = flavour.fluxDriftModifier(level, auraChunk.getLoc());
+        float growFlux = phaseFlux * drift;
         List<Integer> directions = Arrays.asList(0, 1, 2, 3);
         Collections.shuffle(directions, rand);
         int x = auraChunk.getLoc().x;
@@ -102,20 +106,20 @@ public class AuraThread implements Runnable
             dirty = true;
         }
         if (neighbourFluxChunk != null && currentFlux > Math.max(5.0f, auraChunk.getBase() / 10.0f) && lowestFlux < currentFlux / 1.75) {
-            float inc = Math.min(currentFlux - lowestFlux, 1.0f);
+            float inc = Math.min(currentFlux - lowestFlux, drift);
             currentFlux -= inc;
             neighbourFluxChunk.setFlux(lowestFlux + inc);
             dirty = true;
         }
         if (currentVis + currentFlux < base) {
-            currentVis += Math.min(base - (currentVis + currentFlux), phaseVis);
+            currentVis += Math.min(base - (currentVis + currentFlux), regen);
             dirty = true;
         } else if (currentVis > base * 1.25 && rand.nextFloat() < 0.1) {
-            currentFlux += phaseFlux;
-            currentVis -= phaseFlux;
+            currentFlux += growFlux;
+            currentVis -= growFlux;
             dirty = true;
         } else if (currentVis <= base * 0.1 && currentVis >= currentFlux && rand.nextFloat() < 0.1) {
-            currentFlux += phaseFlux;
+            currentFlux += growFlux;
             dirty = true;
         }
 

@@ -34,4 +34,15 @@ public abstract class FocusEffect extends FocusNode {
 	public void onCast(Entity caster) {
 
 	}
+
+	private float powerScale = 1.0f;
+
+	/** Multiplies this effect's power on every hit of the cast; set from {@link FocusPowerModifier}s when cast. */
+	public float getPowerScale() {
+		return powerScale;
+	}
+
+	public void setPowerScale(float powerScale) {
+		this.powerScale = powerScale;
+	}
 }

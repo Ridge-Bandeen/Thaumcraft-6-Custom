@@ -18339,6 +18339,95 @@ public class ThaumcraftGameTests {
 
 	private static volatile boolean heatSourceAdded;
 
+	private static volatile boolean worldHooksAdded;
+	private static volatile BlockPos stabilityModifiedAt;
+	private static final java.util.Set<BlockPos> TAINT_BLOCKED = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+	/** COMPAT_HOOKS.md #27-#31: the aura modifiers default to no change; a stability modifier adds to a matrix's
+	 * replenish; an aspect modifier changes a stack's aspects by its components; a focus power modifier scales an
+	 * effect and the scale survives a package copy; a cancelled TaintSpreadEvent stops a crawler laying fibre. */
+	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")
+	public static void addonWorldHooksApply(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		if (!worldHooksAdded) {
+			worldHooksAdded = true;
+			thaumcraft.api.ThaumcraftApi.addInfusionStabilityModifier((l, pos) -> pos.equals(stabilityModifiedAt) ? 0.5f : 0.0f);
+			thaumcraft.api.ThaumcraftApi.addAspectModifier((stack, aspects) -> {
+				var name = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
+				if (name == null || !name.getString().equals("rotten for a test")) return aspects;
+				return new thaumcraft.api.aspects.AspectList().add(thaumcraft.api.aspects.Aspect.DEATH, 3);
+			});
+			thaumcraft.api.ThaumcraftApi.addFocusPowerModifier((focus, effect, power) -> {
+				var name = focus.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
+				return name != null && name.getString().equals("ruby for a test")
+						&& effect instanceof thaumcraft.common.items.casters.foci.FocusEffectFire ? power * 1.5f : power;
+			});
+			net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((thaumcraft.api.events.TaintSpreadEvent e) -> {
+				if (TAINT_BLOCKED.contains(e.getTo())) e.setCanceled(true);
+			});
+		}
+
+		// #27: the shipped flavour leaves the aura's pace alone
+		net.minecraft.world.level.ChunkPos chunk = new net.minecraft.world.level.ChunkPos(helper.absolutePos(BlockPos.ZERO));
+		helper.assertTrue(thaumcraft.api.world.WorldFlavour.BIOMES.auraRegenModifier(level, chunk) == 1.0f
+				&& thaumcraft.api.world.WorldFlavour.BIOMES.fluxDriftModifier(level, chunk) == 1.0f, "the default aura modifiers should be 1");
+
+		// #28: a lone matrix gains exactly the modifier's stability on its first scan
+		BlockPos matrixPos = helper.absolutePos(new BlockPos(1, 2, 1));
+		stabilityModifiedAt = matrixPos;
+		helper.setBlock(new BlockPos(1, 2, 1), BlocksTC.infusionMatrix.get());
+		var matrix = (thaumcraft.common.tiles.crafting.TileInfusionMatrix) level.getBlockEntity(matrixPos);
+		thaumcraft.common.tiles.crafting.TileInfusionMatrix.tick(level, matrixPos, level.getBlockState(matrixPos), matrix);
+		helper.assertTrue(Math.abs(matrix.stabilityReplenish - 0.5f) < 0.001f, "the stability modifier should add 0.5, got " + matrix.stabilityReplenish);
+
+		// #29: the same item, rotten, has other aspects
+		ItemStack apple = new ItemStack(Items.APPLE);
+		ItemStack rotten = apple.copy();
+		rotten.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, net.minecraft.network.chat.Component.literal("rotten for a test"));
+		thaumcraft.api.aspects.AspectList fresh = thaumcraft.api.aspects.AspectHelper.getObjectAspects(apple);
+		thaumcraft.api.aspects.AspectList rot = thaumcraft.api.aspects.AspectHelper.getObjectAspects(rotten);
+		helper.assertTrue(fresh != null && fresh.getAmount(thaumcraft.api.aspects.Aspect.DEATH) == 0, "a fresh apple keeps its own aspects");
+		helper.assertTrue(rot != null && rot.getAmount(thaumcraft.api.aspects.Aspect.DEATH) == 3 && rot.size() == 1, "the rotten apple should be Mortuus only");
+
+		// #30: a ruby focus strengthens fire, not frost, and the scale is saved with the package
+		ItemStack ruby = new ItemStack(Items.STICK);
+		ruby.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, net.minecraft.network.chat.Component.literal("ruby for a test"));
+		var fire = new thaumcraft.common.items.casters.foci.FocusEffectFire();
+		var frost = new thaumcraft.common.items.casters.foci.FocusEffectFrost();
+		FocusPackage core = spell(new thaumcraft.common.items.casters.foci.FocusMediumTouch(), fire, frost);
+		thaumcraft.api.ThaumcraftApi.applyFocusPowerModifiers(ruby, core);
+		helper.assertTrue(fire.getPowerScale() == 1.5f && frost.getPowerScale() == 1.0f, "only the fire effect should be scaled");
+		FocusPackage copy = new FocusPackage();
+		copy.deserialize(core.serialize(), level);
+		float copied = 0;
+		for (thaumcraft.api.casters.FocusEffect e : copy.getFocusEffects()) {
+			if (e instanceof thaumcraft.common.items.casters.foci.FocusEffectFire) copied = e.getPowerScale();
+		}
+		helper.assertTrue(copied == 1.5f, "the copied package should keep the fire scale, got " + copied);
+
+		// #31: a cancelled spread leaves the crawler's spot as it was
+		BlockPos floorRel = new BlockPos(3, 1, 3);
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				helper.setBlock(floorRel.offset(dx, 0, dz), Blocks.STONE);
+			}
+		}
+		BlockPos crawlerPos = helper.absolutePos(floorRel).above();
+		TAINT_BLOCKED.add(crawlerPos.immutable());
+		try {
+			var crawler = thaumcraft.common.registry.ThaumcraftEntities.TAINT_CRAWLER.get().create(level);
+			crawler.moveTo(crawlerPos.getX() + 0.5, crawlerPos.getY(), crawlerPos.getZ() + 0.5, 0.0f, 0.0f);
+			crawler.setNoAi(true);
+			level.addFreshEntity(crawler);
+			for (int i = 0; i < 45; i++) crawler.tick();
+			helper.assertFalse(level.getBlockState(crawlerPos).is(BlocksTC.taintFibre.get()), "the cancelled spread should leave no fibre");
+			crawler.discard();
+		} finally {
+			TAINT_BLOCKED.remove(crawlerPos);
+		}
+		helper.succeed();
+	}
+
 	/** COMPAT_HOOKS.md #25 and #26: a registered crucible heat predicate counts a block by its state (here a lit furnace,
 	 * not an unlit one), and an addon's loot gear ladder replaces the built-in one for its slot. */
 	@GameTest(templateNamespace = Thaumcraft.MODID, template = "empty")

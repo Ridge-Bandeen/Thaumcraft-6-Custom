@@ -1,10 +1,19 @@
 package thaumcraft.api;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiFunction;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import thaumcraft.api.aspects.AspectList;
+import thaumcraft.api.casters.FocusEffect;
+import thaumcraft.api.casters.FocusPackage;
+import thaumcraft.api.casters.FocusPowerModifier;
 import thaumcraft.api.internal.DummyInternalMethodHandler;
 import thaumcraft.api.internal.IInternalMethodHandler;
 
@@ -85,6 +94,68 @@ public class ThaumcraftApi {
 		}
 		thaumcraft.api.internal.WeightedRandomLoot.lootBagGear[slot] = byQuality == null ? null : byQuality.clone();
 	}
+
+	/**
+	 * Adds to an infusion's stability regeneration wherever an Infusion Matrix stands: each modifier's answer for the
+	 * matrix's level and position is summed into the stability it regains per cycle (the symmetry bonus), whenever the
+	 * matrix rescans its surroundings. Positive steadies infusions there, negative unsettles them. Main thread only.
+	 */
+	public static void addInfusionStabilityModifier(BiFunction<Level, BlockPos, Float> modifier) {
+		STABILITY_MODIFIERS.add(modifier);
+	}
+
+	/** The sum of the registered infusion stability modifiers at a matrix (0 without any). */
+	public static float getInfusionStabilityModifier(Level level, BlockPos matrix) {
+		float total = 0;
+		for (BiFunction<Level, BlockPos, Float> modifier : STABILITY_MODIFIERS) {
+			Float f = modifier.apply(level, matrix);
+			if (f != null) total += f;
+		}
+		return total;
+	}
+
+	/**
+	 * Changes the aspects an item stack has, by its data components or anything else about the stack: each modifier gets
+	 * the stack and its aspects so far (a copy it may change and return, empty for a stack with none) and returns the
+	 * aspects to use. Everything that reads item aspects sees the result: the Crucible, the Alchemical Furnace, scanning,
+	 * tooltips, the Research Table. Applied after the item's own aspects are looked up, so it may run often; only read
+	 * the stack.
+	 */
+	public static void addAspectModifier(BiFunction<ItemStack, AspectList, AspectList> modifier) {
+		ASPECT_MODIFIERS.add(modifier);
+	}
+
+	/** Runs the registered aspect modifiers over a stack's aspects; null if nothing is left. */
+	public static AspectList applyAspectModifiers(ItemStack stack, AspectList aspects) {
+		if (ASPECT_MODIFIERS.isEmpty()) return aspects;
+		AspectList out = aspects == null ? new AspectList() : aspects.copy();
+		for (BiFunction<ItemStack, AspectList, AspectList> modifier : ASPECT_MODIFIERS) {
+			AspectList next = modifier.apply(stack, out);
+			out = next == null ? new AspectList() : next;
+		}
+		return out.size() == 0 ? null : out;
+	}
+
+	/** Changes the power of a focus's effects by the focus stack; see {@link FocusPowerModifier}. */
+	public static void addFocusPowerModifier(FocusPowerModifier modifier) {
+		FOCUS_POWER_MODIFIERS.add(modifier);
+	}
+
+	/** Sets each effect of a package about to be cast from this focus to the registered modifiers' power. */
+	public static void applyFocusPowerModifiers(ItemStack focus, FocusPackage focusPackage) {
+		if (FOCUS_POWER_MODIFIERS.isEmpty()) return;
+		for (FocusEffect effect : focusPackage.getFocusEffects()) {
+			float power = 1.0f;
+			for (FocusPowerModifier modifier : FOCUS_POWER_MODIFIERS) {
+				power = modifier.modify(focus, effect, power);
+			}
+			effect.setPowerScale(power);
+		}
+	}
+
+	private static final List<BiFunction<Level, BlockPos, Float>> STABILITY_MODIFIERS = new CopyOnWriteArrayList<>();
+	private static final List<BiFunction<ItemStack, AspectList, AspectList>> ASPECT_MODIFIERS = new CopyOnWriteArrayList<>();
+	private static final List<FocusPowerModifier> FOCUS_POWER_MODIFIERS = new CopyOnWriteArrayList<>();
 
 	public static void addWarpToItem(ItemStack craftresult, int amount) {
 		if (craftresult == null || craftresult.isEmpty()) return;

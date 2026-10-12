@@ -162,6 +162,9 @@ public class FocusPackage implements IFocusElement {
 							if (fn instanceof FocusModSplit) {
 								((FocusModSplit)fn).deserialize(nodenbt.getCompound("packages"), level);
 							}
+							if (fn instanceof FocusEffect && nodenbt.contains("power_scale")) {
+								((FocusEffect)fn).setPowerScale(nodenbt.getFloat("power_scale"));
+							}
 						}
 						addNode(fn);
 					}
@@ -198,6 +201,9 @@ public class FocusPackage implements IFocusElement {
 						}
 					if (node instanceof FocusModSplit) {
 						nodenbt.put("packages", ((FocusModSplit)node).serialize());
+					}
+					if (node instanceof FocusEffect && ((FocusEffect)node).getPowerScale() != 1.0f) {
+						nodenbt.putFloat("power_scale", ((FocusEffect)node).getPowerScale());
 					}
 					nodelist.add(nodenbt);
 				}

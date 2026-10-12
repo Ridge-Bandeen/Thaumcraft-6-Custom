@@ -167,7 +167,7 @@ public final class ThaumcraftObjectTags {
 			AspectList found = baseTags(stack.getItem());
 			base = found == null ? null : found.copy();
 		}
-		return capAspects(getBonusTags(stack, base), 500);
+		return capAspects(thaumcraft.api.ThaumcraftApi.applyAspectModifiers(stack, getBonusTags(stack, base)), 500);
 	}
 
 	private static AspectList capAspects(AspectList source, int amount) {

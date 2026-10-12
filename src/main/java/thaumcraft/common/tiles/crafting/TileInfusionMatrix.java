@@ -732,6 +732,9 @@ public class TileInfusionMatrix extends BlockEntity implements IInteractWithCast
 			}
 		}
 
+		// addon modifiers (seasons, places of power): ThaumcraftApi.addInfusionStabilityModifier
+		stabilityReplenish += thaumcraft.api.ThaumcraftApi.getInfusionStabilityModifier(level, worldPosition);
+
 		// Real pedestalEldritch/pedestalAncient cost bonuses, matching the true original's own real, opposite
 		// signs exactly - Eldritch raises cost slightly, Ancient lowers it. Both tiers' own stone/pedestal
 		// chain is real but genuinely unreachable in survival (stoneAncient/stoneEldritchTile have zero

@@ -1,5 +1,7 @@
 package thaumcraft.common.blocks.world.taint;
 
+import thaumcraft.api.events.TaintSpreadEvent;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -157,7 +159,7 @@ public class TaintHelper {
 				|| bs.getBlock() instanceof net.minecraft.world.level.block.BushBlock;
 		if (!isLeaves && eligibleForFibre && bs.getFluidState().isEmpty() && isAdjacentToSolidBlock(level, t)
 				&& !BlockTaintFibre.isOnlyAdjacentToTaint(level, t)) {
-			growFibre(level, t);
+			growFibre(level, pos, t);
 			return;
 		}
 
@@ -168,10 +170,12 @@ public class TaintHelper {
 		if (isLeaves) {
 			Direction touchingLog = level.random.nextFloat() < 0.6f ? faceTouching(level, t, BlocksTC.taintLog.get()) : null;
 			if (touchingLog != null) {
-				level.setBlockAndUpdate(t, BlocksTC.taintFeature.get().defaultBlockState()
-						.setValue(BlockTaintFeature.FACING, touchingLog.getOpposite()));
+				BlockState feature = BlocksTC.taintFeature.get().defaultBlockState().setValue(BlockTaintFeature.FACING, touchingLog.getOpposite());
+				if (TaintSpreadEvent.allows(level, pos, t, feature)) {
+					level.setBlockAndUpdate(t, feature);
+				}
 			} else {
-				growFibre(level, t);
+				growFibre(level, pos, t);
 			}
 			return;
 		}
@@ -185,22 +189,34 @@ public class TaintHelper {
 		if (BlockTaintFibre.isHemmedByTaint(level, t) && bh < 5.0f) {
 			if (bs.is(BlockTags.LOGS) && !(bs.getBlock() instanceof ITaintBlock)) {
 				Direction.Axis axis = bs.hasProperty(RotatedPillarBlock.AXIS) ? bs.getValue(RotatedPillarBlock.AXIS) : Direction.Axis.Y;
-				level.setBlockAndUpdate(t, BlocksTC.taintLog.get().defaultBlockState().setValue(RotatedPillarBlock.AXIS, axis));
+				BlockState log = BlocksTC.taintLog.get().defaultBlockState().setValue(RotatedPillarBlock.AXIS, axis);
+				if (TaintSpreadEvent.allows(level, pos, t, log)) {
+					level.setBlockAndUpdate(t, log);
+				}
 				return;
 			}
 			if (isCrustSurface(bs)) {
-				level.setBlockAndUpdate(t, BlocksTC.taintCrust.get().defaultBlockState());
-				AuraHelper.drainFlux(level, t, 0.01f, false);
+				BlockState into = BlocksTC.taintCrust.get().defaultBlockState();
+				if (TaintSpreadEvent.allows(level, pos, t, into)) {
+					level.setBlockAndUpdate(t, into);
+					AuraHelper.drainFlux(level, t, 0.01f, false);
+				}
 				return;
 			}
 			if (isSoilSurface(bs)) {
-				level.setBlockAndUpdate(t, BlocksTC.taintSoil.get().defaultBlockState());
-				AuraHelper.drainFlux(level, t, 0.01f, false);
+				BlockState into = BlocksTC.taintSoil.get().defaultBlockState();
+				if (TaintSpreadEvent.allows(level, pos, t, into)) {
+					level.setBlockAndUpdate(t, into);
+					AuraHelper.drainFlux(level, t, 0.01f, false);
+				}
 				return;
 			}
 			if (isRockSurface(bs)) {
-				level.setBlockAndUpdate(t, BlocksTC.taintRock.get().defaultBlockState());
-				AuraHelper.drainFlux(level, t, 0.01f, false);
+				BlockState into = BlocksTC.taintRock.get().defaultBlockState();
+				if (TaintSpreadEvent.allows(level, pos, t, into)) {
+					level.setBlockAndUpdate(t, into);
+					AuraHelper.drainFlux(level, t, 0.01f, false);
+				}
 				return;
 			}
 		}
@@ -226,8 +242,10 @@ public class TaintHelper {
 	/** Places a plain {@link BlocksTC#taintFibre}, real connections computed explicitly (a bare
 	 * {@code defaultBlockState()} never picks up neighbor connections on a direct {@code setBlockAndUpdate} -
 	 * see {@link BlockTaintFibre#computeState}'s own doc comment), draining a small real amount of flux. */
-	private static void growFibre(Level level, BlockPos pos) {
-		level.setBlockAndUpdate(pos, BlockTaintFibre.computeState(BlocksTC.taintFibre.get().defaultBlockState(), level, pos));
+	private static void growFibre(Level level, BlockPos from, BlockPos pos) {
+		BlockState fibre = BlockTaintFibre.computeState(BlocksTC.taintFibre.get().defaultBlockState(), level, pos);
+		if (!TaintSpreadEvent.allows(level, from, pos, fibre)) return;
+		level.setBlockAndUpdate(pos, fibre);
 		AuraHelper.drainFlux(level, pos, 0.01f, false);
 	}
 

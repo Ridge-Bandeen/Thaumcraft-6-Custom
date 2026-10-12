@@ -36,6 +36,19 @@ public interface WorldFlavour {
 	/** Default: the biome is Eerie. */
 	boolean isEerieArea(LevelAccessor level, BlockPos pos);
 
+	/** Scales how fast a chunk's vis regenerates toward its base (the moon phase sets the pace; 1 leaves it). Asked
+	 * from the aura thread about once a second per loaded chunk: answer from cached state only, never by reading the
+	 * level. */
+	default float auraRegenModifier(Level level, ChunkPos chunk) {
+		return 1.0f;
+	}
+
+	/** Scales how readily a chunk's flux grows out of its vis and spreads to a neighbour (1 leaves it; above 1 flux
+	 * builds and moves faster, below 1 it lingers where it is). Same thread rules as {@link #auraRegenModifier}. */
+	default float fluxDriftModifier(Level level, ChunkPos chunk) {
+		return 1.0f;
+	}
+
 	/** The biome-based flavour Thaumcraft ships. */
 	WorldFlavour BIOMES = new WorldFlavour() {
 		@Override

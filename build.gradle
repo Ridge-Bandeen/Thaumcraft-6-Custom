@@ -507,6 +507,7 @@ sourceSets {
             include 'thaumcraft/api/TaintHooks.java'
             include 'thaumcraft/api/world/WorldFlavour.java'
             include 'thaumcraft/api/events/LampGrowthEvent.java'
+            include 'thaumcraft/api/events/TaintSpreadEvent.java'
             include 'thaumcraft/api/events/LampBreedEvent.java'
             include 'thaumcraft/api/events/GolemButcherTargetEvent.java'
             include 'thaumcraft/common/registry/ThaumcraftDataMaps.java'
@@ -541,6 +542,7 @@ sourceSets {
 
             include 'thaumcraft/api/casters/CasterTriggerRegistry.java'
             include 'thaumcraft/api/casters/FocusEffect.java'
+            include 'thaumcraft/api/casters/FocusPowerModifier.java'
             include 'thaumcraft/api/casters/FocusEngine.java'
             include 'thaumcraft/api/casters/FocusMedium.java'
             include 'thaumcraft/api/casters/FocusMediumRoot.java'

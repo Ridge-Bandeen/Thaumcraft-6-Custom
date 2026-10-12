@@ -261,6 +261,7 @@ public class ItemCaster extends Item implements ICaster, thaumcraft.api.items.IA
 		}
 
 		core.initialize(player);
+		thaumcraft.api.ThaumcraftApi.applyFocusPowerModifiers(focusStack, core);
 		FocusEngine.castFocusPackage(player, core, true);
 		player.swing(hand);
 		return InteractionResultHolder.success(wand);

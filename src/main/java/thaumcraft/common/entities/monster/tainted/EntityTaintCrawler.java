@@ -104,7 +104,10 @@ public class EntityTaintCrawler extends Monster implements ITaintedMob {
 			boolean eligible = bs.isAir() || bs.canBeReplaced() || bs.getBlock() instanceof SaplingBlock || bs.getBlock() instanceof BushBlock;
 			if (eligible && !bs.is(BlockTags.LEAVES) && !bs.liquid() && !(bs.getBlock() instanceof ITaintBlock)
 					&& TaintHelper.isAdjacentToSolidBlock(level(), pos) && !BlockTaintFibre.isOnlyAdjacentToTaint(level(), pos)) {
-				level().setBlockAndUpdate(pos, BlockTaintFibre.computeState(BlocksTC.taintFibre.get().defaultBlockState(), level(), pos));
+				BlockState fibre = BlockTaintFibre.computeState(BlocksTC.taintFibre.get().defaultBlockState(), level(), pos);
+				if (thaumcraft.api.events.TaintSpreadEvent.allows(level(), pos, pos, fibre)) {
+					level().setBlockAndUpdate(pos, fibre);
+				}
 			}
 		}
 	}

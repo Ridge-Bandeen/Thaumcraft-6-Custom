@@ -153,7 +153,10 @@ public class EntityTaintacle extends Monster implements ITaintedMob {
 		serverLevel.addFreshEntity(taintlet);
 		playSound(ThaumcraftSounds.TENTACLE.get(), getSoundVolume(), getVoicePitch());
 		if (inEldritchBiome && level().getBlockState(pos).isAir() && isAdjacentToSolidBlock(level(), pos)) {
-			level().setBlock(pos, thaumcraft.api.blocks.BlocksTC.taintFibre.get().defaultBlockState(), 3);
+			net.minecraft.world.level.block.state.BlockState fibre = thaumcraft.api.blocks.BlocksTC.taintFibre.get().defaultBlockState();
+			if (thaumcraft.api.events.TaintSpreadEvent.allows(level(), blockPosition(), pos, fibre)) {
+				level().setBlock(pos, fibre, 3);
+			}
 		}
 	}
 

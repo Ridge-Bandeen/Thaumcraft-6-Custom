@@ -156,7 +156,7 @@ public class FocusEngine {
 								}
 							}
 							Trajectory tra = prevTrajectories!=null? ((prevTrajectories.length==prevTargets.length) ? prevTrajectories[num] : prevTrajectories[0]) : null;
-							effect.execute(target, tra, focusPackage.getPower(), num);
+							effect.execute(target, tra, focusPackage.getPower() * effect.getPowerScale(), num);
 							num++;
 						}
 					}

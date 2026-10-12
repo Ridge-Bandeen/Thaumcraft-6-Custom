@@ -159,7 +159,12 @@ public class BlockFluxGoo extends Block {
 				AuraHelper.polluteAura(level, pos, 1.0f, true);
 				level.removeBlock(pos, false);
 			} else {
-				level.setBlockAndUpdate(pos, BlockTaintFibre.computeState(BlocksTC.taintFibre.get().defaultBlockState(), level, pos));
+				BlockState fibre = BlockTaintFibre.computeState(BlocksTC.taintFibre.get().defaultBlockState(), level, pos);
+				if (thaumcraft.api.events.TaintSpreadEvent.allows(level, pos, pos, fibre)) {
+					level.setBlockAndUpdate(pos, fibre);
+				} else {
+					level.removeBlock(pos, false);
+				}
 			}
 		} else {
 			level.setBlockAndUpdate(pos, state.setValue(LEVEL, lvl - 1));
